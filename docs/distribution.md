@@ -4,6 +4,10 @@ The Web client runs in a browser; desktop exports bundle their own Godot runtime
 Players do not install Blender, Rust, Python, Node or the SDK. The current
 development endpoint is [https://kcanakdag.com:8443](https://kcanakdag.com:8443/),
 database `mt2-yongan-v2`, on `159.195.213.9`. It may restart during updates.
+Current release `20260906T154235134255Z` includes the fixed test probe with the
+user's explicit authorization. Its 45 public Chrome/Linux checks cover current
+map/chat panels, inventory and multiplayer. Normal export commands below omit
+that probe.
 
 Browser/Linux multiplayer checks passed on the training ground and Yongan.
 The corrected Yongan browser run also verifies terrain appearance, keyboard
@@ -247,29 +251,35 @@ See [temporary playtesting](playtesting.md).
 
 Evidence recorded on 2026-09-06:
 
-The final instrumented browser run below uses the corrected visible-water bake,
-complete texture dependencies and lossless terrain-ID maps. Normal Web/Linux
-exports also pass package audits with `test_probe=false`. The deployed normal
-release `20260906T141816112109Z` passed a separate direct browser UI/keyboard
-test and an actual Linux release session against the same public database.
+The evidence includes several completed slices. The earlier normal release
+`20260906T141816112109Z` passed direct browser UI/keyboard and Linux checks
+without test instrumentation. The current authorized development release
+`20260906T154235134255Z` includes the original HUD, inventory and map/chat panels,
+with exact UI pixel audits and separate public versus loopback chat checks.
 
 | Path | Evidence | Scope and limits |
 | --- | --- | --- |
 | Browser + exported Linux on the training ground | `.local/browser-proof/20260906-143520/report.json`, 14 checks and screenshots | Real HTTPS endpoint, independent identities, mutual rendered visibility/movement, rejection, disconnect/reconnect, browser refresh |
-| Yongan Rust rules | 16 passing tests with `--features yongan` | Baked layout, spawn/height/bounds, circular clearance, bridge seam and combat reach/blocking |
+| Baseline Yongan Rust rules | 16 passing tests with `--features yongan` | Baked layout, spawn/height/bounds, circular clearance, bridge seam and combat reach/blocking |
 | Yongan live SDK multiplayer | `.local/yongan-network-final.json`, 22 checks | Two SDK identities, mutual replicated state, both movement directions, rejection, duplicate session and reconnect |
 | Yongan live SDK combat | `.local/yongan-combat-final.json`, 19 checks | Damage, death/respawn, reservation/duplicate pickup rules and preserved gold |
 | Streamed Yongan browser + exported Linux | `.local/browser-proof/20260906-161458/report.json`, 26 checks | Mutual rendered movement, keyboard controls, background sections, rejection, reconnect/refresh, forced database-container replacement, attacks/damage/loot and both death/respawn paths |
 | Yongan appearance | `browser-final.png`, `browser-combat.png` and `desktop.png` beside the final browser report; `.local/yongan-native-public.png` | Corrected terrain/textures, textured warrior, buildings and combat observed |
 | Isolated streamed resources | `.local/export-web/world-pack-audit.json`, 20 sections and 40 numeric textures | Fresh process per shared/section pair; dependency loading and exact tile/attribute bytes |
-| Full development checks | `make check`, 16 Rust and 66 Python tool tests, all linters and actual Godot parser/runtime | Owned source, server, conversion/deployment tools and real engine checks |
-| Normal release exports | `dist/web/build-manifest.json`, `dist/linux/build-manifest.json` | Actual PCK audits of 229 core Web files and 1,032 Linux files; both `test_probe=false` |
-| Normal public browser release | `.local/release-browser/evidence.json`, `observations.json` and screenshots | Actual connection UI, correct terrain textures, keyboard movement reflected in server diagnostics, no engine errors or test hooks |
-| Matching Linux release | `.local/release-native/report.json`, `client.png` | Export-template build, connected to the public database, both release players visible, no errors |
+| Baseline development checks | `make check`, 16 Rust and 66 Python tool tests, all linters and actual Godot parser/runtime | Owned source, server, conversion/deployment tools and real engine checks |
+| Earlier normal release exports | `dist/web/build-manifest.json`, `dist/linux/build-manifest.json` | Actual PCK audits of 229 core Web files and 1,032 Linux files; both `test_probe=false` |
+| Earlier normal public browser release | `.local/release-browser/evidence.json`, `observations.json` and screenshots | Actual connection UI, correct terrain textures, keyboard movement reflected in server diagnostics, no engine errors or test hooks |
+| Earlier matching Linux release | `.local/release-native/report.json`, `client.png` | Export-template build, connected to the public database, both release players visible, no errors |
 | Deployment/export failure tests | 14 tests in `tests/test_deploy_export.py` | Artifact inventory and apply-script failure sequencing with temporary command stand-ins; not a live data restore drill |
+| Current public map/chat/inventory build | `.local/browser-proof/20260906-174806/report.json`, 45 checks | Independent Chrome/Linux clients, final panel drag/resize geometry, inventory, rejection, reconnect/refresh and no engine errors; no public chat sent |
+| Chat-send/WASD regression | `.local/browser-proof/20260906-174144/report.json`, 45 loopback checks | Actual chat delivery to the other subscription and movement after send, Escape, world click and history submission |
+| Current native panels | `.local/classic-panels-ui/`, `.local/classic-map/`, `.local/classic-chat-final/` | 15 UI, 17 map and 22 chat checks with screenshots |
+| Current public native editor | `.local/classic-chat-native-editor/centered-chat.png` | Connected project, bottom-center chat, Escape leaves no focus/visible entry |
+| Current test export/deployment | Web/Linux PCK audits: 582/1,385 files and 160 exact UI/map images; `.local/classic-panels-served-manifest.json` | Served/exported manifests match; fixed test probe explicitly authorized; no MCP/evaluator/tokens/source archives |
+| Current tool checks | 70 passing tool tests and all lint groups | Source/tool validation, separate from rendered client evidence |
 | Windows graphics | Historical local Wine report | No native Windows hardware or current Yongan Windows run |
 
-The corrected final test used Chrome with the workstation's AMD 860M GPU via
+The earlier corrected-Yongan test used Chrome with the workstation's AMD 860M GPU via
 ANGLE. Engine readiness took 6.66 seconds and world readiness 12.97 seconds total
 in that run. Sampled browser rates after loading ranged from 32 to 63 FPS while
 a software-rendered Linux observer also ran. Earlier SwiftShader runs were much
@@ -283,6 +293,12 @@ server position from approximately `(662.4, 198.625, 575.0)` to
 joined with an independent identity and rendered the browser and desktop
 characters. Existing VPS application endpoints also returned HTTP 200 after
 the final deployment.
+
+The latest public panel run reached the world in 12.52 seconds and recorded
+42 FPS in its final sample. The separate loopback chat run reached the world in
+8.82 seconds with a final 21 FPS sample. These describe those particular runs;
+they are not comparable load benchmarks. The loopback-only `--chat-focus` option
+keeps synthetic chat away from public sessions.
 
 The prototype has no large-player load benchmark, complete Metin2 visuals/content,
 account system or full database-restore/disaster-recovery verification.

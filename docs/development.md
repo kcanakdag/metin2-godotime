@@ -184,8 +184,8 @@ the result in Godot. Downloaded assets and converted output are ignored so they
 can be regenerated; they are not hand-maintained game source.
 
 Use `make import-ui` after `make dev-setup` for the selected original HUD,
-inventory, item icons and stitched Yongan minimap. This converts 148 UI images
-and 20 original DDS map tiles from 185 pinned source files with Pillow; Blender
+inventory, item icons and stitched Yongan minimap. This converts 159 UI images
+and 20 original DDS map tiles from 207 pinned source files with Pillow; Blender
 is unnecessary for these raster assets. For a cached rebuild and format tests:
 
 ```sh
@@ -200,6 +200,29 @@ See [UI assets](ui-assets.md) for mappings and layout references. Verify the
 actual Godot layout, icon sizes, mouse carry/drag, right-click actions, page
 changes, quickslots and chat focus after UI changes. Conversion tests alone do
 not prove usable UI or original-client parity.
+
+The isolated presentation runner supports `ui`, `map` and `chat` suites. Give
+each its own output directory so one report cannot overwrite another:
+
+```sh
+make test-ui UI_FLAGS="--suite ui --native --output .local/classic-panels-ui"
+make test-ui UI_FLAGS="--suite map --native --output .local/classic-map"
+make test-ui UI_FLAGS="--suite chat --native --output .local/classic-chat"
+```
+
+Omit `--native` for a headless run; native rendering uses `xvfb-run` and saves a
+PNG. The runner stages UI sources/art plus the selected smoke script in an
+isolated Godot project, without network SDK, editor bridge or saved identity.
+These checks verify input, layout and emitted intents; only the live multiplayer
+checks establish server acceptance and subscriptions. Current local evidence
+includes 15 UI, 17 map and 22 chat checks with native screenshots. Reports are
+in `.local/classic-panels-ui/`, `.local/classic-map/` and `.local/classic-chat-final/`.
+
+`make import-ui` also records each image's decoded RGBA SHA-256 and pins lossless
+texture import without mipmaps, automatic 3D compression or alpha-border fixes.
+The actual export audit loads every UI texture from its PCK and compares pixels
+against that hash, including the stitched map. Re-export after importer changes;
+inspecting only a source PNG does not establish the exported texture's fidelity.
 
 Before sharing a client, execute the real export workflow, check that required
 SDK libraries/assets are included and MCP tooling/tokens are absent, then run
@@ -255,13 +278,59 @@ and Linux export identities, real mouse/keyboard UI actions and the workstation
 GPU, and recorded no engine errors. Cold world readiness was 15.98 seconds;
 the final combat sample was 59 FPS. These timings describe this run only.
 
-The current public development release `20260906T150508494693Z` intentionally
-retains the fixed test probe with the user's explicit authorization. Its actual
-Web/Linux PCK audits checked 556/1359 files, with no MCP bridge, runtime script
-evaluator, identity tokens or original source archives. Normal exports still
-exclude the test probe; inspect those separately before friend/release delivery.
-This final rebuild removes the default scrollbar from the passive chat overlay;
-the 39-check run above exercised the same gameplay and inventory implementation.
+Add `--panels` to test original minimap close/reopen/zoom, atlas opening/dragging/
+closing, chat focus and chat-history dragging/resizing with actual browser
+mouse/key input. Scrolling is covered by the native chat suite. This requires
+exports containing the new panel code.
+The new panel export passed both loopback and public checks. The latest public
+run in `.local/browser-proof/20260906-174806/report.json` passes 45 core/panel/
+inventory checks with independent Chrome/Linux clients and no browser engine
+errors. It checks final drag positions and the chat log's final 530 × 210 size,
+so an intermediate drag snapshot cannot count as completion. It sends no public
+chat; the delivery and post-send movement proof remains the loopback run below.
+
+The chat-focus regression exercises native and browser clients: send from the
+bottom-center field, close it with Escape, and dismiss it by clicking the world.
+Each path releases both chat fields, leaves ordinary entry closed and lets
+WASD reach the server and the other client's avatar. Sending from chat history
+also releases focus while retaining its visible window.
+Consuming the submit Enter before releasing focus prevents the same event from
+reopening chat through the world shortcut. Keep this evidence distinct from
+older UI tests that expected continued editing after send; the return-to-game
+behavior follows the player's later request.
+
+For synthetic chat delivery checks, `--chat-focus` accepts only URL hostnames
+`127.0.0.1`, `localhost` or `::1`. Serve matching test exports and the test
+database's routes on loopback first, then run, for example:
+
+```sh
+make test-browser PUBLIC_URL=http://127.0.0.1:8182 DB=mt2-yongan-test \
+  BROWSER_FLAGS="--hardware --panels --chat-focus"
+```
+
+The restriction prevents synthetic chat from reaching public players. The
+loopback run in `.local/browser-proof/20260906-174144/report.json` passed all
+45 checks with independent Chrome/Linux identities and no browser engine errors.
+It covers the focus paths, panel interactions, actual message replication,
+rejection, disconnect/reconnect and refresh. Before recording the reconnect
+position, the runner waits for both subscribed movement to stop and the rendered
+avatar to settle. Cold world readiness was 8.82 seconds and one final sample
+was 21 FPS; these are observations from that run, not a benchmark.
+
+The current public development release `20260906T154235134255Z` retains the
+fixed test probe with the user's explicit authorization. Its Web/Linux PCK
+audits checked 582/1,385 files and all 160 exact RGBA UI/map images, with no MCP
+bridge, runtime script evaluator, identity tokens or source archives. The served
+manifest in `.local/classic-panels-served-manifest.json` equals the Web export's
+manifest; deployment output is `.local/classic-chat-map-deploy.log`.
+
+The public run reached the world in 12.52 seconds with a final sample of 42 FPS;
+these are observations on this workstation, not a performance guarantee.
+Native editor inspection confirmed the connected project, opened bottom-center
+chat, and observed Escape clearing focus and hiding entry; its screenshot is
+`.local/classic-chat-native-editor/centered-chat.png`. The final tool suite has
+70 passing tests and all lint groups pass. Normal exports exclude the fixed
+probe; inspect those separately before friend/release delivery.
 
 The Web build connects to its page origin and the database baked into its config.
 The Linux export receives the same endpoint/database from the runner. Publishing

@@ -139,13 +139,18 @@ or effect fixture, and should not be described as an original Metin2 mob import.
 `tools/import_metin_ui.py` fetches an explicit selection from the same pinned
 client archive: taskbar gauges/button states, quickslot legends, inventory and
 equipment art, common windows/tooltips, chat/minimap controls, sword icon `00010`
-and red-potion icon `27001`. It converts 148 UI images and stitches 20 original
-Yongan DDS minimap tiles into one 1024 × 1280 image, using 185 source files.
+and red-potion icon `27001`. It converts 159 UI images and stitches 20 original
+Yongan DDS minimap tiles into one 1024 × 1280 image, using 207 source files.
+The expanded fixture includes the separate original 171 × 214 Yongan atlas,
+chat-history title/scrollbar parts and working minimap controls.
 
 `client/assets/imported/ui/manifest.json` records Git blob/SHA-256 hashes for
-sources, atlas/crop information, PNG hashes, pixel dimensions and consulted
-references. Output retains decoded RGBA pixels without recoloring/resizing;
-each PNG is reopened to verify its pixel round trip. `GrpSubImage.cpp` was
+sources, atlas/crop information, PNG and decoded RGBA hashes, pixel dimensions
+and consulted references. Output retains decoded RGBA pixels without recoloring/resizing;
+each PNG is reopened to verify its pixel round trip. The converter pins lossless
+Godot imports without mipmaps, automatic 3D compression or alpha-border changes;
+the actual PCK audit checks every loaded UI texture's RGBA bytes against its
+manifest hash. `GrpSubImage.cpp` was
 consulted for `.sub` descriptor semantics, and selected taskbar, inventory,
 minimap, chat, tooltip and system-layout sources informed presentation. No
 downloaded Python/C++ is executed or copied as runtime implementation.
@@ -153,8 +158,10 @@ downloaded Python/C++ is executed or copied as runtime implementation.
 Pillow is pinned and installed by development setup; it is not shipped in the
 player runtime. Original UI art has the same separate asset-rights constraints
 as the warrior/map, and both its originals and converted files remain ignored.
-This fixture adds no font: identical original text rendering and full behavioral
-parity have not been established. See [UI assets](ui-assets.md) for the precise
+The pinned English locale specifies Tahoma at 12, 14 and 9, and original
+rendering uses GDI; equal Godot size numbers do not establish equal metrics.
+This fixture adds no font. No Microsoft font is redistributed, and neither
+original text rendering nor complete behavioral parity has been established. See [UI assets](ui-assets.md) for the precise
 source/layout contract and remaining fidelity limits.
 
 ## Gameplay reference

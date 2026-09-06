@@ -144,6 +144,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
 		camera_rig.orbit(event.relative)
 	if event is InputEventMouseButton and event.pressed:
+		if (
+			connection.state == "connected"
+			and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]
+		):
+			hud.release_chat_focus()
 		match event.button_index:
 			MOUSE_BUTTON_WHEEL_UP:
 				camera_rig.zoom(-0.7)

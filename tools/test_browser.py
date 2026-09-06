@@ -12,14 +12,20 @@ import re
 import subprocess
 import time
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from playwright.sync_api import sync_playwright
 from test_browser_inventory import exercise_inventory
+from test_browser_panels import exercise_chat_focus, exercise_panels
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def distance(a, b):
+    # An absent avatar cannot establish either movement or proximity. Let the
+    # polling check capture diagnostics on timeout instead of indexing None.
+    if a is None or b is None:
+        return math.nan
     return math.dist([a[0], a[-1]], [b[0], b[-1]])
 
 
@@ -38,9 +44,21 @@ def main():
         "--inventory", action="store_true", help="Exercise original inventory with mouse and keys"
     )
     parser.add_argument(
+        "--panels", action="store_true", help="Exercise original map and chat window controls"
+    )
+    parser.add_argument(
+        "--chat-focus",
+        action="store_true",
+        help="Send chat and verify WASD on a loopback test world",
+    )
+    parser.add_argument(
         "--restart-host", help="Replace only the game's DB container to test persistence"
     )
     args = parser.parse_args()
+    if args.chat_focus and urlsplit(args.url).hostname not in {"127.0.0.1", "localhost", "::1"}:
+        parser.error(
+            "Chat-send regression uses a loopback test world to avoid messaging public players"
+        )
     if args.restart_host and not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_.@-]*", args.restart_host):
         parser.error("Restart host must be a plain SSH host")
     output = ROOT / ".local/browser-proof" / time.strftime("%Y%m%d-%H%M%S")
@@ -126,6 +144,14 @@ def main():
             )
             context = browser.new_context(viewport={"width": 1280, "height": 800})
             page = context.new_page()
+            samples["browser_lifecycle"] = []
+            for emitter, event in [(page, "crash"), (page, "close"), (browser, "disconnected")]:
+                emitter.on(
+                    event,
+                    lambda *_, event=event: samples["browser_lifecycle"].append(
+                        {"event": event, "seconds": round(time.monotonic() - started, 2)}
+                    ),
+                )
             page.on(
                 "console",
                 lambda message: (
@@ -213,9 +239,26 @@ def main():
             page.screenshot(path=str(output / "browser.png"))
             native_command("capture")
             samples["moved_web"], samples["moved_desktop"] = web(), desktop()
+            if args.panels:
+                samples["original_panels"] = exercise_panels(page, web, wait, output)
+            if args.chat_focus:
+                exercise_chat_focus(page, web, desktop, web_id, wait, lambda: web_command("stop"))
             if args.inventory:
                 samples["inventory_ui"] = exercise_inventory(page, web, wait, output)
-            position = seen(desktop(), web_id)
+            web_command("stop")
+            wait(
+                "movement_settles_before_reconnect",
+                lambda: (
+                    web().get("activity") == 0
+                    and any(
+                        row["identity"] == web_id and row["activity"] == 0
+                        for row in desktop().get("player_rows", [])
+                    )
+                    and distance(seen(desktop(), web_id), web()["server_position"]) < 0.02
+                ),
+            )
+            position = web()["server_position"]
+            samples["position_before_reconnect"] = position
             web_command("disconnect")
             wait(
                 "browser_disconnect_removes_desktop_avatar", lambda: seen(desktop(), web_id) is None
@@ -225,8 +268,10 @@ def main():
                 "browser_reconnect_restores_avatar",
                 lambda: web().get("identity") == web_id and seen(desktop(), web_id) is not None,
             )
-            assert distance(seen(desktop(), web_id), position) < 0.1
-            checks.append("browser_reconnect_preserves_position")
+            wait(
+                "browser_reconnect_preserves_position",
+                lambda: distance(seen(desktop(), web_id), position) < 0.1,
+            )
             page.reload(wait_until="domcontentloaded")
             wait("browser_refresh_boots", lambda: bool(web()), 90)
             web_command("connect", name="BrowserTest")

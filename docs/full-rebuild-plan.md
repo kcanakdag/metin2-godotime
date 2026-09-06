@@ -9,6 +9,11 @@ An original UI/inventory slice is now implemented: selected original taskbar and
 inventory art, a two-page bag, one equipable sword, red potions, item drops and
 an original-image minimap. Its Web/Linux exports passed 39 public checks,
 including inventory mouse interactions, quickslots, persistence and potion drops.
+The following panel pass adds working minimap close/reopen, the separate original
+Yongan atlas, centered fading chat and a movable/resizable chat log. It has local
+component checks and 45 passing loopback Chrome/Linux checks, including restored
+movement after chat. The deployed panel update also passes 45 public core/panel/
+inventory checks; actual chat sends remain tested on the separate loopback world.
 Complete client interfaces, skills, quests and progression remain future work.
 The implemented contract is in [architecture.md](architecture.md).
 
@@ -207,8 +212,10 @@ multiplayer, combat and normal-release checks pass for the preceding Yongan
 slice. The next inventory/equipment slice is now implemented in source and under
 verification: once-only sword/potions, bounded bag cells/stacks, server equipment
 bonus, healing, item drops and original UI controls. Its 56 live inventory checks
-and additive data-preservation check pass. Complete browser mouse/keyboard and
-normal-export checks before treating the slice as done.
+and additive data-preservation check pass, as do 39 public browser/Linux checks
+for the original HUD and inventory. The added map/chat panels now pass native,
+loopback and public browser checks with exact-pixel export audits. Extend
+item/equipment breadth and progression as the next connected gameplay slice.
 Then extend item/equipment breadth and progression without implying that the
 entire original starter experience is complete.
 

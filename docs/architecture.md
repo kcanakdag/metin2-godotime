@@ -164,7 +164,7 @@ nearby players around its home, and deals 20 damage within 1.9 m every
 
 A defeated sentinel respawns after 12 seconds and drops five gold plus one red
 potion. Gold and item drops have separate authoritative rows. Both remain
-reserved for its slayer for 10 seconds, expires after 60 seconds, and requires
+reserved for the slayer for 10 seconds, expire after 60 seconds, and require
 a pickup within 2.5 m with compatible height and clear path. An atomic reducer
 deletes the loot and credits the player, preventing duplicate grants. A dead
 player respawns after 8 seconds at the town spawn with full health and retained
@@ -201,8 +201,9 @@ equipment and cooldown state survive death/reconnect; there is no player-driven
 item deletion, trading or arbitrary item/currency grant endpoint.
 
 The UI uses selected original raster artwork converted by
-`tools/import_metin_ui.py`: 148 UI images and one Yongan map assembled from 20
-original minimap tiles. Source resolution and alpha are preserved. Layout
+`tools/import_metin_ui.py`: 159 UI images and one Yongan map assembled from 20
+original minimap tiles, using 207 pinned source files. Source resolution and
+alpha are preserved. Layout
 references guide the 176 × 565 inventory, 37-pixel taskbar, eight visible
 quickslots and minimap. See [UI assets](ui-assets.md) for provenance and limits.
 
@@ -217,6 +218,42 @@ character/skills/social controls are inactive, and neither font rendering nor
 complete behavior has been compared with a running original client. The
 inventory introduces a narrow weapon/consumable loop, not a complete original
 equipment or progression system.
+
+## Original map and chat panels
+
+`classic_map_panel.gd` separates the small minimap from the original atlas.
+The minimap uses the 1024 × 1280 stitched tiles, original player/other-player
+marker art and subscribed positions; close/reopen and zoom are interactive.
+`M` or the minimap atlas button opens the separate original 171 × 214 atlas
+inside a 186 × 252 draggable window. M, Escape and its close button dismiss it.
+The atlas shows the local player; it does not invent absent NPC/warp data.
+Unsupported maps disable the atlas and zoom controls.
+
+`classic_chat.gd` places a 600-pixel ordinary chat entry at the horizontal center,
+62 pixels above the viewport bottom. Passive messages fade after five seconds
+or once they are older than the four newest, with a time-based decay. Enter
+opens entry; submitting nonempty text sends a normal server intent, clears the
+field, releases both chat inputs and closes ordinary entry. Empty Enter also
+closes ordinary entry. Up/Down recalls locally sent text, and Escape cancels it.
+World left/right clicks release chat focus before movement or camera handling.
+The submission event is consumed before focus changes so the root Enter
+shortcut cannot reopen chat. Typing still owns input while active, preventing
+I/M/L and movement keys from also triggering game controls. Returning to
+movement after sending is the requested usability behavior; it deliberately
+differs from the original source's keep-editing behavior.
+
+`L` or the chat-history button opens a draggable, resizable log with original
+title and scrollbar parts. The client presents subscribed chat messages;
+the server still accepts only normal chat, limits messages to 160 characters,
+rate-limits submission and retains 100 rows. An original 300-line reference
+does not imply server-side 300-line persistence or implemented party/guild/
+whisper/shout channels. Unavailable channel controls stay inactive.
+
+The UI asset manifest includes decoded RGBA hashes. Import settings prevent
+lossy compression, mipmaps and alpha-border modification, and exported-PCK
+audits compare every UI texture's loaded pixels to those hashes. This checks
+texture preservation, not full original font/layout behavior. The source's
+Tahoma GDI sizes are documented; no font has been added or redistributed.
 
 ## Loading and identity lifecycle
 
@@ -291,9 +328,26 @@ Publishing additively to an existing test world preserved all four player rows
 exactly, including identity, position, health and gold; the before/after evidence
 is `.local/inventory-migration-before.txt` and `inventory-migration-after.txt`.
 Native MCP inspection confirms I opens inventory and right click equips the
-sword through the server. Browser mouse/keyboard inventory interactions and
-fresh exports still require verification; baseline screenshots do not establish
-those new paths.
+sword through the server. The first original-HUD release then passed 39 public
+Chrome/Linux checks in `.local/browser-proof/20260906-165921/report.json`, including
+inventory input, quickslots, refresh, combat and item pickup. Its published
+development build intentionally retains the user-authorized fixed test probe.
+The area-map/chat pass has 15 UI, 17 map and 22 chat native component checks.
+Its real Chrome/Linux loopback run passed 45 checks in
+`.local/browser-proof/20260906-174144/report.json`, with no browser engine errors.
+The run covers map/chat dragging and resizing, bottom-center chat, delivery to
+the other subscription, and WASD after send, Escape, world click and chat-history
+submission, plus rejection and reconnect/refresh/disconnect behavior. The runner
+waits for stopped subscribed state and visual interpolation before comparing
+reconnected positions. Fresh Web/Linux test PCKs verify all 160 UI/map images
+against exact RGBA hashes; their file inventories contain 582/1,385 entries.
+Public release `20260906T154235134255Z` then passed 45 core/panel/inventory
+checks in `.local/browser-proof/20260906-174806/report.json`, with no browser
+engine errors. Its served manifest equals the exported Web manifest. Public
+checks exercise chat open/cancel and panel controls; actual message delivery and
+post-send WASD remain the separately verified loopback paths. Native editor
+inspection of the connected public game also confirms bottom-center entry and
+Escape leaving chat unfocused and hidden.
 These checks do not establish full-game fidelity, a large
 player-count target or native Windows execution.
 See [distribution](distribution.md#verification-status) for current export

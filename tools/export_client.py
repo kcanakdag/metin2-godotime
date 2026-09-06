@@ -200,6 +200,10 @@ func _initialize() -> void:
                 push_error("Unexpected packaged connection setting: " + str(key))
                 quit(1)
                 return
+    var ui_images := audit_ui()
+    if ui_images < 0:
+        quit(1)
+        return
     var packed := load("res://assets/imported/warrior.glb") as PackedScene
     if not packed:
         push_error("Packaged warrior could not load")
@@ -241,8 +245,43 @@ func _initialize() -> void:
     license_file.store_line("Third-party licenses:")
     license_file.store_line(JSON.stringify(Engine.get_license_info(), "  "))
     license_file.close()
-    print("PACK_AUDIT " + JSON.stringify({"meshes": meshes, "textured_meshes": textured_meshes, "bones": bones, "animations": clips}))
+    print("PACK_AUDIT " + JSON.stringify({"meshes": meshes, "textured_meshes": textured_meshes, "bones": bones, "animations": clips, "ui_images": ui_images, "ui_pixels_verified": true}))
     quit(0 if meshes >= 3 and textured_meshes == meshes and bones >= 75 and clips.size() >= 4 else 1)
+
+func audit_ui() -> int:
+    var path := "res://assets/imported/ui/manifest.json"
+    if not FileAccess.file_exists(path):
+        push_error("Original UI manifest missing. Run make import-ui before exporting.")
+        return -1
+    var manifest = JSON.parse_string(FileAccess.get_file_as_string(path))
+    if not manifest is Dictionary or not manifest.get("assets") is Dictionary or not manifest.get("maps") is Dictionary:
+        push_error("Invalid original UI manifest")
+        return -1
+    var entries: Array = manifest.assets.values() + manifest.maps.values()
+    if entries.is_empty():
+        push_error("Original UI fixture is empty")
+        return -1
+    for entry in entries:
+        var resource := str(entry.get("resource", ""))
+        if not resource.begins_with("res://assets/imported/ui/") or not resource.ends_with(".png"):
+            push_error("Invalid original UI resource path")
+            return -1
+        var texture := load(resource) as Texture2D
+        if not texture:
+            push_error("Missing packaged UI image: " + resource)
+            return -1
+        var image := texture.get_image()
+        if not image or image.is_compressed() or image.has_mipmaps():
+            push_error("UI texture must remain lossless without mipmaps: " + resource)
+            return -1
+        image.convert(Image.FORMAT_RGBA8)
+        var hash := HashingContext.new()
+        hash.start(HashingContext.HASH_SHA256)
+        hash.update(image.get_data())
+        if hash.finish().hex_encode() != str(entry.get("rgba_sha256", "")):
+            push_error("Packaged UI pixels differ from the pinned conversion: " + resource)
+            return -1
+    return entries.size()
 """)
     stdout = run(
         [

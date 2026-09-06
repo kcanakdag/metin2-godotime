@@ -44,8 +44,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument("--native", action="store_true", help="Render under Xvfb and save a PNG.")
+    parser.add_argument("--suite", choices=["ui", "map", "chat"], default="ui")
     parser.add_argument("--output", type=Path, default=ROOT / ".local/classic-ui")
     options = parser.parse_args()
+    script = f"classic_{options.suite}_smoke.gd"
+    image_name = f"classic-{options.suite}.png"
     options.output = options.output.resolve()
     options.output.mkdir(parents=True, exist_ok=True)
     assets = ROOT / "client/assets/imported/ui"
@@ -59,7 +62,7 @@ def main() -> None:
             shutil.copytree(ROOT / "client" / relative, stage / relative)
         (stage / "scripts/world").mkdir(parents=True)
         (stage / "tests").mkdir()
-        for relative in ("scripts/world/classic_minimap.gd", "tests/classic_ui_smoke.gd"):
+        for relative in ("scripts/world/classic_minimap.gd", "tests/" + script):
             shutil.copy2(ROOT / "client" / relative, stage / relative)
         (stage / "project.godot").write_text(PROJECT)
         environment = {
@@ -91,23 +94,28 @@ def main() -> None:
             "--path",
             str(stage),
             "--script",
-            "res://tests/classic_ui_smoke.gd",
+            "res://tests/" + script,
         ]
         if options.native:
             command = ["xvfb-run", "-a", "-s", "-screen 0 1280x800x24", *command]
         else:
             command.insert(1, "--headless")
         output = run(command, environment, options.output / "runtime.log")
-        match = re.search(r"CLASSIC_UI_SMOKE PASS (\d+) checks", output)
+        match = re.search(rf"CLASSIC_{options.suite.upper()}_SMOKE PASS (\d+) checks", output)
         if not match:
             raise SystemExit("Godot UI smoke did not report completion.")
-        evidence = {"passed": True, "checks": int(match.group(1)), "native": options.native}
+        evidence = {
+            "passed": True,
+            "checks": int(match.group(1)),
+            "native": options.native,
+            "suite": options.suite,
+        }
         if options.native:
-            screenshot = stage / ".data/godot/app_userdata/MT2 UI Test/classic-ui.png"
+            screenshot = stage / ".data/godot/app_userdata/MT2 UI Test" / image_name
             if not screenshot.is_file():
                 raise SystemExit("Native UI smoke did not produce its screenshot.")
-            shutil.copy2(screenshot, options.output / "classic-ui.png")
-            evidence["screenshot"] = "classic-ui.png"
+            shutil.copy2(screenshot, options.output / image_name)
+            evidence["screenshot"] = image_name
         (options.output / "report.json").write_text(json.dumps(evidence, indent=2) + "\n")
         print(f"Verified {match.group(1)} Godot UI checks; evidence: {options.output}")
 

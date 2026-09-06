@@ -21,7 +21,8 @@ const Art = preload("res://scripts/ui/classic_art.gd")
 const Inventory = preload("res://scripts/ui/classic_inventory.gd")
 const Taskbar = preload("res://scripts/ui/classic_taskbar.gd")
 const ItemTooltip = preload("res://scripts/ui/classic_tooltip.gd")
-const Minimap = preload("res://scripts/world/classic_minimap.gd")
+const MapPanel = preload("res://scripts/ui/classic_map_panel.gd")
+const ChatPanel = preload("res://scripts/ui/classic_chat.gd")
 
 const INK := Color(0.055, 0.065, 0.077, 0.96)
 const BRONZE := Color(0.63, 0.47, 0.28)
@@ -61,8 +62,6 @@ var _header_action: Button
 var _world_name: Label
 var _online_count: Label
 var _chat_panel: Control
-var _chat_log: RichTextLabel
-var _chat_input: LineEdit
 var _hotbar: Control
 var _debug: PanelContainer
 var _debug_values: Dictionary = {}
@@ -76,8 +75,6 @@ var _carry: Dictionary = {}
 var _inventory_rows: Array = []
 var _profile_key := ""
 var _minimap: Control
-var _minimap_panel: Control
-var _chat_entry: Control
 var _system: Control
 var _connected := false
 var _state := "disconnected"
@@ -118,10 +115,11 @@ func set_connection_state(state: String, message: String) -> void:
 	_connected = state == "connected"
 	var busy := state in ["connecting", "subscribing", "joining"]
 	_connection.visible = not _connected
-	_chat_panel.visible = _connected
-	_minimap_panel.visible = _connected
+	_chat_panel.set_connected(_connected)
+	_minimap.visible = _connected
 	if not _connected:
 		_inventory.hide()
+		_minimap.close_top()
 		_system.hide()
 		_cancel_carry()
 	_hotbar.visible = _connected
@@ -139,8 +137,6 @@ func set_connection_state(state: String, message: String) -> void:
 	_reset_identity_button.visible = state == "error"
 	_header_action.text = "Leave world" if _connected else "Connection"
 	_header_action.disabled = busy
-	_chat_input.editable = _connected
-	_chat_input.placeholder_text = "Enter to chat…" if _connected else "Connect to chat"
 	for entry in [_server, _database, _player_name]:
 		entry.editable = not busy
 
@@ -173,19 +169,7 @@ func set_players(rows: Array, local_identity: String) -> void:
 
 
 func set_chat(rows: Array) -> void:
-	var lines: PackedStringArray = []
-	for row in rows.slice(maxi(0, rows.size() - 60)):
-		if row is Dictionary:
-			lines.append(
-				(
-					"%s: %s"
-					% [
-						row.get("sender_name", row.get("name", "Player")),
-						row.get("message", row.get("text", ""))
-					]
-				)
-			)
-	_chat_log.text = "\n".join(lines)
+	_chat_panel.set_chat(rows)
 
 
 func set_diagnostics(data: Dictionary) -> void:
@@ -217,13 +201,16 @@ func is_debug_visible() -> bool:
 
 func focus_chat() -> void:
 	if _connected:
-		_chat_entry.show()
-		_chat_input.grab_focus()
+		_chat_panel.focus_chat()
 
 
 func wants_keyboard() -> bool:
 	var focused := get_viewport().gui_get_focus_owner()
 	return focused is LineEdit or focused is TextEdit
+
+
+func release_chat_focus() -> void:
+	_chat_panel.close_input()
 
 
 func _make_theme() -> Theme:
@@ -345,49 +332,9 @@ func _field(parent: Node, title: String, placeholder: String) -> LineEdit:
 
 
 func _build_chat() -> void:
-	_chat_panel = Control.new()
-	_chat_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	_chat_panel.position = Vector2(0, -210)
-	_chat_panel.size = Vector2(600, 173)
-	_chat_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chat_panel = ChatPanel.new()
 	_root.add_child(_chat_panel)
-	_chat_log = RichTextLabel.new()
-	_chat_log.position = Vector2(10, 0)
-	_chat_log.size = Vector2(580, 140)
-	_chat_log.bbcode_enabled = false
-	_chat_log.scroll_active = false
-	_chat_log.scroll_following = true
-	_chat_log.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_chat_log.add_theme_font_size_override("normal_font_size", 12)
-	_chat_log.add_theme_color_override("default_color", Color.WHITE)
-	_chat_log.add_theme_color_override("font_shadow_color", Color.BLACK)
-	_chat_log.add_theme_constant_override("shadow_offset_x", 1)
-	_chat_log.add_theme_constant_override("shadow_offset_y", 1)
-	_chat_panel.add_child(_chat_log)
-	_chat_entry = Control.new()
-	_chat_entry.position = Vector2(0, 141)
-	_chat_entry.size = Vector2(600, 32)
-	_chat_panel.add_child(_chat_entry)
-	Art.image(_chat_entry, "pattern/chat_bar_left", Vector2.ZERO)
-	Art.tile(_chat_entry, "pattern/chat_bar_middle", Rect2(64, 0, 472, 32))
-	Art.image(_chat_entry, "pattern/chat_bar_right", Vector2(536, 0))
-	Art.label(_chat_entry, "Normal", Vector2(11, 7), Color.WHITE)
-	_chat_input = LineEdit.new()
-	_chat_input.position = Vector2(62, 5)
-	_chat_input.size = Vector2(482, 22)
-	_chat_input.max_length = 160
-	_chat_input.add_theme_font_size_override("font_size", 12)
-	for state in ["normal", "focus", "read_only"]:
-		_chat_input.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	_chat_input.text_submitted.connect(_on_chat)
-	_chat_entry.add_child(_chat_input)
-	Art.button(
-		_chat_entry,
-		"game/taskbar/send_chat_button_",
-		Vector2(549, 7),
-		func() -> void: _on_chat(_chat_input.text)
-	)
-	_chat_entry.hide()
+	_chat_panel.submitted.connect(func(message: String): chat_submitted.emit(message))
 
 
 func _build_hotbar() -> void:
@@ -531,7 +478,6 @@ func _build_notice() -> void:
 
 func _layout() -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
-	_chat_panel.position = Vector2(0, viewport_size.y - 210)
 	_debug.offset_bottom = maxf(300, viewport_size.y - 70)
 
 
@@ -558,15 +504,6 @@ func _on_connect() -> void:
 	)
 
 
-func _on_chat(message: String) -> void:
-	var trimmed := message.strip_edges()
-	if not trimmed.is_empty() and _connected:
-		chat_submitted.emit(trimmed)
-		_chat_input.clear()
-	_chat_input.release_focus()
-	_chat_entry.hide()
-
-
 func _on_debug_option(value: Variant, option: String) -> void:
 	debug_option_changed.emit(option, value)
 
@@ -589,20 +526,27 @@ func handle_key(event: InputEventKey) -> bool:
 		return false
 	if event.keycode == KEY_ESCAPE:
 		if wants_keyboard():
-			get_viewport().gui_get_focus_owner().release_focus()
-			_chat_entry.hide()
+			_chat_panel.close_input()
+			get_viewport().gui_release_focus()
 		elif not _carry.is_empty():
 			_cancel_carry()
 		elif _inventory.visible:
 			_inventory.hide()
 			_tooltip.hide()
+		elif _minimap.close_top():
+			pass
+		elif _chat_panel.close_top():
+			pass
 		elif _connected:
 			_system.visible = not _system.visible
 		return true
 	if wants_keyboard() or not _connected or event.ctrl_pressed or event.alt_pressed:
 		return false
-	if event.keycode == KEY_I:
-		_inventory.toggle()
+	var toggles := {
+		KEY_M: _minimap.toggle_atlas, KEY_L: _chat_panel.toggle_history, KEY_I: _inventory.toggle
+	}
+	if toggles.has(event.keycode):
+		toggles[event.keycode].call()
 		return true
 	var slot_keys := [KEY_1, KEY_2, KEY_3, KEY_4, KEY_F1, KEY_F2, KEY_F3, KEY_F4]
 	var index := slot_keys.find(event.keycode)
@@ -628,6 +572,8 @@ func inventory_snapshot() -> Dictionary:
 	result["tab_centers"] = [[origin.x + 49, origin.y + 233], [origin.x + 127, origin.y + 233]]
 	result["tooltip_visible"] = _tooltip.visible
 	result["dragging"] = not _carry.is_empty() or get_viewport().gui_is_dragging()
+	result["map"] = _minimap.snapshot()
+	result["chat"] = _chat_panel.snapshot()
 	return result
 
 
@@ -703,28 +649,8 @@ func _cancel_carry() -> void:
 
 
 func _build_minimap() -> void:
-	_minimap_panel = Control.new()
-	_minimap_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	_minimap_panel.offset_left = -136
-	_minimap_panel.size = Vector2(136, 137)
-	_minimap_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_root.add_child(_minimap_panel)
-	_minimap = Minimap.new()
-	_minimap.position = Vector2(4, 5)
-	_minimap_panel.add_child(_minimap)
-	Art.image(_minimap_panel, "minimap/minimap", Vector2.ZERO)
-	for entry in [
-		["minimap_scaleup", Vector2(101, 116), _minimap.zoom_in],
-		["minimap_scaledown", Vector2(115, 103), _minimap.zoom_out]
-	]:
-		var control := TextureButton.new()
-		control.position = entry[1]
-		control.texture_normal = Art.texture("minimap/" + entry[0] + "_default")
-		control.texture_hover = Art.texture("minimap/" + entry[0] + "_over")
-		control.texture_pressed = Art.texture("minimap/" + entry[0] + "_down")
-		control.focus_mode = Control.FOCUS_NONE
-		control.pressed.connect(entry[2])
-		_minimap_panel.add_child(control)
+	_minimap = MapPanel.new()
+	_root.add_child(_minimap)
 
 
 func _build_system() -> void:

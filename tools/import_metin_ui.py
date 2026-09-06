@@ -17,7 +17,10 @@ REFERENCES = (
     "bin/pack/locale_en/locale/en/ui/taskbar.py",
     "bin/pack/locale_en/locale/en/ui/inventorywindow.py",
     "bin/pack/locale_en/locale/en/ui/systemdialog.py",
+    "bin/pack/locale_en/locale/en/locale_game.txt",
+    "bin/pack/locale_en/locale/en/locale_interface.txt",
     "bin/pack/uiscript/uiscript/minimap.py",
+    "bin/pack/uiscript/uiscript/atlaswindow.py",
     "bin/pack/root/uitaskbar.py",
     "bin/pack/root/uiinventory.py",
     "bin/pack/root/uiminimap.py",
@@ -25,7 +28,14 @@ REFERENCES = (
     "bin/pack/root/uitooltip.py",
     "bin/pack/root/ui.py",
     "bin/pack/root/localeinfo.py",
+    "bin/pack/root/interfacemodule.py",
+    "bin/pack/root/game.py",
     "src/EterLib/GrpSubImage.cpp",
+    "src/EterLib/GrpText.cpp",
+    "src/EterLib/GrpFontTexture.cpp",
+    "src/UserInterface/PythonMiniMap.cpp",
+    "src/UserInterface/PythonChat.cpp",
+    "src/UserInterface/PythonChat.h",
 )
 
 
@@ -48,6 +58,8 @@ def selected_assets():
         "minimap/whitemark.sub",
         "minimap_image_filter.dds",
         "minimap_camera.dds",
+        "atlas/metin2_map_a1/atlas.sub",
+        "public/scrollbar_small_thin_middle_button_01.sub",
     }
     for stem in (
         "character_button",
@@ -77,6 +89,11 @@ def selected_assets():
         names.update(f"public/{stem}_{state:02}.sub" for state in range(1, 4))
     for size in ("small", "large"):
         names.update(f"game/windows/tab_button_{size}_{state:02}.sub" for state in range(1, 4))
+    for direction in ("up", "down"):
+        names.update(
+            f"public/scrollbar_small_thin_{direction}_button_{state:02}.sub"
+            for state in range(1, 4)
+        )
     for stem in ("minimap_scaleup", "minimap_scaledown", "minimap_close", "atlas_open"):
         names.update(f"minimap/{stem}_{state}.sub" for state in ("default", "over", "down"))
     for key in ("1", "2", "3", "4", "f1", "f2", "f3", "f4"):
@@ -96,6 +113,7 @@ def selected_assets():
         names.add(f"pattern/titlebar_{part}.tga")
     for part in ("left", "middle", "right"):
         names.add(f"pattern/chat_bar_{part}.tga")
+        names.add(f"pattern/chatlogwindow_titlebar_{part}.tga")
     return sorted(
         {UI_ROOT + name for name in names} | {"icon/item/00010.tga", "icon/item/27001.tga"}
     )
@@ -157,6 +175,13 @@ def save_png(image, output):
     with Image.open(output) as saved:
         if saved.mode != "RGBA" or saved.tobytes() != image.tobytes():
             raise ValueError(f"UI PNG pixel mismatch: {output}")
+    # UI pixels also appear on 3D pickup sprites. Never let 3D auto-detection turn
+    # the shared icon into a lossy block-compressed or mipmapped HUD texture.
+    output.with_suffix(".png.import").write_text(
+        '[remap]\nimporter="texture"\ntype="CompressedTexture2D"\n\n'
+        "[params]\ncompress/mode=0\nmipmaps/generate=false\n"
+        "detect_3d/compress_to=0\nprocess/fix_alpha_border=false\n"
+    )
     return hashlib.sha256(output.read_bytes()).hexdigest()
 
 
@@ -191,6 +216,7 @@ def stitch_yongan(archive):
         "tile_meters": 256,
         "sources": [{"grid": list(grid), "source": source} for grid, source in tiles.items()],
         "sha256": sha256,
+        "rgba_sha256": hashlib.sha256(canvas.tobytes()).hexdigest(),
     }
 
 
@@ -234,6 +260,7 @@ def convert(archive):
             "height": converted.height,
             "atlas_dimensions": original_size if entry["atlas"] else None,
             "sha256": sha256,
+            "rgba_sha256": hashlib.sha256(converted.tobytes()).hexdigest(),
         }
     manifest["maps"] = {"metin2_map_a1": stitch_yongan(archive)}
     manifest["sources"] = dict(sorted(archive.used.items()))

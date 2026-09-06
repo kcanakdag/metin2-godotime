@@ -7,6 +7,8 @@ const MAP_SIZE := Vector2(1024, 1280)
 const RADIUS := 63.0
 
 var _texture: Texture2D
+var _player_mark: Texture2D
+var _other_mark: Texture2D
 var _map_id := ""
 var _player: Dictionary = {}
 var _players: Array = []
@@ -18,6 +20,8 @@ func _ready() -> void:
 	custom_minimum_size = Vector2(128, 128)
 	size = custom_minimum_size
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_player_mark = load("res://assets/imported/ui/minimap/playermark.png")
+	_other_mark = load("res://assets/imported/ui/minimap/whitemark.png")
 	if ResourceLoader.exists(MAP_PATH):
 		_texture = load(MAP_PATH)
 
@@ -67,18 +71,11 @@ func _draw() -> void:
 			continue
 		var offset := (Vector2(float(row.x), float(row.z)) - position_on_map) / _meters_per_pixel
 		if offset.length() < RADIUS - 3:
-			draw_circle(center + offset, 2, Color("ffeb4c"))
-	var heading := float(_player.get("heading", 0))
-	var direction := Vector2(-sin(heading), -cos(heading))
-	var side := Vector2(-direction.y, direction.x)
-	draw_colored_polygon(
-		PackedVector2Array(
-			[
-				center + direction * 6,
-				center - direction * 4 + side * 3,
-				center - direction * 2,
-				center - direction * 4 - side * 3
-			]
-		),
-		Color("58ff61")
-	)
+			if _other_mark:
+				draw_texture(
+					_other_mark, center + offset - _other_mark.get_size() / 2, Color("ffeb4c")
+				)
+	if _player_mark:
+		draw_set_transform(center, -float(_player.get("heading", 0)))
+		draw_texture(_player_mark, -_player_mark.get_size() / 2)
+		draw_set_transform(Vector2.ZERO)

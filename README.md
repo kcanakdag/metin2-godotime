@@ -13,6 +13,10 @@ The current development build includes the explicitly authorized fixed test
 probe. The original HUD and inventory passed 39 public Chrome/Linux checks,
 including drag/drop, quickslots, browser refresh, combat and item pickup.
 Normal exports omit this probe as before.
+The map/chat update is live as release `20260906T154235134255Z`. Original
+area-map/chat-history windows and minimap controls pass 45 public Chrome/Linux
+checks. A separate 45-check loopback run verifies actual chat delivery and WASD
+after sending, Escape, world clicks and history submission.
 Browser multiplayer has passed real Web/Linux export tests on the training
 ground and Yongan. The public Yongan test verifies movement, terrain appearance,
 combat, loot, both respawns, reconnect and database-container replacement.
@@ -108,8 +112,12 @@ Both variants use the version-2 gameplay schema.
 | Item right click | Equip/unequip the sword or consume a potion |
 | 1–4 / F1–F4 | Activate one of the eight visible quickslots |
 | Shift+1–4 / quickslot arrows | Select a quickslot page |
-| Enter | Focus chat; Enter again sends |
-| Escape | Cancel carried item or close inventory; otherwise open/close the system menu |
+| M / minimap atlas button | Open/close the draggable original Yongan area map |
+| Minimap close/reopen and +/− buttons | Hide/show the minimap or change zoom |
+| L / chat-history button | Open the draggable, resizable chat log |
+| Enter | Open chat; send nonempty text and return to movement; empty Enter closes |
+| Up / Down while typing | Recall recently submitted chat text |
+| Escape | Cancel chat/carry or close a panel; otherwise open/close the system menu |
 | Ctrl+F3 | Toggle local diagnostics; F3 remains a quickslot key |
 
 Approach the Stone Sentinel near the town spawn, attack it, and collect its
@@ -124,10 +132,19 @@ and dead-player use is rejected. The 90 bag cells form two 5 × 9 pages, and
 potions stack to 200. Item ownership, placement, rewards and consumption belong
 to the server; quickslot assignments and window preferences are saved locally.
 
-`make import-ui` converts 148 selected original UI images and stitches Yongan's
-20 original DDS minimap tiles, using 185 pinned source files. The visible minimap
-uses that image and live player state. See [UI assets](docs/ui-assets.md) for
-pixel-preserving conversion, layout observations and fidelity limits.
+`make import-ui` converts 159 selected original UI images and stitches Yongan's
+20 original DDS minimap tiles, using 207 pinned source files. The minimap uses
+that stitched image; the area-map window uses its separate original 171 × 214
+image. Player markers come from subscribed state. Chat uses the original
+centered entry and fading passive lines, with normal messages still limited to
+160 characters by the server. Every exported UI texture is checked against its
+decoded source-pixel hash. See [UI assets](docs/ui-assets.md) for conversion,
+layout references and fidelity limits.
+
+Chat sits at the bottom center. Sending, closing with Escape, or clicking the
+world releases text focus and restores WASD/camera input. This passes native
+and loopback browser/Linux regression checks. The public build also passes
+panel, inventory and multiplayer checks without sending synthetic public chat.
 
 Click movement follows a straight line with collision/sliding; it does not
 route around walls. Visuals interpolate server positions without local
@@ -192,6 +209,11 @@ explicit test exports as described in
 [development](docs/development.md#browser-integration-checks).
 The original inventory UI check adds `BROWSER_FLAGS="--hardware --inventory"`
 to `make test-browser` with matching test exports.
+Add `--panels` for actual browser minimap, area-map and chat-window controls.
+`--chat-focus` adds sending and subsequent WASD checks on a loopback test world
+only; it rejects public hostnames to keep synthetic chat out of public sessions.
+Local isolated panel checks use `make test-ui UI_FLAGS="--suite map"` or
+`UI_FLAGS="--suite chat"`; add `--native` to capture their rendered result.
 
 After table/reducer changes, publish, run `make bindings`, and test before
 exporting. Generated bindings record the schema hash and SDK pin;
