@@ -39,6 +39,14 @@ yet. There are no quests, leveling or full Metin2 combat balance. Yongan has all
 20 terrain sections and 601 building/prop placements; **368 trees and 6 effects
 remain unsupported**. See [the rebuild roadmap](docs/full-rebuild-plan.md).
 
+The next milestone is the account-to-world flow: minimal username/password
+sign-in, original server/channel and character screens, persistent character
+ownership, and entering Yongan with a selected character. Use the real pinned
+intro artwork and screen layouts; defer a full account dashboard and recovery
+flow. This takes priority over additional combat content; the existing guest
+login is still the current implementation. See
+[the milestone scope](docs/full-rebuild-plan.md#immediate-next-milestone-account-to-world).
+
 ## Develop locally
 
 Verified tools: **Godot 4.7.2 standard**, **SpacetimeDB 2.8.3**, Rust with

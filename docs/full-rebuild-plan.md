@@ -209,15 +209,80 @@ from milestone 7: Yongan import/bake, one warrior, authoritative movement, one
 procedural enemy, damage/death/respawn and a gold reward. That subset does not
 complete any broad milestone merely because SDK tests pass. Public browser/Linux
 multiplayer, combat and normal-release checks pass for the preceding Yongan
-slice. The next inventory/equipment slice is now implemented in source and under
-verification: once-only sword/potions, bounded bag cells/stacks, server equipment
+slice. The inventory/equipment slice is implemented and verified: once-only
+sword/potions, bounded bag cells/stacks, server equipment
 bonus, healing, item drops and original UI controls. Its 56 live inventory checks
 and additive data-preservation check pass, as do 39 public browser/Linux checks
 for the original HUD and inventory. The added map/chat panels now pass native,
-loopback and public browser checks with exact-pixel export audits. Extend
-item/equipment breadth and progression as the next connected gameplay slice.
-Then extend item/equipment breadth and progression without implying that the
-entire original starter experience is complete.
+loopback and public browser checks with exact-pixel export audits. Account and
+character entry now takes priority over extending equipment and progression.
+
+## Immediate next milestone: account to world
+
+Build the beginning of the player experience before expanding combat content.
+This is planned work, not a description of the existing guest connection panel.
+Match the selected original client's screen layout and flow while connecting
+each screen to real server state.
+
+1. Separate authenticated accounts, persistent characters and active sessions.
+   The server owns character slots, names, ownership and character selection.
+   Account details and character inventories require server-enforced read
+   privacy; filtering a public table in the UI does not provide it.
+2. Keep auth small: basic account creation, username/password login, a remembered
+   session and logout. Defer account recovery, a full account dashboard and
+   social sign-in. Use an established authentication implementation; the initial
+   candidate is Better Auth with its username plugin and documented SpacetimeDB
+   integration. Pin and verify the integration against SpacetimeDB 2.8.3 and
+   both Godot clients before adopting it. Keep credentials out of gameplay
+   tables and logs; small scope still requires ownership and session validation.
+3. Rebuild the original server/channel selection and login screens using
+   selected pinned assets. Initially advertise the one actual development
+   server/channel and its real availability. Additional entries require real
+   destinations and an account ownership contract across them.
+4. Add character selection and creation, including a 3D preview, validated
+   names and persistent slots. Follow the reference empire-selection flow;
+   initially enable the warrior and the empire/map combination supported by
+   Yongan. Enable more classes and starting locations when their content works.
+5. Enter the world only after the server accepts the selected character.
+   Introduce a lobby state before world subscriptions and map streaming, then
+   support returning to selection, switching characters and logging out.
+   Gameplay reducers resolve the active character through its authorized
+   session; a supplied character ID is never sufficient proof of ownership.
+
+Use original intro backgrounds, frames, button states, empire imagery and
+character presentation. The pinned archive inventory includes English
+`loginwindow.py`, `selectempirewindow.py`, `selectcharacterwindow.py` and
+`createcharacterwindow.py`, their `intro*.py` behavior references, and intro
+image descriptors. Resolve each screen's actual dependencies through the
+existing selected-asset converter, preserve provenance, and verify native and
+exported pixels. This inventory check does not mean these screens or all their
+assets have already been imported. Keep unsupported class/map choices inactive.
+
+Authentication references checked for this plan:
+[Better Auth username sign-in](https://better-auth.com/docs/plugins/username)
+and [SpacetimeDB integration](https://spacetimedb.com/docs/core-concepts/authentication/BetterAuth/).
+The username plugin's standard registration also requires an email address;
+account creation can collect it while the familiar login remains username/password.
+These are implementation candidates, not newly installed dependencies or a
+verified authentication deployment.
+
+Migrate existing guest characters and their items without wiping development
+data. Preserve positions, health, gold, equipment, starter-grant markers and
+cooldowns. Linking an existing guest character to an account must prove control
+of that guest identity; matching its display name is insufficient. Record a
+repeatable migration and ensure retrying it cannot grant another starter set.
+
+Completion evidence: two independent accounts can create/select characters,
+enter the same world, see each other and move. Logging into the same account
+from a fresh browser profile or another client restores its character roster
+and selected character's items and position. Switching characters, logout,
+reconnect and duplicate sessions preserve valid ownership and presence. Tests
+must reject another account's character or inventory access, enforce name/slot
+rules, and verify existing guest data survives migration. Inspect the actual
+native and exported browser screens, including keyboard focus and loading.
+
+After this flow is complete, resume visible equipment, original enemies,
+combat feedback and leveling, followed by shops and starter quests.
 
 The full original map set, remaining classes and complete gameplay are not
 imported or verified. Docker hosting on port 8443 is a development deployment;
