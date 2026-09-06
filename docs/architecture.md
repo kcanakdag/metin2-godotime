@@ -13,7 +13,9 @@ flowchart LR
     Blender --> Bake[Trusted heights and collision]
     Bake --> Server[SpacetimeDB module]
     Visuals --> Client[Godot Web or desktop]
-    Client -->|Movement and action intents| Server
+    Client -->|Username/password and session| Auth[Better Auth service]
+    Auth -->|Short-lived signed JWT| Client
+    Client -->|Authenticated character intents| Server
     Server --> Tick[Authoritative 50 ms simulation]
     Tick --> Tables[Replicated player, monster and loot rows]
     Tables --> Client
@@ -57,7 +59,7 @@ with no multiplayer connection.
 
 Without the Cargo feature, the server uses the small flat training ground with
 five box obstacles. Make enables Yongan by default; raw Cargo has no default
-feature. Both builds expose the same version-2 schema.
+feature. Both builds expose the same protocol-3 schema.
 
 ## Networking and runtime boundaries
 
@@ -70,7 +72,7 @@ The socket subprotocol is `v3.bsatn.spacetimedb`. In the pinned server,
 coalesces messages using the
 [v2 binary schema](https://github.com/clockworklabs/SpacetimeDB/blob/v2.8.3/crates/client-api-messages/src/websocket/v2.rs).
 This transport version is separate from application
-`world_info.protocol_version = 2`, checked before joining.
+`world_info.protocol_version = 3`, checked before joining.
 
 Decoding runs on the main thread, with no compression and
 `confirmed_reads = false`. Cached tables require primary keys; Brotli is
@@ -79,12 +81,16 @@ The standard engine and pure GDScript path support Web without a .NET dependency
 
 | Location | Responsibility |
 | --- | --- |
-| `server/src/lib.rs` | Player/session tables, controlling connection, reducer validation, scheduled movement, chat |
+| `server/src/lib.rs` | Character-keyed player/session tables, reducer validation, scheduled movement, chat |
+| `server/src/accounts.rs` | Trusted JWT claims, account roster/selection, connection leases and inventory read filters |
+| `auth/` | Better Auth HTTP service, account sessions, signed JWTs, persistent SQLite and signing keys |
 | `server/src/movement.rs` | Direction, speed and training-ground sweep/sliding rules |
 | `server/src/content.rs` | Trusted terrain, map bounds, building/water blocking and elevated surfaces |
 | `server/src/combat.rs` | Monster simulation, attacks, health, death/respawn and loot |
 | `server/src/inventory.rs` | Item ownership, grid placement, equipment, consumables and item drops |
-| `client/scripts/net/game_connection.gd` | SDK lifecycle, tokens, version checks, subscriptions and dictionary signals |
+| `client/scripts/net/game_connection.gd` | Typed account/gameplay facade, SDK lifecycle, version checks and subscription dictionaries |
+| `client/scripts/net/account_auth.gd` | Same-origin auth HTTP requests and private remembered-session storage |
+| `client/scripts/net/account_flow.gd` | Entry screens, availability, selection, logout and JWT refresh/reconnect |
 | `client/scripts/main.gd` | Input, entity instances, loading, camera and HUD |
 | `client/scripts/actors/` | Interpolated warriors and procedural monster/loot visuals |
 | `client/scripts/world/world_stream.gd` | Content manifest, downloaded packs, nearby chunk instances |
@@ -96,50 +102,102 @@ Gameplay code consumes dictionaries and calls `GameConnection` methods. SDK
 resources, generated bindings and authentication tokens stay behind that
 boundary. `client/spacetime_bindings/` is generated, not manually maintained.
 
-## Application contract
+## Accounts and application contract
 
-Positions are meters with Y up, heading is radians about Y, and activity is
-`0 = idle`, `1 = moving`, `2 = attacking`, `3 = dead`.
+Better Auth **1.7.3** handles username/password registration and login, session
+validation, password hashing and rate limiting. Its separate Node **24.20.0**
+service uses SQLite and persistent signing material under `/data`. Registration
+collects an email address, but this milestone sends no verification/recovery
+email. Account recovery, social login and an account dashboard are deferred.
+See [the auth service contract](../auth/README.md).
 
-| Public table | State |
+RS256 game JWTs contain only issuer, audience, opaque account subject, issue time
+and expiry. The production issuer is `https://kcanakdag.com:8443/auth`, audience
+`mt2-game`, and lifetime five minutes. The host verifies signatures through the
+issuer's discovery/JWKS endpoints; the module separately requires the exact
+issuer, audience and unexpired credential when connecting and acting.
+`MT2_AUTH_ISSUER` overrides the trusted issuer at compile time for local tests.
+Remembered account sessions last up to 30 days. Logout revokes the auth session
+and disconnects the client; an already issued JWT remains valid until expiry.
+
+An SDK caller identity identifies the account. `player.identity`, item owners,
+loot owners and controllers identify a persistent character. New character IDs
+are domain-separated deterministic identities derived from account and slot;
+names confer no ownership. `GameConnection.account_identity` and
+`local_identity` expose these two different concepts to the client.
+
+| Table | State and visibility |
 | --- | --- |
-| `player` | Identity primary key; name; X/Y/Z and heading; activity/online; attack sequence; health/max health; gold; respawn deadline |
-| `monster` | Numeric ID; X/Y/Z and heading; health/max health; activity; attack sequence; respawn deadline |
-| `loot` | Auto-increment ID; X/Y/Z; gold; owner identity; reservation and expiry deadlines |
-| `inventory_item` | Auto-increment ID; owner identity; item vnum; count; bag cell; equipped flag |
-| `item_drop` | Auto-increment ID; X/Y/Z; vnum/count; owner identity; reservation and expiry deadlines |
-| `world_info` | ID, protocol version, map display name, map ID, content hash, tick interval and legacy half-size |
-| `obstacle` | Training-ground box IDs, centers, extents, height and visual kind |
-| `chat_message` | Auto-increment ID; sender, server-copied name, message and timestamp |
+| `account_character` | Character Identity primary key; account, slot, name, empire, `character_class`, sex; owner-only RLS |
+| `account_state` | Account Identity primary key; selected-character Identity (ZERO when unset), in-world flag; owner-only RLS |
+| `player` | Public character Identity primary key; name, X/Y/Z, heading, activity/online, attack sequence, health/max health, gold, respawn deadline; offline rows also readable |
+| `monster` | Numeric ID; position, heading, health, activity, attack sequence, respawn deadline |
+| `loot` | Numeric ID; position, gold, owner character, reservation and expiry |
+| `inventory_access` | Character-to-account mapping; public with a strict account-only read filter |
+| `inventory_item` | Numeric ID; owner character, server-assigned account, vnum, count, bag cell, equipped flag; account-owned rows only through RLS |
+| `item_drop` | Numeric ID; position, vnum/count, owner character, reservation and expiry |
+| `world_info` | Protocol, map identity/content hash, tick interval and legacy half-size |
+| `obstacle`, `chat_message` | Training obstacles and retained normal chat |
 
-The client subscribes to online players, monsters, gold/item drops, inventory,
-world information, training obstacles and retained chat. `inventory_item` is a
-public prototype table; the UI filters to the local owner, but this is not
-inventory-read privacy. Reducers still validate ownership before every mutation.
-There is no spatial subscription filtering.
-Yongan's actual bounds come from baked content, not the legacy `half_size`
-field. Display names confer no ownership or authorization.
+The pinned `unstable` RLS feature filters inventory directly with
+`inventory_item.account = :sender`. The server assigns this indexed account
+field from the character's `inventory_access` record when granting an item;
+clients cannot provide or change ownership. The access mapping has its own
+strict `account = :sender` filter. An account can read its characters' items,
+including inactive characters, but can act only as its selected active
+character. This is independent of client-side filtering. Roster and selection
+filters also select the authenticated caller's account. The direct filter
+avoids a join that the actual 2.8.3 subscription engine rejected even with the
+join columns indexed. Two real authenticated accounts pass 58 headless checks
+through the HTTP service, Godot SDK and SpacetimeDB, including raw subscribed
+roster, state, access-map and inventory privacy, four-slot creation, rejected
+foreign actions, switching and reconnect. The updated guest-enabled disposable
+world separately passes 60 inventory checks, including unreadable foreign
+items and preserved privacy through reconnects and death. See
+[verification evidence](distribution.md#verification-status).
+
+Read privacy is limited to account-to-character mappings, account state,
+inventory access mappings and inventory rows. The public `player` table has no
+server-enforced online-only filter: other authenticated accounts can read
+offline character names, positions, health and gold. The client's online-only
+query controls presentation, not access. RLS checks account identity alone.
+JWT expiry rejects gameplay reducers and removes active presence, but revoking
+already-established read subscriptions at expiry or logout has not been
+demonstrated. A stale same-account socket may retain reads unless the host
+closes it; this is a source-review concern, not a reproduced runtime result.
+
+The lobby subscribes to the private account roster and selection. World entry
+adds online players, monsters, drops, inventory, map information and chat;
+leaving unsubscribes that world state. No spatial interest filtering exists yet.
+Yongan bounds come from baked content rather than the legacy `half_size` field.
 
 | Reducer | Behavior |
 | --- | --- |
-| `enter_world(name)` | Validate a 2–16 character name; create/resume one character per identity; acquire its controlling connection |
-| `set_move_input(dx, dz)` | Validate finite components in [-1, 1]; store direction for scheduled movement |
-| `move_to(x, z)` | Validate a finite destination against trusted bounds and blockers |
-| `stop_moving()` | Clear held/destination movement |
-| `perform_attack()` | Enforce cooldown, stop movement, replicate animation and damage an eligible nearby enemy |
-| `pickup_loot(id)` | Validate a living controlling player, distance, clear path, expiry and reservation; grant gold and delete loot atomically |
-| `move_item(id, cell)` | Validate ownership, bag footprint, page bounds and empty destination cells |
-| `equip_item(id)` | Validate a single sword, move it to the weapon slot and return any previous weapon to a fitting bag location |
-| `unequip_item(id, cell)` | Validate the equipped item and a fitting unoccupied bag destination |
-| `use_item(id)` | Validate an owned potion, living/injured player and cooldown; heal and consume one atomically |
-| `pickup_item_drop(id)` | Validate distance, height, clear path, reservation, expiry and bag capacity; grant/stack the item and delete the drop atomically |
-| `send_chat(message)` | Validate 1–160 printable characters, rate-limit to one per second and retain the latest 100 |
+| `open_account()` | Validate credentials and acquire one controlling connection per account |
+| `create_character(slot, name)` | Enforce four slots (0–3), unique case-insensitive 2–16-character names; create male warrior in empire 1 and once-only starter items |
+| `select_character(character_id)` | Require ownership; atomically leave any active character and update selection |
+| `enter_selected_character()` | Acquire the selected character controller and enter the world |
+| `leave_world()` | Stop movement, remove online presence and return to selection |
+| `set_move_input(dx, dz)`, `move_to(x, z)`, `stop_moving()` | Validate finite/ranged movement intents and trusted collision |
+| `perform_attack()` | Enforce cooldown, stop movement and damage an eligible nearby enemy |
+| `pickup_loot(id)`, `pickup_item_drop(id)` | Validate owner/reservation, range, expiry and capacity; grant rewards atomically |
+| `move_item`, `equip_item`, `unequip_item`, `use_item` | Validate the active character's ownership, placement and consumable rules |
+| `send_chat(message)` | Validate 1–160 printable characters, one message per second, retain latest 100 |
 
-Private tables hold socket sessions, controlling connections/input, simulation
-time, scheduled ticks, monster attack clocks and inventory initialization/potion
-cooldowns. Simulation accepts only the
-scheduler's identity. Gameplay actions require the controlling socket, and
-movement/attacks/pickups reject dead characters.
+Private `session` and `account_control` tables bind authenticated accounts to
+sockets. Character-keyed controllers retain attack/chat deadlines across
+switching and reconnect. A second socket cannot control the same account or
+evict its current character on disconnect. Expired account leases stop active
+presence. Scheduled simulation accepts only the database scheduler's identity;
+movement, attacks and pickups reject dead characters.
+
+Public account builds reject guest credentials. `enter_world(name)` remains
+only for disposable legacy tests with compile-time `MT2_ALLOW_GUESTS=1`.
+The public account rollout targets a new `mt2-accounts-v3` database and retains
+the old `mt2-yongan-v2` guest database without exposing its gameplay routes.
+No guest claim or migration API is implemented. Local development keeps its
+tested database name; public exports and deployment select the new name
+explicitly. Deployment preserves existing data.
 
 ## Movement and combat
 
@@ -172,16 +230,16 @@ gold. Reconnecting does not bypass death or attack deadlines.
 
 ## Inventory and original UI
 
-The inventory slice is additive: the existing `Player`, `Monster`, `Loot` and
-world schema remain unchanged. Application protocol stays at version 2, while
-new clients require the added item tables/reducers and regenerated bindings.
-Publish that module before running the new client; an older database without
-the additional tables cannot satisfy its subscriptions.
+Inventory retains character-keyed `Player`, `Monster` and `Loot` state and adds
+a server-assigned account field to item rows under application protocol 3.
+Clients require the account tables, reducers and regenerated bindings. Publish
+the matching module before running the client; older schemas cannot satisfy
+its subscriptions. This milestone creates a separate public account database;
+guest inventories remain in the retained old database and are not migrated.
 
-`inventory_state` marks once-only initialization and stores the potion cooldown.
-On first entry each identity receives one sword (`vnum=10`) and five red potions
-(`vnum=27001`); entry/reconnect never grants another starter set. Existing guest
-characters receive their first set when they enter after publication.
+`inventory_state` marks once-only initialization and stores potion cooldowns.
+Each newly created character receives one sword (`vnum=10`) and five red potions
+(`vnum=27001`). Switching, entering and reconnecting never grants another set.
 
 The bag has 90 cells in two 45-cell pages, each five columns by nine rows.
 Items occupy one column: the sword is two cells tall and a potion one. A sword
@@ -201,8 +259,8 @@ equipment and cooldown state survive death/reconnect; there is no player-driven
 item deletion, trading or arbitrary item/currency grant endpoint.
 
 The UI uses selected original raster artwork converted by
-`tools/import_metin_ui.py`: 159 UI images and one Yongan map assembled from 20
-original minimap tiles, using 207 pinned source files. Source resolution and
+`tools/import_metin_ui.py`: 196 UI images and one Yongan map assembled from 20
+original minimap tiles, using 260 pinned source files. Source resolution and
 alpha are preserved. Layout
 references guide the 176 × 565 inventory, 37-pixel taskbar, eight visible
 quickslots and minimap. See [UI assets](ui-assets.md) for provenance and limits.
@@ -213,10 +271,11 @@ after acceptance. `I` opens inventory, right click equips/uses, `1–4` and
 bindings, selected pages and inventory-window position are local UI preferences
 scoped to the character profile; they confer no item ownership or permission.
 
-Original UI fidelity is a target. Login is still a prototype, unsupported
-character/skills/social controls are inactive, and neither font rendering nor
-complete behavior has been compared with a running original client. The
-inventory introduces a narrow weapon/consumable loop, not a complete original
+Original UI fidelity is a target. Entry screens use selected original art and
+a 3D warrior preview; additional classes/empires, skills and social controls
+remain inactive. The preview uses the existing wait animation rather than a
+complete original intro motion set. Font rendering and complete behavior have
+not been compared with a running original client. The inventory introduces a narrow weapon/consumable loop, not a complete original
 equipment or progression system.
 
 ## Original map and chat panels
@@ -257,8 +316,9 @@ Tahoma GDI sizes are documented; no font has been added or redistributed.
 
 ## Loading and identity lifecycle
 
-Connection advances through `connecting`, `subscribing`, optional `loading`,
-`joining`, then `connected`. Content is prepared after world metadata arrives
+Account connection advances through `connecting`, lobby subscription, `opening`
+and `lobby`. Selected entry advances through world `subscribing`, optional
+`loading`, `joining` and `connected`; `leaving` returns to the lobby. Content is prepared after world metadata arrives
 and before the normal join reducer. Failures clear stale snapshots; reconnect
 constructs a fresh SDK instance/cache. If map identity/content changes while
 loading, joining or connected, the client disconnects with a refresh/restart
@@ -286,17 +346,24 @@ and browser reconnect are verified. The corrected public browser build also
 passed rendered terrain and keyboard combat checks. See
 [distribution](distribution.md#verification-status).
 
-Browser identity tokens use the SDK's WebSocket query-token path because the
-browser cannot set arbitrary handshake headers. HTTPS/WSS and disabled URL
-logging keep tokens out of proxy request logs. Desktop uses authorization
-headers. Tokens live under `user://identities/`, scoped by endpoint, database
-and local profile; they are absent from reports and packages. Browser storage
-depends on the browser retaining the origin's site data.
+Browser game JWTs use the SDK's WebSocket query-token path because browsers
+cannot set arbitrary handshake headers. HTTPS/WSS and disabled URL logging keep
+them out of proxy access logs; native clients use authorization headers.
+Remembered bearer sessions live under `user://accounts/`, scoped by auth origin
+and local profile, with owner-only permissions where supported. Game JWTs are
+kept in memory. Submitting login/registration immediately clears password fields. Logout
+clears the remembered session and any remaining form password.
+Snapshots, logs and exports must exclude passwords, bearer sessions and JWTs.
+Clearing browser site data loses the remembered login, not the server account
+or its character data; signing in again recovers the roster.
 
-A duplicate socket cannot displace an active controller. Its rejected join and
-disconnect leave the original player online. Disconnecting the controller
-stops movement and removes online presence while preserving character state.
-These are guest identities, not an account/character-selection system.
+The coordinator requests a new JWT after four minutes, closes the current SDK
+connection, and reopens the same account. If it was in the world it re-enters
+the selected character after authenticated lobby state arrives. This refresh
+path includes a brief reconnect rather than continuous socket renewal. The
+server/channel board polls `/auth/health` and the selected database's exact
+`/v1/database/<name>/identity` route every 15 seconds; availability comes from
+responses rather than a hardcoded Online label.
 
 ## Protocol changes and evidence
 
@@ -307,7 +374,7 @@ or deliberate migration for incompatible changes. The generator fetches
 `--offline` uses the saved schema. Increase the application version when the
 contract becomes incompatible.
 
-The completed Yongan baseline has 16 Rust tests, 22 live SDK multiplayer checks
+Historical protocol-2 evidence follows. The Yongan baseline had 16 Rust tests, 22 live SDK multiplayer checks
 and 19 combat checks in `.local/yongan-network-final.json` and
 `.local/yongan-combat-final.json`. Real exported Web/Linux tests cover both the
 training ground and Yongan. Yongan's 26-check real-GPU browser run covers mutual
@@ -330,8 +397,8 @@ is `.local/inventory-migration-before.txt` and `inventory-migration-after.txt`.
 Native MCP inspection confirms I opens inventory and right click equips the
 sword through the server. The first original-HUD release then passed 39 public
 Chrome/Linux checks in `.local/browser-proof/20260906-165921/report.json`, including
-inventory input, quickslots, refresh, combat and item pickup. Its published
-development build intentionally retains the user-authorized fixed test probe.
+inventory input, quickslots, refresh, combat and item pickup. That published
+development build intentionally retained the user-authorized fixed test probe.
 The area-map/chat pass has 15 UI, 17 map and 22 chat native component checks.
 Its real Chrome/Linux loopback run passed 45 checks in
 `.local/browser-proof/20260906-174144/report.json`, with no browser engine errors.
@@ -339,7 +406,7 @@ The run covers map/chat dragging and resizing, bottom-center chat, delivery to
 the other subscription, and WASD after send, Escape, world click and chat-history
 submission, plus rejection and reconnect/refresh/disconnect behavior. The runner
 waits for stopped subscribed state and visual interpolation before comparing
-reconnected positions. Fresh Web/Linux test PCKs verify all 160 UI/map images
+reconnected positions. Those Web/Linux test PCKs verified all 160 UI/map images
 against exact RGBA hashes; their file inventories contain 582/1,385 entries.
 Public release `20260906T154235134255Z` then passed 45 core/panel/inventory
 checks in `.local/browser-proof/20260906-174806/report.json`, with no browser
@@ -352,3 +419,12 @@ These checks do not establish full-game fidelity, a large
 player-count target or native Windows execution.
 See [distribution](distribution.md#verification-status) for current export
 evidence and remaining limits.
+
+The account implementation passes 22 Yongan Rust tests, 16 training tests,
+Clippy and 58 real HTTP → Godot → SpacetimeDB account checks. The native intro
+and main-UI suites pass 27 and 19 checks respectively. Both test exports verify
+all 197 UI/map images against decoded source pixels. Native editor entry and
+return to selection have been observed. Public account release
+`20260906T173802450337Z` passes deployment and HTTPS checks. Local and public
+Chrome/Linux runs each pass 103 checks, including real four-minute token
+renewal with unchanged identities/positions and no browser engine errors.

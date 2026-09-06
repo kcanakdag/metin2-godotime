@@ -73,8 +73,17 @@ func _validate_inventory(first: GameConnection, second: GameConnection) -> bool:
 			_potion_id = int(row.id)
 	if not _check("starter_types", _sword_id > 0 and _potion_id > 0):
 		return false
-	_check("starter_sword_unequipped", not bool(_item(second, _sword_id).equipped))
-	_check("starter_potion_count", int(_item(second, _potion_id).count) == 5)
+	_check("starter_sword_unequipped", not bool(_item(first, _sword_id).equipped))
+	_check("starter_potion_count", int(_item(first, _potion_id).count) == 5)
+	_check(
+		"other_owner_inventory_is_private",
+		(
+			_items(second, _owner).is_empty()
+			and _items(first, second.local_identity).is_empty()
+			and _item(second, _sword_id).is_empty()
+			and _item(second, _potion_id).is_empty()
+		)
+	)
 	await _rejected(
 		"other_owner_move_rejected", func(): second.move_item(_sword_id, 20), "another player"
 	)
@@ -98,16 +107,16 @@ func _validate_inventory(first: GameConnection, second: GameConnection) -> bool:
 	first.move_item(_sword_id, 45)
 	_check(
 		"move_between_pages_replicates",
-		await _wait_until(func(): return int(_item(second, _sword_id).cell) == 45)
+		await _wait_until(func(): return int(_item(first, _sword_id).cell) == 45)
 	)
 	first.move_item(_potion_id, 0)
-	await _wait_until(func(): return int(_item(second, _potion_id).cell) == 0)
+	await _wait_until(func(): return int(_item(first, _potion_id).cell) == 0)
 	first.equip_item(_sword_id)
 	_check(
 		"equipped_weapon_replicates",
-		await _wait_until(func(): return bool(_item(second, _sword_id).equipped))
+		await _wait_until(func(): return bool(_item(first, _sword_id).equipped))
 	)
-	_check("equipped_weapon_frees_grid", int(_item(second, _sword_id).cell) == 255)
+	_check("equipped_weapon_frees_grid", int(_item(first, _sword_id).cell) == 255)
 	await _rejected("equipped_move_rejected", func(): first.move_item(_sword_id, 60), "Unequip")
 	await _rejected(
 		"occupied_unequip_rejected", func(): first.unequip_item(_sword_id, 0), "occupied"
@@ -115,24 +124,24 @@ func _validate_inventory(first: GameConnection, second: GameConnection) -> bool:
 	first.unequip_item(_sword_id, 60)
 	_check(
 		"unequip_replicates",
-		await _wait_until(func(): return not bool(_item(second, _sword_id).equipped))
+		await _wait_until(func(): return not bool(_item(first, _sword_id).equipped))
 	)
-	_check("unequip_uses_selected_cell", int(_item(second, _sword_id).cell) == 60)
+	_check("unequip_uses_selected_cell", int(_item(first, _sword_id).cell) == 60)
 	first.equip_item(_sword_id)
-	await _wait_until(func(): return bool(_item(second, _sword_id).equipped))
+	await _wait_until(func(): return bool(_item(first, _sword_id).equipped))
 	await _rejected("full_health_potion_rejected", func(): first.use_item(_potion_id), "full")
 	first._call_reducer("enter_world", ["InventoryA"], [&"String"])
 	await _wait_until(func(): return first._pending_calls.is_empty())
-	_check("repeated_enter_no_starter_duplication", _items(second, _owner).size() == 2)
+	_check("repeated_enter_no_starter_duplication", _items(first, _owner).size() == 2)
 	return await _reconnect_inventory(first, second, "inventory_reconnect")
 
 
 func _starter_ready(first: GameConnection, second: GameConnection) -> bool:
-	return _items(second, _owner).size() == 2 and _items(first, second.local_identity).size() == 2
+	return _items(first, _owner).size() == 2 and _items(second, second.local_identity).size() == 2
 
 
 func _reconnect_inventory(first: GameConnection, second: GameConnection, label: String) -> bool:
-	var before := _items(second, _owner).duplicate(true)
+	var before := _items(first, _owner).duplicate(true)
 	first.disconnect_game()
 	_check(
 		label + "_presence_removed",
@@ -148,6 +157,7 @@ func _reconnect_inventory(first: GameConnection, second: GameConnection, label: 
 		label + "_items_preserved",
 		await _wait_until(func(): return _items(first, _owner) == before)
 	)
+	_check(label + "_other_inventory_remains_private", _items(second, _owner).is_empty())
 	return true
 
 
@@ -166,11 +176,13 @@ func _fight_with_equipment(first: GameConnection, second: GameConnection) -> boo
 	first.use_item(_potion_id)
 	_check(
 		"potion_consumes_one",
-		await _wait_until(func(): return int(_item(second, _potion_id).count) == 4)
+		await _wait_until(func(): return int(_item(first, _potion_id).count) == 4)
 	)
 	_check(
 		"potion_heals_server_amount",
-		int(_player(second, _owner).health) == mini(100, health_before + 40)
+		await _wait_until(
+			func(): return int(_player(second, _owner).health) == mini(100, health_before + 40)
+		)
 	)
 	await _rejected("potion_cooldown_rejected", func(): first.use_item(_potion_id), "cooling")
 	if not await _reconnect_inventory(first, second, "potion_reconnect"):
@@ -232,9 +244,9 @@ func _collect_item(first: GameConnection, second: GameConnection) -> bool:
 	)
 	_check(
 		"item_pickup_stacks_without_new_instance",
-		await _wait_until(func(): return int(_item(second, _potion_id).count) == 5)
+		await _wait_until(func(): return int(_item(first, _potion_id).count) == 5)
 	)
-	_check("item_pickup_keeps_instance_count", _items(second, _owner).size() == 2)
+	_check("item_pickup_keeps_instance_count", _items(first, _owner).size() == 2)
 	await _rejected(
 		"duplicate_item_pickup_rejected", func(): first.pickup_item_drop(id), "collected"
 	)
@@ -242,7 +254,7 @@ func _collect_item(first: GameConnection, second: GameConnection) -> bool:
 
 
 func _inventory_survives_death(first: GameConnection, second: GameConnection) -> void:
-	var before := _items(second, _owner).duplicate(true)
+	var before := _items(first, _owner).duplicate(true)
 	_check(
 		"sentinel_respawns",
 		await _wait_until(func(): return int(second.monsters[0].health) == 100, 15)
@@ -252,7 +264,7 @@ func _inventory_survives_death(first: GameConnection, second: GameConnection) ->
 		await _wait_until(func(): return int(_player(second, _owner).get("health", 100)) == 0, 15)
 	):
 		return
-	_check("death_preserves_inventory", _items(second, _owner) == before)
+	_check("death_preserves_inventory", _items(first, _owner) == before)
 	await _rejected("dead_player_cannot_use_potion", func(): first.use_item(_potion_id), "defeated")
 	await _rejected("dead_player_cannot_equip", func(): first.equip_item(_sword_id), "defeated")
 	await _reconnect_inventory(first, second, "death_inventory_reconnect")
@@ -260,4 +272,4 @@ func _inventory_survives_death(first: GameConnection, second: GameConnection) ->
 		"player_respawns_with_inventory",
 		await _wait_until(func(): return int(_player(second, _owner).get("health", 0)) == 100, 10)
 	)
-	_check("respawn_preserves_inventory", _items(second, _owner) == before)
+	_check("respawn_preserves_inventory", _items(first, _owner) == before)

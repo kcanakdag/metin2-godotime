@@ -139,10 +139,14 @@ or effect fixture, and should not be described as an original Metin2 mob import.
 `tools/import_metin_ui.py` fetches an explicit selection from the same pinned
 client archive: taskbar gauges/button states, quickslot legends, inventory and
 equipment art, common windows/tooltips, chat/minimap controls, sword icon `00010`
-and red-potion icon `27001`. It converts 159 UI images and stitches 20 original
-Yongan DDS minimap tiles into one 1024 × 1280 image, using 207 source files.
+and red-potion icon `27001`. It converts 196 UI images and stitches 20 original
+Yongan DDS minimap tiles into one 1024 × 1280 image, using 260 source files.
 The expanded fixture includes the separate original 171 × 214 Yongan atlas,
-chat-history title/scrollbar parts and working minimap controls.
+chat-history title/scrollbar parts, working minimap controls and selected
+English account/character-entry backgrounds, panels, empire map/flags, warrior
+title and button states. `tools/import_metin_intro.py` explicitly lists that
+entry subset and its eight original layout/behavior references; it does not
+recursively import the archive or expand the warrior model fixture.
 
 `client/assets/imported/ui/manifest.json` records Git blob/SHA-256 hashes for
 sources, atlas/crop information, PNG and decoded RGBA hashes, pixel dimensions
@@ -152,7 +156,7 @@ Godot imports without mipmaps, automatic 3D compression or alpha-border changes;
 the actual PCK audit checks every loaded UI texture's RGBA bytes against its
 manifest hash. `GrpSubImage.cpp` was
 consulted for `.sub` descriptor semantics, and selected taskbar, inventory,
-minimap, chat, tooltip and system-layout sources informed presentation. No
+minimap, chat, tooltip, system and account/character-layout sources informed presentation. No
 downloaded Python/C++ is executed or copied as runtime implementation.
 
 Pillow is pinned and installed by development setup; it is not shipped in the

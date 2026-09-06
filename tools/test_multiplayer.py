@@ -34,8 +34,12 @@ def main() -> None:
     (ROOT / ".local").mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="multiplayer-", dir=ROOT / ".local") as scratch:
         stage = Path(scratch)
-        for directory in ("addons/SpacetimeDB", "spacetime_bindings", "scripts/net", "tests"):
+        for directory in ("addons/SpacetimeDB", "spacetime_bindings", "tests"):
             shutil.copytree(ROOT / "client" / directory, stage / directory)
+        (stage / "scripts/net").mkdir(parents=True)
+        shutil.copy2(
+            ROOT / "client/scripts/net/game_connection.gd", stage / "scripts/net/game_connection.gd"
+        )
         (stage / "project.godot").write_text(
             'config_version=5\n[application]\nconfig/name="MT2 Multiplayer Tests"\n'
             '[rendering]\nrenderer/rendering_method="gl_compatibility"\n'

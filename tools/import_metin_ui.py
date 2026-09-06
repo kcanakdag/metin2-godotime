@@ -7,6 +7,7 @@ import shlex
 from pathlib import Path, PurePosixPath
 
 from fetch_test_assets import METIN_COMMIT, ROOT
+from import_metin_intro import INTRO_REFERENCES, selected_intro_assets
 from metin_archive import Archive, virtual_path, write_json
 from PIL import Image
 from PIL import __version__ as pillow_version
@@ -36,7 +37,7 @@ REFERENCES = (
     "src/UserInterface/PythonMiniMap.cpp",
     "src/UserInterface/PythonChat.cpp",
     "src/UserInterface/PythonChat.h",
-)
+) + INTRO_REFERENCES
 
 
 def selected_assets():
@@ -115,7 +116,9 @@ def selected_assets():
         names.add(f"pattern/chat_bar_{part}.tga")
         names.add(f"pattern/chatlogwindow_titlebar_{part}.tga")
     return sorted(
-        {UI_ROOT + name for name in names} | {"icon/item/00010.tga", "icon/item/27001.tga"}
+        {UI_ROOT + name for name in names}
+        | {"icon/item/00010.tga", "icon/item/27001.tga"}
+        | set(selected_intro_assets())
     )
 
 
@@ -151,7 +154,7 @@ def output_path(name):
     normalized = virtual_path(name)
     if normalized.startswith(UI_ROOT):
         normalized = normalized[len(UI_ROOT) :]
-    elif not normalized.startswith("icon/item/"):
+    elif not normalized.startswith(("icon/item/", "locale/en/ui/")):
         raise ValueError(f"Asset outside selected UI/icon namespace: {name}")
     return Path(normalized).with_suffix(".png")
 

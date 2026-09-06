@@ -1,7 +1,9 @@
+# gdlint: disable=max-public-methods
 class_name GameConnection
 extends Node
 ## Application boundary for SpacetimeDB. Gameplay only receives plain dictionaries.
 ## Never log identity tokens or package user:// files in a client distribution.
+# One typed action facade covers account, movement, combat and inventory intents.
 
 signal connection_state_changed(state: String, message: String)
 signal players_changed(rows: Array)
@@ -14,9 +16,14 @@ signal loot_changed(rows: Array)
 signal inventory_changed(rows: Array)
 signal item_drops_changed(rows: Array)
 signal content_load_requested(info: Dictionary)
+signal roster_changed(rows: Array)
+signal account_changed(info: Dictionary)
+signal lobby_ready
+signal lobby_action_completed(action: String)
+signal account_reconnect_requested
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
-const EXPECTED_PROTOCOL_VERSION := 2
+const EXPECTED_PROTOCOL_VERSION := 3
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
 const TABLES := [
@@ -27,8 +34,11 @@ const TABLES := [
 	"monster",
 	"loot",
 	"inventory_item",
-	"item_drop"
+	"item_drop",
+	"account_character",
+	"account_state",
 ]
+const LOBBY_QUERIES := ["SELECT * FROM account_character", "SELECT * FROM account_state"]
 const QUERIES := [
 	"SELECT * FROM player WHERE online = true",
 	"SELECT * FROM obstacle",
@@ -41,6 +51,9 @@ const QUERIES := [
 ]
 
 var local_identity := ""
+var account_identity := ""
+var characters: Array = []
+var account_state: Dictionary = {}
 var state := "disconnected"
 var state_message := "Disconnected."
 var endpoint := ""
@@ -70,10 +83,29 @@ var _token_path := ""
 var _connection_deadline := 0
 var _pending_calls: Dictionary = {}
 var _dirty_tables: Dictionary = {}
+var _account_mode := false
+var _auth_token := ""
+var _world_subscription: SpacetimeDBSubscription
 
 
 func connect_game(
 	server_url: String, database_name: String, player_name: String, profile := "default"
+) -> void:
+	_account_mode = false
+	_auth_token = ""
+	_connect(server_url, database_name, player_name, profile)
+
+
+func connect_account(
+	server_url: String, database_name: String, token: String, profile := "default"
+) -> void:
+	_account_mode = true
+	_auth_token = token
+	_connect(server_url, database_name, "", profile)
+
+
+func _connect(
+	server_url: String, database_name: String, player_name: String, profile: String
 ) -> void:
 	_retire_client()
 	_clear_snapshots()
@@ -123,7 +155,9 @@ func connect_game(
 	options.debug_mode = false
 	options.confirmed_reads = false
 	options.compression = SpacetimeDBConnection.CompressionPreference.NONE
-	if FileAccess.file_exists(_token_path):
+	if _account_mode:
+		options.token = _auth_token
+	elif FileAccess.file_exists(_token_path):
 		options.token = FileAccess.get_file_as_string(_token_path).strip_edges()
 	_connection_deadline = Time.get_ticks_msec() + CONNECTION_TIMEOUT_MS
 	_set_state("connecting", "Connecting to %s / %s…" % [endpoint, database])
@@ -137,7 +171,44 @@ func disconnect_game() -> void:
 
 
 func reconnect_game() -> void:
-	connect_game(endpoint, database, _player_name, _profile)
+	if _account_mode:
+		account_reconnect_requested.emit()
+	else:
+		connect_game(endpoint, database, _player_name, _profile)
+
+
+func create_character(slot: int, character_name: String) -> void:
+	if slot < 0 or slot >= 4:
+		reducer_failed.emit("Choose one of the four character slots.")
+		return
+	_call_lobby("create_character", [slot, character_name], [&"U8", &"String"])
+
+
+func select_character(character_id: String) -> void:
+	if character_id.length() != 64 or not character_id.is_valid_hex_number(false):
+		return
+	_call_lobby("select_character", [character_id.hex_decode()], [&"__identity__"])
+
+
+func enter_selected() -> void:
+	if state != "lobby" or local_identity.is_empty():
+		return
+	_connection_deadline = Time.get_ticks_msec() + CONNECTION_TIMEOUT_MS
+	_set_state("subscribing", "Loading your character's world…")
+	_subscribe_world(_session)
+
+
+func leave_world() -> void:
+	if not _account_mode:
+		disconnect_game()
+		return
+	if state == "connected":
+		_set_state("leaving", "Returning to character selection…")
+		_call_lobby("leave_world")
+
+
+func uses_account() -> bool:
+	return _account_mode
 
 
 func reset_identity() -> void:
@@ -226,14 +297,37 @@ func _process(_delta: float) -> void:
 func _on_connected(identity: PackedByteArray, token: String, session: int) -> void:
 	if session != _session:
 		return
-	local_identity = identity.hex_encode()
+	account_identity = identity.hex_encode()
+	if _account_mode:
+		_set_state("subscribing", "Loading your characters…")
+		var lobby := _client.subscribe(PackedStringArray(LOBBY_QUERIES))
+		if lobby.error != OK:
+			_fail("Could not load character selection.")
+			return
+		lobby.applied.connect(_on_lobby_applied.bind(session))
+		return
+	local_identity = account_identity
 	_save_token(token)
 	_set_state("subscribing", "Loading the shared development map…")
-	var subscription := _client.subscribe(PackedStringArray(QUERIES))
-	if subscription.error != OK:
-		_fail("Unable to subscribe to the map: %s" % error_string(subscription.error))
+	_subscribe_world(session)
+
+
+func _on_lobby_applied(session: int) -> void:
+	if session != _session:
 		return
-	subscription.applied.connect(_on_subscription_applied.bind(session))
+	_dirty_tables["account_character"] = true
+	_dirty_tables["account_state"] = true
+	_flush_snapshots()
+	_set_state("opening", "Opening your account…")
+	_call_lobby("open_account")
+
+
+func _subscribe_world(session: int) -> void:
+	_world_subscription = _client.subscribe(PackedStringArray(QUERIES))
+	if _world_subscription.error != OK:
+		_fail("Unable to subscribe to the world.")
+		return
+	_world_subscription.applied.connect(_on_subscription_applied.bind(session))
 
 
 func _on_subscription_applied(session: int) -> void:
@@ -262,13 +356,21 @@ func enter_loaded_world() -> void:
 	if state not in ["subscribing", "loading"]:
 		return
 	_set_state("joining", "Entering %s…" % world_info.get("map_name", "the map"))
-	_call_reducer("enter_world", [_player_name], [&"String"], true)
+	if _account_mode:
+		_call_reducer("enter_selected_character", [], [], true)
+	else:
+		_call_reducer("enter_world", [_player_name], [&"String"], true)
+
+
+func _call_lobby(reducer_name: String, args: Array = [], types: Array = []) -> void:
+	if state in ["lobby", "opening", "leaving"]:
+		_call_reducer(reducer_name, args, types, false, true)
 
 
 func _call_reducer(
-	reducer_name: String, args: Array = [], types: Array = [], joining := false
+	reducer_name: String, args: Array = [], types: Array = [], joining := false, lobby := false
 ) -> void:
-	if not is_instance_valid(_client) or (state != "connected" and not joining):
+	if not is_instance_valid(_client) or (state != "connected" and not joining and not lobby):
 		return
 	var call := _client.call_reducer(reducer_name, args, types)
 	if call.error != OK:
@@ -279,7 +381,7 @@ func _call_reducer(
 			reducer_failed.emit(message)
 		return
 	_pending_calls[call.request_id] = {
-		"name": reducer_name, "started": Time.get_ticks_msec(), "joining": joining
+		"name": reducer_name, "started": Time.get_ticks_msec(), "joining": joining, "lobby": lobby
 	}
 	call.response.connect(_on_reducer_response.bind(_session))
 
@@ -296,6 +398,9 @@ func _on_reducer_response(response: ReducerResultMessage, session: int) -> void:
 		if pending["joining"]:
 			_fail(message)
 		else:
+			if pending.get("lobby", false):
+				_connection_deadline = 0
+				_set_state("lobby", message)
 			reducer_failed.emit(message)
 		return
 	if outcome.value == ReducerOutcomeEnum.Options.internalError:
@@ -305,6 +410,32 @@ func _on_reducer_response(response: ReducerResultMessage, session: int) -> void:
 		_connection_deadline = 0
 		connected_at_msec = Time.get_ticks_msec()
 		_set_state("connected", "Connected to %s." % world_info.get("map_name", database))
+	elif pending.get("lobby", false):
+		_on_lobby_result(str(pending.name), session)
+
+
+func _on_lobby_result(action: String, session: int) -> void:
+	if action == "open_account":
+		_connection_deadline = 0
+		_set_state("lobby", "Choose your character.")
+		lobby_ready.emit()
+	elif action == "leave_world":
+		if is_instance_valid(_world_subscription) and _world_subscription.active:
+			_world_subscription.end.connect(_on_world_left.bind(session), CONNECT_ONE_SHOT)
+			if _world_subscription.unsubscribe() != OK:
+				_fail("Could not leave the world. Please reconnect.")
+		else:
+			_on_world_left(session)
+	lobby_action_completed.emit(action)
+
+
+func _on_world_left(session: int) -> void:
+	if session != _session:
+		return
+	_clear_world_snapshots()
+	_connection_deadline = 0
+	_set_state("lobby", "Choose your character.")
+	lobby_ready.emit()
 
 
 func _on_row_changed(table_name: String, _row: Resource, session: int) -> void:
@@ -339,6 +470,18 @@ func _flush_snapshots() -> void:
 				values[field] = value.hex_encode() if value is PackedByteArray else value
 			rows.append(values)
 		match table_name:
+			"account_character":
+				rows.sort_custom(
+					func(a: Dictionary, b: Dictionary): return int(a.slot) < int(b.slot)
+				)
+				characters = rows
+				roster_changed.emit(characters)
+			"account_state":
+				account_state = rows[0] if not rows.is_empty() else {}
+				if _account_mode:
+					var selected := str(account_state.get("selected_character", ""))
+					local_identity = "" if selected == "0".repeat(64) else selected
+				account_changed.emit(account_state)
 			"inventory_item":
 				inventory = rows
 				inventory_changed.emit(own_inventory())
@@ -389,12 +532,7 @@ func _on_disconnected(session: int) -> void:
 
 func _on_connection_error(_code: int, _reason: String, session: int) -> void:
 	if session == _session:
-		_fail(
-			(
-				"Connection failed. Check the address, database, and server version. "
-				+ "If the server was reset, use Reset identity and reconnect."
-			)
-		)
+		_fail("Could not connect to the game server. Please log in again or try shortly.")
 
 
 func _on_protocol_error(_message: String, session: int) -> void:
@@ -429,10 +567,16 @@ func _retire_client() -> void:
 		if scene_tree:
 			scene_tree.auto_accept_quit = previous_quit_policy
 	_client = null
+	_world_subscription = null
 
 
 func _clear_snapshots() -> void:
 	local_identity = ""
+	account_identity = ""
+	characters = []
+	account_state = {}
+	roster_changed.emit(characters)
+	account_changed.emit(account_state)
 	connected_at_msec = 0
 	last_snapshot_msec = 0
 	rx_messages = 0
@@ -440,6 +584,10 @@ func _clear_snapshots() -> void:
 	rx_bytes = 0
 	tx_bytes = 0
 	last_reducer_rtt_ms = 0
+	_clear_world_snapshots()
+
+
+func _clear_world_snapshots() -> void:
 	players = []
 	obstacles = []
 	chat = []

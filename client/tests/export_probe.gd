@@ -69,6 +69,26 @@ func _dispatch(command: Dictionary) -> void:
 	var world := get_parent()
 	var connection: GameConnection = world.connection
 	match str(command.get("action", "")):
+		"login":
+			world._account_flow._login(
+				str(command.get("username", "")), str(command.get("password", ""))
+			)
+		"register":
+			world._account_flow._register(
+				str(command.get("username", "")),
+				str(command.get("email", "")),
+				str(command.get("password", ""))
+			)
+		"create":
+			connection.create_character(int(command.get("slot", 0)), str(command.get("name", "")))
+		"select":
+			connection.select_character(str(command.get("character_id", "")))
+		"enter":
+			connection.enter_selected()
+		"leave":
+			world._account_flow.change_character()
+		"logout":
+			world._account_flow.logout()
 		"connect":
 			world._connect_game(
 				world._settings.server_url,

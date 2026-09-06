@@ -4,7 +4,8 @@
 fixture from client archive commit
 `bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7`. It imports taskbar gauges and button
 states, eight quickslot legends, inventory/equipment art, common window and
-tooltip frames, chat bar/history pieces, minimap/area-map controls, sword icon `00010` and potion
+tooltip frames, chat bar/history pieces, minimap/area-map controls, selected
+account/character entry art, sword icon `00010` and potion
 icon `27001`. The original sword icon occupies 32 × 64 pixels; the potion is
 32 × 32. This is an asset pipeline, separate from gameplay item definitions.
 
@@ -40,6 +41,7 @@ drive prefix. Below `res://assets/imported/ui/`, remove the initial
 | `d:/ymir work/ui/equipment_bg_without_ring.tga` | `equipment_bg_without_ring.png` |
 | `icon/item/00010.tga` | `icon/item/00010.png` |
 | `icon/item/27001.tga` | `icon/item/27001.png` |
+| `locale/en/ui/login/loginwindow.sub` | `locale/en/ui/login/loginwindow.png` |
 
 `manifest.json` has `version = 1`, `commit`, `repository`, `converter`,
 `pillow_version`, `references`, `sources`, `assets`, and `maps` fields.
@@ -154,11 +156,101 @@ the small minimap instead starts at scale 2, doubles/halves zoom, and clamps
 to `[0.5, 4]`. Its source cell scale is two meters, so the default minimap
 scale corresponds to one rendered pixel per meter.
 
-The current conversion produces 159 UI images and one stitched map using 207
+The current conversion produces 196 UI images and one stitched map using 260
 pinned source files. Synthetic tests cover atlas version rules, invalid crops,
 alpha preservation and map tile orientation. Actual conversion verified PNG
 pixel round trips; Godot rendering and interaction require separate client
 inspection and are not established by conversion alone.
+
+## Account and character entry fixture
+
+`tools/import_metin_intro.py` lists the selected entry artwork and eight source
+references. The converter reads the pinned English `loginwindow.py`,
+`selectempirewindow.py`, `selectcharacterwindow.py`, `createcharacterwindow.py`
+and corresponding `root/intro*.py` files as references only. Their implementation
+is neither copied nor executed. Selected dependencies include the original
+1024 × 768 login/server/selection backgrounds, 208 × 97 login panel, warrior
+title, empire map/flags, selection arrows, and attribute slots/gauges.
+
+The server board is 375 × 400 at horizontal center and `height - 472`.
+The login image is centered at `height - 410`, with 120 × 18 username/password
+fields at `(77, 16)` and `(77, 43)` inside it. The connection strip is 35 pixels
+above it. The selection board is 208 × 323 at `(width * 65/800, height * 220/600)`;
+the creation board is 208 × 329 at `(width * 65/800, height * 215/600)`.
+Background scaling and these mixed native-pixel/proportional anchors follow
+the selected source layouts. The original four character slots use arrows or
+keys 1–4; Start remains disabled until the chosen character is confirmed by
+the server. Empty slots expose Create.
+
+`classic_intro.gd` emits login, registration, selection, creation, entry and
+logout intents. Roster refreshes preserve an active creation/selection panel;
+the account coordinator chooses the next screen after confirmed actions.
+Error responses preserve username/email and character-name input. Password
+fields are masked and cleared immediately after submission; logout also clears
+any unsubmitted password. Read-only snapshots expose control rectangles without
+username, email or password field values. The supported fixture enables one
+server/channel, Shinsoo/Yongan, male warrior and the first shape. Other choices
+remain disabled. Attribute values are blank unless supplied by actual state.
+
+The native preview loads the existing original warrior GLB into an isolated,
+transparent Godot viewport. It reuses the converted `wait` animation; the
+original dedicated intro motion set, exact original lighting, selection
+transitions and full job/gender/shape choices are not implemented. Registration
+is an in-client adaptation using original board/button art: the reference
+client delegated account creation to a website. Font limitations above also
+apply. These differences prevent a claim of complete entry-screen parity.
+
+```sh
+make test-ui UI_FLAGS="--suite intro --native --output .local/classic-intro"
+```
+
+The isolated native intro suite passes 27 checks for real GUI click handling,
+original input geometry, focus, masked fields, explicit submit signals, error
+retention, submitted-password clearing, busy-state rejection, server-confirmed roster/selection, unavailable
+choices, original model loading and credential-free snapshots. Native images
+for server, login, registration, empire, creation and selection are saved as
+`classic-intro-<stage>.png`; their original artwork and warrior rendering were
+visually inspected. This fixture uses synthetic responses and establishes no
+authentication or database behavior; exported account-to-world verification is
+separate.
+
+`tools/test_browser_accounts.py` runs that separate check against matching Web
+and Linux `--test-probe` exports. It uses actual browser canvas clicks/typing
+for original entry controls and system-menu actions, and a fixed native command
+list for normal server intents. It creates two independent test accounts and
+checks subscribed/rendered movement, character ownership rejection, creation
+errors, switching, reconnect, session restore, logout and subsequent login.
+Optional `--panels` and `--inventory` reuse the ordinary HUD interaction checks.
+`--session-refresh` additionally waits for both real four-minute session timers,
+checking renewed connection timestamps and the same rendered identities/positions;
+it neither changes token expiry nor adds a privileged refresh action.
+Use the normal development Python environment with browser dependencies installed;
+both exports must name the supplied `--database` and share the supplied `--url`.
+Each run uses fresh userdata. Native command files have owner-only permissions
+from creation and are removed with the fresh userdata afterward; credentials
+are excluded from printed results and read-only snapshots. A generated
+`report.json` distinguishes completed checks from a failed or unfinished run.
+
+The complete loopback Web/Linux account run passes **103 checks** with
+`--inventory --panels --session-refresh`; evidence is
+`.local/browser-accounts/20260906-193823/report.json`. Real browser typing verifies
+focus and the complete character name before creation, including retry after a
+duplicate-name rejection. Actual clicks exercise both original system-menu
+actions, character switching and entry. Both real four-minute session timers
+renewed their connections and restored identical character identities/positions.
+Login, creation, two-character selection and both world screenshots were
+inspected; neither client reported an engine error. The native client runs under
+Xvfb, so this is functional/rendering evidence rather than a native GPU performance
+comparison. Private command files and fresh userdata were removed after completion.
+
+The same complete **103-check** run also passes against the public
+`https://kcanakdag.com:8443` release with database `mt2-accounts-v3`, including both
+real renewal timers. Public evidence is
+`.local/browser-accounts/20260906-194508/report.json`; login and both rendered
+world screenshots were inspected. Browser/native TLS validation remained enabled,
+both clients retained the same identities/positions after renewal, and neither
+reported an engine error. These runs use fresh synthetic test accounts and do
+not establish Windows execution or exact original font/intro-animation parity.
 
 ## Godot HUD and interaction verification
 
@@ -217,13 +309,17 @@ intents, confirmation-only counts, quickslot binding, chat keyboard ownership
 and per-identity setting restoration. `--native` requires `xvfb-run` and also
 renders a standalone screenshot. Logs, a JSON result and the optional PNG are
 written to the chosen `--output` directory (default `.local/classic-ui/`). Separate
-outputs preserve each suite's evidence. `--suite` accepts `ui`, `map` or `chat`;
+outputs preserve each suite's evidence. `--suite` accepts `ui`, `map`, `chat` or `intro`;
 omit `--native` for a headless check. These presentation checks complement the
 multiplayer and exported-browser checks; they do not establish a server action.
+The intro suite additionally stages the existing warrior GLB for its preview.
 
-The latest local native UI, map and chat runs pass 15, 17 and 22 checks,
-with screenshots in `.local/classic-panels-ui/`, `.local/classic-map/` and
+The latest local native UI, map and chat runs pass 19, 17 and 22 checks,
+with screenshots in `.local/classic-system/`, `.local/classic-map/` and
 `.local/classic-chat-final/`.
+The UI suite additionally verifies that Escape opens the system menu inside
+the viewport, that it remains centered when resizing from 1280 × 800 to
+1024 × 768, and that actual clicks emit Change Character and Logout intents.
 Native MCP also observed M opening the exact-size atlas in the connected game.
 The new loopback exported Chrome/Linux run passed 45 panel, chat-focus and
 multiplayer checks in `.local/browser-proof/20260906-174144/report.json`.

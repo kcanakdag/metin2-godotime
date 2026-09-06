@@ -2,8 +2,9 @@
 
 Run commands from the repository root. The game uses standard Godot with
 GDScript and a Rust SpacetimeDB module. Python runs development and asset tools;
-Node runs the local Godot MCP server. None of these Python/Node development
-dependencies belong in a player's client build.
+Node runs the authentication service and local development proxy/MCP tools.
+The auth service is deployed separately; no Python/Node runtime belongs inside
+a player's Godot client build.
 
 ## Install the quality tools
 
@@ -16,6 +17,7 @@ python3 tools/dev.py setup
 rustup component add rustfmt clippy
 rustup target add wasm32-unknown-unknown
 make mcp-build
+make auth-setup
 ```
 
 `setup` installs Python packages locally; the two `rustup` commands add
@@ -66,7 +68,7 @@ explicit and may still leave findings that require a code change.
 | Owned Python under `tools/` and `tests/` | Ruff correctness/import/bug checks and formatter | `pyproject.toml` |
 | Owned `.gd` files under `client/` and `tools/`, recursively | gdformat and gdlint | `gdlintrc`, 100 columns |
 | Rust server | rustfmt; clippy for all targets and features, warnings as errors | `server/Cargo.toml`, `server/Cargo.lock` |
-| Godot MCP TypeScript server | Strict TypeScript type check with no output | Its existing `tsconfig.json` and `package-lock.json` |
+| Godot MCP and auth TypeScript | Strict type checks with no output | Each service's `tsconfig.json` and `package-lock.json` |
 
 The checker excludes all Godot `addons/` directories, generated data, dependency
 directories, and downloaded source trees. This includes the vendored Godot MCP
@@ -80,6 +82,11 @@ The Python importer has one explicit `E402` exception because it must put the
 pinned Carbon modules on Blender's import path before importing them. Do not
 expand this exception to other tools. Ruff's standard undefined-name and unused
 import checks still run. Explain narrow exclusions and keep failures visible.
+
+`game_connection.gd` has a file-scoped `max-public-methods` exception: it is the
+single typed facade for account, movement, combat and inventory intents. This
+keeps callers outside SDK implementation details. Other GDScript checks still
+run; do not extend this exception to unrelated files.
 
 `make check` complements static checks with the project's test/build/import
 commands. Inspect its output; passing formatting does not prove networking,
@@ -97,51 +104,116 @@ a sandbox denying socket creation cannot execute those integration checks.
 The launcher tests cover ownership validation and cleanup without creating a
 public tunnel. For actual remote sessions, follow [Internet playtesting](playtesting.md).
 
-## Iterating on the shared map
+## Local accounts and shared world
 
-Start the local database and publish using the README commands. Give disposable
-tests a separate database name and data directory; do not reset someone else's
-development state. Run two clients with distinct identity profiles and connect
-both to the same endpoint/database.
+Use Node 24.10 or newer in the Node 24 line. `make auth-setup` installs pinned
+Better Auth dependencies; `make test-auth` runs actual HTTP tests against
+isolated temporary SQLite databases. All four HTTP suites pass; a separate
+Docker check verified persisted account/signing state. Production images pin
+Node 24.20.0.
 
-The Make defaults are `SERVER_FEATURES=yongan`, `DB=mt2-yongan-v2` and
-`SERVER_URL=http://127.0.0.1:3210`. Publish to a disposable database before live
-network/gameplay checks:
+Start each long-running process in its own terminal:
 
 ```sh
-make server-publish DB=mt2-yongan-test
-make test-multiplayer DB=mt2-yongan-test
-make test-combat DB=mt2-yongan-test
-make test-inventory DB=mt2-yongan-test
+make server-start
+# Another terminal:
+AUTH_ISSUER=http://127.0.0.1:8184/auth make auth-start
 ```
 
-The tests create real guest characters and act on the selected world. The combat
-test exercises monster/player damage, attack rejection, death/respawn, reward
-reservation, duplicate pickup rejection and retained gold. Use separate data
-directories when starting disposable SpacetimeDB processes, and do not reuse a
-port occupied by the development server. An empty `SERVER_FEATURES=` selects
-training for Make's server build/test/publish commands; raw Cargo defaults to
-training too.
+Compile/publish with the same trusted issuer, then start the local proxy:
 
-The inventory suite uses `client/tests/inventory_smoke.gd` and writes
-`.local/inventory-report.json`. It is intended to exercise starter initialization,
-ownership rejection, page/footprint collision, equipment effects, potion limits,
-reserved/distant/duplicate item pickups and persistence through death/reconnect.
-Run it against the freshly published additive inventory schema, not an older
-baseline database. Inspect its actual report before describing any path as tested.
+```sh
+MT2_AUTH_ISSUER=http://127.0.0.1:8184/auth make server-publish
+make bindings
+node tools/serve_local.mjs
+```
 
-For gameplay or networking changes, verify that both clients show both players,
-that each player's movement reaches the server and the other client, and that
-presence disappears after disconnect. Verify reconnect when changing lifecycle
-code. Reducer validation belongs on the server even when the UI already limits
-input. Tests should exercise rejected input and identity/presence boundaries,
-not merely compare a helper's output to an identical implementation.
+The browser/native client origin is `http://127.0.0.1:8184`; the proxy forwards
+auth to 3219 and game routes to SpacetimeDB on 3210. Administrative publication
+and schema/binding requests continue to use 3210. `AUTH_ISSUER` configures the
+HTTP service; `MT2_AUTH_ISSUER` is compiled into the Rust module. They must match
+exactly, including `/auth`. The production default is
+`https://kcanakdag.com:8443/auth`; do not publish a local-issuer module publicly.
+
+The local proxy's actual HTTP check passed for auth health, database identity
+and the Web index, while rejecting administrative schema access and traversal.
+The isolated-port report is `.local/accounts/local-entry-report.json`.
+
+```sh
+make client SERVER_URL=http://127.0.0.1:8184 PROFILE=alice
+# Another terminal, with a different account:
+make client SERVER_URL=http://127.0.0.1:8184 PROFILE=bob
+```
+
+Profiles separate remembered client sessions; account ownership lives on the
+server. One account has four character slots, but only one controlling socket.
+Use the original server/login/empire/create/select screens to enter Yongan.
+The server board checks both auth and database availability every 15 seconds.
+`make editor`/F5 uses the client default, but saved profile settings may override
+it. Browser exports use their page origin rather than a stale saved endpoint.
+
+The Make server defaults remain `SERVER_FEATURES=yongan`, `DB=mt2-yongan-v2`
+and administrative `SERVER_URL=http://127.0.0.1:3210`. Game state lives in
+`.local/spacetimedb`; authentication state/keys live in `.local/auth`.
+Keep disposable processes/databases separate from development state. Public
+account exports and deployment explicitly target `DB=mt2-accounts-v3`, retaining
+the old public guest database. This does not change the tested local default.
+
+## Account and gameplay checks
+
+Publish to a disposable game database using the local auth issuer. Stop the
+existing local proxy and restart it in its own terminal for the test database:
+
+```sh
+MT2_DEV_DATABASE=mt2-yongan-test MT2_WEB_DIR=dist/web-test node tools/serve_local.mjs
+```
+
+The proxy exposes only its configured game database. Then run:
+
+```sh
+MT2_AUTH_ISSUER=http://127.0.0.1:8184/auth make server-publish DB=mt2-yongan-test
+make bindings DB=mt2-yongan-test
+make test-auth
+make test-accounts SERVER_URL=http://127.0.0.1:8184 DB=mt2-yongan-test
+```
+
+`tools/test_accounts.py` creates two real accounts through HTTP, stages a
+separate Godot project, writes its two JWTs into a temporary mode-0600 fixture,
+and runs `client/tests/account_smoke.gd`. Tokens/passwords are redacted from
+logs; fixture sessions are logged out afterward. The accounts and character
+rows remain for inspection. Reports default to `.local/accounts-report.json`.
+The suite checks raw SDK roster/state/inventory caches for private reads,
+four slots, name/ownership rejection, selection, mutual subscribed movement,
+duplicate sessions, leaving/switching and reconnect persistence. The full
+HTTP → Godot → SpacetimeDB run passed 58 checks on 2026-09-06; its report is
+`.local/accounts/integration-report.json`. This establishes real subscribed
+account behavior in headless native clients. Rendered browser input and the
+real four-minute refresh timer have separate checks below.
+
+Legacy `make test-multiplayer`, `test-combat`, `test-inventory` and
+`tools/test_browser.py` target the earlier guest flow. They require an isolated
+module compiled with `MT2_ALLOW_GUESTS=1`; production builds reject guests.
+The adapted legacy suites passed on the disposable `mt2-account-legacy`
+database on 2026-09-06: 22 multiplayer, 19 combat and 60 inventory checks.
+Reports are `.local/accounts/legacy-multiplayer.json`, `legacy-combat.json` and
+`legacy-inventory.json`. Inventory now reads items from their owner's cache and
+asserts the other client cannot read them, including after reconnects and death.
+Foreign item intents still verify server rejection. These runs use the current
+direct account RLS filter and generated schema, but do not exercise account
+registration or authenticated character selection.
+Do not enable guest access in the public deployment to make old checks pass.
+Training uses `SERVER_FEATURES=` and a separate training database; both maps
+use application protocol 3.
+
+For gameplay changes, verify two independently authenticated accounts see each
+other, each movement reaches the other subscription, and disconnect removes
+presence. Include rejected reducers and reconnect when changing lifecycle.
+The server validates actions even when the UI limits inputs. A database query
+or plausible snapshot alone does not prove subscribed or rendered behavior.
 
 The development scene exposes `dev_snapshot()` for runtime inspection. Use it
-alongside scene-tree and screenshot checks; a plausible snapshot does not prove
-the character is visible or the input controls work. Debug controls should call
-normal server reducers. Adding privileged controls requires an explicit
-server-side permission model.
+with scene trees, screenshots and actual input. Debug controls send normal
+validated reducers; privileged actions require explicit server authorization.
 
 ## Working with the editor
 
@@ -184,8 +256,8 @@ the result in Godot. Downloaded assets and converted output are ignored so they
 can be regenerated; they are not hand-maintained game source.
 
 Use `make import-ui` after `make dev-setup` for the selected original HUD,
-inventory, item icons and stitched Yongan minimap. This converts 159 UI images
-and 20 original DDS map tiles from 207 pinned source files with Pillow; Blender
+inventory, item icons and stitched Yongan minimap. This converts 196 UI images
+and 20 original DDS map tiles from 260 pinned source files with Pillow; Blender
 is unnecessary for these raster assets. For a cached rebuild and format tests:
 
 ```sh
@@ -215,8 +287,11 @@ PNG. The runner stages UI sources/art plus the selected smoke script in an
 isolated Godot project, without network SDK, editor bridge or saved identity.
 These checks verify input, layout and emitted intents; only the live multiplayer
 checks establish server acceptance and subscriptions. Current local evidence
-includes 15 UI, 17 map and 22 chat checks with native screenshots. Reports are
-in `.local/classic-panels-ui/`, `.local/classic-map/` and `.local/classic-chat-final/`.
+includes 17 map and 22 chat checks with native screenshots in
+`.local/classic-map/` and `.local/classic-chat-final/`. The latest UI run passes
+19 checks, including system-menu centering, viewport resizing and button
+clicks, in `.local/classic-system/`. The separate original entry suite passes
+27 native checks in `.local/classic-intro/`.
 
 `make import-ui` also records each image's decoded RGBA SHA-256 and pins lossless
 texture import without mipmaps, automatic 3D compression or alpha-border fixes.
@@ -236,6 +311,43 @@ The original assets, GPL reference server code, and MIT import/editor tooling
 have separate terms. Record source and license when adapting external resources.
 
 ## Browser integration checks
+
+The account milestone uses `tools/test_browser_accounts.py` with matching
+instrumented Web/Linux exports and the auth-aware origin. Run the local proxy
+with `MT2_DEV_DATABASE=mt2-yongan-test MT2_WEB_DIR=dist/web-test` as above, so its
+allowed database and static directory match the exports:
+
+```sh
+make browser-setup
+make export-web SERVER_URL=http://127.0.0.1:8184 DB=mt2-yongan-test TEST_PROBE=--test-probe
+make export-linux SERVER_URL=http://127.0.0.1:8184 DB=mt2-yongan-test TEST_PROBE=--test-probe
+.local/venv-dev/bin/python tools/test_browser_accounts.py \
+  --url http://127.0.0.1:8184 --database mt2-yongan-test \
+  --hardware --inventory --panels
+```
+
+The runner uses visible browser controls for registration/login and character
+entry, plus an independent exported Linux account. It covers ownership,
+creation/selection, leave/switch, movement, reconnect/refresh, logout and wrong
+password handling; optional flags add original HUD/panel interactions. It
+writes private reports/screenshots under `.local/browser-accounts/<timestamp>/`.
+Add `--session-refresh` to wait for both clients' real four-minute refresh
+timers and verify that they reconnect into the same world state; this is a
+longer test, not an accelerated timer simulation. Both final runs pass 103
+checks, including real timer renewal with unchanged identities and positions:
+`.local/browser-accounts/20260906-193823/report.json` on loopback and
+`.local/browser-accounts/20260906-194508/report.json` on the public account
+database. Both use independent Chrome/Linux accounts and record no browser
+engine errors. Entry, inventory/panels, system-menu interactions, movement,
+switching, reconnect, page reload, logout and wrong-password retry are covered.
+The 19-check native UI suite separately verifies menu centering/resizing/clicks.
+Public release `20260906T173802450337Z` also passes HTTPS/served-manifest checks.
+
+### Historical guest browser evidence
+
+The commands/results below describe the preceding guest build. Reusing its
+runner requires a dedicated guest-enabled test module and compatible exports.
+
 
 Install matching Godot 4.7.2 Web/Linux export templates and an actual Chrome
 browser. The optional runner also needs `xvfb-run` for the rendered Linux client
@@ -282,7 +394,7 @@ Add `--panels` to test original minimap close/reopen/zoom, atlas opening/draggin
 closing, chat focus and chat-history dragging/resizing with actual browser
 mouse/key input. Scrolling is covered by the native chat suite. This requires
 exports containing the new panel code.
-The new panel export passed both loopback and public checks. The latest public
+The preceding panel export passed both loopback and public checks. Its final public
 run in `.local/browser-proof/20260906-174806/report.json` passes 45 core/panel/
 inventory checks with independent Chrome/Linux clients and no browser engine
 errors. It checks final drag positions and the chat log's final 530 × 210 size,
@@ -317,7 +429,7 @@ position, the runner waits for both subscribed movement to stop and the rendered
 avatar to settle. Cold world readiness was 8.82 seconds and one final sample
 was 21 FPS; these are observations from that run, not a benchmark.
 
-The current public development release `20260906T154235134255Z` retains the
+The preceding public guest release `20260906T154235134255Z` retained the
 fixed test probe with the user's explicit authorization. Its Web/Linux PCK
 audits checked 582/1,385 files and all 160 exact RGBA UI/map images, with no MCP
 bridge, runtime script evaluator, identity tokens or source archives. The served
@@ -356,21 +468,43 @@ all `client/tests/` sources and MCP bridges.
 
 ## Deploying an update
 
-Build the selected server, export a normal Web client, then run `make deploy`.
-This deploys only `/opt/metin2-godotime` and Compose project `metin2-godotime` on
-the configured VPS. The default game port is 8443, separate from existing
-services; the SpacetimeDB administrative port remains loopback-only. The script
-verifies the full export inventory, uploads a separate candidate, validates the
-proxy before downtime and locks its own deployment. It checks port ownership,
-takes a cold database/runtime backup, preserves issuer keys and refuses data
-deletion. It can interrupt game sessions; distribution documents phase status
-and failure recovery.
+Build the production-issuer server, export a normal Web client with
+`DB=mt2-accounts-v3` and run `make deploy DB=mt2-accounts-v3`. This changes only
+`/opt/metin2-godotime` and Compose project
+`metin2-godotime`. HTTPS/WSS uses 8443; database administration stays on remote
+loopback 13210. Auth has a private container and separate persistent `accounts`
+volume. The public issuer is `https://kcanakdag.com:8443/auth`.
 
-After deployment, verify HTTPS and a real browser/client session against that
-endpoint. Health checks and successful Docker startup do not establish gameplay
-replication. Restore a normal Web export after instrumented tests unless the
-user has explicitly authorized keeping the development test build. Deployment
-details, prerequisites, backups and evidence are in [distribution](distribution.md).
+The script verifies export bytes, stages only selected auth build inputs,
+validates Compose/Nginx before downtime and locks its own deployment. It takes
+cold game/auth data and runtime backups, checks issuer-key/auth-secret hashes,
+and normally publishes with `--delete-data=never`.
 
-Implementation guidance for agents lives in the root [AGENTS.md](../AGENTS.md).
-Update these instructions when a tested workflow changes.
+Local Godot is also required for deployment: an isolated headless process reads
+the actual Web PCK's connection defaults and rejects a database mismatch before
+SSH. Use `GODOT=/path/to/godot` or the deploy tool's `--godot` option if needed.
+
+The account rollout creates a new public database while preserving the old
+guest database. With matching instrumented exports targeting `mt2-accounts-v3`:
+
+```sh
+make deploy DB=mt2-accounts-v3 WEB_DIR=dist/web-test DEPLOY_FLAGS='--allow-test-build'
+```
+
+This invocation does not reset a database or remove a volume. The old
+`mt2-yongan-v2` remains stored, and the proxy exposes only the new account
+database. Auth accounts, signing material and SpacetimeDB issuer keys persist.
+The public deployment completed as release `20260906T173802450337Z`, with
+verified HTTPS health/discovery, database availability and served manifest.
+The public browser/Linux account run passes 103 checks, including real timed
+refresh. Local apply-script command fixtures cover failure recovery and optional
+reset scope; they are not a real Docker restore drill.
+
+After deployment, verify HTTPS and two actual accounts in browser/native
+clients. Health checks and successful container startup do not establish
+private subscriptions or gameplay. Normal exports omit probes; the development
+test build is explicitly authorized. See [distribution](distribution.md) for
+prerequisites, phase status, failure behavior and recorded evidence.
+
+Implementation guidance for agents lives in [AGENTS.md](../AGENTS.md). Update
+these notes when the tested workflow changes.

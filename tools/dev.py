@@ -113,18 +113,26 @@ def commands(group: str, format_code: bool) -> list[list[str]]:
     if group == "typescript":
         if format_code:
             return []
-        compiler = ROOT / "tools/godot-mcp-server/node_modules/typescript/bin/tsc"
-        if not compiler.is_file():
-            raise FileNotFoundError("Run `make mcp-build` to install the locked MCP dependencies.")
-        return [
-            [
-                system_tool("node"),
-                str(compiler),
-                "--project",
-                "tools/godot-mcp-server/tsconfig.json",
-                "--noEmit",
-            ]
-        ]
+        checks = []
+        for directory, setup_command in (
+            ("tools/godot-mcp-server", "make mcp-build"),
+            ("auth", "make auth-setup"),
+        ):
+            compiler = ROOT / directory / "node_modules/typescript/bin/tsc"
+            if not compiler.is_file():
+                raise FileNotFoundError(
+                    f"Run `{setup_command}` to install the locked {directory} dependencies."
+                )
+            checks.append(
+                [
+                    system_tool("node"),
+                    str(compiler),
+                    "--project",
+                    directory + "/tsconfig.json",
+                    "--noEmit",
+                ]
+            )
+        return checks
     raise ValueError(group)
 
 

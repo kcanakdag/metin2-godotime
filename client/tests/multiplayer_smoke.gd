@@ -188,7 +188,9 @@ func _finish() -> void:
 	if _finished:
 		return
 	_finished = true
+	var client_states: Array = []
 	for client: GameConnection in _clients:
+		client_states.append({"state": client.state, "message": client.state_message})
 		client.disconnect_game()
 	await create_timer(0.1).timeout
 	var passed := _checks.all(func(check: Dictionary): return check["passed"])
@@ -196,6 +198,7 @@ func _finish() -> void:
 		"passed": passed,
 		"database": _database,
 		"checks": _checks,
+		"client_states": client_states,
 		"reducer_errors_observed": _errors.size()
 	}
 	var file := FileAccess.open(_report_path, FileAccess.WRITE)

@@ -1,12 +1,15 @@
 """Artifact integrity, package exclusions, and deployment recovery without remote services."""
 
+import io
 import json
 import os
 import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 import export_client  # noqa: E402
@@ -75,6 +78,41 @@ class WebArtifactTests(unittest.TestCase):
         self.save_manifest()
         self.assertTrue(deploy.validate_web_build(self.root, allow_test_build=True)["test_probe"])
 
+    def test_packaged_database_mismatch_prevents_any_remote_command(self):
+        arguments = [
+            "deploy.py",
+            "--web-dir",
+            str(self.root),
+            "--database",
+            "mt2-intended-world",
+        ]
+        config = {"database": "mt2-other-world", "server_url": "https://example.invalid:8443"}
+        with (
+            patch.object(sys, "argv", arguments),
+            patch.object(deploy, "read_pack_config", return_value=config) as inspect_pack,
+            patch.object(deploy, "run") as remote_command,
+            redirect_stderr(io.StringIO()) as errors,
+            self.assertRaises(SystemExit) as result,
+        ):
+            deploy.main()
+        self.assertEqual(result.exception.code, 2)
+        self.assertIn("does not match requested deployment database", errors.getvalue())
+        self.assertEqual(inspect_pack.call_args.args[1], self.root / "index.pck")
+        remote_command.assert_not_called()
+
+    def test_config_inspection_failure_prevents_any_remote_command(self):
+        with (
+            patch.object(sys, "argv", ["deploy.py", "--web-dir", str(self.root)]),
+            patch.object(deploy, "read_pack_config", side_effect=ValueError("Unreadable PCK")),
+            patch.object(deploy, "run") as remote_command,
+            redirect_stderr(io.StringIO()) as errors,
+            self.assertRaises(SystemExit) as result,
+        ):
+            deploy.main()
+        self.assertEqual(result.exception.code, 2)
+        self.assertIn("Unreadable PCK", errors.getvalue())
+        remote_command.assert_not_called()
+
 
 class PackExclusionTests(unittest.TestCase):
     def test_runtime_sdk_auth_code_is_allowed(self):
@@ -89,6 +127,8 @@ class PackExclusionTests(unittest.TestCase):
             "res://addons/godot_mcp/services/mcp_runtime_bridge.gdc",
             "res://addons/mt2_dev_bridge/evaluator.gdc",
             "res://identities/alice.json",
+            "res://accounts/alice.session",
+            "res://saved/alice.session",
             "res://assets/source/model.gr2",
             "res://saved/issuer.pem",
             "res://logs/client.log",
@@ -107,6 +147,63 @@ class PackExclusionTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(RuntimeError, "no packaged test probe"):
             export_client.validate_pack_paths([], allow_test_probe=True)
+
+
+class AuthPackageTests(unittest.TestCase):
+    def test_only_explicit_auth_build_inputs_are_staged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, destination = root / "auth", root / "package"
+            for name in [
+                *deploy.AUTH_FILES,
+                "data/auth.secret",
+                "data/auth.sqlite-wal",
+                "node_modules/installed.js",
+                ".env",
+                ".cache/download.ts",
+                "src/unreviewed.ts",
+            ]:
+                path = source / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("fixture")
+            deploy.stage_auth(source, destination)
+            self.assertEqual(
+                {
+                    path.relative_to(destination).as_posix()
+                    for path in destination.rglob("*")
+                    if path.is_file()
+                },
+                set(deploy.AUTH_FILES),
+            )
+
+    def test_auth_build_inputs_cannot_be_missing_or_symbolic_links(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "auth"
+            source.mkdir()
+            with self.assertRaisesRegex(ValueError, "ordinary auth build input"):
+                deploy.stage_auth(source, root / "package")
+            (root / "outside").write_text("private fixture")
+            (source / "Dockerfile").symlink_to(root / "outside")
+            with self.assertRaisesRegex(ValueError, "ordinary auth build input"):
+                deploy.stage_auth(source, root / "package")
+
+    def test_nginx_auth_routes_are_exact_and_do_not_trust_forwarded_client_ip(self):
+        config = (deploy.ROOT / "deploy/nginx.conf.in").read_text()
+        auth = config.split("location ^~ /auth/ {", 1)[1].split("}", 1)[0]
+        self.assertIn("proxy_pass http://auth:3219;", auth)
+        self.assertIn("proxy_set_header X-Real-IP $remote_addr;", auth)
+        self.assertNotIn("$http_x_real_ip", config)
+        token = config.split("location = /v1/identity/websocket-token {", 1)[1].split("\n    }", 1)[
+            0
+        ]
+        self.assertIn("limit_except POST", token)
+        identity = config.split("location = /v1/database/@DATABASE@/identity {", 1)[1].split(
+            "\n    }", 1
+        )[0]
+        self.assertIn("limit_except GET", identity)
+        self.assertIn('Cache-Control "no-store"', identity)
+        self.assertIn("location /v1/ { return 403; }", config)
 
 
 # Execute the real shell workflow against command stand-ins. Only the fixed repository/VPS paths
@@ -136,14 +233,17 @@ if args == ["compose", "version"]:
     print("Docker Compose fixture")
 elif args == ["compose", "ps", "-aq", "db"]:
     print("previous-db")
+elif args == ["compose", "ps", "-aq", "auth"]:
+    print("previous-auth")
 elif args[:2] == ["inspect", "--format"]:
-    print("sha256:previous-image" if args[2] == "{{.Image}}" else "metin2-godotime-db")
-elif args == ["inspect", "previous-db"]:
+    auth = args[-1] == "previous-auth"
+    print(("sha256:previous-auth-image" if auth else "sha256:previous-image") if args[2] == "{{.Image}}" else ("metin2-godotime-auth" if auth else "metin2-godotime-db"))
+elif args[0] == "inspect":
     pass
 elif args[0] == "run" and args[-2:] == ["nginx", "-t"]:
     if failure == "nginx":
         sys.exit(11)
-elif args[:2] == ["stop", "previous-db"]:
+elif args[0] == "stop":
     pass
 elif args[:2] == ["cp", "previous-db:/data"]:
     if failure == "backup":
@@ -151,19 +251,37 @@ elif args[:2] == ["cp", "previous-db:/data"]:
     key = Path(args[-1]) / "config/spacetime/id_ecdsa.pub"
     key.parent.mkdir(parents=True)
     key.write_bytes(b"persistent public key")
+elif args[:2] == ["cp", "previous-auth:/data"]:
+    if failure == "auth-backup":
+        sys.exit(15)
+    data = Path(args[-1])
+    data.mkdir()
+    (data / "auth.secret").write_bytes(b"persistent auth secret")
+    (data / "auth.sqlite").write_bytes(b"persistent accounts")
 elif args[0] in {"start", "image"}:
     pass
 elif args[0] == "compose":
     if args[-2:] == ["config", "--images"]:
         print("nginx:fixture")
+    elif args[-2:] == ["config", "--services"]:
+        print("db\nauth\nweb" if os.environ["DEPLOY_TEST_OLD_AUTH"] == "1" else "db\nweb")
+    elif args[-3:] == ["build", "db", "auth"] and failure == "auth-build":
+        sys.exit(17)
     elif "sha256sum" in args:
-        print(hashlib.sha256(b"persistent public key").hexdigest() + "  /data/config/spacetime/id_ecdsa.pub")
+        secret = args[-1] == "/data/auth.secret"
+        value = b"persistent auth secret" if secret else b"persistent public key"
+        if secret and failure == "auth-secret":
+            value = b"wrong secret"
+        print(hashlib.sha256(value).hexdigest() + "  " + args[-1])
     elif "publish" in args and failure == "publish":
         sys.exit(13)
     elif args[1:] == ["up", "-d", "--no-deps", "db"] and failure == "start":
         # Fail just the replacement. A rollback uses the previous runtime config.
         if (root / "compose.yaml").read_text() == "candidate config":
             sys.exit(14)
+    elif args[1:] == ["up", "-d", "--no-deps", "auth"] and failure == "auth-start":
+        if (root / "compose.yaml").read_text() == "candidate config":
+            sys.exit(16)
 else:
     raise RuntimeError("Unexpected Docker arguments: " + repr(args))
 """
@@ -189,10 +307,15 @@ class DeploymentRecoveryTests(unittest.TestCase):
             "nginx.conf",
             ".env",
             ".certificate",
+            ".database",
             "mt2_server.wasm",
         ]:
             (self.root / name).write_text("previous config")
             (self.candidate / name).write_text("candidate config")
+        (self.candidate / ".database").write_text("test-db\n")
+        for directory in [self.root / "auth", self.candidate / "auth"]:
+            directory.mkdir()
+            (directory / "Dockerfile").write_text("fixture auth build input")
         (self.candidate / "reload-certificate.sh").write_text("fixture hook")
         (self.candidate / "web").mkdir()
         (self.candidate / "web/build-manifest.json").write_text('{"release":"candidate"}')
@@ -212,31 +335,34 @@ class DeploymentRecoveryTests(unittest.TestCase):
         self.script = self.root / "apply.sh"
         self.script.write_text(script)
 
-    def execute(self, failure):
+    def execute(self, failure, *, reset=False, database="test-db", old_auth=True):
         result = subprocess.run(
             [
                 "bash",
                 str(self.script),
                 "test-release",
-                "test-db",
+                database,
                 "example.test",
                 "8443",
                 "test-cert",
+                *(["--reset-database"] if reset else []),
             ],
             env={
                 **os.environ,
                 "PATH": str(self.commands) + ":" + os.environ["PATH"],
                 "DEPLOY_TEST_ROOT": str(self.root),
                 "DEPLOY_TEST_FAILURE": failure,
+                "DEPLOY_TEST_OLD_AUTH": "1" if old_auth else "0",
             },
             capture_output=True,
             text=True,
             check=False,
             timeout=10,
         )
-        commands = [
-            json.loads(line) for line in (self.root / "commands.jsonl").read_text().splitlines()
-        ]
+        log = self.root / "commands.jsonl"
+        commands = (
+            [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
+        )
         status = json.loads((self.root / "deployment-status.json").read_text())
         return result, commands, status
 
@@ -296,6 +422,91 @@ class DeploymentRecoveryTests(unittest.TestCase):
         web_at = next(i for i, command in enumerate(commands) if "--force-recreate" in command)
         self.assertLess(publish_at, web_at)
         self.assertTrue((self.root / "hooks/game").is_file())
+        self.assertEqual(
+            (self.root / "backups/test-release/accounts/auth.secret").read_bytes(),
+            b"persistent auth secret",
+        )
+        self.assertTrue((self.root / "backups/test-release/accounts/auth.sqlite").is_file())
+        self.assertTrue(any("auth:127.0.0.1" in command for command in commands))
+        self.assertTrue(
+            any(
+                command[-1].endswith("/auth/health") for command in commands if command[0] == "curl"
+            )
+        )
+        self.assertEqual(status["delete_data"], "never")
+
+    def test_failed_auth_build_restores_image_tags_without_stopping_services(self):
+        result, commands, status = self.execute("auth-build")
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(status["phase"], "failed:validating")
+        self.assertFalse(any(command[:2] == ["docker", "stop"] for command in commands))
+        self.assertIn(
+            ["docker", "image", "tag", "sha256:previous-auth-image", "metin2-godotime-auth"],
+            commands,
+        )
+
+    def test_first_auth_install_does_not_require_a_previous_auth_container(self):
+        result, commands, status = self.execute("", old_auth=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(status["phase"], "ready")
+        self.assertIn(["docker", "compose", "up", "-d", "--no-deps", "auth"], commands)
+        self.assertFalse(any("previous-auth:/data" in command for command in commands))
+        self.assertTrue((self.root / "backups/test-release/world").is_dir())
+
+    def test_failed_auth_backup_restarts_both_previous_services(self):
+        result, commands, status = self.execute("auth-backup")
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(status["phase"], "failed:backing-up")
+        for container in ["previous-db", "previous-auth"]:
+            self.assertIn(["docker", "start", container], commands)
+        self.assertFalse(any("publish" in command for command in commands))
+
+    def test_failed_auth_start_or_changed_secret_recovers_without_data_restore(self):
+        for failure in ["auth-start", "auth-secret"]:
+            with self.subTest(failure=failure):
+                # Each deployment needs its own backup directory and candidate.
+                case = DeploymentRecoveryTests()
+                case.setUp()
+                try:
+                    result, commands, status = case.execute(failure)
+                    self.assertNotEqual(result.returncode, 0, result.stdout)
+                    self.assertEqual(status["phase"], "failed:starting-auth")
+                    self.assertEqual((case.root / "compose.yaml").read_text(), "previous config")
+                    self.assertIn(
+                        [
+                            "docker",
+                            "image",
+                            "tag",
+                            "sha256:previous-auth-image",
+                            "metin2-godotime-auth",
+                        ],
+                        commands,
+                    )
+                    self.assertFalse(any("publish" in command for command in commands))
+                    for command in commands:
+                        if command[:2] == ["docker", "cp"]:
+                            self.assertTrue(command[2].endswith(":/data"))
+                finally:
+                    case.doCleanups()
+
+    def test_explicit_reset_publishes_only_configured_game_database_once(self):
+        result, commands, status = self.execute("", reset=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        publications = [command for command in commands if "publish" in command]
+        self.assertEqual(len(publications), 1)
+        self.assertIn("test-db", publications[0])
+        self.assertIn("--delete-data=always", publications[0])
+        self.assertIn("--yes=remote,skip-login,migrate,delete-data", publications[0])
+        self.assertEqual(status["database"], "test-db")
+        self.assertEqual(status["delete_data"], "always")
+        self.assertTrue((self.root / "backups/test-release/accounts/auth.sqlite").is_file())
+        self.assertFalse(any("down" in command or "volume" in command for command in commands))
+
+    def test_reset_cannot_target_a_different_database_than_the_staged_release(self):
+        result, commands, status = self.execute("", reset=True, database="another-service")
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(status["phase"], "failed:preflight")
+        self.assertFalse(any("publish" in command or "stop" in command for command in commands))
 
 
 if __name__ == "__main__":

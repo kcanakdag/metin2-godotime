@@ -76,7 +76,7 @@ pub fn player_attack(ctx: &ReducerContext) -> Result<(), String> {
         .db
         .player()
         .identity()
-        .find(ctx.sender())
+        .find(crate::accounts::selected_character(ctx)?)
         .ok_or("Enter the world first.")?;
     let target = ctx
         .db
@@ -99,19 +99,26 @@ pub fn player_attack(ctx: &ReducerContext) -> Result<(), String> {
     if let Some(mut monster) = target {
         player.heading = (player.x - monster.x).atan2(player.z - monster.z);
         ctx.db.player().identity().update(player);
-        let damage = PLAYER_DAMAGE + inventory::weapon_bonus(ctx, ctx.sender());
+        let damage =
+            PLAYER_DAMAGE + inventory::weapon_bonus(ctx, crate::accounts::selected_character(ctx)?);
         monster.health = monster.health.saturating_sub(damage);
         if monster.health == 0 {
             monster.activity = 3;
             monster.respawn_at_us = now_us(ctx) + 12_000_000;
-            inventory::drop_potion(ctx, ctx.sender(), monster.x, monster.y, monster.z);
+            inventory::drop_potion(
+                ctx,
+                crate::accounts::selected_character(ctx)?,
+                monster.x,
+                monster.y,
+                monster.z,
+            );
             ctx.db.loot().insert(Loot {
                 id: 0,
                 x: monster.x,
                 y: monster.y,
                 z: monster.z,
                 gold: 5,
-                owner: ctx.sender(),
+                owner: crate::accounts::selected_character(ctx)?,
                 reserved_until_us: now_us(ctx) + 10_000_000,
                 expires_at_us: now_us(ctx) + 60_000_000,
             });
@@ -134,13 +141,13 @@ pub fn pickup_loot(ctx: &ReducerContext, id: u64) -> Result<(), String> {
         .db
         .player()
         .identity()
-        .find(ctx.sender())
+        .find(crate::accounts::selected_character(ctx)?)
         .ok_or("Enter the world first.")?;
     let now = now_us(ctx);
     if now >= loot.expires_at_us {
         return Err("That loot has expired.".into());
     }
-    if loot.owner != ctx.sender() && now < loot.reserved_until_us {
+    if loot.owner != crate::accounts::selected_character(ctx)? && now < loot.reserved_until_us {
         return Err("That loot is reserved for its slayer.".into());
     }
     if !within_reach(

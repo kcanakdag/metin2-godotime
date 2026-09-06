@@ -6,6 +6,15 @@ var _client: SpacetimeDBClient
 
 func _init(p_client: SpacetimeDBClient) -> void:
 	_client = p_client
+## 0. slot: int [br]
+## 1. name: String [br]
+func create_character(slot: int, name: String) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('create_character', [slot, name], [&'U8', &'String'])
+
+
+func enter_selected_character() -> SpacetimeDBReducerCall:
+	return _client.call_reducer('enter_selected_character', [], [])
+
 ## 0. name: String [br]
 func enter_world(name: String) -> SpacetimeDBReducerCall:
 	return _client.call_reducer('enter_world', [name], [&'String'])
@@ -13,6 +22,10 @@ func enter_world(name: String) -> SpacetimeDBReducerCall:
 ## 0. id: int [br]
 func equip_item(id: int) -> SpacetimeDBReducerCall:
 	return _client.call_reducer('equip_item', [id], [&'U64'])
+
+
+func leave_world() -> SpacetimeDBReducerCall:
+	return _client.call_reducer('leave_world', [], [])
 
 ## 0. id: int [br]
 ## 1. cell: int [br]
@@ -25,6 +38,10 @@ func move_to(x: float, z: float) -> SpacetimeDBReducerCall:
 	return _client.call_reducer('move_to', [x, z], [&'F32', &'F32'])
 
 
+func open_account() -> SpacetimeDBReducerCall:
+	return _client.call_reducer('open_account', [], [])
+
+
 func perform_attack() -> SpacetimeDBReducerCall:
 	return _client.call_reducer('perform_attack', [], [])
 
@@ -35,6 +52,10 @@ func pickup_item_drop(id: int) -> SpacetimeDBReducerCall:
 ## 0. id: int [br]
 func pickup_loot(id: int) -> SpacetimeDBReducerCall:
 	return _client.call_reducer('pickup_loot', [id], [&'U64'])
+
+## 0. character_id: PackedByteArray [br]
+func select_character(character_id: PackedByteArray) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('select_character', [character_id], [&'__identity__'])
 
 ## 0. message: String [br]
 func send_chat(message: String) -> SpacetimeDBReducerCall:

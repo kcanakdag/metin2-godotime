@@ -33,6 +33,8 @@ func _run() -> void:
 	_hud.move_item_requested.connect(
 		func(id: int, cell: int) -> void: _events.append(["move", id, cell])
 	)
+	_hud.change_character_requested.connect(func() -> void: _events.append(["change_character"]))
+	_hud.disconnect_requested.connect(func() -> void: _events.append(["logout"]))
 	_check(_key(KEY_I), "I is consumed by inventory")
 	await process_frame
 	var snapshot: Dictionary = _hud.inventory_snapshot()
@@ -75,6 +77,24 @@ func _run() -> void:
 	_check(_hud.inventory_snapshot()["quickslot_bindings"][0] == 0, "identity settings isolated")
 	_hud.set_profile("classic-ui-test".sha256_text())
 	_check(_hud.inventory_snapshot()["quickslot_bindings"][0] == 12, "quickslot binding restored")
+	_key(KEY_ESCAPE)
+	await process_frame
+	_check(_system_is_centered(), "Escape opens a centered system menu inside 1280 by 800")
+	root.size = Vector2i(1024, 768)
+	await process_frame
+	await process_frame
+	_check(_system_is_centered(), "system menu remains centered and visible after resize")
+	if not DisplayServer.get_name() == "headless":
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png("user://classic-ui-system.png")
+	_click(_hud.inventory_snapshot().system.change_character_center, MOUSE_BUTTON_LEFT)
+	_check(_events.back() == ["change_character"], "visible Change Character emits its intent")
+	_click(_hud.inventory_snapshot().system.logout_center, MOUSE_BUTTON_LEFT)
+	_check(_events.back() == ["logout"], "visible Logout emits its intent")
+	_key(KEY_ESCAPE)
+	root.size = Vector2i(1280, 800)
+	await process_frame
+	await process_frame
 	_key(KEY_I)
 	await process_frame
 	if not DisplayServer.get_name() == "headless":
@@ -85,6 +105,16 @@ func _run() -> void:
 	_hud.queue_free()
 	await process_frame
 	quit(1 if _failed else 0)
+
+
+func _system_is_centered() -> bool:
+	var rect: Rect2 = _hud._system.get_global_rect()
+	var viewport := Rect2(Vector2.ZERO, Vector2(root.size))
+	return (
+		_hud.inventory_snapshot().system.visible
+		and viewport.encloses(rect)
+		and rect.get_center().distance_to(viewport.get_center()) < 0.1
+	)
 
 
 func _key(code: Key) -> bool:

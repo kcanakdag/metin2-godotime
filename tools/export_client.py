@@ -114,7 +114,10 @@ def validate_pack_paths(paths, *, allow_test_probe=False):
         if "export_probe" in name:
             probes.append(path)
         if (
-            any(part in {".git", ".local", "identities", "tests", "logs"} for part in parts)
+            any(
+                part in {".git", ".local", "identities", "accounts", "tests", "logs"}
+                for part in parts
+            )
             or any(addon in parts for addon in DEV_ADDONS)
             or relative.lower().startswith("assets/source/")
             or name == ".env"
@@ -124,6 +127,7 @@ def validate_pack_paths(paths, *, allow_test_probe=False):
                 ".pem",
                 ".key",
                 ".token",
+                ".session",
                 ".log",
                 ".gr2",
                 ".epk",

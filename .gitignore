@@ -9,6 +9,7 @@ __pycache__/
 target/
 .env
 node_modules/
+auth/data/
 tools/godot-mcp-server/build/
 dist/
 server/content/

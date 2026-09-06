@@ -3,16 +3,20 @@
 The Web client runs in a browser; desktop exports bundle their own Godot runtime.
 Players do not install Blender, Rust, Python, Node or the SDK. The current
 development endpoint is [https://kcanakdag.com:8443](https://kcanakdag.com:8443/),
-database `mt2-yongan-v2`, on `159.195.213.9`. It may restart during updates.
-Current release `20260906T154235134255Z` includes the fixed test probe with the
-user's explicit authorization. Its 45 public Chrome/Linux checks cover current
-map/chat panels, inventory and multiplayer. Normal export commands below omit
-that probe.
+on `159.195.213.9`. It may restart during updates. Account release
+`20260906T173802450337Z` serves `mt2-accounts-v3` at that public origin.
+The preceding `mt2-yongan-v2` guest database is retained without public routes.
+The account milestone adds original entry screens, login, four character slots
+and server-owned private roster/inventory access, with 58 passing local account
+integration checks. Local and public independent Chrome/Linux runs each pass
+103 checks, including real four-minute token refresh. The completed deployment
+used `--delete-data=never`. The fixed test probe is authorized in the development
+build. Normal export commands omit it.
 
-Browser/Linux multiplayer checks passed on the training ground and Yongan.
-The corrected Yongan browser run also verifies terrain appearance, keyboard
-combat, loot and both respawns, while scenery loads nearby during play.
-Refresh an older tab after the content update. See [verification status](#verification-status).
+The preceding guest release `20260906T154235134255Z` passed 45 public Chrome/Linux
+checks for map/chat panels, inventory and multiplayer. Earlier Yongan gameplay,
+terrain and normal-release checks remain historical evidence; they do not prove
+the new account flow. See the evidence table below.
 
 ## Export Web and Linux
 
@@ -22,8 +26,8 @@ for Web, `linux_release.x86_64` for Linux. Standard Godot/GDScript is used
 throughout. Engine and template versions must match.
 
 ```sh
-make export-web SERVER_URL=https://kcanakdag.com:8443 DB=mt2-yongan-v2
-make export-linux SERVER_URL=https://kcanakdag.com:8443 DB=mt2-yongan-v2
+make export-web SERVER_URL=https://kcanakdag.com:8443 DB=mt2-accounts-v3
+make export-linux SERVER_URL=https://kcanakdag.com:8443 DB=mt2-accounts-v3
 ```
 
 The underlying command accepts `--godot`, `--templates`, `--server`,
@@ -31,7 +35,7 @@ The underlying command accepts `--godot`, `--templates`, `--server`,
 
 ```sh
 python3 tools/export_playable.py --target web --include-map \
-  --server https://kcanakdag.com:8443 --database mt2-yongan-v2
+  --server https://kcanakdag.com:8443 --database mt2-accounts-v3
 ```
 
 Make includes Yongan by default. Use `INCLUDE_MAP=` only when intentionally
@@ -59,15 +63,17 @@ Linux settings can be overridden on launch:
 
 ```sh
 ./dist/linux/MT2Spacetime.x86_64 -- \
-  --server https://kcanakdag.com:8443 --database mt2-yongan-v2 \
-  --profile alice --name Alice --auto-connect
+  --server https://kcanakdag.com:8443 --database mt2-accounts-v3 \
+  --profile alice
 ```
 
 Desktop settings load from built-in defaults, packaged config, saved profile,
-then command-line overrides. Profiles separate local identities. Browser builds
-use their page origin for the server and the packaged database, avoiding stale
-saved endpoints after deployment. Browser guest identity storage belongs to
-that origin; clearing site data can create a new identity on the next join.
+then command-line overrides. Profiles separate remembered account sessions;
+they are not account or character identifiers. Browser builds use their page
+origin for both game and auth routes, plus the packaged database. Clearing site
+data removes the remembered login, while the server account and its character
+roster remain recoverable by signing in. The public account origin must match
+the module's compiled trusted issuer and the auth service configuration.
 
 ## Loading assets during play
 
@@ -105,19 +111,26 @@ it catches wrong terrain IDs even when dimensions and resource loading look vali
 
 `deploy/Dockerfile` pins SpacetimeDB **2.8.3** by image digest and copies the
 already-built module. It runs the service as the image's `spacetime` user.
-`deploy/compose.yaml` pins Nginx **1.28.0 Alpine** by digest and gives the two
-services separate CPU/memory/log limits.
+`deploy/compose.yaml` pins Nginx **1.28.0 Alpine** by digest and gives the
+game, auth and Web services separate CPU/memory/log limits. Auth uses
+`auth/Dockerfile`, pinned Node 24.20.0 and Better Auth 1.7.3, running as UID 1000.
+Its internal port 3219 is not published to the host; `AUTH_TRUST_PROXY=true`
+accepts only the isolated proxy's overwritten client-IP header.
 
 | Resource | Scope |
 | --- | --- |
 | Remote directory | `/opt/metin2-godotime` |
 | Compose project | `metin2-godotime` |
 | Public game endpoint | TCP `8443`, HTTPS and WSS |
+| Public account database | `mt2-accounts-v3`, selected explicitly in export/deploy commands |
+| Retained previous database | `mt2-yongan-v2`; stored but not exposed by the account proxy |
 | Administrative database endpoint | `127.0.0.1:13210` on the VPS only |
-| Database persistence | Compose named volume `world` |
+| Game persistence | Compose named volume `world` |
+| Account/session/key persistence | Separate Compose named volume `accounts`, mounted at auth `/data` |
+| Production auth issuer | `https://kcanakdag.com:8443/auth` |
 | Static releases | `web/releases/<UTC timestamp>`, selected by `web/current` |
 | Staged candidates | `incoming/<UTC timestamp>/`, isolated from active files |
-| Database/runtime backups | `backups/<UTC timestamp>/world` and `runtime`, private directories |
+| Cold backups | `backups/<UTC timestamp>/world`, `accounts` and `runtime`, private directories |
 | Deployment status | `deployment-status.json` and the candidate's `status.json` |
 
 The deployment host must already have Docker with Compose, SSH access, Bash,
@@ -129,8 +142,8 @@ Docker or provision/renew certificates. Existing HTTP/HTTPS services on ports
 
 ```sh
 make server-build
-make export-web SERVER_URL=https://kcanakdag.com:8443 DB=mt2-yongan-v2
-make deploy
+make export-web SERVER_URL=https://kcanakdag.com:8443 DB=mt2-accounts-v3
+make deploy DB=mt2-accounts-v3
 ```
 
 Equivalent explicit deployment:
@@ -138,35 +151,69 @@ Equivalent explicit deployment:
 ```sh
 python3 tools/deploy.py --host root@159.195.213.9 \
   --public-name kcanakdag.com --certificate kcanakdag.com \
-  --port 8443 --database mt2-yongan-v2 --web-dir dist/web
+  --port 8443 --database mt2-accounts-v3 --web-dir dist/web
 ```
 
-Before SSH, the script verifies every exported file against the build manifest,
+Before SSH, the script verifies every exported file against its build manifest,
 including streamed packs, compressed files and the actual-PCK audit. Missing,
-modified, extra, hidden or symbolic-link files fail validation. It uploads only
-the game's context, module and Web files into a fresh candidate directory.
+modified, extra, hidden or symbolic-link files fail validation. The staged
+archive contains the game's module/Web files and ten selected auth build inputs:
+Dockerfile, ignore/config files, package/lock files, four service sources and the
+HTTP test source. Auth data, secrets, node_modules, caches and unrelated sources
+are excluded. The auth image runs its tests during the build and retains only
+production dependencies and compiled service code.
 
-`deploy/apply.sh` takes the game's deployment lock, checks certificate hostname
-and expiry, refuses unrelated port owners, validates Compose/Nginx, and builds
-the candidate database image before downtime. It then stops only the game
-database, takes a cold copy of its volume contents and prior runtime config,
-starts the candidate, and checks that its identity-issuer public-key hash is
-unchanged. Publication uses persistent `/data/publisher-v2.toml` and
-`--delete-data=never`; destructive schema migration fails instead of wiping data.
+Deployment also requires Godot on the local workstation (`--godot`, or the
+`GODOT` environment variable; default `godot`). A fresh isolated headless
+process mounts the actual Web PCK and reads its packaged `client_config.json`
+without starting the game or its autoloads. The packaged database must equal
+the requested deployment database before any SSH command can run. File hashes
+alone do not establish that client configuration and proxy routes agree.
 
-After publication it atomically switches the Web symlink, recreates only the
-game proxy, validates Nginx and verifies the HTTPS-served manifest hash. It
-installs the game's certificate reload hook and opens the game port in UFW.
-Game sessions can disconnect during the restart; players reconnect afterward.
-No `docker compose down -v`, host-wide prune, unrelated-container restart or
-existing database reset is part of this workflow.
+`deploy/apply.sh` takes the game deployment lock, validates certificate/ports,
+Compose and Nginx (including the `db` and `auth` upstream names), and builds both
+candidate service images before downtime. It stops only this game's DB/auth
+services, takes cold data and runtime backups, restarts candidates and checks
+the SpacetimeDB issuer-key and auth-secret hashes. Auth must become healthy
+before publication. Its SQLite database and encrypted JWT signing keys persist
+in the separate account volume.
 
-The HTTPS proxy serves assets and permits fresh identity creation and the
-configured database's game subscription WebSocket. Other `/v1/` routes are
-denied, keeping publication, administration and direct HTTP SQL unavailable
-through the game endpoint. Game actions still require server-side validation.
-Browser WebSocket tokens appear in the handshake query, so access logging is
-disabled and proxy error logging is restricted to avoid recording request URLs.
+Publication uses `/data/publisher-v2.toml` and preserves data with
+`--delete-data=never`. The account rollout creates `mt2-accounts-v3`, retaining
+the old guest database. With matching test exports targeting the new database:
+
+```sh
+make deploy DB=mt2-accounts-v3 WEB_DIR=dist/web-test DEPLOY_FLAGS='--allow-test-build'
+```
+
+The earlier requested reset was rejected by automatic approval review, so this
+rollout creates a separate database without deleting the guest data. Auth
+accounts and issuer keys remain persistent. The public proxy switches its exact
+game routes to the new database; the retained guest database is no longer the
+active public world. Local defaults remain `mt2-yongan-v2`, so public commands
+must supply the account database explicitly.
+
+The deployment tool retains an optional `--reset-database` flag, but it is not
+used by this rollout. That flag applies `--delete-data=always` only to the staged
+game database for that invocation, without removing volumes, auth accounts or
+signing keys. A mismatched staged database is rejected before services stop,
+and reset is not saved as a future default. Other applications remain outside
+this Compose project.
+
+After publication, the script atomically selects the new Web release, recreates
+the proxy and verifies HTTPS health, auth health/discovery, database availability
+and the served manifest hash. It installs only this game's certificate reload
+hook and opens the game port. Sessions may disconnect during restart.
+
+The proxy exposes `/auth/`, the configured database's subscription WebSocket
+and exact GET identity/availability route, plus exact POST `/v1/identity` and
+`/v1/identity/websocket-token` routes. Other `/v1/` routes are denied, including
+publication, administration and HTTP SQL. `/auth/` takes precedence over the
+hidden-file rule so discovery remains reachable; it overwrites `X-Real-IP`
+and forwarded headers, preserving the service's per-client rate limiting.
+The channel-identity response has `Cache-Control: no-store`. Browser WebSocket
+tokens may be in the query; URL access logs are disabled and proxy error logs
+are restricted. Game reducers still validate account and character authority.
 
 ## Operation and recovery
 
@@ -184,9 +231,11 @@ The game adds `/etc/letsencrypt/renewal-hooks/deploy/metin2-godotime`, which
 reloads only this Compose project's Nginx when its configured certificate renews.
 An unrelated script already occupying that hook path is not overwritten.
 
-Deployment status records the active phase or `failed:<phase>`. A failure before
-publication restores the previous runtime/config where available and resumes
-the stopped game database, without restoring or deleting its data. A publication
+Deployment status records phase or `failed:<phase>`, database name and reset mode. A failure before
+publication restores previous runtime/image tags where available and resumes
+the stopped game/auth services, without automatically restoring their data.
+Even a preflight build failure restores image tags before leaving old services
+running. The auth secret is never regenerated as a recovery action. A publication
 failure leaves the database running and the old Web release in place. A later
 Web-activation failure can restore the previous Web symlink/proxy; it does not
 roll the database schema back. Candidate files and private backups remain for
@@ -200,33 +249,33 @@ failure handling is separate from a complete backup restore drill.
 
 ## Browser test builds
 
-`--test-probe` adds a local browser/desktop test interface to inspect rendered
-entities and send normal gameplay actions. It provides no privileged server
-write path, but belongs only in deliberate test builds.
+`--test-probe` adds the fixed browser/desktop inspection and ordinary-action
+interface. It provides no privileged server writes; normal exports omit it.
+The development build is explicitly authorized to include this probe.
 
 ```sh
 make browser-setup
-make export-web TEST_PROBE=--test-probe DB=mt2-yongan-test
-make export-linux TEST_PROBE=--test-probe DB=mt2-yongan-test
-make deploy DB=mt2-yongan-test WEB_DIR=dist/web-test DEPLOY_FLAGS=--allow-test-build
-make test-browser PUBLIC_URL=https://kcanakdag.com:8443 DB=mt2-yongan-test
+make export-web SERVER_URL=https://kcanakdag.com:8443 DB=mt2-accounts-v3 TEST_PROBE=--test-probe
+make export-linux SERVER_URL=https://kcanakdag.com:8443 DB=mt2-accounts-v3 TEST_PROBE=--test-probe
+make deploy DB=mt2-accounts-v3 WEB_DIR=dist/web-test DEPLOY_FLAGS=--allow-test-build
+.local/venv-dev/bin/python tools/test_browser_accounts.py \
+  --url https://kcanakdag.com:8443 --database mt2-accounts-v3 \
+  --hardware --inventory --panels
 ```
 
-Add `BROWSER_FLAGS=--hardware` to use a visible Chrome window and the system GPU.
-The default software renderer is useful for connectivity checks but can run
-Yongan too slowly for timing-sensitive combat verification.
+The account rollout and regular test deployment both preserve existing data.
+Both account services and a matching protocol-3 module must be available before
+running the clients. The runner creates actual test accounts/characters, uses
+visible browser entry controls and an independent rendered Linux export, and
+records private results under `.local/browser-accounts/<timestamp>/`.
+Both local and public final runs passed 103 checks. Add `--session-refresh` to
+verify both real four-minute token-refresh timers; this extends the run.
+`--hardware` uses the
+workstation GPU; software-rendered Yongan can be too slow for reliable combat
+timing. See [development](development.md#browser-integration-checks).
 
-The deployment command refuses test instrumentation without
-`--allow-test-build`. This example temporarily switches the development game
-endpoint to the test database; do not run it expecting existing sessions to
-continue. Build and deploy a normal Web export for the intended game database
-after testing. A disposable endpoint/world is preferable when other people
-need an uninterrupted session.
-
-The test runner uses Playwright/Chrome and a rendered exported Linux executable,
-with independent identities, real subscriptions and scene-avatar observations.
-It saves a report and screenshots in `.local/browser-proof/<timestamp>/`.
-Failures also write partial reports. See [development](development.md#browser-integration-checks).
+The older `make test-browser` runner exercises guest gameplay and is retained
+for disposable guest-enabled test worlds. It is not account-flow evidence.
 
 ## Windows and temporary local hosting
 
@@ -241,7 +290,8 @@ export. See `.local/windows-playtest/` for that historical evidence.
 
 `make share-setup`, `make share-start DB=mt2-training-v2`, and `make export-shared`
 remain an optional temporary Windows tunnel for the local training server.
-Publish it using `make server-publish SERVER_FEATURES= DB=mt2-training-v2` first.
+Any legacy guest test use needs a disposable training module compiled with
+`MT2_ALLOW_GUESTS=1`. Current account login on Windows remains unverified.
 Its hostname expires when the tunnel stops; its old Windows public gameplay test
 remains unverified.
 The Docker deployment is the current stable-address development path.
@@ -251,9 +301,9 @@ See [temporary playtesting](playtesting.md).
 
 Evidence recorded on 2026-09-06:
 
-The evidence includes several completed slices. The earlier normal release
+The table records historical completed gameplay slices and current component checks. The earlier normal release
 `20260906T141816112109Z` passed direct browser UI/keyboard and Linux checks
-without test instrumentation. The current authorized development release
+without test instrumentation. The preceding authorized guest release
 `20260906T154235134255Z` includes the original HUD, inventory and map/chat panels,
 with exact UI pixel audits and separate public versus loopback chat checks.
 
@@ -270,13 +320,27 @@ with exact UI pixel audits and separate public versus loopback chat checks.
 | Earlier normal release exports | `dist/web/build-manifest.json`, `dist/linux/build-manifest.json` | Actual PCK audits of 229 core Web files and 1,032 Linux files; both `test_probe=false` |
 | Earlier normal public browser release | `.local/release-browser/evidence.json`, `observations.json` and screenshots | Actual connection UI, correct terrain textures, keyboard movement reflected in server diagnostics, no engine errors or test hooks |
 | Earlier matching Linux release | `.local/release-native/report.json`, `client.png` | Export-template build, connected to the public database, both release players visible, no errors |
-| Deployment/export failure tests | 14 tests in `tests/test_deploy_export.py` | Artifact inventory and apply-script failure sequencing with temporary command stand-ins; not a live data restore drill |
-| Current public map/chat/inventory build | `.local/browser-proof/20260906-174806/report.json`, 45 checks | Independent Chrome/Linux clients, final panel drag/resize geometry, inventory, rejection, reconnect/refresh and no engine errors; no public chat sent |
+| Account deployment/export tests | 25 tests in `tests/test_deploy_export.py` | Auth packaging, recovery fixtures, scoped reset/default preservation, artifact checks and prevention of remote commands when packaged database inspection fails or mismatches; one existing 10-second shell-fixture timeout passed on isolated retry |
+| Auth HTTP and container checks | Four suites in `auth/test/auth.test.ts`; remote image build in `.local/accounts/public-deploy.log` | Real HTTP authentication/JWT/session rules; a separate local container recreation retained a bearer session and identical public JWKS using the same private volume |
+| Actual account subscriptions | `.local/accounts/integration-report.json`, 58 checks | Two headless Godot accounts through real auth and SpacetimeDB; private raw roster/state/access/inventory reads, four slots, rejected actions, mutual movement, switching and reconnect |
+| Local account browser/Linux | `.local/browser-accounts/20260906-193823/report.json`, 103 checks | Actual entry/menu/inventory/panel controls, independent accounts, mutual movement, rejection, switching/reconnect/reload/logout and real timed token renewal; no browser engine errors |
+| Public account browser/Linux | `.local/browser-accounts/20260906-194508/report.json`, 103 checks | Same actual exported-client coverage on HTTPS `mt2-accounts-v3`, including real four-minute renewal with preserved identities/positions; no browser engine errors |
+| Current native account UI | `.local/classic-intro/`, `.local/classic-system/` | 27 intro and 19 main-UI checks; menu centering, viewport resizing and actual button clicks |
+| Live native editor account flow | `.local/accounts/mcp-select.png`, `mcp-world.png`, `mcp-login-final.png`, `mcp-public-server.png` | Correct project, character creation/preview, Yongan entry with two starter item instances, leave/reentry and login observed; final start screen checks public `mt2-accounts-v3` and shows CH1 Online |
+| Current account test exports | `dist/web-test/build-manifest.json`, `dist/linux-test/build-manifest.json` | Actual Web/Linux PCK audits: 684/1,487 files, all 197 UI/map images pixel-verified; fixed test probe present as authorized |
+| Actual nginx container validation | Configuration in `.local/accounts/nginx/`; `.local/accounts/public-deploy.log` | Local and deployment Docker `nginx -t` passed with the auth/game proxy configuration |
+| Local client-origin proxy | `.local/accounts/local-entry-report.json` | Actual HTTP: auth health, configured database identity and Web index return 200; administrative schema route returns 403 and traversal returns 404 |
+| Public account deployment | `.local/accounts/public-deploy.log`, release `20260906T173802450337Z` | Created `mt2-accounts-v3` with `--delete-data=never`, retained guest database/auth/issuer keys, built auth with four passing HTTP suites |
+| Public account HTTPS checks | `.local/accounts/public-http-report.json` | Workstation HTTPS: auth health/discovery, public-only JWKS, database identity and served manifest exactly matching the Web export |
+| Current deployed configuration | `.local/accounts/deployment-config-preflight.json` | Both actual PCKs, adjacent Linux config and deployed routes target `mt2-accounts-v3`; deliberate mismatch rejected before remote commands, without changing exports |
+| Current source checks | `.local/accounts/final-check.log`, deployment guard checks above | 22 Rust, 81 Python checks verified (79 in full `make check` plus two guard regressions), four auth HTTP suites, all linters and real Godot parser/runtime |
+| Current schema legacy gameplay checks | `.local/accounts/legacy-multiplayer.json`, `legacy-combat.json`, `legacy-inventory.json`: 22/19/60 checks | Disposable guest-enabled `mt2-account-legacy`; real subscribed movement/combat, direct account inventory RLS, foreign item rejection and privacy/persistence through reconnect/death; no account login or lobby coverage |
+| Previous public map/chat/inventory build | `.local/browser-proof/20260906-174806/report.json`, 45 checks | Independent Chrome/Linux clients, final panel drag/resize geometry, inventory, rejection, reconnect/refresh and no engine errors; no public chat sent |
 | Chat-send/WASD regression | `.local/browser-proof/20260906-174144/report.json`, 45 loopback checks | Actual chat delivery to the other subscription and movement after send, Escape, world click and history submission |
-| Current native panels | `.local/classic-panels-ui/`, `.local/classic-map/`, `.local/classic-chat-final/` | 15 UI, 17 map and 22 chat checks with screenshots |
-| Current public native editor | `.local/classic-chat-native-editor/centered-chat.png` | Connected project, bottom-center chat, Escape leaves no focus/visible entry |
-| Current test export/deployment | Web/Linux PCK audits: 582/1,385 files and 160 exact UI/map images; `.local/classic-panels-served-manifest.json` | Served/exported manifests match; fixed test probe explicitly authorized; no MCP/evaluator/tokens/source archives |
-| Current tool checks | 70 passing tool tests and all lint groups | Source/tool validation, separate from rendered client evidence |
+| Previous native panels | `.local/classic-panels-ui/`, `.local/classic-map/`, `.local/classic-chat-final/` | 15 UI, 17 map and 22 chat checks with screenshots |
+| Previous public native editor | `.local/classic-chat-native-editor/centered-chat.png` | Connected project, bottom-center chat, Escape leaves no focus/visible entry |
+| Previous test export/deployment | Web/Linux PCK audits: 582/1,385 files and 160 exact UI/map images; `.local/classic-panels-served-manifest.json` | Served/exported manifests match; fixed test probe explicitly authorized; no MCP/evaluator/tokens/source archives |
+| Previous tool checks | 70 passing tool tests and all lint groups | Source/tool validation, separate from rendered client evidence |
 | Windows graphics | Historical local Wine report | No native Windows hardware or current Yongan Windows run |
 
 The earlier corrected-Yongan test used Chrome with the workstation's AMD 860M GPU via
@@ -294,11 +358,23 @@ joined with an independent identity and rendered the browser and desktop
 characters. Existing VPS application endpoints also returned HTTP 200 after
 the final deployment.
 
-The latest public panel run reached the world in 12.52 seconds and recorded
+The preceding public panel run reached the world in 12.52 seconds and recorded
 42 FPS in its final sample. The separate loopback chat run reached the world in
 8.82 seconds with a final 21 FPS sample. These describe those particular runs;
 they are not comparable load benchmarks. The loopback-only `--chat-focus` option
 keeps synthetic chat away from public sessions.
 
-The prototype has no large-player load benchmark, complete Metin2 visuals/content,
-account system or full database-restore/disaster-recovery verification.
+The prototype has no large-player load benchmark, complete Metin2 parity or
+full database-restore/disaster-recovery verification.
+The account implementation passes 58 headless integration checks, 22 Yongan/16
+training Rust tests, Clippy and the native UI checks above. The connected native
+editor also rendered character selection, entry with two starter item instances
+and return to the lobby. The final local and public browser/Linux runs each
+pass 103 checks. During the public real-timer test, browser connection time
+advanced from 10,857 to 249,002 ms and native time from 64,369 to 304,703 ms;
+both accounts retained their identities and positions after renewal.
+The additional public headless account-suite run was not executed because
+automatic approval review rejected its synthetic credential exchange; the
+58-check account report is local evidence. Public HTTP/deployment and browser
+checks are recorded separately. Earlier 160-image export audits belong to the
+previous fixture; the current 197-image test exports pass exact pixel checks.

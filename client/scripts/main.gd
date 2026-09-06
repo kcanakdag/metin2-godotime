@@ -1,9 +1,10 @@
 extends Node3D
 ## Shared development world. Gameplay authority lives in SpacetimeDB.
 
-const DEFAULT_SERVER := "http://127.0.0.1:3210"
+const DEFAULT_SERVER := "http://127.0.0.1:8184"
 const DEFAULT_DATABASE := "mt2-yongan-v2"
 const LEGACY_SETTINGS_PATH := "user://client_settings.json"
+const AccountScreens = preload("res://scripts/net/account_flow.gd")
 
 var _actors: Dictionary = {}
 var _local_actor: PlayerActor
@@ -19,6 +20,7 @@ var _stream: WorldStream
 var _pve: Dictionary = {}
 var _original_map := false
 var _content_generation := 0
+var _account_flow: AccountScreens
 
 @onready var connection: GameConnection = $GameConnection
 @onready var world: DevMap = $DevMap
@@ -48,7 +50,8 @@ func _ready() -> void:
 	connection.world_info_changed.connect(_on_world_info)
 	connection.reducer_failed.connect(hud.show_notice)
 	hud.connect_requested.connect(_connect_game)
-	hud.disconnect_requested.connect(connection.disconnect_game)
+	hud.disconnect_requested.connect(_logout)
+	hud.change_character_requested.connect(_change_character)
 	hud.reconnect_requested.connect(connection.reconnect_game)
 	hud.reset_identity_requested.connect(connection.reset_identity)
 	hud.attack_requested.connect(connection.perform_attack)
@@ -71,6 +74,10 @@ func _ready() -> void:
 	dev_capture.name = "DevCapture"
 	add_child(dev_capture)
 	dev_capture.configure(self)
+	_account_flow = AccountScreens.new()
+	_account_flow.name = "AccountFlow"
+	add_child(_account_flow)
+	_account_flow.configure(connection, hud, _settings, _profile)
 	if bool(_settings.get("auto_connect", false)):
 		_connect_game(_settings.server_url, _settings.database, _settings.player_name)
 
@@ -124,6 +131,10 @@ func _physics_process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if connection.state != "connected" and is_instance_valid(_account_flow):
+		if event is InputEventKey and _account_flow.handle_key(event):
+			get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_F3 and event.ctrl_pressed:
 			hud.toggle_debug()
@@ -199,6 +210,8 @@ func dev_snapshot() -> Dictionary:
 		"ui": hud.inventory_snapshot(),
 		"map_chunks": _stream.loaded.keys(),
 		"content_error": _stream.last_error,
+		"account": _account_flow.snapshot() if is_instance_valid(_account_flow) else {},
+		"connected_at_msec": connection.connected_at_msec,
 	}
 
 
@@ -207,6 +220,8 @@ func _key_down(primary: Key, alternate: Key) -> bool:
 
 
 func _connect_game(server_url: String, database: String, player_name: String) -> void:
+	if is_instance_valid(_account_flow):
+		_account_flow.use_legacy_entry()
 	_settings.server_url = server_url.strip_edges()
 	_settings.database = database.strip_edges()
 	_settings.player_name = player_name.strip_edges()
@@ -233,6 +248,18 @@ func _connect_game(server_url: String, database: String, player_name: String) ->
 	connection.connect_game(server_url, database, player_name, _profile)
 
 
+func _logout() -> void:
+	if is_instance_valid(_account_flow):
+		_account_flow.logout()
+	else:
+		connection.disconnect_game()
+
+
+func _change_character() -> void:
+	if is_instance_valid(_account_flow):
+		_account_flow.change_character()
+
+
 func _on_connection_state(state: String, message: String) -> void:
 	if state == "connected":
 		hud.set_profile(
@@ -242,7 +269,7 @@ func _on_connection_state(state: String, message: String) -> void:
 			)
 		)
 	hud.set_connection_state(state, message)
-	if state in ["connecting", "disconnected", "error"]:
+	if state in ["connecting", "disconnected", "error", "lobby", "leaving"]:
 		_content_generation += 1
 		_stream.set_active(false)
 	if state != "connected":

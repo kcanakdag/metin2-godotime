@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Deploy only this game's Compose project; preserve existing services and database contents."""
+"""Deploy only this game's Compose project; reset its game DB only with explicit opt-in."""
 
 import argparse
 import hashlib
 import json
+import os
 import re
 import shlex
 import shutil
@@ -16,6 +17,18 @@ from pathlib import Path, PurePosixPath
 ROOT = Path(__file__).resolve().parents[1]
 REMOTE = "/opt/metin2-godotime"
 MANIFEST = "build-manifest.json"
+AUTH_FILES = (
+    "Dockerfile",
+    ".dockerignore",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "src/auth.ts",
+    "src/config.ts",
+    "src/main.ts",
+    "src/server.ts",
+    "test/auth.test.ts",
+)
 
 
 def run(command, **kwargs):
@@ -25,6 +38,91 @@ def run(command, **kwargs):
 def digest(path):
     with path.open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def stage_auth(source, destination):
+    """Copy only reviewed build inputs; never auth state, installed packages or caches."""
+    for name in AUTH_FILES:
+        path = source / name
+        if (
+            source.is_symlink()
+            or not path.is_file()
+            or any(
+                parent.is_symlink() for parent in [path, *path.parents] if parent != source.parent
+            )
+            or not path.resolve().is_relative_to(source.resolve())
+        ):
+            raise ValueError(f"Expected an ordinary auth build input: {name}")
+        target = destination / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, target)
+
+
+def read_pack_config(godot, pck):
+    """Read connection defaults from the actual PCK without starting its game or autoloads."""
+    with tempfile.TemporaryDirectory(prefix="mt2-deploy-config-") as directory:
+        root = Path(directory)
+        (root / "project.godot").write_text(
+            'config_version=5\n[application]\nconfig/name="MT2 deployment config check"\n'
+        )
+        script = root / "read_config.gd"
+        script.write_text("""extends SceneTree
+
+func _initialize() -> void:
+    if not ProjectSettings.load_resource_pack(OS.get_cmdline_user_args()[0]):
+        push_error("Cannot mount the exported PCK")
+        quit(1)
+        return
+    var config = JSON.parse_string(FileAccess.get_file_as_string("res://client_config.json"))
+    if not config is Dictionary:
+        push_error("Packaged connection defaults are missing or invalid")
+        quit(1)
+        return
+    print("PACKAGED_CONFIG " + JSON.stringify({"database": config.get("database"), "server_url": config.get("server_url")}))
+    quit()
+""")
+        environment = dict(os.environ)
+        for variable in ["XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME"]:
+            path = root / variable.lower()
+            path.mkdir()
+            environment[variable] = str(path)
+        try:
+            result = subprocess.run(
+                [
+                    godot,
+                    "--headless",
+                    "--path",
+                    root,
+                    "--script",
+                    script,
+                    "--",
+                    pck.resolve(),
+                ],
+                env=environment,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=30,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            raise ValueError("Godot packaged-config inspection timed out") from None
+    if result.returncode or "SCRIPT ERROR:" in result.stdout or "\nERROR:" in result.stdout:
+        raise ValueError("Godot could not inspect the actual PCK connection defaults")
+    records = [
+        line.removeprefix("PACKAGED_CONFIG ")
+        for line in result.stdout.splitlines()
+        if line.startswith("PACKAGED_CONFIG ")
+    ]
+    if len(records) != 1:
+        raise ValueError("Godot did not report exactly one packaged connection configuration")
+    config = json.loads(records[0])
+    if not isinstance(config, dict) or any(
+        not isinstance(config.get(key), str) or not config[key].strip()
+        for key in ["database", "server_url"]
+    ):
+        raise ValueError("Packaged database and server URL must be nonempty strings")
+    return config
 
 
 def validate_web_build(directory, *, allow_test_build=False):
@@ -77,8 +175,14 @@ def main():
     parser.add_argument("--certificate", default="kcanakdag.com")
     parser.add_argument("--port", type=int, default=8443)
     parser.add_argument("--database", default="mt2-yongan-v2")
+    parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument("--web-dir", type=Path, default=ROOT / "dist/web")
     parser.add_argument("--allow-test-build", action="store_true")
+    parser.add_argument(
+        "--reset-database",
+        action="store_true",
+        help="Reset only --database during publication; preserves auth accounts and issuer keys",
+    )
     args = parser.parse_args()
     for value in [args.host, args.public_name, args.certificate, args.database]:
         if (
@@ -91,6 +195,12 @@ def main():
         parser.error("Choose a separate unprivileged game port")
     try:
         validate_web_build(args.web_dir, allow_test_build=args.allow_test_build)
+        config = read_pack_config(args.godot, args.web_dir / "index.pck")
+        if config["database"] != args.database:
+            raise ValueError(
+                f"Packaged database {config['database']!r} does not match "
+                f"requested deployment database {args.database!r}; export for that database first"
+            )
     except (OSError, ValueError) as error:
         parser.error(str(error))
     wasm = ROOT / "server/target/wasm32-unknown-unknown/release/mt2_server.wasm"
@@ -114,6 +224,7 @@ def main():
         ]:
             shutil.copy2(ROOT / "deploy" / name, stage / name)
         shutil.copy2(wasm, stage / "mt2_server.wasm")
+        stage_auth(ROOT / "auth", stage / "auth")
         config = (ROOT / "deploy/nginx.conf.in").read_text()
         for key, value in {
             "HOST": args.public_name,
@@ -122,8 +233,11 @@ def main():
         }.items():
             config = config.replace("@" + key + "@", value)
         (stage / "nginx.conf").write_text(config)
-        (stage / ".env").write_text(f"GAME_PORT={args.port}\n")
+        (stage / ".env").write_text(
+            f"GAME_PORT={args.port}\nAUTH_ISSUER=https://{args.public_name}:{args.port}/auth\n"
+        )
         (stage / ".certificate").write_text(args.certificate + "\n")
+        (stage / ".database").write_text(args.database + "\n")
         archive = local / (release + ".tar.gz")
         with tarfile.open(archive, "w:gz") as tar:
             for path in stage.iterdir():
@@ -140,6 +254,7 @@ def main():
             args.public_name,
             str(args.port),
             args.certificate,
+            *(["--reset-database"] if args.reset_database else []),
         ]
     )
     run([*ssh, command])

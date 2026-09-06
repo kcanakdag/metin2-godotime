@@ -70,6 +70,16 @@ def main() -> None:
         generated = stage / "spacetime_bindings/schema"
         if not (generated / "module_game_client.gd").is_file():
             raise RuntimeError("The upstream generator did not produce a game client.")
+        # Editor import alone can defer errors in scripts loaded only at login.
+        # Instantiate the actual client to validate every generated table type.
+        (stage / "validate.gd").write_text(
+            "extends SceneTree\nfunc _initialize():\n"
+            '\tvar module = load("res://spacetime_bindings/schema/module_game_client.gd")\n'
+            "\tif module == null or not module.can_instantiate():\n"
+            "\t\tquit(1)\n\t\treturn\n"
+            "\tvar client = module.new()\n\tclient.free()\n\tquit()\n"
+        )
+        run_godot(options.godot, stage, "--script", "res://validate.gd")
         output = DESTINATION / "schema"
         DESTINATION.mkdir(parents=True, exist_ok=True)
         # This directory is exclusively generated; preserve SDK and gameplay source.

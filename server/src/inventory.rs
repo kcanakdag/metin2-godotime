@@ -1,4 +1,5 @@
 //! Server-owned item instances, grid placement, equipment, consumables and item drops.
+use crate::accounts::inventory_access;
 use crate::{active_controller, collision_bounds, content, now_us, player};
 use spacetimedb::{Identity, ReducerContext, Table};
 
@@ -12,7 +13,10 @@ pub struct InventoryItem {
     #[primary_key]
     #[auto_inc]
     pub id: u64,
+    #[index(btree)]
     pub owner: Identity,
+    #[index(btree)]
+    pub account: Identity,
     pub vnum: u32,
     pub count: u16,
     pub cell: u8,
@@ -98,7 +102,7 @@ fn owned_item(ctx: &ReducerContext, id: u64) -> Result<InventoryItem, String> {
         .id()
         .find(id)
         .ok_or("That item does not exist.")?;
-    if item.owner != ctx.sender() {
+    if item.owner != crate::accounts::selected_character(ctx)? {
         return Err("That item belongs to another player.".into());
     }
     Ok(item)
@@ -106,6 +110,13 @@ fn owned_item(ctx: &ReducerContext, id: u64) -> Result<InventoryItem, String> {
 
 // Reducer transactions roll back all stack changes if a later allocation has no room.
 fn grant(ctx: &ReducerContext, owner: Identity, vnum: u32, count: u16) -> Result<(), String> {
+    let account = ctx
+        .db
+        .inventory_access()
+        .character_id()
+        .find(owner)
+        .ok_or("Character inventory ownership is missing.")?
+        .account;
     let (_, limit) = item_rules(vnum)?;
     if count == 0 {
         return Err("Cannot grant an empty item stack.".into());
@@ -130,6 +141,7 @@ fn grant(ctx: &ReducerContext, owner: Identity, vnum: u32, count: u16) -> Result
         let item = ctx.db.inventory_item().insert(InventoryItem {
             id: 0,
             owner,
+            account,
             vnum,
             count,
             cell,
@@ -141,20 +153,14 @@ fn grant(ctx: &ReducerContext, owner: Identity, vnum: u32, count: u16) -> Result
     Ok(())
 }
 
-pub fn ensure_starter(ctx: &ReducerContext) -> Result<(), String> {
-    if ctx
-        .db
-        .inventory_state()
-        .owner()
-        .find(ctx.sender())
-        .is_some()
-    {
+pub fn ensure_starter(ctx: &ReducerContext, owner: Identity) -> Result<(), String> {
+    if ctx.db.inventory_state().owner().find(owner).is_some() {
         return Ok(());
     }
-    grant(ctx, ctx.sender(), SWORD, 1)?;
-    grant(ctx, ctx.sender(), RED_POTION, 5)?;
+    grant(ctx, owner, SWORD, 1)?;
+    grant(ctx, owner, RED_POTION, 5)?;
     ctx.db.inventory_state().insert(InventoryState {
-        owner: ctx.sender(),
+        owner,
         next_potion_us: 0,
     });
     Ok(())
@@ -166,7 +172,12 @@ pub fn move_item(ctx: &ReducerContext, id: u64, cell: u8) -> Result<(), String> 
     if item.equipped {
         return Err("Unequip that item before moving it.".into());
     }
-    can_place(&owned_items(ctx, ctx.sender()), item.vnum, cell, &[id])?;
+    can_place(
+        &owned_items(ctx, crate::accounts::selected_character(ctx)?),
+        item.vnum,
+        cell,
+        &[id],
+    )?;
     item.cell = cell;
     ctx.db.inventory_item().id().update(item);
     Ok(())
@@ -181,7 +192,7 @@ pub fn equip_item(ctx: &ReducerContext, id: u64) -> Result<(), String> {
     if item.equipped {
         return Ok(());
     }
-    let items = owned_items(ctx, ctx.sender());
+    let items = owned_items(ctx, crate::accounts::selected_character(ctx)?);
     if let Some(mut previous) = items.iter().find(|i| i.equipped).cloned() {
         previous.cell = free_cell(&items, previous.vnum, &[previous.id, id])?;
         previous.equipped = false;
@@ -199,7 +210,12 @@ pub fn unequip_item(ctx: &ReducerContext, id: u64, cell: u8) -> Result<(), Strin
     if !item.equipped {
         return Err("That item is not equipped.".into());
     }
-    can_place(&owned_items(ctx, ctx.sender()), item.vnum, cell, &[id])?;
+    can_place(
+        &owned_items(ctx, crate::accounts::selected_character(ctx)?),
+        item.vnum,
+        cell,
+        &[id],
+    )?;
     item.equipped = false;
     item.cell = cell;
     ctx.db.inventory_item().id().update(item);
@@ -226,7 +242,7 @@ pub fn use_item(ctx: &ReducerContext, id: u64) -> Result<(), String> {
         .db
         .inventory_state()
         .owner()
-        .find(ctx.sender())
+        .find(crate::accounts::selected_character(ctx)?)
         .ok_or("Enter the world first.")?;
     let now = now_us(ctx);
     if now < state.next_potion_us {
@@ -236,7 +252,7 @@ pub fn use_item(ctx: &ReducerContext, id: u64) -> Result<(), String> {
         .db
         .player()
         .identity()
-        .find(ctx.sender())
+        .find(crate::accounts::selected_character(ctx)?)
         .ok_or("Enter the world first.")?;
     player.health = healed_health(player.health, player.max_health)?;
     state.next_potion_us = now.saturating_add(1_000_000);
@@ -292,14 +308,14 @@ pub fn pickup_item_drop(ctx: &ReducerContext, id: u64) -> Result<(), String> {
     if now >= drop.expires_at_us {
         return Err("That item drop has expired.".into());
     }
-    if drop.owner != ctx.sender() && now < drop.reserved_until_us {
+    if drop.owner != crate::accounts::selected_character(ctx)? && now < drop.reserved_until_us {
         return Err("That item drop is reserved for its slayer.".into());
     }
     let player = ctx
         .db
         .player()
         .identity()
-        .find(ctx.sender())
+        .find(crate::accounts::selected_character(ctx)?)
         .ok_or("Enter the world first.")?;
     if (drop.x - player.x).hypot(drop.z - player.z) > 2.5
         || (drop.y - player.y).abs() >= 2.0
@@ -307,7 +323,12 @@ pub fn pickup_item_drop(ctx: &ReducerContext, id: u64) -> Result<(), String> {
     {
         return Err("Move closer to collect that item drop.".into());
     }
-    grant(ctx, ctx.sender(), drop.vnum, drop.count)?;
+    grant(
+        ctx,
+        crate::accounts::selected_character(ctx)?,
+        drop.vnum,
+        drop.count,
+    )?;
     ctx.db.item_drop().id().delete(id);
     Ok(())
 }
@@ -328,6 +349,7 @@ mod tests {
         InventoryItem {
             id,
             owner: Identity::ZERO,
+            account: Identity::ZERO,
             vnum: RED_POTION,
             count: 1,
             cell,

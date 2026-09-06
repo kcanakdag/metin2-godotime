@@ -1,4 +1,5 @@
 //! Authoritative shared development map for the Godot client.
+mod accounts;
 mod combat;
 mod content;
 mod inventory;
@@ -107,7 +108,7 @@ pub struct TickSchedule {
 fn compiled_world_info() -> WorldInfo {
     WorldInfo {
         id: 1,
-        protocol_version: 2,
+        protocol_version: 3,
         map_name: if content::YONGAN {
             "Yongan"
         } else {
@@ -180,6 +181,7 @@ pub fn init(ctx: &ReducerContext) {
 
 #[spacetimedb::reducer(client_connected)]
 pub fn client_connected(ctx: &ReducerContext) -> Result<(), String> {
+    accounts::authorize_connection(ctx)?;
     let connection_id = ctx
         .connection_id()
         .ok_or("A WebSocket connection is required.")?;
@@ -196,66 +198,71 @@ pub fn client_disconnected(ctx: &ReducerContext) {
         return;
     };
     ctx.db.session().connection_id().delete(connection_id);
-    if let Some(mut controller) = ctx.db.controller().identity().find(ctx.sender()) {
-        // A second socket with the same identity cannot evict the controlling socket.
-        if controller.connection_id == connection_id {
-            // Preserve attack/chat deadlines so reconnect cannot reset their limits.
-            controller.mode = 0;
-            controller.direction_x = 0.0;
-            controller.direction_z = 0.0;
-            ctx.db.controller().identity().update(controller);
-            if let Some(mut player) = ctx.db.player().identity().find(ctx.sender()) {
-                player.online = false;
-                player.activity = 0;
-                ctx.db.player().identity().update(player);
-            }
-        }
-    }
+    accounts::disconnected(ctx, connection_id);
 }
 
 #[spacetimedb::reducer]
 pub fn enter_world(ctx: &ReducerContext, name: String) -> Result<(), String> {
+    accounts::require_guest(ctx)?;
     let name = valid_name(&name)?;
+    if ctx.db.player().identity().find(ctx.sender()).is_none() {
+        accounts::unique_name(ctx, name)?;
+        create_player(ctx, ctx.sender(), name, false);
+    }
+    accounts::ensure_guest_access(ctx, ctx.sender());
+    enter_character(ctx, ctx.sender())
+}
+
+fn create_player(ctx: &ReducerContext, character: Identity, name: &str, online: bool) {
+    let slot = ctx.db.player().count() % 32;
+    let x = content::SPAWN.0 + (slot % 4) as f32 * 1.2;
+    ctx.db.player().insert(Player {
+        identity: character,
+        name: name.into(),
+        x,
+        y: content::height(x, content::SPAWN.1),
+        z: content::SPAWN.1,
+        heading: 0.0,
+        activity: 0,
+        online,
+        attack_sequence: 0,
+        health: 100,
+        max_health: 100,
+        gold: 0,
+        respawn_at_us: 0,
+    });
+}
+
+fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), String> {
     let connection_id = active_session(ctx)?;
-    let previous_controller = ctx.db.controller().identity().find(ctx.sender());
-    if let Some(controller) = &previous_controller {
-        if controller.connection_id == connection_id {
-            return inventory::ensure_starter(ctx);
-        }
-        if ctx
+    let previous_controller = ctx.db.controller().identity().find(character);
+    if let Some(controller) = &previous_controller
+        && controller.connection_id != connection_id
+        && ctx
+            .db
+            .player()
+            .identity()
+            .find(character)
+            .is_some_and(|player| player.online)
+        && ctx
             .db
             .session()
             .connection_id()
             .find(controller.connection_id)
             .is_some()
-        {
-            return Err("This identity is already playing in another connection.".into());
-        }
+    {
+        return Err("This character is already playing in another connection.".into());
     }
-    if let Some(mut player) = ctx.db.player().identity().find(ctx.sender()) {
-        player.online = true;
-        player.activity = if player.health == 0 { 3 } else { 0 };
-        ctx.db.player().identity().update(player);
-    } else {
-        // The small dev grid wraps after 32 persistent characters, keeping spawns in bounds.
-        let slot = ctx.db.player().count() % 32;
-        ctx.db.player().insert(Player {
-            identity: ctx.sender(),
-            name: name.into(),
-            x: content::SPAWN.0 + (slot % 4) as f32 * 1.2,
-            y: content::height(content::SPAWN.0 + (slot % 4) as f32 * 1.2, content::SPAWN.1),
-            z: content::SPAWN.1,
-            heading: 0.0,
-            activity: 0,
-            online: true,
-            attack_sequence: 0,
-            health: 100,
-            max_health: 100,
-            gold: 0,
-            respawn_at_us: 0,
-        });
-    }
-    inventory::ensure_starter(ctx)?;
+    let mut player = ctx
+        .db
+        .player()
+        .identity()
+        .find(character)
+        .ok_or("Select an existing character first.")?;
+    player.online = true;
+    player.activity = if player.health == 0 { 3 } else { 0 };
+    ctx.db.player().identity().update(player);
+    inventory::ensure_starter(ctx, character)?;
     if let Some(mut controller) = previous_controller {
         controller.connection_id = connection_id;
         controller.direction_x = 0.0;
@@ -265,7 +272,7 @@ pub fn enter_world(ctx: &ReducerContext, name: String) -> Result<(), String> {
         ctx.db.controller().identity().update(controller);
     } else {
         ctx.db.controller().insert(Controller {
-            identity: ctx.sender(),
+            identity: character,
             connection_id,
             direction_x: 0.0,
             direction_z: 0.0,
@@ -339,7 +346,7 @@ pub fn perform_attack(ctx: &ReducerContext) -> Result<(), String> {
         .db
         .player()
         .identity()
-        .find(ctx.sender())
+        .find(accounts::selected_character(ctx)?)
         .ok_or("Enter the world first.")?;
     player.activity = 2;
     player.attack_sequence = player.attack_sequence.wrapping_add(1);
@@ -361,11 +368,11 @@ pub fn send_chat(ctx: &ReducerContext, message: String) -> Result<(), String> {
         .db
         .player()
         .identity()
-        .find(ctx.sender())
+        .find(accounts::selected_character(ctx)?)
         .ok_or("Enter the world first.")?;
     ctx.db.chat_message().insert(ChatMessage {
         id: 0,
-        sender: ctx.sender(),
+        sender: accounts::selected_character(ctx)?,
         name: player.name,
         message: message.into(),
         sent_at: ctx.timestamp,
@@ -386,6 +393,7 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
     // 2.8.3 has no update lifecycle hook. Refresh static metadata after publication
     // from this existing authorized schedule, without resetting any gameplay tables.
     refresh_world_info(ctx)?;
+    accounts::maintain(ctx);
     let mut clock = ctx
         .db
         .simulation_clock()
@@ -472,20 +480,30 @@ fn active_session(ctx: &ReducerContext) -> Result<ConnectionId, String> {
 
 fn active_controller(ctx: &ReducerContext) -> Result<Controller, String> {
     let connection_id = active_session(ctx)?;
+    let character = accounts::selected_character(ctx)?;
     let controller = ctx
         .db
         .controller()
         .identity()
-        .find(ctx.sender())
+        .find(character)
         .ok_or("Enter the world first.")?;
     if controller.connection_id != connection_id {
         return Err("This identity is controlled by another connection.".into());
+    }
+    if !ctx
+        .db
+        .player()
+        .identity()
+        .find(character)
+        .is_some_and(|p| p.online)
+    {
+        return Err("Enter the world first.".into());
     }
     if ctx
         .db
         .player()
         .identity()
-        .find(ctx.sender())
+        .find(character)
         .is_some_and(|p| p.health == 0)
     {
         return Err("You are defeated. Wait for respawn.".into());

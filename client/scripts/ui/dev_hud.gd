@@ -4,6 +4,7 @@ extends CanvasLayer
 
 signal connect_requested(server_url: String, database: String, player_name: String)
 signal disconnect_requested
+signal change_character_requested
 signal reconnect_requested
 signal reset_identity_requested
 signal attack_requested
@@ -76,8 +77,10 @@ var _inventory_rows: Array = []
 var _profile_key := ""
 var _minimap: Control
 var _system: Control
+var _system_buttons: Dictionary = {}
 var _connected := false
 var _state := "disconnected"
+var _account_entry := false
 
 
 func _ready() -> void:
@@ -114,7 +117,7 @@ func set_connection_state(state: String, message: String) -> void:
 	_state = state
 	_connected = state == "connected"
 	var busy := state in ["connecting", "subscribing", "joining"]
-	_connection.visible = not _connected
+	_connection.visible = not _connected and not _account_entry
 	_chat_panel.set_connected(_connected)
 	_minimap.visible = _connected
 	if not _connected:
@@ -211,6 +214,13 @@ func wants_keyboard() -> bool:
 
 func release_chat_focus() -> void:
 	_chat_panel.close_input()
+
+
+func set_account_entry(enabled: bool) -> void:
+	_account_entry = enabled
+	_connection.visible = not _connected and not enabled
+	if enabled:
+		get_viewport().gui_release_focus()
 
 
 func _make_theme() -> Theme:
@@ -574,6 +584,11 @@ func inventory_snapshot() -> Dictionary:
 	result["dragging"] = not _carry.is_empty() or get_viewport().gui_is_dragging()
 	result["map"] = _minimap.snapshot()
 	result["chat"] = _chat_panel.snapshot()
+	var system := {"visible": _system.is_visible_in_tree()}
+	for key: String in _system_buttons:
+		var center: Vector2 = _system_buttons[key].get_global_rect().get_center()
+		system[key + "_center"] = [center.x, center.y]
+	result["system"] = system
 	return result
 
 
@@ -656,21 +671,21 @@ func _build_minimap() -> void:
 func _build_system() -> void:
 	_system = Control.new()
 	_system.size = Vector2(200, 288)
-	_system.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	_system.position = get_viewport().get_visible_rect().size / 2 - _system.size / 2
 	_root.add_child(_system)
+	_system.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_KEEP_SIZE)
 	Art.board(_system, _system.size, true)
 	for entry in [
 		["Help", 17, Callable()],
 		["Item Shop", 57, Callable()],
 		["System Options", 87, Callable()],
 		["Game Options", 117, Callable()],
-		["Change Character", 147, Callable()],
+		["Change Character", 147, func() -> void: change_character_requested.emit()],
 		["Logout", 177, func() -> void: disconnect_requested.emit()],
 		["Exit Game", 217, func() -> void: disconnect_requested.emit()],
 		["Cancel", 247, _system.hide]
 	]:
 		var button := Art.button(_system, "public/xlarge_button_", Vector2(10, entry[1]), entry[2])
+		_system_buttons[str(entry[0]).to_lower().replace(" ", "_")] = button
 		button.disabled = not entry[2].is_valid()
 		var caption := Art.label(button, entry[0], Vector2.ZERO)
 		caption.size = Vector2(180, 30)

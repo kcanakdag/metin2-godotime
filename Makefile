@@ -21,8 +21,13 @@ DEPLOY_FLAGS ?=
 BROWSER_PYTHON ?= .local/venv-dev/bin/python
 UI_FLAGS ?=
 BROWSER_FLAGS ?=
+AUTH_HOST ?= 127.0.0.1
+AUTH_PORT ?= 3219
+AUTH_ISSUER ?= http://127.0.0.1:$(AUTH_PORT)/auth
+AUTH_DATA_DIR ?= $(CURDIR)/.local/auth
 
 .PHONY: assets import-assets import-map import-ui test-ui test-inventory bake-map map-preview test-map test-world-packs editor client preview check server-build server-test server-start server-publish mcp-build mcp-check dev-setup lint format bindings test-tools test-multiplayer test-combat export-windows export-web export-linux browser-setup test-browser deploy share-setup share-start share-status share-stop export-shared
+.PHONY: auth-setup auth-start test-auth test-accounts
 
 assets:
 	python3 tools/fetch_test_assets.py
@@ -63,10 +68,23 @@ server-test:
 server-start:
 	$(SPACETIME) start --listen-addr "$(LISTEN_ADDR)" --data-dir "$(CURDIR)/.local/spacetimedb" --non-interactive
 
+auth-setup:
+	npm --prefix auth ci
+
+auth-start:
+	npm --prefix auth run build
+	AUTH_HOST="$(AUTH_HOST)" AUTH_PORT="$(AUTH_PORT)" AUTH_ISSUER="$(AUTH_ISSUER)" AUTH_DATA_DIR="$(abspath $(AUTH_DATA_DIR))" npm --prefix auth start
+
+test-auth:
+	npm --prefix auth test
+
+test-accounts:
+	python3 tools/test_accounts.py --godot "$(GODOT)" --server "$(SERVER_URL)" --database "$(DB)" --report .local/accounts-report.json
+
 server-publish: server-build
 	$(SPACETIME) --config-path .local/spacetime-cli.toml publish --server "$(SERVER_URL)" --bin-path server/target/wasm32-unknown-unknown/release/mt2_server.wasm "$(DB)" --no-config
 
-check: lint server-test test-tools
+check: lint server-test test-tools test-auth
 	python3 tools/check_client.py --godot $(GODOT)
 
 test-tools:
