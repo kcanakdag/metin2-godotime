@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "profile_id": "p0-warrior-dog",
+  "description": "Male Warrior, starter Sword+0 and Wild Dog vertical slice.",
+  "source": {
+    "client": {
+      "repository": "https://git.old-metin2.com/metin2/client",
+      "revision": "bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7"
+    },
+    "server_reference": {
+      "repository": "https://git.old-metin2.com/metin2/server",
+      "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+      "files": [
+        {
+          "path": "gamefiles/conf/mob_proto.txt",
+          "git_sha": "002c00106dec10dcde3e8e292d6f1e242bf1c4d9",
+          "sha256": "9aeb98db989ed64ec51dcd1e0df844d7cbd52004779747156017b1617c6be3fa"
+        },
+        {
+          "path": "gamefiles/conf/mob_names_en.txt",
+          "git_sha": "5e832ca9ac25ce6227f140e41b55224e7a485b68",
+          "sha256": "171a1f706d6e7471138cab38f4101a059cb4d0803e62a7c4e044f154902e2ec3"
+        },
+        {
+          "path": "gamefiles/conf/item_proto.txt",
+          "git_sha": "f199abcc1077916c3496d84c58240cbc095ac033",
+          "sha256": "b16190baa1b37425eb372339f81eb188e37ecd0bdb06530f0a9a63f0fb045292"
+        },
+        {
+          "path": "gamefiles/conf/item_names_en.txt",
+          "git_sha": "81404285be617d9b55c6ba23fcbcc87f7b3b8733",
+          "sha256": "5d0e18e89e8aad096a5a7475971a303baa92c065e1d77a999e8421897c5d7acf"
+        }
+      ]
+    }
+  },
+  "coordinates": {
+    "source_linear_unit": "centimeter",
+    "output_linear_unit": "meter",
+    "source_axes": "+X right, +Y forward, +Z up",
+    "godot_axes": "+X right, +Y up, -Z forward",
+    "source_to_godot": ["x / 100", "z / 100", "-y / 100"]
+  },
+  "distribution": {
+    "basis": "development-only-original-fixture",
+    "evidence": "docs/third-party.md#warrior-fixture-and-conversion",
+    "release_status": "excluded-unless-rights-are-established"
+  },
+  "catalog_sources": [
+    "bin/pack/root/playersettingmodule.py",
+    "bin/pack/root/warrior_m.msm",
+    "bin/pack/root/npclist.txt"
+  ],
+  "actors": [
+    {
+      "id": "actor.player.warrior-male",
+      "kind": "player",
+      "race_id": 0,
+      "model_key": "warrior_m",
+      "race_script": "bin/pack/root/warrior_m.msm",
+      "model": "bin/pack/PC/ymir work/pc/warrior/warrior_novice.gr2",
+      "output": "actors/warrior-male.glb",
+      "orientation": {
+        "source_authored_forward": "-Y",
+        "output_forward": "-Z",
+        "yaw_correction_degrees": 180.0,
+        "evidence": "rest skeleton ponytail lies behind the head on source -Y"
+      },
+      "textures": [
+        "bin/pack/PC/ymir work/pc/warrior/warrior_face.dds",
+        "bin/pack/PC/ymir work/pc/warrior/warrior_novice_red.dds"
+      ],
+      "attachment_bones": {
+        "weapon_right": "equip_right_hand"
+      },
+      "modes": [
+        {
+          "id": "general",
+          "motions": [
+            {"action": "wait", "files": ["general/wait.msa", "general/wait_1.msa"], "weights": [70, 30], "loop": true},
+            {"action": "walk", "files": ["general/walk.msa"], "loop": true},
+            {"action": "run", "files": ["general/run.msa"], "loop": true},
+            {"action": "normal_attack", "files": ["general/attack.msa", "general/attack_1.msa"], "weights": [50, 50], "loop": false},
+            {"action": "front_damage", "files": ["general/damage.msa", "general/damage_1.msa"], "weights": [50, 50], "loop": false},
+            {"action": "back_damage", "files": ["general/damage_2.msa", "general/damage_3.msa"], "weights": [50, 50], "loop": false},
+            {"action": "death", "files": ["general/dead.msa"], "loop": false}
+          ]
+        },
+        {
+          "id": "onehand",
+          "required_item_vnums": [10],
+          "motions": [
+            {"action": "wait", "files": ["onehand_sword/wait.msa", "onehand_sword/wait_1.msa"], "weights": [50, 50], "loop": true},
+            {"action": "walk", "files": ["onehand_sword/walk.msa"], "loop": true},
+            {"action": "run", "files": ["onehand_sword/run.msa"], "loop": true},
+            {"action": "front_damage", "files": ["onehand_sword/damage.msa", "onehand_sword/damage_1.msa"], "weights": [50, 50], "loop": false},
+            {"action": "back_damage", "files": ["onehand_sword/damage_2.msa", "onehand_sword/damage_3.msa"], "weights": [50, 50], "loop": false},
+            {"action": "combo_1", "files": ["onehand_sword/combo_01.msa"], "loop": false},
+            {"action": "combo_2", "files": ["onehand_sword/combo_02.msa"], "loop": false},
+            {"action": "combo_3", "files": ["onehand_sword/combo_03.msa"], "loop": false},
+            {"action": "combo_4", "files": ["onehand_sword/combo_04.msa"], "loop": false},
+            {"action": "combo_5", "files": ["onehand_sword/combo_05.msa"], "loop": false},
+            {"action": "combo_6", "files": ["onehand_sword/combo_06.msa"], "loop": false},
+            {"action": "combo_7", "files": ["onehand_sword/combo_07.msa"], "loop": false},
+            {"action": "death", "files": ["general/dead.msa"], "fallback_mode": "general", "loop": false}
+          ],
+          "combo_chains": [
+            ["combo_1", "combo_2", "combo_3", "combo_4"],
+            ["combo_1", "combo_2", "combo_3", "combo_5", "combo_7"],
+            ["combo_1", "combo_2", "combo_3", "combo_5", "combo_6", "combo_4"]
+          ]
+        }
+      ],
+      "motion_root": "bin/pack/PC/ymir work/pc/warrior"
+    },
+    {
+      "id": "actor.mob.wild-dog-101",
+      "kind": "mob",
+      "vnum": 101,
+      "name": "Wild Dog",
+      "model_key": "stray_dog",
+      "race_script": "bin/pack/Monster/ymir work/monster/stray_dog/stray_dog.msm",
+      "motion_list": "bin/pack/Monster/ymir work/monster/stray_dog/motlist.txt",
+      "model": "bin/pack/Monster/ymir work/monster/stray_dog/stray_dog.gr2",
+      "output": "actors/wild-dog-101.glb",
+      "orientation": {
+        "source_authored_forward": "-Y",
+        "output_forward": "-Z",
+        "yaw_correction_degrees": 180.0,
+        "evidence": "rest skeleton head-to-tail axis points toward source -Y"
+      },
+      "textures": [
+        "bin/pack/Monster/ymir work/monster/stray_dog/stray_dog.dds"
+      ],
+      "motion_root": "bin/pack/Monster/ymir work/monster/stray_dog",
+      "modes": [
+        {
+          "id": "general",
+          "motions": [
+            {"action": "wait", "files": ["00.msa", "00_1.msa", "00_2.msa"], "weights": [65, 25, 10], "loop": true},
+            {"action": "walk", "files": ["02.msa"], "loop": true},
+            {"action": "run", "files": ["03.msa"], "loop": true},
+            {"action": "normal_attack", "files": ["20.msa", "20_1.msa"], "weights": [50, 50], "loop": false},
+            {"action": "front_damage", "files": ["30.msa"], "loop": false},
+            {"action": "front_death", "files": ["31.msa"], "loop": false},
+            {"action": "back_damage", "files": ["34.msa", "34_1.msa"], "weights": [50, 50], "loop": false},
+            {"action": "back_death", "files": ["37.msa", "37_1.msa"], "weights": [50, 50], "loop": false}
+          ]
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "item.weapon.sword-10",
+      "vnum": 10,
+      "name": "Sword+0",
+      "kind": "weapon",
+      "equipment_mode": "onehand",
+      "script": "bin/pack/item/ymir work/item/00010.msm",
+      "model": "bin/pack/item/ymir work/item/weapon/00010.gr2",
+      "output": "items/sword-10.glb",
+      "textures": [
+        "bin/pack/item/ymir work/item/weapon/weapon_chogeup_01.dds"
+      ],
+      "actor_attachment": "weapon_right",
+      "attachment_transform": {
+        "translation_m": [0.0, 0.0, 0.0],
+        "rotation_degrees": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      }
+    }
+  ],
+  "trusted_gameplay": {
+    "player": {
+      "actor_id": "actor.player.warrior-male",
+      "base_damage": 25,
+      "attack_range_m": 2.7,
+      "attack_cooldown_us": 850000,
+      "primary_actions": {
+        "general": "normal_attack",
+        "onehand": "combo_1"
+      },
+      "override_basis": "Preserve the implemented player base damage, attack reach and cooldown while source MSA supplies clip and hit-window timing."
+    },
+    "mob": {
+      "actor_id": "actor.mob.wild-dog-101",
+      "vnum": 101,
+      "name": "Wild Dog",
+      "model_key": "stray_dog",
+      "motion_set": "actor.mob.wild-dog-101.general",
+      "max_health": 100,
+      "move_speed_mps": 2.4,
+      "acquisition_range_m": 8.0,
+      "chase_home_range_m": 16.0,
+      "attack_range_m": 1.9,
+      "damage_min": 20,
+      "damage_max": 20,
+      "attack_cooldown_us": 1300000,
+      "respawn_us": 12000000,
+      "reward_gold_min": 5,
+      "reward_gold_max": 5,
+      "override_basis": "Preserve the implemented prototype balance while replacing its presentation; original vnum 101 reference values are retained below.",
+      "source_values": {
+        "max_health": 126,
+        "move_speed": 100,
+        "aggressive_sight_source_units": 2000,
+        "attack_range_source_units": 175,
+        "damage_min": 20,
+        "damage_max": 24,
+        "gold_min": 18,
+        "gold_max": 27
+      }
+    },
+    "item": {
+      "item_id": "item.weapon.sword-10",
+      "vnum": 10,
+      "attack_bonus": 10,
+      "allowed_actor_ids": ["actor.player.warrior-male"],
+      "equipment_mode": "onehand",
+      "override_basis": "Preserve the implemented starter-sword bonus; original item row identifies a size-2 WEAPON_SWORD with values 15-19 and 13-15."
+    }
+  },
+  "known_exclusions": [
+    {
+      "id": "warrior-hair-and-shapes",
+      "source": "bin/pack/root/warrior_m.msm",
+      "reason": "This vertical slice selects only the base novice body; hair and armour shape variants remain outside the profile."
+    },
+    {
+      "id": "motion-sound-and-effects",
+      "source": "selected MSA motion events",
+      "reason": "Sound and effect dependencies are reported when encountered but are not converted by this visual/action slice."
+    }
+  ]
+}

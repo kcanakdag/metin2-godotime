@@ -1,0 +1,90 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://tests/actor_gallery.gd" id="1"]
+
+[sub_resource type="Environment" id="Environment"]
+background_mode = 1
+background_color = Color(0.08, 0.1, 0.13, 1)
+ambient_light_source = 3
+ambient_light_color = Color(0.82, 0.86, 0.95, 1)
+ambient_light_energy = 0.65
+tonemap_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="GroundMaterial"]
+albedo_color = Color(0.22, 0.25, 0.27, 1)
+roughness = 0.95
+
+[sub_resource type="PlaneMesh" id="GroundMesh"]
+material = SubResource("GroundMaterial")
+size = Vector2(7, 6)
+
+[sub_resource type="StandardMaterial3D" id="MarkerMaterial"]
+albedo_color = Color(0.9, 0.65, 0.14, 1)
+emission_enabled = true
+emission = Color(0.35, 0.18, 0.02, 1)
+
+[sub_resource type="BoxMesh" id="MarkerMesh"]
+material = SubResource("MarkerMaterial")
+size = Vector3(0.06, 0.035, 1.8)
+
+[node name="ActorGallery" type="Node3D"]
+script = ExtResource("1")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment")
+
+[node name="KeyLight" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-42, -28, 0)
+light_color = Color(1, 0.9, 0.78, 1)
+light_energy = 1.35
+shadow_enabled = true
+
+[node name="FillLight" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-24, 150, 0)
+light_color = Color(0.65, 0.76, 1, 1)
+light_energy = 0.8
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("GroundMesh")
+
+[node name="ForwardMarker" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.025, -1)
+mesh = SubResource("MarkerMesh")
+
+[node name="ForwardLabel" type="Label3D" parent="."]
+position = Vector3(0, 0.08, -2.1)
+pixel_size = 0.005
+billboard = 1
+text = "SERVER HEADING 0  →  -Z"
+font_size = 28
+outline_size = 5
+
+[node name="Camera3D" type="Camera3D" parent="."]
+position = Vector3(2.8, 1.9, -4.8)
+current = true
+fov = 42.0
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Margin" type="MarginContainer" parent="HUD"]
+offset_left = 24.0
+offset_top = 20.0
+offset_right = 560.0
+offset_bottom = 110.0
+
+[node name="Column" type="VBoxContainer" parent="HUD/Margin"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="HUD/Margin/Column"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "P1 actor gallery"
+
+[node name="Status" type="Label" parent="HUD/Margin/Column"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Loading generated profile…"
+
+[node name="Help" type="Label" parent="HUD/Margin/Column"]
+layout_mode = 2
+text = "1 Equipped wait   2 Sword swing   3 Warrior death   4 Dog attack   5 Dog death"

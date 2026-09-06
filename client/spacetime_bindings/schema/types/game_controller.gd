@@ -15,6 +15,13 @@ const table_names: Array[String] = []
 @export var mode: int
 @export var last_input_us: int
 @export var attack_until_us: int
+@export var next_attack_us: int
+@export var pending_attack_target_id: int
+@export var pending_attack_target_generation: int
+@export var pending_attack_hit_at_us: int
+@export var pending_attack_hit_until_us: int
+@export var pending_attack_damage: int
+@export var pending_attack_range: float
 @export var next_chat_us: int
 
 #BSATN metadata
@@ -29,6 +36,13 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"mode": "U8",
 	"last_input_us": "I64",
 	"attack_until_us": "I64",
+	"next_attack_us": "I64",
+	"pending_attack_target_id": "U32",
+	"pending_attack_target_generation": "U32",
+	"pending_attack_hit_at_us": "I64",
+	"pending_attack_hit_until_us": "I64",
+	"pending_attack_damage": "U16",
+	"pending_attack_range": "F32",
 	"next_chat_us": "I64"
 }
 
@@ -41,8 +55,15 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 ## 7. mode: int[br]
 ## 8. last_input_us: int[br]
 ## 9. attack_until_us: int[br]
-## 10. next_chat_us: int[br]
-static func create(p_identity: PackedByteArray, p_connection_id: PackedByteArray, p_direction_x: float, p_direction_z: float, p_target_x: float, p_target_z: float, p_mode: int, p_last_input_us: int, p_attack_until_us: int, p_next_chat_us: int) -> GameController:
+## 10. next_attack_us: int[br]
+## 11. pending_attack_target_id: int[br]
+## 12. pending_attack_target_generation: int[br]
+## 13. pending_attack_hit_at_us: int[br]
+## 14. pending_attack_hit_until_us: int[br]
+## 15. pending_attack_damage: int[br]
+## 16. pending_attack_range: float[br]
+## 17. next_chat_us: int[br]
+static func create(p_identity: PackedByteArray, p_connection_id: PackedByteArray, p_direction_x: float, p_direction_z: float, p_target_x: float, p_target_z: float, p_mode: int, p_last_input_us: int, p_attack_until_us: int, p_next_attack_us: int, p_pending_attack_target_id: int, p_pending_attack_target_generation: int, p_pending_attack_hit_at_us: int, p_pending_attack_hit_until_us: int, p_pending_attack_damage: int, p_pending_attack_range: float, p_next_chat_us: int) -> GameController:
 	var result: GameController = GameController.new()
 	result.identity = p_identity
 	result.connection_id = p_connection_id
@@ -53,5 +74,12 @@ static func create(p_identity: PackedByteArray, p_connection_id: PackedByteArray
 	result.mode = p_mode
 	result.last_input_us = p_last_input_us
 	result.attack_until_us = p_attack_until_us
+	result.next_attack_us = p_next_attack_us
+	result.pending_attack_target_id = p_pending_attack_target_id
+	result.pending_attack_target_generation = p_pending_attack_target_generation
+	result.pending_attack_hit_at_us = p_pending_attack_hit_at_us
+	result.pending_attack_hit_until_us = p_pending_attack_hit_until_us
+	result.pending_attack_damage = p_pending_attack_damage
+	result.pending_attack_range = p_pending_attack_range
 	result.next_chat_us = p_next_chat_us
 	return result

@@ -156,6 +156,10 @@ def run_godot(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--server", default="http://127.0.0.1:3210")
+    parser.add_argument(
+        "--game-server",
+        help="Optional direct game origin when auth and the disposable database use different routes.",
+    )
     parser.add_argument("--database", default="mt2-yongan-v2")
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument("--report", type=Path, default=ROOT / ".local/accounts-report.json")
@@ -170,6 +174,21 @@ def main() -> None:
     health, _ = auth.request("/auth/health")
     if not isinstance(health, dict) or health.get("status") != "ok":
         raise RuntimeError("The selected origin does not expose a healthy /auth service.")
+    game_server = (options.game_server or auth.server).rstrip("/")
+    schema_url = (
+        f"{game_server}/v1/database/"
+        f"{urllib.parse.quote(options.database, safe='')}/schema?version=10"
+    )
+    try:
+        with urllib.request.urlopen(schema_url, timeout=15) as response:
+            schema = json.load(response)
+    except (OSError, ValueError, urllib.error.HTTPError) as error:
+        raise RuntimeError(
+            f"The selected game route does not expose the requested database schema "
+            f"({type(error).__name__})."
+        ) from None
+    if not isinstance(schema, dict):
+        raise RuntimeError("The selected game route returned an invalid database schema.")
     try:
         with tempfile.TemporaryDirectory(prefix="accounts-", dir=ROOT / ".local") as scratch:
             stage = Path(scratch)
@@ -202,6 +221,14 @@ def main() -> None:
                 )
             suffix = uuid.uuid4().hex[:12]
             tokens = [auth.create_account(f"acct_{suffix}_{index}") for index in range(2)]
+            definitions = json.loads(
+                (ROOT / "server/content/p0-warrior-dog/actions.v1.json").read_text()
+            )
+            definition_hash = definitions.get("gameplay_definition_hash")
+            if not isinstance(definition_hash, str) or not re.fullmatch(
+                r"[0-9a-f]{64}", definition_hash
+            ):
+                raise RuntimeError("Trusted server definitions have no valid gameplay hash.")
             print(
                 "Created two fresh accounts through HTTP; checking real Godot subscriptions.",
                 flush=True,
@@ -212,9 +239,10 @@ def main() -> None:
             with os.fdopen(descriptor, "w") as handle:
                 json.dump(
                     {
-                        "server": auth.server,
+                        "server": game_server,
                         "database": options.database,
                         "tokens": tokens,
+                        "definition_hash": definition_hash,
                         "report": str(private_report),
                     },
                     handle,

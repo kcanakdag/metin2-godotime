@@ -124,6 +124,17 @@ bones, and wait/walk/run/attack clips. Source curves are sampled at approximatel
 every GR2 variant, map, hairstyle, equipment attachment, or effect, nor
 frame-for-frame agreement with the original Granny runtime.
 
+The P1 `p0-warrior-dog` profile expands this narrow fixture to the selected
+male Warrior, Sword+0 vnum 10 and Wild Dog 101. It records pinned source paths,
+source hashes, normalized motion/action metadata, converted GLB hashes and
+generated presentation/action hashes. The selected 27 Warrior and 13 Wild Dog
+motion records are not a license to redistribute the original source files or
+an assertion that every original race, mob, weapon, effect or animation is
+supported. Original GR2/MSA/MSM/MSS files, Granny and Blender runtimes, and
+source archives remain build-time inputs only and are rejected from player
+exports. The generated output remains ignored under the same distribution
+constraints described above; see [P1 actor content import](content-import.md).
+
 ## Original-map conversion
 
 The [map pipeline](map-import.md) reads the small property catalog to resolve

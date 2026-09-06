@@ -8,18 +8,42 @@ const table_names: Array[String] = []
 
 @export var id: int
 @export var next_attack_us: int
+@export var attack_until_us: int
+@export var pending_target: PackedByteArray
+@export var pending_target_generation: int
+@export var pending_hit_at_us: int
+@export var pending_hit_until_us: int
+@export var pending_damage: int
 
 #BSATN metadata
 const primary_key: StringName = &'id'
 const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"id": "U32",
-	"next_attack_us": "I64"
+	"next_attack_us": "I64",
+	"attack_until_us": "I64",
+	"pending_target": "__identity__",
+	"pending_target_generation": "U32",
+	"pending_hit_at_us": "I64",
+	"pending_hit_until_us": "I64",
+	"pending_damage": "U16"
 }
 
 ## 1. id: int[br]
 ## 2. next_attack_us: int[br]
-static func create(p_id: int, p_next_attack_us: int) -> GameMonsterClock:
+## 3. attack_until_us: int[br]
+## 4. pending_target: PackedByteArray[br]
+## 5. pending_target_generation: int[br]
+## 6. pending_hit_at_us: int[br]
+## 7. pending_hit_until_us: int[br]
+## 8. pending_damage: int[br]
+static func create(p_id: int, p_next_attack_us: int, p_attack_until_us: int, p_pending_target: PackedByteArray, p_pending_target_generation: int, p_pending_hit_at_us: int, p_pending_hit_until_us: int, p_pending_damage: int) -> GameMonsterClock:
 	var result: GameMonsterClock = GameMonsterClock.new()
 	result.id = p_id
 	result.next_attack_us = p_next_attack_us
+	result.attack_until_us = p_attack_until_us
+	result.pending_target = p_pending_target
+	result.pending_target_generation = p_pending_target_generation
+	result.pending_hit_at_us = p_pending_hit_at_us
+	result.pending_hit_until_us = p_pending_hit_until_us
+	result.pending_damage = p_pending_damage
 	return result

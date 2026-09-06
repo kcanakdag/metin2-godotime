@@ -61,10 +61,12 @@ def main() -> None:
         for relative in ("scripts/ui", "assets/imported/ui"):
             shutil.copytree(ROOT / "client" / relative, stage / relative)
         if options.suite == "intro":
-            warrior = ROOT / "client/assets/imported/warrior.glb"
-            if not warrior.is_file():
-                raise SystemExit("Missing warrior fixture; run make import-assets first.")
-            shutil.copy2(warrior, stage / "assets/imported/warrior.glb")
+            content = ROOT / "client/assets/imported/content/p0-warrior-dog"
+            if not (content / "manifest.v1.json").is_file():
+                raise SystemExit("Missing P1 actor profile; run the content import first.")
+            shutil.copytree(content, stage / "assets/imported/content/p0-warrior-dog")
+            shutil.copytree(ROOT / "client/scripts/actors", stage / "scripts/actors")
+            shutil.copytree(ROOT / "client/scripts/content", stage / "scripts/content")
         (stage / "scripts/world").mkdir(parents=True)
         (stage / "tests").mkdir()
         for relative in ("scripts/world/classic_minimap.gd", "tests/" + script):

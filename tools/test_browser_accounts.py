@@ -19,12 +19,79 @@ import subprocess
 import time
 from pathlib import Path
 
+from browser_snapshot import (
+    POSITION_INVALID,
+    POSITION_VALID,
+    authoritative_position_distance,
+    subscribed_player_position,
+)
 from playwright.sync_api import sync_playwright
 from test_browser import distance
+from test_browser_actors import exercise_actors
 from test_browser_inventory import exercise_inventory
 from test_browser_panels import exercise_panels
 
 ROOT = Path(__file__).resolve().parents[1]
+RENEWAL_INPUT_AUDIT = """() => {
+    const movementCodes = new Set([
+        "KeyW", "KeyA", "KeyS", "KeyD",
+        "ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"
+    ]);
+    const audit = {
+        installedAtMs: performance.now(),
+        events: [],
+        pressed: [],
+        pointerButtons: 0
+    };
+    const append = value => {
+        audit.events.push({...value, atMs: performance.now()});
+        if (audit.events.length > 128) audit.events.shift();
+    };
+    window.addEventListener("keydown", event => {
+        if (!movementCodes.has(event.code)) return;
+        if (!audit.pressed.includes(event.code)) audit.pressed.push(event.code);
+        append({type: "keydown", code: event.code, repeat: event.repeat,
+            target: event.target?.tagName || ""});
+    }, true);
+    window.addEventListener("keyup", event => {
+        if (!movementCodes.has(event.code)) return;
+        audit.pressed = audit.pressed.filter(code => code !== event.code);
+        append({type: "keyup", code: event.code,
+            target: event.target?.tagName || ""});
+    }, true);
+    for (const type of ["pointerdown", "pointerup", "pointercancel"]) {
+        window.addEventListener(type, event => {
+            if (!(event.target instanceof HTMLCanvasElement)) return;
+            audit.pointerButtons = event.buttons;
+            append({type, button: event.button, buttons: event.buttons,
+                x: event.clientX, y: event.clientY, target: "CANVAS"});
+        }, true);
+    }
+    window.addEventListener("blur", () => append({type: "window-blur"}), true);
+    window.addEventListener("focus", () => append({type: "window-focus"}), true);
+    document.addEventListener("visibilitychange", () => append({
+        type: "visibility", state: document.visibilityState
+    }), true);
+    window.mt2RenewalInputAudit = audit;
+}"""
+WEBGL_RENDERER_PROBE = """() => {
+    const canvas = document.createElement("canvas");
+    const attributes = {alpha: false, antialias: false, preserveDrawingBuffer: false};
+    const gl = canvas.getContext("webgl2", attributes) || canvas.getContext("webgl", attributes);
+    if (!gl) return {available: false};
+    const debug = gl.getExtension("WEBGL_debug_renderer_info");
+    const result = {
+        available: true,
+        api: gl instanceof WebGL2RenderingContext ? "webgl2" : "webgl",
+        vendor: String(gl.getParameter(debug ? debug.UNMASKED_VENDOR_WEBGL : gl.VENDOR)),
+        renderer: String(gl.getParameter(debug ? debug.UNMASKED_RENDERER_WEBGL : gl.RENDERER)),
+        version: String(gl.getParameter(gl.VERSION)),
+        shading_language: String(gl.getParameter(gl.SHADING_LANGUAGE_VERSION))
+    };
+    const lose = gl.getExtension("WEBGL_lose_context");
+    if (lose) lose.loseContext();
+    return result;
+}"""
 
 
 def private_write(path: Path, text: str) -> None:
@@ -51,8 +118,18 @@ def main() -> None:
     parser.add_argument("--url", default="https://kcanakdag.com:8443")
     parser.add_argument("--database", default="mt2-browser-proof")
     parser.add_argument("--chrome", default="/usr/bin/google-chrome")
-    parser.add_argument("--hardware", action="store_true", help="Visible Chrome with system GPU")
+    parser.add_argument(
+        "--hardware",
+        action="store_true",
+        help="Use the system GPU and show Chrome unless --headless is also set",
+    )
+    parser.add_argument(
+        "--headless",
+        action="store_true",
+        help="Hide Chrome; combine with --hardware to retain the system GPU",
+    )
     parser.add_argument("--inventory", action="store_true")
+    parser.add_argument("--actors", action="store_true")
     parser.add_argument("--panels", action="store_true")
     parser.add_argument(
         "--session-refresh",
@@ -206,18 +283,31 @@ def main() -> None:
 
     def settle(identity: str, check: str) -> list:
         web_command("stop")
-        wait(
-            check,
-            lambda: (
-                web().get("activity") == 0
+
+        def settled() -> bool:
+            web_state, native_state = web(), desktop()
+            status, position = subscribed_player_position(web_state, identity)
+            if status == POSITION_INVALID:
+                raise AssertionError(
+                    "subscribed own player row has invalid authoritative coordinates"
+                )
+            return (
+                status == POSITION_VALID
+                and web_state.get("activity") == 0
                 and any(
                     row["identity"] == identity and row["activity"] == 0
-                    for row in desktop().get("player_rows", [])
+                    for row in native_state.get("player_rows", [])
                 )
-                and distance(seen(desktop(), identity), web().get("server_position")) < 0.02
-            ),
+                and distance(seen(native_state, identity), position) < 0.02
+            )
+
+        wait(
+            check,
+            settled,
         )
-        return web()["server_position"]
+        status, position = subscribed_player_position(web(), identity)
+        assert status == POSITION_VALID and position is not None
+        return position
 
     private_write(output / "desktop.log", "")
     log = (output / "desktop.log").open("w")
@@ -249,16 +339,19 @@ def main() -> None:
             },
         )
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(
-                executable_path=args.chrome,
-                headless=not args.hardware,
-                args=[]
-                if args.hardware
-                else [
+            browser_headless = args.headless or not args.hardware
+            if args.hardware:
+                chrome_arguments = ["--enable-gpu"] if browser_headless else []
+            else:
+                chrome_arguments = [
                     "--use-angle=swiftshader",
                     "--enable-unsafe-swiftshader",
                     "--disable-dev-shm-usage",
-                ],
+                ]
+            browser = playwright.chromium.launch(
+                executable_path=args.chrome,
+                headless=browser_headless,
+                args=chrome_arguments,
             )
             context = browser.new_context(viewport={"width": 1280, "height": 800})
             page = context.new_page()
@@ -277,6 +370,11 @@ def main() -> None:
                 lambda: bool(account()) and bool(account(desktop())),
                 90,
             )
+            samples["browser_renderer"] = {
+                "requested_hardware": args.hardware,
+                "headless": browser_headless,
+                "webgl": page.evaluate(WEBGL_RENDERER_PROBE),
+            }
             if args.session_refresh:
                 assert "connected_at_msec" in web() and "connected_at_msec" in desktop(), (
                     "Session-refresh proof requires exports with connected_at_msec snapshots"
@@ -363,6 +461,17 @@ def main() -> None:
             native_command("capture")
             wait("native_initial_world_capture_saved", lambda: (output / "desktop.png").is_file())
             (output / "desktop.png").replace(output / "desktop-initial.png")
+            if args.actors:
+                samples["actors"] = exercise_actors(
+                    page,
+                    web,
+                    desktop,
+                    web_command,
+                    wait,
+                    web_id,
+                    native_id,
+                    output,
+                )
             start = seen(desktop(), web_id)
             page.locator("canvas").focus()
             page.keyboard.down("w")
@@ -555,31 +664,187 @@ def main() -> None:
             if args.session_refresh:
                 position = settle(web_id, "character_stops_before_automatic_session_refresh")
                 native_command("stop")
+
+                def native_stopped() -> bool:
+                    native_state, web_state = desktop(), web()
+                    status, authoritative = subscribed_player_position(native_state, native_id)
+                    if status == POSITION_INVALID:
+                        raise AssertionError(
+                            "subscribed own player row has invalid authoritative coordinates"
+                        )
+                    return (
+                        status == POSITION_VALID
+                        and any(
+                            row.get("identity") == native_id and row.get("activity") == 0
+                            for row in native_state.get("player_rows", [])
+                        )
+                        and distance(seen(web_state, native_id), authoritative) < 0.02
+                    )
+
                 wait(
                     "native_stops_before_automatic_session_refresh",
-                    lambda: (
-                        desktop().get("activity") == 0
-                        and distance(seen(web(), native_id), desktop().get("server_position"))
-                        < 0.02
-                    ),
+                    native_stopped,
                 )
-                native_position = desktop()["server_position"]
-                connection_times = (web()["connected_at_msec"], desktop()["connected_at_msec"])
+                baseline_web, baseline_native = web(), desktop()
+                web_status, web_baseline = subscribed_player_position(baseline_web, web_id)
+                native_status, native_position = subscribed_player_position(
+                    baseline_native, native_id
+                )
+                assert web_status == native_status == POSITION_VALID
+                assert web_baseline is not None and native_position is not None
+                assert distance(web_baseline, position) < 0.02
+                position = web_baseline
+                connection_times = (
+                    baseline_web["connected_at_msec"],
+                    baseline_native["connected_at_msec"],
+                )
                 assert min(connection_times) > 0
+                page.evaluate(RENEWAL_INPUT_AUDIT)
+                samples["session_refresh_baseline_web"] = baseline_web
+                samples["session_refresh_baseline_native"] = baseline_native
+                samples["session_refresh_authoritative_baselines"] = {
+                    "web": position,
+                    "native": native_position,
+                }
+                renewal_started = time.monotonic()
+                renewal_trace: list[dict] = []
+                trace_fingerprint = None
+                trace_at = 0.0
+
+                def renewal_state() -> bool:
+                    nonlocal trace_at, trace_fingerprint
+                    web_state, native_state = web(), desktop()
+                    audit = page.evaluate("() => window.mt2RenewalInputAudit")
+                    now = time.monotonic()
+                    web_position_status, web_position = subscribed_player_position(
+                        web_state, web_id
+                    )
+                    native_position_status, current_native_position = subscribed_player_position(
+                        native_state, native_id
+                    )
+                    fingerprint = (
+                        web_state.get("connection_state"),
+                        native_state.get("connection_state"),
+                        web_state.get("connected_at_msec"),
+                        native_state.get("connected_at_msec"),
+                        web_state.get("activity"),
+                        native_state.get("activity"),
+                        web_position_status,
+                        native_position_status,
+                        tuple(web_position or []),
+                        tuple(current_native_position or []),
+                        len(audit.get("events", [])),
+                    )
+                    if fingerprint != trace_fingerprint or now - trace_at >= 5:
+                        events = audit.get("events", [])
+                        renewal_trace.append(
+                            {
+                                "elapsed_seconds": round(now - renewal_started, 3),
+                                "web": {
+                                    "connection_state": web_state.get("connection_state"),
+                                    "connected_at_msec": web_state.get("connected_at_msec"),
+                                    "identity": web_state.get("identity"),
+                                    "activity": web_state.get("activity"),
+                                    "authoritative_position_status": web_position_status,
+                                    "authoritative_position": web_position,
+                                    "snapshot_server_position": web_state.get("server_position"),
+                                    "self_position": seen(web_state, web_id),
+                                    "peer_position": seen(native_state, web_id),
+                                },
+                                "native": {
+                                    "connection_state": native_state.get("connection_state"),
+                                    "connected_at_msec": native_state.get("connected_at_msec"),
+                                    "identity": native_state.get("identity"),
+                                    "activity": native_state.get("activity"),
+                                    "authoritative_position_status": native_position_status,
+                                    "authoritative_position": current_native_position,
+                                    "snapshot_server_position": native_state.get("server_position"),
+                                    "self_position": seen(native_state, native_id),
+                                    "peer_position": seen(web_state, native_id),
+                                },
+                                "input": {
+                                    "pressed": audit.get("pressed", []),
+                                    "pointer_buttons": audit.get("pointerButtons", 0),
+                                    "event_count": len(events),
+                                    "last_event": events[-1] if events else None,
+                                },
+                            }
+                        )
+                        samples["session_refresh_trace"] = renewal_trace
+                        trace_fingerprint = fingerprint
+                        trace_at = now
+                    if POSITION_INVALID in (web_position_status, native_position_status):
+                        samples["session_refresh_invalid_authoritative_position"] = {
+                            "elapsed_seconds": round(now - renewal_started, 3),
+                            "web_position_status": web_position_status,
+                            "native_position_status": native_position_status,
+                            "web": web_state,
+                            "native": native_state,
+                            "input": audit,
+                        }
+                        raise AssertionError(
+                            "subscribed own player row has invalid authoritative coordinates"
+                        )
+                    web_drift = (
+                        authoritative_position_distance(web_position, position)
+                        if web_position_status == POSITION_VALID
+                        else None
+                    )
+                    native_drift = (
+                        authoritative_position_distance(current_native_position, native_position)
+                        if native_position_status == POSITION_VALID
+                        else None
+                    )
+                    if (
+                        web_state.get("connection_state") == "connected"
+                        and web_state.get("identity") == web_id
+                        and web_position_status == POSITION_VALID
+                        and web_drift >= 0.1
+                    ) or (
+                        native_state.get("connection_state") == "connected"
+                        and native_state.get("identity") == native_id
+                        and native_position_status == POSITION_VALID
+                        and native_drift >= 0.1
+                    ):
+                        samples["session_refresh_first_valid_drift"] = {
+                            "elapsed_seconds": round(now - renewal_started, 3),
+                            "web_distance": web_drift,
+                            "native_distance": native_drift,
+                            "web_authoritative_position": web_position,
+                            "native_authoritative_position": current_native_position,
+                            "web": web_state,
+                            "native": native_state,
+                            "input": audit,
+                        }
+                        raise AssertionError(
+                            "authoritative position drifted during session renewal; "
+                            "see session_refresh_first_valid_drift"
+                        )
+                    return (
+                        web_state.get("connection_state")
+                        == native_state.get("connection_state")
+                        == "connected"
+                        and web_state.get("connected_at_msec", 0) > connection_times[0]
+                        and native_state.get("connected_at_msec", 0) > connection_times[1]
+                        and web_state.get("identity") == web_id
+                        and native_state.get("identity") == native_id
+                        and web_position_status == POSITION_VALID
+                        and native_position_status == POSITION_VALID
+                        and web_drift < 0.1
+                        and native_drift < 0.1
+                        and distance(seen(web_state, web_id), position) < 0.1
+                        and distance(seen(native_state, web_id), position) < 0.1
+                        and distance(seen(native_state, native_id), native_position) < 0.1
+                        and distance(seen(web_state, native_id), native_position) < 0.1
+                    )
+
                 wait(
                     "both_real_session_timers_refresh_and_restore_world",
-                    lambda: (
-                        web().get("connection_state")
-                        == desktop().get("connection_state")
-                        == "connected"
-                        and web().get("connected_at_msec", 0) > connection_times[0]
-                        and desktop().get("connected_at_msec", 0) > connection_times[1]
-                        and web().get("identity") == web_id
-                        and desktop().get("identity") == native_id
-                        and distance(seen(desktop(), web_id), position) < 0.1
-                        and distance(seen(web(), native_id), native_position) < 0.1
-                    ),
+                    renewal_state,
                     330,
+                )
+                samples["session_refresh_input"] = page.evaluate(
+                    "() => window.mt2RenewalInputAudit"
                 )
                 samples["after_session_refresh_web"] = web()
                 samples["after_session_refresh_native"] = desktop()

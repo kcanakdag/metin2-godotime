@@ -362,15 +362,23 @@ pub fn leave_world(ctx: &ReducerContext) -> Result<(), String> {
 }
 
 pub fn stop_character(ctx: &ReducerContext, character: Identity) {
+    crate::appearance::remove(ctx, character);
     if let Some(mut control) = ctx.db.controller().identity().find(character) {
         control.mode = 0;
         control.direction_x = 0.0;
         control.direction_z = 0.0;
+        control.attack_until_us = 0;
+        crate::combat::cancel_player_attack(&mut control);
         ctx.db.controller().identity().update(control);
     }
+    crate::combat::cancel_attacks_targeting(ctx, character);
     if let Some(mut player) = ctx.db.player().identity().find(character) {
         player.online = false;
         player.activity = if player.health == 0 { 3 } else { 0 };
+        if player.health > 0 {
+            player.action_started_at_us = 0;
+            player.action_ends_at_us = 0;
+        }
         ctx.db.player().identity().update(player);
     }
 }

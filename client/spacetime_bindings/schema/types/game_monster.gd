@@ -7,6 +7,12 @@ const module_name : String = "Game"
 const table_names: Array[String] = ['monster']
 
 @export var id: int
+@export var definition_vnum: int
+@export var actor_id: String
+@export var name: String
+@export var model_key: String
+@export var motion_set: String
+@export var attack_action_id: String
 @export var x: float
 @export var y: float
 @export var z: float
@@ -15,12 +21,21 @@ const table_names: Array[String] = ['monster']
 @export var max_health: int
 @export var activity: int
 @export var attack_sequence: int
+@export var life_sequence: int
 @export var respawn_at_us: int
+@export var action_started_at_us: int
+@export var action_ends_at_us: int
 
 #BSATN metadata
 const primary_key: StringName = &'id'
 const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"id": "U32",
+	"definition_vnum": "U32",
+	"actor_id": "String",
+	"name": "String",
+	"model_key": "String",
+	"motion_set": "String",
+	"attack_action_id": "String",
 	"x": "F32",
 	"y": "F32",
 	"z": "F32",
@@ -29,22 +44,40 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"max_health": "U16",
 	"activity": "U8",
 	"attack_sequence": "U32",
-	"respawn_at_us": "I64"
+	"life_sequence": "U32",
+	"respawn_at_us": "I64",
+	"action_started_at_us": "I64",
+	"action_ends_at_us": "I64"
 }
 
 ## 1. id: int[br]
-## 2. x: float[br]
-## 3. y: float[br]
-## 4. z: float[br]
-## 5. heading: float[br]
-## 6. health: int[br]
-## 7. max_health: int[br]
-## 8. activity: int[br]
-## 9. attack_sequence: int[br]
-## 10. respawn_at_us: int[br]
-static func create(p_id: int, p_x: float, p_y: float, p_z: float, p_heading: float, p_health: int, p_max_health: int, p_activity: int, p_attack_sequence: int, p_respawn_at_us: int) -> GameMonster:
+## 2. definition_vnum: int[br]
+## 3. actor_id: String[br]
+## 4. name: String[br]
+## 5. model_key: String[br]
+## 6. motion_set: String[br]
+## 7. attack_action_id: String[br]
+## 8. x: float[br]
+## 9. y: float[br]
+## 10. z: float[br]
+## 11. heading: float[br]
+## 12. health: int[br]
+## 13. max_health: int[br]
+## 14. activity: int[br]
+## 15. attack_sequence: int[br]
+## 16. life_sequence: int[br]
+## 17. respawn_at_us: int[br]
+## 18. action_started_at_us: int[br]
+## 19. action_ends_at_us: int[br]
+static func create(p_id: int, p_definition_vnum: int, p_actor_id: String, p_name: String, p_model_key: String, p_motion_set: String, p_attack_action_id: String, p_x: float, p_y: float, p_z: float, p_heading: float, p_health: int, p_max_health: int, p_activity: int, p_attack_sequence: int, p_life_sequence: int, p_respawn_at_us: int, p_action_started_at_us: int, p_action_ends_at_us: int) -> GameMonster:
 	var result: GameMonster = GameMonster.new()
 	result.id = p_id
+	result.definition_vnum = p_definition_vnum
+	result.actor_id = p_actor_id
+	result.name = p_name
+	result.model_key = p_model_key
+	result.motion_set = p_motion_set
+	result.attack_action_id = p_attack_action_id
 	result.x = p_x
 	result.y = p_y
 	result.z = p_z
@@ -53,5 +86,8 @@ static func create(p_id: int, p_x: float, p_y: float, p_z: float, p_heading: flo
 	result.max_health = p_max_health
 	result.activity = p_activity
 	result.attack_sequence = p_attack_sequence
+	result.life_sequence = p_life_sequence
 	result.respawn_at_us = p_respawn_at_us
+	result.action_started_at_us = p_action_started_at_us
+	result.action_ends_at_us = p_action_ends_at_us
 	return result

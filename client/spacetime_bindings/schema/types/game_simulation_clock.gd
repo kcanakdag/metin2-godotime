@@ -4,7 +4,7 @@
 class_name GameSimulationClock extends _ModuleTableType
 
 const module_name : String = "Game"
-const table_names: Array[String] = []
+const table_names: Array[String] = ['simulation_clock']
 
 @export var id: int
 @export var last_tick: int

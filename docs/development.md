@@ -156,8 +156,9 @@ The Make server defaults remain `SERVER_FEATURES=yongan`, `DB=mt2-yongan-v2`
 and administrative `SERVER_URL=http://127.0.0.1:3210`. Game state lives in
 `.local/spacetimedb`; authentication state/keys live in `.local/auth`.
 Keep disposable processes/databases separate from development state. Public
-account exports and deployment explicitly target `DB=mt2-accounts-v3`, retaining
-the old public guest database. This does not change the tested local default.
+P1 exports and deployment explicitly target `DB=mt2-p1-v4`, retaining the
+preceding account and guest databases. This does not change the tested local
+default.
 
 ## Account and gameplay checks
 
@@ -175,6 +176,14 @@ MT2_AUTH_ISSUER=http://127.0.0.1:8184/auth make server-publish DB=mt2-yongan-tes
 make bindings DB=mt2-yongan-test
 make test-auth
 make test-accounts SERVER_URL=http://127.0.0.1:8184 DB=mt2-yongan-test
+```
+
+For an isolated database that is intentionally not on the proxy allowlist, keep
+authentication on the issuer origin and select the game service separately:
+
+```sh
+python3 tools/test_accounts.py --server http://127.0.0.1:8186 \
+  --game-server http://127.0.0.1:13223 --database mt2-p1-final
 ```
 
 `tools/test_accounts.py` creates two real accounts through HTTP, stages a
@@ -203,7 +212,7 @@ direct account RLS filter and generated schema, but do not exercise account
 registration or authenticated character selection.
 Do not enable guest access in the public deployment to make old checks pass.
 Training uses `SERVER_FEATURES=` and a separate training database; both maps
-use application protocol 3.
+use application protocol 4.
 
 For gameplay changes, verify two independently authenticated accounts see each
 other, each movement reaches the other subscription, and disconnect removes
@@ -281,6 +290,36 @@ source manifest records commits and file hashes; conversion reports go in
 the result in Godot. Downloaded assets and converted output are ignored so they
 can be regenerated; they are not hand-maintained game source.
 
+## P1 generated actor fixture
+
+The `p0-warrior-dog` profile compiles a selected male Warrior, starter Sword+0
+vnum 10 and Wild Dog 101 into client presentation data and matching server
+trusted action definitions. Run:
+
+```sh
+make content-build BLENDER=/path/to/blender
+make content-validate
+make content-probe
+make test-actors
+```
+
+The build may retrieve declared pinned inputs on a cold cache; the compiler also
+has `--offline` after those inputs are available. Validation compares generated
+GLB hashes and structural records with the presentation manifest and checks the
+shared gameplay-definition hash against
+`server/content/p0-warrior-dog/actions.v1.json`. The probe uses an isolated
+Godot project. `test-actors` stages actor resources in a separate project; add
+`UI_FLAGS=--native` for rendered captures when Xvfb is available. See
+[P1 actor content import](content-import.md) for generated paths, package
+exclusions and current evidence limits.
+
+Current exports require the generated P1 profile; they fail before staging with
+the content-build guidance when its manifest is absent. For isolated P1 export
+QA, `tools/export_playable.py` accepts `--output-dir` and `--work-dir`; use
+separate `.local/p1/` paths so normal `dist/` artifacts are not replaced. The
+actual PCK audit retains a legacy branch only for inspecting already-created
+legacy packs, never as a fallback for a current export.
+
 Use `make import-ui` after `make dev-setup` for the selected original HUD,
 inventory, item icons and stitched Yongan minimap. This converts 196 UI images
 and 20 original DDS map tiles from 260 pinned source files with Pillow; Blender
@@ -348,8 +387,9 @@ make browser-setup
 make export-web SERVER_URL=http://127.0.0.1:8184 DB=mt2-yongan-test TEST_PROBE=--test-probe
 make export-linux SERVER_URL=http://127.0.0.1:8184 DB=mt2-yongan-test TEST_PROBE=--test-probe
 .local/venv-dev/bin/python tools/test_browser_accounts.py \
-  --url http://127.0.0.1:8184 --database mt2-yongan-test \
-  --hardware --inventory --panels
+  --url http://127.0.0.1:8186 --database mt2-p1-final \
+  --output .local/p1/browser-source-row-rerun \
+  --actors --hardware --headless --inventory --panels --session-refresh
 ```
 
 The runner uses visible browser controls for registration/login and character
@@ -357,17 +397,44 @@ entry, plus an independent exported Linux account. It covers ownership,
 creation/selection, leave/switch, movement, reconnect/refresh, logout and wrong
 password handling; optional flags add original HUD/panel interactions. It
 writes private reports/screenshots under `.local/browser-accounts/<timestamp>/`.
+Use `--hardware --headless` for an isolated hidden Chrome run with
+`--enable-gpu`; its report records the actual WebGL renderer and avoids desktop
+mouse/keyboard input contaminating timing-sensitive checks. `--hardware` by
+itself deliberately keeps Chrome visible for desktop observation. Add
+`--actors` to exercise only the selected P1 Warrior, Sword+0 vnum 10 and Wild
+Dog 101 fixture checks; it is not broad actor/content coverage. These modes
+produce scoped evidence and do not by themselves establish a final acceptance
+pass.
 Add `--session-refresh` to wait for both clients' real four-minute refresh
 timers and verify that they reconnect into the same world state; this is a
-longer test, not an accelerated timer simulation. Both final runs pass 103
-checks, including real timer renewal with unchanged identities and positions:
+longer test, not an accelerated timer simulation. The latest local P1 run uses
+the command shape above and passes 111 checks in
+`.local/p1/browser-source-row-final/report.json`. It covers the selected
+Warrior/Sword+0/Wild Dog actors, entry, inventory/panels, system-menu
+interactions, combat, movement, switching, reconnect, page reload, logout,
+wrong-password retry and both real timer renewals. It used AMD hardware through
+headless Chrome and an independent exported Linux client, retained both self and
+peer actors after renewal, and recorded no browser engine errors.
+
+The idle-renewal diagnostics distinguish input and state sources. A prior
+visible run recorded contaminating DOM mouse/WASD events. A later transient
+`[0,0,0]` convenience snapshot came from deferred local-actor reconciliation,
+while the matching subscribed online player row remained valid. The runner now
+uses that own-identity row for its authoritative baseline and drift, and still
+requires final self/peer rendering in both clients. The accepted report's
+post-hoc 55-sample XYZ audit records zero drift and zero DOM events in
+`.local/p1/browser-source-row-final/xyz-drift-audit.json`.
+
+The earlier account-flow exports passed 103 checks in
 `.local/browser-accounts/20260906-193823/report.json` on loopback and
 `.local/browser-accounts/20260906-194508/report.json` on the public account
-database. Both use independent Chrome/Linux accounts and record no browser
-engine errors. Entry, inventory/panels, system-menu interactions, movement,
-switching, reconnect, page reload, logout and wrong-password retry are covered.
-The 19-check native UI suite separately verifies menu centering/resizing/clicks.
-Public release `20260906T173802450337Z` also passes HTTPS/served-manifest checks.
+database. That public evidence belongs to release `20260906T173802450337Z` and
+is separate from local P1 acceptance. The P1 development build is now live as
+release `20260906T204513591109Z` on `mt2-p1-v4`; publication verified HTTPS,
+database availability and the served manifest without deleting data; the HTTP
+record is `.local/p1/public-http-report.json`. Public exported-gameplay
+qualification is still pending. The 19-check native UI suite separately verifies
+menu centering/resizing/clicks.
 
 ### Historical guest browser evidence
 
@@ -495,7 +562,7 @@ all `client/tests/` sources and MCP bridges.
 ## Deploying an update
 
 Build the production-issuer server, export a normal Web client with
-`DB=mt2-accounts-v3` and run `make deploy DB=mt2-accounts-v3`. This changes only
+`DB=mt2-p1-v4` and run `make deploy DB=mt2-p1-v4`. This changes only
 `/opt/metin2-godotime` and Compose project
 `metin2-godotime`. HTTPS/WSS uses 8443; database administration stays on remote
 loopback 13210. Auth has a private container and separate persistent `accounts`
@@ -510,21 +577,24 @@ Local Godot is also required for deployment: an isolated headless process reads
 the actual Web PCK's connection defaults and rejects a database mismatch before
 SSH. Use `GODOT=/path/to/godot` or the deploy tool's `--godot` option if needed.
 
-The account rollout creates a new public database while preserving the old
-guest database. With matching instrumented exports targeting `mt2-accounts-v3`:
+The P1 development rollout creates a new public database while preserving the
+preceding account and guest databases. With matching instrumented exports
+targeting `mt2-p1-v4`:
 
 ```sh
-make deploy DB=mt2-accounts-v3 WEB_DIR=dist/web-test DEPLOY_FLAGS='--allow-test-build'
+make deploy DB=mt2-p1-v4 WEB_DIR=dist/web-test DEPLOY_FLAGS='--allow-test-build'
 ```
 
 This invocation does not reset a database or remove a volume. The old
-`mt2-yongan-v2` remains stored, and the proxy exposes only the new account
-database. Auth accounts, signing material and SpacetimeDB issuer keys persist.
-The public deployment completed as release `20260906T173802450337Z`, with
-verified HTTPS health/discovery, database availability and served manifest.
-The public browser/Linux account run passes 103 checks, including real timed
-refresh. Local apply-script command fixtures cover failure recovery and optional
-reset scope; they are not a real Docker restore drill.
+`mt2-yongan-v2` and `mt2-accounts-v3` databases remain stored, and the proxy
+exposes only `mt2-p1-v4`. Auth accounts, signing material and SpacetimeDB issuer
+keys persist. The public P1 development deployment completed as release
+`20260906T204513591109Z`, with verified HTTPS health/discovery, database
+availability and served manifest. Its exported browser/Linux gameplay
+qualification remains pending. The preceding account release's public run
+passed 103 checks, including real timed refresh. Local apply-script command
+fixtures cover failure recovery and optional reset scope; they are not a real
+Docker restore drill.
 
 After deployment, verify HTTPS and two actual accounts in browser/native
 clients. Health checks and successful container startup do not establish

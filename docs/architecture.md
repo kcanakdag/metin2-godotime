@@ -66,7 +66,7 @@ with no multiplayer connection.
 
 Without the Cargo feature, the server uses the small flat training ground with
 five box obstacles. Make enables Yongan by default; raw Cargo has no default
-feature. Both builds expose the same protocol-3 schema.
+feature. Both builds expose the same protocol-4 schema.
 
 ## Networking and runtime boundaries
 
@@ -79,7 +79,7 @@ The socket subprotocol is `v3.bsatn.spacetimedb`. In the pinned server,
 coalesces messages using the
 [v2 binary schema](https://github.com/clockworklabs/SpacetimeDB/blob/v2.8.3/crates/client-api-messages/src/websocket/v2.rs).
 This transport version is separate from application
-`world_info.protocol_version = 3`, checked before joining.
+`world_info.protocol_version = 4`, checked before joining.
 
 Decoding runs on the main thread, with no compression and
 `confirmed_reads = false`. Cached tables require primary keys; Brotli is
@@ -99,7 +99,7 @@ The standard engine and pure GDScript path support Web without a .NET dependency
 | `client/scripts/net/account_auth.gd` | Same-origin auth HTTP requests and private remembered-session storage |
 | `client/scripts/net/account_flow.gd` | Entry screens, availability, selection, logout and JWT refresh/reconnect |
 | `client/scripts/main.gd` | Input, entity instances, loading, camera and HUD |
-| `client/scripts/actors/` | Interpolated warriors and procedural monster/loot visuals |
+| `client/scripts/actors/` | Interpolated generated-GLB Warrior/Wild Dog actors, equipment attachment and loot visuals |
 | `client/scripts/world/world_stream.gd` | Content manifest, downloaded packs, nearby chunk instances |
 | `client/scripts/ui/classic_*.gd` | Original UI art/layout, inventory slots, taskbar, tooltips and minimap presentation |
 | `tools/export_playable.py` | Isolated Web/Linux builds and optional test-only probes |
@@ -137,13 +137,15 @@ names confer no ownership. `GameConnection.account_identity` and
 | --- | --- |
 | `account_character` | Character Identity primary key; account, slot, name, empire, `character_class`, sex; owner-only RLS |
 | `account_state` | Account Identity primary key; selected-character Identity (ZERO when unset), in-world flag; owner-only RLS |
-| `player` | Public character Identity primary key; name, X/Y/Z, heading, activity/online, attack sequence, health/max health, gold, respawn deadline; offline rows also readable |
-| `monster` | Numeric ID; position, heading, health, activity, attack sequence, respawn deadline |
+| `player` | Public character Identity primary key; name, X/Y/Z, heading, activity/online, action and life sequences, health/max health, gold, respawn and current-action timestamps; offline rows also readable |
+| `player_appearance` | Presence-only character projection with empire, class, sex and equipped weapon vnum; inserted on entry and removed on leave/expiry/disconnect |
+| `monster` | Numeric ID; Wild Dog definition identity/model/motion/action, position, heading, health, activity, action and life sequences, respawn and current-action timestamps |
 | `loot` | Numeric ID; position, gold, owner character, reservation and expiry |
 | `inventory_access` | Character-to-account mapping; public with a strict account-only read filter |
 | `inventory_item` | Numeric ID; owner character, server-assigned account, vnum, count, bag cell, equipped flag; account-owned rows only through RLS |
 | `item_drop` | Numeric ID; position, vnum/count, owner character, reservation and expiry |
-| `world_info` | Protocol, map identity/content hash, tick interval and legacy half-size |
+| `world_info` | Protocol, map identity/content hash, trusted action profile/hash, tick interval and legacy half-size |
+| `simulation_clock` | Public authoritative tick timestamp used to seek late-joined action clips |
 | `obstacle`, `chat_message` | Training obstacles and retained normal chat |
 
 The pinned `unstable` RLS feature filters inventory directly with
@@ -220,14 +222,43 @@ local position prediction, reconciliation system, player-to-player collision
 or general layered navigation. Local and remote visuals interpolate toward
 replicated three-dimensional positions.
 
-The prototype Stone Sentinel is procedural geometry, not an imported Metin2 mob.
-A player hit deals 25 base damage plus 10 for the equipped starter sword, within
-2.7 m and a 2 m height difference, with a
-clear path and an 850 ms cooldown. The sentinel has 100 health, chases eligible
-nearby players around its home, and deals 20 damage within 1.9 m every
-1.3 seconds. These are prototype rules, not an original-game balance claim.
+The selected fixture is original Wild Dog vnum 101 with trusted actor, model,
+motion-set and action IDs. A player hit deals 25 base damage plus 10 for the
+equipped starter sword, within 2.7 m and a 2 m height difference, with a clear
+path and an 850 ms cooldown. The Wild Dog has 100 health, chases eligible nearby
+players around its home, and deals 20 damage within 1.9 m every 1.3 seconds.
+Those balance values are explicit prototype overrides rather than a claim of
+full original-game balance.
 
-A defeated sentinel respawns after 12 seconds and drops five gold plus one red
+The build requires the generated, ignored
+`server/content/p0-warrior-dog/actions.v1.json`, verifies its canonical SHA-256
+definition hash and emits typed Rust constants. Player and dog hits resolve only
+inside the selected source-derived microsecond window. Target life generations,
+window expiry and consumed pending state prevent delayed actions from hitting a
+new respawn or applying twice. Equipment and damage are frozen when the server
+accepts the action. The 850 ms player cooldown intentionally allows another
+accepted action to replace the current one before its nominal 1 s clip ends.
+
+Each simulation tick collects due player and monster hits into one global queue
+and orders them by the authoritative source hit timestamp before applying
+movement or monster AI. An exact timestamp tie resolves player hits before
+monster hits, then uses player identity or monster ID as a stable tie key. Before
+consuming a queued hit, the server reads the source's current pending action,
+life generation and controller state again. An earlier death, leave, respawn or
+replacement action therefore cancels a later copied event, while valid events
+retain their expiry and exactly-once consumption rules.
+
+The P1 compiler produces a client presentation manifest and a separate trusted
+server action artifact from the same selected profile. The manifest identifies
+Warrior race 0, Sword+0 vnum 10 and Wild Dog 101, with its gameplay-definition
+hash checked against the server artifact before an export. Public
+`player_appearance` projects only appearance fields needed by peers; it does
+not expose private inventory rows. `simulation_clock` lets a late-joining
+client seek an already accepted action without turning its local animation into
+authority. See [P1 actor content import](content-import.md) for the compiler
+and package boundary.
+
+A defeated Wild Dog respawns after 12 seconds and drops five gold plus one red
 potion. Gold and item drops have separate authoritative rows. Both remain
 reserved for the slayer for 10 seconds, expire after 60 seconds, and require
 a pickup within 2.5 m with compatible height and clear path. An atomic reducer
@@ -238,7 +269,7 @@ gold. Reconnecting does not bypass death or attack deadlines.
 ## Inventory and original UI
 
 Inventory retains character-keyed `Player`, `Monster` and `Loot` state and adds
-a server-assigned account field to item rows under application protocol 3.
+a server-assigned account field to item rows under application protocol 4.
 Clients require the account tables, reducers and regenerated bindings. Publish
 the matching module before running the client; older schemas cannot satisfy
 its subscriptions. This milestone creates a separate public account database;

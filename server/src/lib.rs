@@ -1,9 +1,14 @@
 //! Authoritative shared development map for the Godot client.
 mod accounts;
+mod appearance;
 mod combat;
 mod content;
 mod inventory;
 mod movement;
+
+mod definitions {
+    include!(concat!(env!("OUT_DIR"), "/trusted_definitions.rs"));
+}
 
 use movement::{Bounds, HALF_SIZE, PLAYER_RADIUS, step, valid_direction};
 use spacetimedb::{ConnectionId, Identity, ReducerContext, ScheduleAt, Table, Timestamp};
@@ -11,7 +16,6 @@ use std::time::Duration;
 
 const TICK_MS: u32 = 50;
 const INPUT_TIMEOUT_US: i64 = 600_000;
-const ATTACK_DURATION_US: i64 = 850_000;
 
 #[spacetimedb::table(accessor = player, public)]
 pub struct Player {
@@ -25,10 +29,14 @@ pub struct Player {
     pub activity: u8,
     pub online: bool,
     pub attack_sequence: u32,
+    pub life_sequence: u32,
     pub health: u16,
     pub max_health: u16,
     pub gold: u32,
     pub respawn_at_us: i64,
+    pub attack_action_id: String,
+    pub action_started_at_us: i64,
+    pub action_ends_at_us: i64,
 }
 
 #[spacetimedb::table(accessor = obstacle, public)]
@@ -52,6 +60,8 @@ pub struct WorldInfo {
     pub map_name: String,
     pub map_id: String,
     pub content_hash: String,
+    pub definition_profile: String,
+    pub definition_hash: String,
     pub tick_ms: u32,
     pub half_size: f32,
 }
@@ -75,6 +85,7 @@ pub struct Session {
 }
 
 #[spacetimedb::table(accessor = controller)]
+#[derive(Clone)]
 pub struct Controller {
     #[primary_key]
     pub identity: Identity,
@@ -87,10 +98,17 @@ pub struct Controller {
     pub mode: u8,
     pub last_input_us: i64,
     pub attack_until_us: i64,
+    pub next_attack_us: i64,
+    pub pending_attack_target_id: u32,
+    pub pending_attack_target_generation: u32,
+    pub pending_attack_hit_at_us: i64,
+    pub pending_attack_hit_until_us: i64,
+    pub pending_attack_damage: u16,
+    pub pending_attack_range: f32,
     pub next_chat_us: i64,
 }
 
-#[spacetimedb::table(accessor = simulation_clock)]
+#[spacetimedb::table(accessor = simulation_clock, public)]
 pub struct SimulationClock {
     #[primary_key]
     pub id: u8,
@@ -108,7 +126,7 @@ pub struct TickSchedule {
 fn compiled_world_info() -> WorldInfo {
     WorldInfo {
         id: 1,
-        protocol_version: 3,
+        protocol_version: 4,
         map_name: if content::YONGAN {
             "Yongan"
         } else {
@@ -123,6 +141,8 @@ fn compiled_world_info() -> WorldInfo {
         .into(),
         tick_ms: TICK_MS,
         content_hash: content::HASH.into(),
+        definition_profile: definitions::PROFILE_ID.into(),
+        definition_hash: definitions::DEFINITION_HASH.into(),
         half_size: HALF_SIZE,
     }
 }
@@ -226,10 +246,14 @@ fn create_player(ctx: &ReducerContext, character: Identity, name: &str, online: 
         activity: 0,
         online,
         attack_sequence: 0,
+        life_sequence: 0,
         health: 100,
         max_health: 100,
         gold: 0,
         respawn_at_us: 0,
+        attack_action_id: String::new(),
+        action_started_at_us: 0,
+        action_ends_at_us: 0,
     });
 }
 
@@ -263,6 +287,7 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
     player.activity = if player.health == 0 { 3 } else { 0 };
     ctx.db.player().identity().update(player);
     inventory::ensure_starter(ctx, character)?;
+    appearance::sync(ctx, character);
     if let Some(mut controller) = previous_controller {
         controller.connection_id = connection_id;
         controller.direction_x = 0.0;
@@ -281,6 +306,13 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
             mode: 0,
             last_input_us: now_us(ctx),
             attack_until_us: 0,
+            next_attack_us: 0,
+            pending_attack_target_id: 0,
+            pending_attack_target_generation: 0,
+            pending_attack_hit_at_us: 0,
+            pending_attack_hit_until_us: 0,
+            pending_attack_damage: 0,
+            pending_attack_range: 0.0,
             next_chat_us: 0,
         });
     }
@@ -334,24 +366,51 @@ pub fn stop_moving(ctx: &ReducerContext) -> Result<(), String> {
 #[spacetimedb::reducer]
 pub fn perform_attack(ctx: &ReducerContext) -> Result<(), String> {
     let mut controller = active_controller(ctx)?;
-    if now_us(ctx) < controller.attack_until_us {
+    let now = now_us(ctx);
+    if now < controller.next_attack_us {
         return Err("Attack is cooling down.".into());
     }
+    let character = accounts::selected_character(ctx)?;
+    let plan = combat::plan_player_attack(ctx, character);
     controller.mode = 0;
     controller.direction_x = 0.0;
     controller.direction_z = 0.0;
-    controller.attack_until_us = now_us(ctx).saturating_add(ATTACK_DURATION_US);
+    controller.attack_until_us = now.saturating_add(plan.definition.duration_us);
+    controller.next_attack_us = now.saturating_add(plan.definition.cooldown_us);
+    controller.pending_attack_target_id = plan.target_id;
+    controller.pending_attack_target_generation = plan.target_generation;
+    controller.pending_attack_hit_at_us = if plan.target_id == 0 {
+        0
+    } else {
+        now.saturating_add(plan.definition.hit_start_us)
+    };
+    controller.pending_attack_hit_until_us = if plan.target_id == 0 {
+        0
+    } else {
+        now.saturating_add(plan.definition.hit_end_us)
+    };
+    controller.pending_attack_damage = if plan.target_id == 0 { 0 } else { plan.damage };
+    controller.pending_attack_range = if plan.target_id == 0 {
+        0.0
+    } else {
+        plan.definition.range_m
+    };
     ctx.db.controller().identity().update(controller);
     let mut player = ctx
         .db
         .player()
         .identity()
-        .find(accounts::selected_character(ctx)?)
+        .find(character)
         .ok_or("Enter the world first.")?;
     player.activity = 2;
+    if let Some(heading) = plan.heading {
+        player.heading = heading;
+    }
     player.attack_sequence = player.attack_sequence.wrapping_add(1);
+    player.attack_action_id = plan.definition.id.into();
+    player.action_started_at_us = now;
+    player.action_ends_at_us = now.saturating_add(plan.definition.duration_us);
     ctx.db.player().identity().update(player);
-    combat::player_attack(ctx)?;
     Ok(())
 }
 
@@ -403,6 +462,7 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
     let elapsed = (now_us(ctx) - clock.last_tick.to_micros_since_unix_epoch()) as f32 / 1_000_000.0;
     clock.last_tick = ctx.timestamp;
     ctx.db.simulation_clock().id().update(clock);
+    combat::resolve_due_hits(ctx, now_us(ctx));
     let bounds = collision_bounds(ctx);
     for mut controller in ctx.db.controller().iter() {
         let Some(mut player) = ctx.db.player().identity().find(controller.identity) else {
@@ -415,6 +475,8 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
         if now_us(ctx) < controller.attack_until_us {
             player.activity = 2;
         } else {
+            player.action_started_at_us = 0;
+            player.action_ends_at_us = 0;
             if controller.mode == 1 && now_us(ctx) - controller.last_input_us > INPUT_TIMEOUT_US {
                 controller.mode = 0;
             }

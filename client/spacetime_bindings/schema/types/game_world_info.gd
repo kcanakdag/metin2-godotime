@@ -11,6 +11,8 @@ const table_names: Array[String] = ['world_info']
 @export var map_name: String
 @export var map_id: String
 @export var content_hash: String
+@export var definition_profile: String
+@export var definition_hash: String
 @export var tick_ms: int
 @export var half_size: float
 
@@ -22,6 +24,8 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"map_name": "String",
 	"map_id": "String",
 	"content_hash": "String",
+	"definition_profile": "String",
+	"definition_hash": "String",
 	"tick_ms": "U32",
 	"half_size": "F32"
 }
@@ -31,15 +35,19 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 ## 3. map_name: String[br]
 ## 4. map_id: String[br]
 ## 5. content_hash: String[br]
-## 6. tick_ms: int[br]
-## 7. half_size: float[br]
-static func create(p_id: int, p_protocol_version: int, p_map_name: String, p_map_id: String, p_content_hash: String, p_tick_ms: int, p_half_size: float) -> GameWorldInfo:
+## 6. definition_profile: String[br]
+## 7. definition_hash: String[br]
+## 8. tick_ms: int[br]
+## 9. half_size: float[br]
+static func create(p_id: int, p_protocol_version: int, p_map_name: String, p_map_id: String, p_content_hash: String, p_definition_profile: String, p_definition_hash: String, p_tick_ms: int, p_half_size: float) -> GameWorldInfo:
 	var result: GameWorldInfo = GameWorldInfo.new()
 	result.id = p_id
 	result.protocol_version = p_protocol_version
 	result.map_name = p_map_name
 	result.map_id = p_map_id
 	result.content_hash = p_content_hash
+	result.definition_profile = p_definition_profile
+	result.definition_hash = p_definition_hash
 	result.tick_ms = p_tick_ms
 	result.half_size = p_half_size
 	return result

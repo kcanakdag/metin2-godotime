@@ -15,10 +15,14 @@ const table_names: Array[String] = ['player']
 @export var activity: int
 @export var online: bool
 @export var attack_sequence: int
+@export var life_sequence: int
 @export var health: int
 @export var max_health: int
 @export var gold: int
 @export var respawn_at_us: int
+@export var attack_action_id: String
+@export var action_started_at_us: int
+@export var action_ends_at_us: int
 
 #BSATN metadata
 const primary_key: StringName = &'identity'
@@ -32,10 +36,14 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"activity": "U8",
 	"online": "Bool",
 	"attack_sequence": "U32",
+	"life_sequence": "U32",
 	"health": "U16",
 	"max_health": "U16",
 	"gold": "U32",
-	"respawn_at_us": "I64"
+	"respawn_at_us": "I64",
+	"attack_action_id": "String",
+	"action_started_at_us": "I64",
+	"action_ends_at_us": "I64"
 }
 
 ## 1. identity: PackedByteArray[br]
@@ -47,11 +55,15 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 ## 7. activity: int[br]
 ## 8. online: bool[br]
 ## 9. attack_sequence: int[br]
-## 10. health: int[br]
-## 11. max_health: int[br]
-## 12. gold: int[br]
-## 13. respawn_at_us: int[br]
-static func create(p_identity: PackedByteArray, p_name: String, p_x: float, p_y: float, p_z: float, p_heading: float, p_activity: int, p_online: bool, p_attack_sequence: int, p_health: int, p_max_health: int, p_gold: int, p_respawn_at_us: int) -> GamePlayer:
+## 10. life_sequence: int[br]
+## 11. health: int[br]
+## 12. max_health: int[br]
+## 13. gold: int[br]
+## 14. respawn_at_us: int[br]
+## 15. attack_action_id: String[br]
+## 16. action_started_at_us: int[br]
+## 17. action_ends_at_us: int[br]
+static func create(p_identity: PackedByteArray, p_name: String, p_x: float, p_y: float, p_z: float, p_heading: float, p_activity: int, p_online: bool, p_attack_sequence: int, p_life_sequence: int, p_health: int, p_max_health: int, p_gold: int, p_respawn_at_us: int, p_attack_action_id: String, p_action_started_at_us: int, p_action_ends_at_us: int) -> GamePlayer:
 	var result: GamePlayer = GamePlayer.new()
 	result.identity = p_identity
 	result.name = p_name
@@ -62,8 +74,12 @@ static func create(p_identity: PackedByteArray, p_name: String, p_x: float, p_y:
 	result.activity = p_activity
 	result.online = p_online
 	result.attack_sequence = p_attack_sequence
+	result.life_sequence = p_life_sequence
 	result.health = p_health
 	result.max_health = p_max_health
 	result.gold = p_gold
 	result.respawn_at_us = p_respawn_at_us
+	result.attack_action_id = p_attack_action_id
+	result.action_started_at_us = p_action_started_at_us
+	result.action_ends_at_us = p_action_ends_at_us
 	return result

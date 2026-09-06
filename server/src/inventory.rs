@@ -3,7 +3,7 @@ use crate::accounts::inventory_access;
 use crate::{active_controller, collision_bounds, content, now_us, player};
 use spacetimedb::{Identity, ReducerContext, Table};
 
-const SWORD: u32 = 10;
+pub(crate) const SWORD: u32 = crate::definitions::WEAPON_VNUM;
 const RED_POTION: u32 = 27001;
 const EQUIPPED_CELL: u8 = 255;
 
@@ -84,12 +84,7 @@ fn free_cell(items: &[InventoryItem], vnum: u32, exclude: &[u64]) -> Result<u8, 
 }
 
 fn owned_items(ctx: &ReducerContext, owner: Identity) -> Vec<InventoryItem> {
-    let mut items: Vec<_> = ctx
-        .db
-        .inventory_item()
-        .iter()
-        .filter(|i| i.owner == owner)
-        .collect();
+    let mut items: Vec<_> = ctx.db.inventory_item().owner().filter(owner).collect();
     items.sort_by_key(|i| i.id);
     items
 }
@@ -190,6 +185,7 @@ pub fn equip_item(ctx: &ReducerContext, id: u64) -> Result<(), String> {
         return Err("Only a sword can be equipped in the weapon slot.".into());
     }
     if item.equipped {
+        crate::appearance::sync(ctx, item.owner);
         return Ok(());
     }
     let items = owned_items(ctx, crate::accounts::selected_character(ctx)?);
@@ -201,6 +197,7 @@ pub fn equip_item(ctx: &ReducerContext, id: u64) -> Result<(), String> {
     item.equipped = true;
     item.cell = EQUIPPED_CELL;
     ctx.db.inventory_item().id().update(item);
+    crate::appearance::sync(ctx, crate::accounts::selected_character(ctx)?);
     Ok(())
 }
 
@@ -219,6 +216,7 @@ pub fn unequip_item(ctx: &ReducerContext, id: u64, cell: u8) -> Result<(), Strin
     item.equipped = false;
     item.cell = cell;
     ctx.db.inventory_item().id().update(item);
+    crate::appearance::sync(ctx, crate::accounts::selected_character(ctx)?);
     Ok(())
 }
 
@@ -271,13 +269,23 @@ pub fn weapon_bonus(ctx: &ReducerContext, owner: Identity) -> u16 {
     if ctx
         .db
         .inventory_item()
-        .iter()
-        .any(|i| i.owner == owner && i.equipped && i.vnum == SWORD)
+        .owner()
+        .filter(owner)
+        .any(|i| i.equipped && i.vnum == SWORD)
     {
-        10
+        crate::definitions::WEAPON_ATTACK_BONUS
     } else {
         0
     }
+}
+
+pub fn equipped_weapon(ctx: &ReducerContext, owner: Identity) -> u32 {
+    ctx.db
+        .inventory_item()
+        .owner()
+        .filter(owner)
+        .find_map(|item| (item.equipped && item.vnum == SWORD).then_some(item.vnum))
+        .unwrap_or(0)
 }
 
 pub fn drop_potion(ctx: &ReducerContext, owner: Identity, x: f32, y: f32, z: f32) {

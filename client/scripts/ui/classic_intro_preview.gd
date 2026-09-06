@@ -1,17 +1,22 @@
 extends SubViewportContainer
 ## Isolated visual preview: original warrior geometry, never a gameplay player.
 
-const MODEL := "res://assets/imported/warrior.glb"
+const ActorCatalogScript := preload("res://scripts/content/actor_catalog.gd")
+const ActorPresentationScript := preload("res://scripts/actors/actor_presentation.gd")
 
 var _viewport: SubViewport
 var _stage: Node3D
 var _models: Dictionary = {}
 var _selected_slot := 0
 var _creating := false
+var _catalog := ActorCatalogScript.new()
+var _error_message := ""
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if not _catalog.load_required():
+		_error_message = _catalog.error_message
 	stretch = true
 	_viewport = SubViewport.new()
 	_viewport.transparent_bg = true
@@ -58,12 +63,17 @@ func set_characters(rows: Array, slot: int, creating: bool) -> void:
 			_models[key].queue_free()
 			_models.erase(key)
 	for key in wanted:
-		if not _models.has(key) and ResourceLoader.exists(MODEL):
-			var model := (load(MODEL) as PackedScene).instantiate() as Node3D
+		if not _models.has(key) and _error_message.is_empty():
+			var model := ActorPresentationScript.new()
 			model.name = "WarriorSlot%d" % key
+			if not model.configure(_catalog, ActorCatalogScript.WARRIOR_ID):
+				_error_message = model.error_message
+				model.queue_free()
+				continue
 			_stage.add_child(model)
 			_models[key] = model
-			_play_wait(model)
+			model.set_weapon(0)
+			model.play_action("general", "", "wait", int(key))
 	_update_positions(true)
 
 
@@ -72,7 +82,12 @@ func _process(delta: float) -> void:
 
 
 func snapshot() -> Dictionary:
-	return {"models": _models.size(), "selected_slot": _selected_slot, "creating": _creating}
+	return {
+		"models": _models.size(),
+		"selected_slot": _selected_slot,
+		"creating": _creating,
+		"error": _error_message,
+	}
 
 
 func _update_positions(immediate: bool, delta: float = 0) -> void:
@@ -83,17 +98,6 @@ func _update_positions(immediate: bool, delta: float = 0) -> void:
 		if _creating:
 			target = Vector3.ZERO
 		model.position = target if immediate else model.position.lerp(target, 1 - exp(-delta * 9))
-
-
-func _play_wait(node: Node) -> void:
-	if node is AnimationPlayer:
-		for animation in node.get_animation_list():
-			if "wait" in animation:
-				node.get_animation(animation).loop_mode = Animation.LOOP_LINEAR
-				node.play(animation)
-				return
-	for child in node.get_children():
-		_play_wait(child)
 
 
 func _update_rendering() -> void:

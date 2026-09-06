@@ -1,7 +1,5 @@
 extends Node3D
 
-var animation_player: AnimationPlayer
-var clips: Dictionary = {}
 var current_clip := "wait"
 var playing := true
 
@@ -12,16 +10,10 @@ var playing := true
 
 
 func _ready() -> void:
-	animation_player = find_animation_player(preview)
-	if animation_player:
-		for animation_name in animation_player.get_animation_list():
-			var short_name := str(animation_name).replace(".", "_").get_slice("_", 1)
-			if short_name in ["wait", "walk", "run", "attack"]:
-				clips[short_name] = animation_name
-				animation_player.get_animation(animation_name).loop_mode = Animation.LOOP_LINEAR
-		play_animation("wait")
+	if preview.snapshot().has("error"):
+		status.text = str(preview.snapshot().error)
 	else:
-		status.text = "Warrior asset missing · run make assets, then make import-assets"
+		play_animation("wait")
 	for button in $HUD/Margin/Column/Animations.get_children():
 		if button is Button:
 			button.pressed.connect(play_animation.bind(str(button.name).to_lower()))
@@ -30,35 +22,25 @@ func _ready() -> void:
 	camera.look_at(pivot.global_position)
 
 
-func find_animation_player(node: Node) -> AnimationPlayer:
-	if node is AnimationPlayer:
-		return node
-	for child in node.get_children():
-		var found := find_animation_player(child)
-		if found:
-			return found
-	return null
-
-
 func play_animation(clip: String) -> Dictionary:
-	if not clips.has(clip) or not animation_player:
-		return {"error": "Animation unavailable: " + clip, "available": clips.keys()}
+	if not preview.play_named(clip):
+		return {"error": "Animation unavailable: " + clip, "state": preview.snapshot()}
 	current_clip = clip
 	playing = true
-	animation_player.play(clips[clip], 0.12)
-	status.text = "Warrior · " + clip.capitalize() + " · 75 bones"
+	status.text = "Warrior · " + clip.capitalize() + " · generated P1 profile"
 	$HUD/Margin/Column/Pause.text = "Pause animation  [Space]"
-	return {"animation": clip, "available": clips.keys()}
+	return {"animation": clip, "state": preview.snapshot()}
 
 
 func toggle_playback() -> void:
-	if not animation_player or clips.is_empty():
+	var player: AnimationPlayer = preview.presentation.animation_player
+	if not player:
 		return
 	playing = not playing
 	if playing:
-		animation_player.play()
+		player.play()
 	else:
-		animation_player.pause()
+		player.pause()
 	$HUD/Margin/Column/Pause.text = ("Pause" if playing else "Resume") + " animation  [Space]"
 
 

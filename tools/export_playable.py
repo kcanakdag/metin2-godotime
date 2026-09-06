@@ -14,6 +14,7 @@ from export_client import (
     ROOT,
     audit_pack,
     digest,
+    p1_profile_requirements,
     package_notices,
     run,
     stage_project,
@@ -30,7 +31,18 @@ def main():
     parser.add_argument("--database", default="mt2-dev-world")
     parser.add_argument("--include-map", action="store_true")
     parser.add_argument("--test-probe", action="store_true")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        help="Write the completed export to this isolated directory instead of dist/<target>",
+    )
+    parser.add_argument(
+        "--work-dir",
+        type=Path,
+        help="Use this isolated directory for staging, imports, logs and temporary export files",
+    )
     args = parser.parse_args()
+    p1_requirements = p1_profile_requirements()
     templates = template_directory(args.templates)
     template = templates / (
         "web_nothreads_release.zip" if args.target == "web" else "linux_release.x86_64"
@@ -38,8 +50,14 @@ def main():
     if not template.is_file():
         parser.error(f"Missing export template: {template}")
     suffix = "-test" if args.test_probe else ""
-    destination = ROOT / "dist" / (args.target + suffix)
-    local = ROOT / ".local" / ("export-" + args.target + suffix)
+    destination = (
+        args.output_dir.resolve() if args.output_dir else ROOT / "dist" / (args.target + suffix)
+    )
+    local = (
+        args.work_dir.resolve()
+        if args.work_dir
+        else ROOT / ".local" / ("export-" + args.target + suffix)
+    )
     local.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)
     for variable in ["XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME"]:
@@ -50,7 +68,12 @@ def main():
         stage = Path(temp) / "project"
         build = Path(temp) / "build"
         build.mkdir()
-        stage_project(stage, templates, include_maps=args.include_map)
+        stage_project(
+            stage,
+            templates,
+            include_maps=args.include_map,
+            p1_enabled=p1_requirements is not None,
+        )
         config = {"server_url": args.server, "database": args.database}
         (stage / "client_config.json").write_text(json.dumps(config) + "\n")
         if args.test_probe:
@@ -108,6 +131,7 @@ def main():
             local,
             env,
             allow_test_probe=args.test_probe,
+            p1_requirements=p1_requirements,
         )
         package_notices(stage, build, local)
         if args.target == "linux":

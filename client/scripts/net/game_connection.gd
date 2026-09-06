@@ -21,9 +21,11 @@ signal account_changed(info: Dictionary)
 signal lobby_ready
 signal lobby_action_completed(action: String)
 signal account_reconnect_requested
+signal appearances_changed(rows: Array)
+signal server_clock_changed(server_time_us: int)
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
-const EXPECTED_PROTOCOL_VERSION := 3
+const EXPECTED_PROTOCOL_VERSION := 4
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
 const TABLES := [
@@ -37,6 +39,8 @@ const TABLES := [
 	"item_drop",
 	"account_character",
 	"account_state",
+	"player_appearance",
+	"simulation_clock",
 ]
 const LOBBY_QUERIES := ["SELECT * FROM account_character", "SELECT * FROM account_state"]
 const QUERIES := [
@@ -48,6 +52,8 @@ const QUERIES := [
 	"SELECT * FROM loot",
 	"SELECT * FROM inventory_item",
 	"SELECT * FROM item_drop",
+	"SELECT * FROM player_appearance",
+	"SELECT * FROM simulation_clock",
 ]
 
 var local_identity := ""
@@ -74,6 +80,8 @@ var loot: Array = []
 var inventory: Array = []
 var item_drops: Array = []
 var require_content := false
+var appearances: Array = []
+var server_time_us := 0
 
 var _client: SpacetimeDBClient
 var _session := 0
@@ -263,6 +271,13 @@ func use_item(id: int) -> void:
 
 func own_inventory() -> Array:
 	return inventory.filter(func(row: Dictionary): return str(row.owner) == local_identity)
+
+
+func appearance_for(character_id: String) -> Dictionary:
+	for row: Dictionary in appearances:
+		if str(row.character_id) == character_id:
+			return row
+	return {}
 
 
 func _valid_inventory_cell(cell: int) -> bool:
@@ -497,6 +512,12 @@ func _flush_snapshots() -> void:
 			"player":
 				players = rows
 				players_changed.emit(players)
+			"player_appearance":
+				appearances = rows
+				appearances_changed.emit(appearances)
+			"simulation_clock":
+				server_time_us = int(rows[0].last_tick) if not rows.is_empty() else 0
+				server_clock_changed.emit(server_time_us)
 			"obstacle":
 				obstacles = rows
 				obstacles_changed.emit(obstacles)
@@ -596,8 +617,12 @@ func _clear_world_snapshots() -> void:
 	loot = []
 	inventory = []
 	item_drops = []
+	appearances = []
+	server_time_us = 0
 	inventory_changed.emit(inventory)
 	item_drops_changed.emit(item_drops)
+	appearances_changed.emit(appearances)
+	server_clock_changed.emit(server_time_us)
 	monsters_changed.emit(monsters)
 	loot_changed.emit(loot)
 	players_changed.emit(players)

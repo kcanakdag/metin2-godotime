@@ -3,6 +3,7 @@ extends "res://tests/multiplayer_smoke.gd"
 
 var _tokens: Array = []
 var _name_suffix := ""
+var _expected_definition_hash := ""
 
 
 func _initialize() -> void:
@@ -20,6 +21,7 @@ func _initialize() -> void:
 	_database = str(config.get("database", _database))
 	_report_path = str(config.get("report", "user://account-smoke.json"))
 	_tokens = config.tokens
+	_expected_definition_hash = str(config.get("definition_hash", ""))
 	_name_suffix = Crypto.new().generate_random_bytes(6).hex_encode()
 	if _tokens.size() != 2 or str(_tokens[0]).is_empty() or str(_tokens[1]).is_empty():
 		printerr("Account smoke requires two signed account credentials.")
@@ -117,6 +119,14 @@ func _run() -> void:
 		"mutual_subscribed_presence",
 		await _wait_until(_mutual_presence.bind(first, second, first_id, second_id))
 	)
+	var appearances_ready := await _wait_until(
+		func():
+			return (
+				_valid_base_appearance(first.appearance_for(second_id))
+				and _valid_base_appearance(second.appearance_for(first_id))
+			)
+	)
+	_check("public_appearance_subscribes", appearances_ready)
 	if not _check(
 		"owned_inventory_subscribes",
 		await _wait_until(
@@ -140,6 +150,40 @@ func _run() -> void:
 		"equipping_changes_owned_character",
 		await _wait_until(func(): return bool(_owned_sword(first, first_id).get("equipped", false)))
 	)
+	var equip_ready := await _wait_until(
+		func():
+			return (
+				int(first.appearance_for(first_id).get("weapon_vnum", 0)) == 10
+				and int(second.appearance_for(first_id).get("weapon_vnum", 0)) == 10
+			)
+	)
+	_check("equipped_weapon_projects_to_both_clients", equip_ready)
+	var second_sword: Dictionary = _owned_sword(second, second_id)
+	second.equip_item(int(second_sword.id))
+	var reverse_equip_ready := await _wait_until(
+		func():
+			return (
+				bool(_owned_sword(second, second_id).get("equipped", false))
+				and int(first.appearance_for(second_id).get("weapon_vnum", 0)) == 10
+			)
+	)
+	_check("reverse_equipment_replication", reverse_equip_ready)
+	first.unequip_item(int(sword.id), int(sword.cell))
+	var unequip_ready := await _wait_until(
+		func():
+			return (
+				not bool(_owned_sword(first, first_id).get("equipped", true))
+				and int(second.appearance_for(first_id).get("weapon_vnum", -1)) == 0
+			)
+	)
+	_check("unequipped_weapon_clears_public_projection", unequip_ready)
+	first.equip_item(int(sword.id))
+	_check(
+		"reequipped_weapon_projects",
+		await _wait_until(
+			func(): return int(second.appearance_for(first_id).get("weapon_vnum", 0)) == 10
+		)
+	)
 	await _movement(first, second, first_id, 1.0, "first")
 	await _movement(second, first, second_id, -1.0, "second")
 	await _raw_rejection(
@@ -149,6 +193,18 @@ func _run() -> void:
 		[&"F32", &"F32"],
 		"invalid_movement_rejected",
 		"between"
+	)
+	if not await _authenticated_pve(first, second, first_id, sword):
+		_finish()
+		return
+	var post_pve := _player(second, first_id)
+	_check(
+		"post_pve_character_ready",
+		(
+			first.state == "connected"
+			and bool(post_pve.get("online", false))
+			and int(post_pve.health) > 0
+		)
 	)
 	var duplicate := _make_client()
 	var before := _errors.size()
@@ -160,7 +216,7 @@ func _run() -> void:
 		)
 	)
 	duplicate.disconnect_game()
-	await _movement(first, second, first_id, 1.0, "original_after_duplicate")
+	await _movement(first, second, first_id, -1.0, "original_after_duplicate")
 	var saved_player := _player(second, first_id).duplicate(true)
 	var saved_inventory := first.inventory.duplicate(true)
 	first.leave_world()
@@ -169,6 +225,10 @@ func _run() -> void:
 		"leave_removes_presence",
 		await _wait_until(func(): return _player(second, first_id).is_empty())
 	)
+	_check(
+		"leave_removes_public_appearance",
+		await _wait_until(func(): return second.appearance_for(first_id).is_empty())
+	)
 	await _raw_rejection(first, "perform_attack", [], [], "lobby_cannot_attack", "Enter")
 	first.select_character(alternative_id)
 	_check(
@@ -176,14 +236,16 @@ func _run() -> void:
 		await _wait_until(func(): return first.local_identity == alternative_id)
 	)
 	first.enter_selected()
-	_check(
-		"alternative_character_enters",
-		await _wait_until(
-			func():
-				return first.state == "connected" and not _player(second, alternative_id).is_empty(),
-			20.0
-		)
+	var alternative_ready := await _wait_until(
+		func():
+			return (
+				first.state == "connected"
+				and not _player(second, alternative_id).is_empty()
+				and _valid_base_appearance(second.appearance_for(alternative_id))
+			),
+		20.0
 	)
+	_check("alternative_character_enters", alternative_ready)
 	_check("switch_keeps_old_character_offline", _player(second, first_id).is_empty())
 	_check(
 		"equipment_is_per_character",
@@ -224,6 +286,10 @@ func _run() -> void:
 		"disconnect_removes_presence",
 		await _wait_until(func(): return _player(second, first_id).is_empty())
 	)
+	_check(
+		"disconnect_removes_public_appearance",
+		await _wait_until(func(): return second.appearance_for(first_id).is_empty())
+	)
 	first.connect_account(_server, _database, str(_tokens[0]), "account-smoke-reconnect")
 	_check(
 		"account_reconnects_to_lobby",
@@ -246,6 +312,12 @@ func _run() -> void:
 	_check(
 		"reconnect_preserves_character_state",
 		_same_character_state(saved_player, _player(second, first_id))
+	)
+	_check(
+		"reconnect_preserves_public_appearance",
+		await _wait_until(
+			func(): return int(second.appearance_for(first_id).get("weapon_vnum", 0)) == 10
+		)
 	)
 	_check(
 		"reconnect_preserves_inventory_without_duplicate_starters",
@@ -344,14 +416,317 @@ func _movement(
 	await create_timer(0.2).timeout
 
 
+func _authenticated_pve(
+	actor: GameConnection, observer: GameConnection, actor_id: String, sword: Dictionary
+) -> bool:
+	var safe_position := _position(_player(observer, actor_id))
+	if not await _pve_definition_and_approach(actor, observer, actor_id):
+		return false
+	if not await _pve_frozen_hit(actor, observer, actor_id, sword):
+		return false
+	if not await _pve_leave_cancellation(actor, observer, actor_id, sword):
+		return false
+	if not await _pve_prepare_death(actor, observer, actor_id, sword):
+		return false
+	if not await _pve_death_cancellation(actor, observer, actor_id):
+		return false
+	return await _pve_reward(actor, observer, actor_id, safe_position)
+
+
+func _pve_definition_and_approach(
+	actor: GameConnection, observer: GameConnection, actor_id: String
+) -> bool:
+	var dog := _monster(observer)
+	if not _check(
+		"wild_dog_trusted_definition",
+		(
+			int(dog.get("definition_vnum", 0)) == 101
+			and dog.get("actor_id") == "actor.mob.wild-dog-101"
+			and dog.get("name") == "Wild Dog"
+			and dog.get("model_key") == "stray_dog"
+			and dog.get("motion_set") == "actor.mob.wild-dog-101.general"
+			and dog.get("attack_action_id") == "actor.mob.wild-dog-101.general.normal_attack.v1"
+		)
+	):
+		return false
+	if not _check(
+		"trusted_definition_identity",
+		(
+			actor.world_info.get("definition_profile") == "p0-warrior-dog"
+			and actor.world_info.get("definition_hash") == _expected_definition_hash
+			and actor.server_time_us > 0
+		)
+	):
+		return false
+
+	# An accepted action outside its trusted reach has no latent hit that can apply
+	# after the dog later moves closer.
+	var dog_health := int(dog.health)
+	var sequence := int(_player(observer, actor_id).attack_sequence)
+	actor.perform_attack()
+	if not _check(
+		"out_of_range_action_replicates",
+		await _wait_until(
+			func(): return int(_player(observer, actor_id).get("attack_sequence", 0)) > sequence
+		)
+	):
+		return false
+	await create_timer(0.7).timeout
+	_check("out_of_range_action_cannot_hit_later", int(_monster(observer).health) == dog_health)
+	await create_timer(0.2).timeout
+
+	dog = _monster(observer)
+	var approach := Vector2(float(dog.x) - 2.35, float(dog.z))
+	actor.move_to(approach.x, approach.y)
+	var reached_dog := await _wait_until(
+		func():
+			return (
+				_position(_player(observer, actor_id)).distance_to(_position(_monster(observer)))
+				<= 2.6
+			),
+		10.0
+	)
+	if not _check("move_into_trusted_melee_reach", reached_dog):
+		return false
+	actor.stop_moving()
+	await create_timer(0.9).timeout
+	return true
+
+
+func _pve_frozen_hit(
+	actor: GameConnection, observer: GameConnection, actor_id: String, sword: Dictionary
+) -> bool:
+	# Reducers from one connection are ordered: the action freezes its equipped
+	# onehand definition and damage before the following unequip intent is applied.
+	var dog_health := int(_monster(observer).health)
+	var sequence := int(_player(observer, actor_id).attack_sequence)
+	actor.perform_attack()
+	if not _check(
+		"onehand_action_replicates",
+		await _wait_until(
+			func(): return int(_player(observer, actor_id).get("attack_sequence", 0)) > sequence
+		)
+	):
+		return false
+	var action_row := _player(observer, actor_id)
+	var action_start := int(action_row.action_started_at_us)
+	_check(
+		"onehand_action_timing_is_source_derived",
+		(
+			action_row.attack_action_id == "actor.player.warrior-male.onehand.combo_1"
+			and int(action_row.action_ends_at_us) - action_start == 1_000_000
+			and observer.server_time_us < action_start + 192_308
+			and int(_monster(observer).health) == dog_health
+		)
+	)
+	actor.unequip_item(int(sword.id), int(sword.cell))
+	_check(
+		"mid_swing_unequip_projects",
+		await _wait_until(
+			func(): return int(observer.appearance_for(actor_id).get("weapon_vnum", -1)) == 0
+		)
+	)
+	if not _check(
+		"source_hit_window_applies_frozen_damage_once",
+		await _wait_until(func(): return int(_monster(observer).health) == dog_health - 35)
+	):
+		return false
+	var frozen_health := int(_monster(observer).health)
+	await _wait_until(func(): return observer.server_time_us > action_start + 1_050_000, 2.0)
+	_check(
+		"hit_is_exactly_once_across_later_ticks", int(_monster(observer).health) == frozen_health
+	)
+	_check(
+		"mid_swing_equipment_does_not_rewrite_action",
+		action_row.attack_action_id == "actor.player.warrior-male.onehand.combo_1"
+	)
+	return true
+
+
+func _pve_leave_cancellation(
+	actor: GameConnection, observer: GameConnection, actor_id: String, sword: Dictionary
+) -> bool:
+	# Leaving consumes the pending hit before its window. Re-entering the same
+	# life cannot revive that intent.
+	actor.equip_item(int(sword.id))
+	if not await _wait_until(
+		func(): return int(observer.appearance_for(actor_id).get("weapon_vnum", 0)) == 10
+	):
+		return _check("pve_reequip_projects", false)
+	await create_timer(0.9).timeout
+	var dog_health := int(_monster(observer).health)
+	var sequence := int(_player(observer, actor_id).attack_sequence)
+	actor.perform_attack()
+	if not await _wait_until(
+		func(): return int(_player(observer, actor_id).get("attack_sequence", 0)) > sequence
+	):
+		return _check("cancelled_action_started", false)
+	actor.leave_world()
+	if not await _wait_until(func(): return actor.state == "lobby"):
+		return _check("pending_hit_leave_reaches_lobby", false)
+	await create_timer(0.55).timeout
+	_check("leave_cancels_pending_hit", int(_monster(observer).health) == dog_health)
+	actor.enter_selected()
+	if not await _wait_until(func(): return actor.state == "connected", 20.0):
+		return _check("pending_hit_reentry", false)
+	_check("reentry_does_not_restore_pending_hit", int(_monster(observer).health) == dog_health)
+	return true
+
+
+func _pve_prepare_death(
+	actor: GameConnection, observer: GameConnection, actor_id: String, sword: Dictionary
+) -> bool:
+	actor.unequip_item(int(sword.id), int(sword.cell))
+	var unequipped := await _wait_until(
+		func():
+			return (
+				not bool(_owned_sword(actor, actor_id).get("equipped", true))
+				and int(observer.appearance_for(actor_id).get("weapon_vnum", -1)) == 0
+			)
+	)
+	return _check("death_scenario_unequips_before_action", unequipped)
+
+
+func _pve_death_cancellation(
+	actor: GameConnection, observer: GameConnection, actor_id: String
+) -> bool:
+	# At 20 HP, start an unarmed action just after the dog's next action starts.
+	# The dog hits at 320195us; the unarmed hit is later at 456410us, so death
+	# must cancel the player's still-pending hit.
+	if not _check(
+		"dog_reduces_player_to_last_hit",
+		await _wait_until(func(): return int(_player(observer, actor_id).health) == 20, 12.0)
+	):
+		return false
+	var dog_sequence := int(_monster(observer).attack_sequence)
+	if not _check(
+		"dog_starts_lethal_action",
+		await _wait_until(
+			func(): return int(_monster(observer).attack_sequence) > dog_sequence, 3.0
+		)
+	):
+		return false
+	var dog_health := int(_monster(observer).health)
+	var sequence := int(_player(observer, actor_id).attack_sequence)
+	actor.perform_attack()
+	var unarmed_started := await _wait_until(
+		func():
+			var row := _player(observer, actor_id)
+			return (
+				int(row.attack_sequence) > sequence
+				and row.attack_action_id == "actor.player.warrior-male.general.normal_attack.v1"
+			)
+	)
+	if not _check("unarmed_pending_action_started", unarmed_started):
+		return false
+	var player_action := _player(observer, actor_id)
+	var dog_action := _monster(observer)
+	var dog_hit_at := int(dog_action.action_started_at_us) + 320_195
+	var player_hit_at := int(player_action.action_started_at_us) + 456_410
+	_check(
+		"lethal_hit_is_scheduled_before_player_hit",
+		(
+			dog_hit_at < player_hit_at
+			and observer.server_time_us < dog_hit_at
+			and int(dog_action.action_ends_at_us) - int(dog_action.action_started_at_us) == 933_333
+		)
+	)
+	if not _check(
+		"authoritative_player_death",
+		await _wait_until(func(): return int(_player(observer, actor_id).health) == 0, 2.0)
+	):
+		return false
+	await create_timer(0.35).timeout
+	_check("death_cancels_pending_player_hit", int(_monster(observer).health) == dog_health)
+	var dead_life := int(_player(observer, actor_id).life_sequence)
+	var respawned := await _wait_until(
+		func():
+			var row := _player(observer, actor_id)
+			return int(row.get("health", 0)) == 100 and int(row.get("life_sequence", 0)) > dead_life,
+		10.0
+	)
+	if not _check("player_respawn_advances_life_generation", respawned):
+		return false
+	return true
+
+
+func _pve_reward(
+	actor: GameConnection, observer: GameConnection, actor_id: String, safe_position: Vector2
+) -> bool:
+	# Kill the same dog life with two more frozen sword hits. Its health moves
+	# 65 -> 30 -> 0, and one reserved reward row is created and collected once.
+	var current_sword := _owned_sword(actor, actor_id)
+	actor.equip_item(int(current_sword.id))
+	await _wait_until(func(): return bool(_owned_sword(actor, actor_id).get("equipped", false)))
+	var dog := _monster(observer)
+	actor.move_to(float(dog.x) - 2.35, float(dog.z))
+	if not await _wait_until(
+		func():
+			return (
+				_position(_player(observer, actor_id)).distance_to(_position(_monster(observer)))
+				<= 2.6
+			),
+		10.0
+	):
+		return _check("return_to_dog_after_respawn", false)
+	actor.stop_moving()
+	var loot_before := observer.loot.size()
+	for expected_health in [30, 0]:
+		await create_timer(0.9).timeout
+		actor.perform_attack()
+		if not _check(
+			"sword_hit_reaches_%d_health" % expected_health,
+			await _wait_until(func(): return int(_monster(observer).health) == expected_health, 2.0)
+		):
+			return false
+	if not _check(
+		"lethal_hit_creates_one_reward",
+		await _wait_until(func(): return observer.loot.size() == loot_before + 1)
+	):
+		return false
+	await create_timer(0.4).timeout
+	_check("death_and_reward_are_exactly_once", observer.loot.size() == loot_before + 1)
+	var reward: Dictionary = observer.loot[-1]
+	var gold_before := int(_player(observer, actor_id).gold)
+	actor.pickup_loot(int(reward.id))
+	var reward_collected := await _wait_until(
+		func():
+			return (
+				int(_player(observer, actor_id).gold) == gold_before + 5
+				and observer.loot.size() == loot_before
+			)
+	)
+	_check("reserved_reward_collects_once", reward_collected)
+	actor.move_to(safe_position.x, safe_position.y)
+	var returned := await _wait_until(
+		func(): return _position(_player(observer, actor_id)).distance_to(safe_position) < 0.1, 10.0
+	)
+	return _check("return_to_safe_area_after_pve", returned)
+
+
 func _mutual_presence(
 	first: GameConnection, second: GameConnection, first_id: String, second_id: String
 ) -> bool:
 	return not _player(first, second_id).is_empty() and not _player(second, first_id).is_empty()
 
 
+func _monster(client: GameConnection) -> Dictionary:
+	return client.monsters[0] if not client.monsters.is_empty() else {}
+
+
 func _valid_warrior(row: Dictionary) -> bool:
 	return row.empire == 1 and row.character_class == 0 and row.sex == 0
+
+
+func _valid_base_appearance(row: Dictionary) -> bool:
+	return (
+		not row.is_empty()
+		and row.size() == 5
+		and int(row.get("empire", 0)) == 1
+		and int(row.get("character_class", -1)) == 0
+		and int(row.get("sex", -1)) == 0
+		and int(row.get("weapon_vnum", -1)) == 0
+	)
 
 
 func _private_roster(client: GameConnection, expected_count: int) -> bool:

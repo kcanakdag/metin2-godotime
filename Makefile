@@ -25,8 +25,9 @@ AUTH_HOST ?= 127.0.0.1
 AUTH_PORT ?= 3219
 AUTH_ISSUER ?= http://127.0.0.1:$(AUTH_PORT)/auth
 AUTH_DATA_DIR ?= $(CURDIR)/.local/auth
+CONTENT_PROFILE ?= content/profiles/p0-warrior-dog.json
 
-.PHONY: assets import-assets import-map import-ui test-ui test-inventory bake-map map-preview test-map test-world-packs editor client preview check server-build server-test server-start server-publish mcp-build mcp-check dev-setup lint format bindings test-tools test-multiplayer test-combat export-windows export-web export-linux browser-setup test-browser deploy share-setup share-start share-status share-stop export-shared
+.PHONY: assets import-assets import-map import-ui content-build content-validate content-probe test-ui test-actors test-inventory bake-map map-preview test-map test-world-packs editor client preview check server-build server-test server-start server-publish mcp-build mcp-check dev-setup lint format bindings test-tools test-multiplayer test-combat export-windows export-web export-linux browser-setup test-browser deploy share-setup share-start share-status share-stop export-shared
 .PHONY: auth-setup auth-start test-auth test-accounts
 .PHONY: check-plan
 
@@ -118,8 +119,20 @@ test-inventory:
 import-ui:
 	.local/venv-dev/bin/python tools/import_metin_ui.py
 
+content-build:
+	python3 tools/content_compile.py build --profile "$(CONTENT_PROFILE)" --blender "$(BLENDER)"
+
+content-validate:
+	python3 tools/content_compile.py validate --profile "$(CONTENT_PROFILE)"
+
+content-probe:
+	python3 tools/content_compile.py probe-godot --profile "$(CONTENT_PROFILE)" --godot "$(GODOT)"
+
 test-ui:
 	python3 tools/test_classic_ui.py --godot "$(GODOT)" $(UI_FLAGS)
+
+test-actors:
+	python3 tools/test_actors.py --godot "$(GODOT)" $(UI_FLAGS)
 
 export-windows:
 	python3 tools/export_client.py --godot "$(GODOT)" --server "$(SERVER_URL)" --database "$(WINDOWS_DB)"

@@ -15,6 +15,8 @@ const Loot = Types.Loot
 const Monster = Types.Monster
 const Obstacle = Types.Obstacle
 const Player = Types.Player
+const PlayerAppearance = Types.PlayerAppearance
+const SimulationClock = Types.SimulationClock
 const WorldInfo = Types.WorldInfo
 
 

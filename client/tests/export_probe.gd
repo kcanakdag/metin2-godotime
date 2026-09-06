@@ -36,13 +36,18 @@ func _process(delta: float) -> void:
 	for actor in get_parent().get_node("Players").get_children():
 		if not actor.is_visible_in_tree():
 			continue
-		actors.append(
-			{
-				"identity": actor.identity,
-				"position": [actor.position.x, actor.position.y, actor.position.z]
-			}
-		)
+		var actor_state: Dictionary = actor.presentation_snapshot()
+		actor_state["position"] = [actor.position.x, actor.position.y, actor.position.z]
+		actors.append(actor_state)
 	snapshot["rendered_actors"] = actors
+	var monsters: Array = []
+	for actor: PveActor in get_parent()._pve.values():
+		if actor.loot_mode or not actor.is_visible_in_tree():
+			continue
+		var actor_state := actor.presentation_snapshot()
+		actor_state["position"] = [actor.position.x, actor.position.y, actor.position.z]
+		monsters.append(actor_state)
+	snapshot["rendered_monsters"] = monsters
 	var payload := JSON.stringify(snapshot)
 	if OS.has_feature("web"):
 		JavaScriptBridge.get_interface("window").mt2Snapshot = payload

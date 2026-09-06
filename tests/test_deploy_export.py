@@ -134,6 +134,14 @@ class PackExclusionTests(unittest.TestCase):
             "res://logs/client.log",
             "res://.env.production",
             "res://tests/multiplayer_smoke.gdc",
+            "res://assets/imported/content/p0-warrior-dog/source.msa",
+            "res://assets/imported/content/p0-warrior-dog/motion.msm",
+            "res://assets/imported/content/p0-warrior-dog/skill.mss",
+            "res://assets/imported/content/p0-warrior-dog/granny/model.bin",
+            "res://assets/imported/content/p0-warrior-dog/bin/granny2.dll",
+            "res://assets/imported/content/p0-warrior-dog/blender/export.bin",
+            "res://assets/imported/content/p0-warrior-dog/tools/blender.exe",
+            "res://server/content/p0-warrior-dog/actions.v1.json",
         ]:
             with self.subTest(path=path), self.assertRaisesRegex(RuntimeError, "Forbidden"):
                 export_client.validate_pack_paths([path])
@@ -147,6 +155,190 @@ class PackExclusionTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(RuntimeError, "no packaged test probe"):
             export_client.validate_pack_paths([], allow_test_probe=True)
+
+
+class P1ProfileAuditTests(unittest.TestCase):
+    @staticmethod
+    def manifest(definition_hash="a" * 64):
+        artifacts = []
+        for index, path in enumerate(export_client.P1_ARTIFACTS):
+            artifact = {
+                "id": ("warrior-male", "wild-dog-101", "sword-10")[index],
+                "type": "model",
+                "path": path,
+                "sha256": chr(ord("b") + index) * 64,
+                "bytes": 100 + index,
+                "mesh_count": 1,
+                "textured_mesh_count": 1,
+                "vertices": 3,
+                "triangles": 1,
+            }
+            if index < 2:
+                artifact.update({"bones": 1, "skeleton_signature": "skeleton-" + str(index)})
+            artifacts.append(artifact)
+        return {
+            "schema": "mt2spacetime.presentation-manifest",
+            "schema_version": 1,
+            "profile_id": export_client.P1_PROFILE,
+            "content_hash": "c" * 64,
+            "gameplay_definition_hash": definition_hash,
+            "presentation_output_hash": "d" * 64,
+            "artifacts": artifacts,
+            "actors": [
+                {
+                    "id": export_client.P1_WARRIOR_ACTOR_ID,
+                    "race_id": 0,
+                    "forward": "-Z",
+                    "model": {
+                        "artifact_id": "warrior-male",
+                        "path": export_client.P1_ARTIFACTS[0],
+                    },
+                },
+                {
+                    "id": export_client.P1_WILD_DOG_ACTOR_ID,
+                    "vnum": 101,
+                    "forward": "-Z",
+                    "model": {
+                        "artifact_id": "wild-dog-101",
+                        "path": export_client.P1_ARTIFACTS[1],
+                    },
+                },
+            ],
+            "items": [
+                {
+                    "id": export_client.P1_SWORD_ITEM_ID,
+                    "vnum": 10,
+                    "model": {
+                        "artifact_id": "sword-10",
+                        "path": export_client.P1_ARTIFACTS[2],
+                    },
+                }
+            ],
+        }
+
+    def test_generated_manifest_requires_exact_profile_artifacts(self):
+        manifest = self.manifest()
+        self.assertEqual(
+            set(export_client.validate_p1_manifest(manifest)), set(export_client.P1_ARTIFACTS)
+        )
+        manifest["artifacts"].pop()
+        with self.assertRaisesRegex(RuntimeError, "missing"):
+            export_client.validate_p1_manifest(manifest)
+
+    def test_generated_manifest_rejects_profile_hash_and_structural_mismatch(self):
+        manifest = self.manifest()
+        manifest["profile_id"] = "other-profile"
+        with self.assertRaisesRegex(RuntimeError, "profile_id"):
+            export_client.validate_p1_manifest(manifest)
+        manifest = self.manifest()
+        manifest["artifacts"][0]["bones"] = 0
+        with self.assertRaisesRegex(RuntimeError, "invalid bones"):
+            export_client.validate_p1_manifest(manifest)
+        manifest = self.manifest()
+        manifest["actors"][0]["model"] = "warrior-male"
+        with self.assertRaisesRegex(RuntimeError, r"invalid at \$\.actors\[0\]\.model"):
+            export_client.validate_p1_manifest(manifest)
+
+    def test_generated_manifest_rejects_unknown_nested_presentation_fields(self):
+        manifest = self.manifest()
+        manifest["private_source"] = "assets/source/warrior/warrior_novice.gr2"
+        with self.assertRaisesRegex(RuntimeError, r"unknown field at \$\.private_source"):
+            export_client.validate_p1_manifest(manifest)
+
+        manifest = self.manifest()
+        manifest["actors"][0]["model"]["credential"] = "not-for-export"
+        with self.assertRaisesRegex(
+            RuntimeError, r"unknown field at \$\.actors\[0\]\.model\.credential"
+        ):
+            export_client.validate_p1_manifest(manifest)
+
+        manifest = self.manifest()
+        manifest["actors"][0]["modes"] = [
+            {
+                "id": "combat",
+                "motions": [
+                    {
+                        "action": "attack",
+                        "events": [{"kind": "attack_window", "private_source": "raw.gr2"}],
+                    }
+                ],
+            }
+        ]
+        with self.assertRaisesRegex(
+            RuntimeError,
+            r"unknown field at \$\.actors\[0\]\.modes\[0\]\.motions\[0\]\.events\[0\]\.private_source",
+        ):
+            export_client.validate_p1_manifest(manifest)
+
+    def test_present_profile_requires_matching_trusted_action_definition(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest_path = root / "client" / export_client.P1_MANIFEST
+            action_path = root / export_client.P1_ACTIONS
+            manifest_path.parent.mkdir(parents=True)
+            action_path.parent.mkdir(parents=True)
+            manifest = self.manifest()
+            for artifact in manifest["artifacts"]:
+                artifact_path = root / "client" / artifact["path"].removeprefix("res://")
+                artifact_path.parent.mkdir(parents=True, exist_ok=True)
+                artifact_path.write_bytes(artifact["id"].encode())
+                artifact["bytes"] = artifact_path.stat().st_size
+                artifact["sha256"] = export_client.digest(artifact_path)
+            manifest_path.write_text(json.dumps(manifest))
+            action_path.write_text(
+                json.dumps(
+                    {
+                        "profile_id": export_client.P1_PROFILE,
+                        "gameplay_definition_hash": "e" * 64,
+                    }
+                )
+            )
+            with (
+                patch.object(export_client, "ROOT", root),
+                self.assertRaisesRegex(RuntimeError, "different hashes"),
+            ):
+                export_client.p1_profile_requirements()
+
+    def test_present_profile_requires_trusted_action_artifact(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest_path = root / "client" / export_client.P1_MANIFEST
+            manifest_path.parent.mkdir(parents=True)
+            manifest_path.write_text(json.dumps(self.manifest()))
+            with (
+                patch.object(export_client, "ROOT", root),
+                self.assertRaisesRegex(RuntimeError, "trusted action definitions are missing"),
+            ):
+                export_client.p1_profile_requirements()
+
+    def test_current_exports_require_generated_p1_manifest(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with (
+                patch.object(export_client, "ROOT", root),
+                self.assertRaisesRegex(RuntimeError, "make content-build"),
+            ):
+                export_client.p1_profile_requirements()
+            with patch.object(export_client, "ROOT", root):
+                self.assertIsNone(export_client.p1_profile_requirements(allow_legacy=True))
+
+    def test_p1_stage_omits_legacy_warrior_resource(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "client"
+            legacy = source / "assets/imported/warrior.glb"
+            p1_manifest = source / export_client.P1_MANIFEST
+            legacy.parent.mkdir(parents=True)
+            p1_manifest.parent.mkdir(parents=True)
+            legacy.write_bytes(b"legacy warrior")
+            p1_manifest.write_text("{}")
+            (source / "project.godot").write_text("config_version=5\n")
+            (source / "export_presets.cfg").write_text('custom_template/debug=""\n')
+            stage = root / "stage"
+            with patch.object(export_client, "ROOT", root):
+                export_client.stage_project(stage, root / "templates", p1_enabled=True)
+            self.assertFalse((stage / "assets/imported/warrior.glb").exists())
+            self.assertTrue((stage / export_client.P1_MANIFEST).is_file())
 
 
 class AuthPackageTests(unittest.TestCase):

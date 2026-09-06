@@ -5,6 +5,7 @@ const DEFAULT_SERVER := "http://127.0.0.1:8184"
 const DEFAULT_DATABASE := "mt2-yongan-v2"
 const LEGACY_SETTINGS_PATH := "user://client_settings.json"
 const AccountScreens = preload("res://scripts/net/account_flow.gd")
+const ActorCatalogScript := preload("res://scripts/content/actor_catalog.gd")
 
 var _actors: Dictionary = {}
 var _local_actor: PlayerActor
@@ -21,6 +22,11 @@ var _pve: Dictionary = {}
 var _original_map := false
 var _content_generation := 0
 var _account_flow: AccountScreens
+var _actor_catalog := ActorCatalogScript.new()
+var _player_rows: Array = []
+var _appearance_rows: Array = []
+var _player_sync_queued := false
+var _last_server_time_us := 0
 
 @onready var connection: GameConnection = $GameConnection
 @onready var world: DevMap = $DevMap
@@ -45,6 +51,8 @@ func _ready() -> void:
 	connection.inventory_changed.connect(hud.set_inventory)
 	connection.connection_state_changed.connect(_on_connection_state)
 	connection.players_changed.connect(_on_players)
+	connection.appearances_changed.connect(_on_appearances)
+	connection.server_clock_changed.connect(_on_server_clock)
 	connection.obstacles_changed.connect(world.set_obstacles)
 	connection.chat_changed.connect(hud.set_chat)
 	connection.world_info_changed.connect(_on_world_info)
@@ -65,6 +73,8 @@ func _ready() -> void:
 	hud.screenshot_requested.connect(_save_screenshot)
 	hud.copy_diagnostics_requested.connect(_copy_diagnostics)
 	_load_settings()
+	if not _actor_catalog.load_required():
+		hud.show_notice(_actor_catalog.error_message)
 	hud.set_connection_defaults(
 		_settings.server_url, _settings.database, _settings.player_name, _profile
 	)
@@ -187,6 +197,8 @@ func dev_snapshot() -> Dictionary:
 		"identity": connection.local_identity,
 		"players": connection.players.size(),
 		"player_rows": connection.players.duplicate(true),
+		"appearances": connection.appearances.duplicate(true),
+		"actor_presentations": _actor_snapshots(),
 		"rx_messages": connection.rx_messages,
 		"tx_messages": connection.tx_messages,
 		"snapshot_age_ms":
@@ -204,6 +216,7 @@ func dev_snapshot() -> Dictionary:
 		"camera_distance": camera_rig.distance,
 		"obstacles": connection.obstacles.size(),
 		"monsters": connection.monsters.duplicate(true),
+		"monster_presentations": _monster_snapshots(),
 		"loot": connection.loot.duplicate(true),
 		"inventory": connection.own_inventory().duplicate(true),
 		"item_drops": connection.item_drops.duplicate(true),
@@ -212,6 +225,8 @@ func dev_snapshot() -> Dictionary:
 		"content_error": _stream.last_error,
 		"account": _account_flow.snapshot() if is_instance_valid(_account_flow) else {},
 		"connected_at_msec": connection.connected_at_msec,
+		"definition_profile": str(connection.world_info.get("definition_profile", "")),
+		"definition_hash": str(connection.world_info.get("definition_hash", "")),
 	}
 
 
@@ -277,20 +292,56 @@ func _on_connection_state(state: String, message: String) -> void:
 
 
 func _on_players(rows: Array) -> void:
+	_player_rows = rows.duplicate(true)
+	_queue_player_sync()
+
+
+func _on_appearances(rows: Array) -> void:
+	_appearance_rows = rows.duplicate(true)
+	_queue_player_sync()
+
+
+func _on_server_clock(server_time_us: int) -> void:
+	if server_time_us <= 0:
+		_last_server_time_us = 0
+		return
+	if _last_server_time_us <= 0:
+		_queue_player_sync()
+		for actor: PveActor in _pve.values():
+			if not actor.loot_mode and not actor.row.is_empty():
+				actor.apply_state(actor.row, server_time_us)
+	_last_server_time_us = server_time_us
+
+
+func _queue_player_sync() -> void:
+	if _player_sync_queued:
+		return
+	_player_sync_queued = true
+	_reconcile_players.call_deferred()
+
+
+func _reconcile_players() -> void:
+	_player_sync_queued = false
+	var appearances_by_id: Dictionary = {}
+	for appearance: Dictionary in _appearance_rows:
+		appearances_by_id[str(appearance.get("character_id", ""))] = appearance
 	var present: Dictionary = {}
-	for row: Dictionary in rows:
+	for row: Dictionary in _player_rows:
 		if not bool(row.get("online", false)):
 			continue
-		var identity := str(row.identity)
+		var identity := str(row.get("identity", ""))
 		present[identity] = true
 		if not _actors.has(identity):
 			var actor := PlayerActor.new()
 			actor.name = "Player_" + identity.left(12)
+			actor.configure(_actor_catalog)
 			$Players.add_child(actor)
 			_actors[identity] = actor
 		var player: PlayerActor = _actors[identity]
 		var is_local := identity == connection.local_identity
-		player.apply_state(row, is_local)
+		player.apply_state(
+			row, is_local, appearances_by_id.get(identity, {}), connection.server_time_us
+		)
 		if is_local:
 			_local_actor = player
 			camera_rig.target = player
@@ -303,7 +354,7 @@ func _on_players(rows: Array) -> void:
 		_local_actor = null
 		camera_rig.target = null
 		hud.set_player_info({})
-	hud.set_players(rows, connection.local_identity)
+	hud.set_players(_player_rows, connection.local_identity)
 
 
 func _on_world_info(info: Dictionary) -> void:
@@ -317,6 +368,14 @@ func _on_world_info(info: Dictionary) -> void:
 
 func _prepare_world(info: Dictionary) -> void:
 	var generation := _content_generation
+	if _actor_catalog.manifest.is_empty() and not _actor_catalog.load_required():
+		connection.disconnect_game()
+		hud.show_notice(_actor_catalog.error_message)
+		return
+	if not _actor_catalog.validate_world(info):
+		connection.disconnect_game()
+		hud.show_notice(_actor_catalog.error_message)
+		return
 	if str(info.get("map_id", "training")) == "metin2_map_a1":
 		var ready := await _stream.prepare(str(info.get("content_hash", "")))
 		if generation != _content_generation or connection.state != "loading":
@@ -352,9 +411,10 @@ func _sync_pve(rows: Array, loot_mode: bool, item_mode: bool = false) -> void:
 			actor.name = id
 			actor.loot_mode = loot_mode
 			actor.item_mode = item_mode
+			actor.configure(_actor_catalog)
 			add_child(actor)
 			_pve[id] = actor
-		_pve[id].apply_state(row)
+		_pve[id].apply_state(row, connection.server_time_us)
 	for id: String in _pve.keys():
 		if id.begins_with(prefix) and not present.has(id):
 			_pve[id].queue_free()
@@ -447,6 +507,21 @@ func _save_screenshot() -> void:
 func _copy_diagnostics() -> void:
 	DisplayServer.clipboard_set(JSON.stringify(dev_snapshot(), "  "))
 	hud.show_notice("Diagnostics copied. Identity tokens are excluded.")
+
+
+func _actor_snapshots() -> Array:
+	var rows: Array = []
+	for actor: PlayerActor in _actors.values():
+		rows.append(actor.presentation_snapshot())
+	return rows
+
+
+func _monster_snapshots() -> Array:
+	var rows: Array = []
+	for actor: PveActor in _pve.values():
+		if not actor.loot_mode:
+			rows.append(actor.presentation_snapshot())
+	return rows
 
 
 func _load_settings() -> void:
