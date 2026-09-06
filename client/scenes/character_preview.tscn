@@ -1,0 +1,130 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/character_preview.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/warrior_preview.gd" id="2"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMaterial"]
+sky_top_color = Color(0.055, 0.07, 0.105, 1)
+sky_horizon_color = Color(0.19, 0.23, 0.28, 1)
+ground_bottom_color = Color(0.055, 0.06, 0.07, 1)
+ground_horizon_color = Color(0.19, 0.23, 0.28, 1)
+
+[sub_resource type="Sky" id="Sky"]
+sky_material = SubResource("SkyMaterial")
+
+[sub_resource type="Environment" id="Environment"]
+background_mode = 2
+sky = SubResource("Sky")
+ambient_light_source = 3
+ambient_light_color = Color(0.7, 0.78, 0.9, 1)
+ambient_light_energy = 0.65
+tonemap_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="FloorMaterial"]
+albedo_color = Color(0.12, 0.15, 0.18, 1)
+roughness = 0.9
+
+[sub_resource type="CylinderMesh" id="FloorMesh"]
+material = SubResource("FloorMaterial")
+top_radius = 2.1
+bottom_radius = 2.2
+height = 0.15
+radial_segments = 96
+
+[sub_resource type="Theme" id="Theme"]
+default_font_size = 18
+
+[node name="MT2Preview" type="Node3D"]
+script = ExtResource("1")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment")
+
+[node name="KeyLight" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-40, -25, 0)
+light_color = Color(1, 0.88, 0.73, 1)
+light_energy = 1.5
+shadow_enabled = true
+
+[node name="FillLight" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-20, 145, 0)
+light_color = Color(0.58, 0.73, 1, 1)
+light_energy = 0.8
+
+[node name="Stage" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.085, 0)
+mesh = SubResource("FloorMesh")
+
+[node name="Preview" type="Node3D" parent="."]
+script = ExtResource("2")
+
+[node name="CameraPivot" type="Node3D" parent="."]
+position = Vector3(0, 0.9, 0)
+
+[node name="Camera3D" type="Camera3D" parent="CameraPivot"]
+position = Vector3(2.4, 1.25, 3.6)
+rotation_degrees = Vector3(-16.1, 33.69, 0)
+current = true
+fov = 38.0
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Margin" type="MarginContainer" parent="HUD"]
+offset_left = 28.0
+offset_top = 26.0
+offset_right = 470.0
+theme = SubResource("Theme")
+
+[node name="Column" type="VBoxContainer" parent="HUD/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="HUD/Margin/Column"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.93, 0.76, 0.45, 1)
+theme_override_font_sizes/font_size = 32
+text = "METIN2 / SPACETIME"
+
+[node name="Subtitle" type="Label" parent="HUD/Margin/Column"]
+layout_mode = 2
+text = "Character preview"
+
+[node name="Status" type="Label" parent="HUD/Margin/Column"]
+layout_mode = 2
+text = "Loading warrior…"
+
+[node name="Animations" type="HBoxContainer" parent="HUD/Margin/Column"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Wait" type="Button" parent="HUD/Margin/Column/Animations"]
+layout_mode = 2
+text = "1  Idle"
+
+[node name="Walk" type="Button" parent="HUD/Margin/Column/Animations"]
+layout_mode = 2
+text = "2  Walk"
+
+[node name="Run" type="Button" parent="HUD/Margin/Column/Animations"]
+layout_mode = 2
+text = "3  Run"
+
+[node name="Attack" type="Button" parent="HUD/Margin/Column/Animations"]
+layout_mode = 2
+text = "4  Attack"
+
+[node name="Pause" type="Button" parent="HUD/Margin/Column"]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Pause animation  [Space]"
+
+[node name="Reset" type="Button" parent="HUD/Margin/Column"]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Reset view  [R]"
+
+[node name="Help" type="Label" parent="HUD/Margin/Column"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 15
+text = "Right-drag to orbit · Scroll to zoom\nOffline preview · Multiplayer connection pending"

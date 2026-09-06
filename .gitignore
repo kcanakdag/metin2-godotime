@@ -1,0 +1,14 @@
+.cache/
+.local/
+assets/source/
+client/assets/imported/
+client/.godot/
+*.blend1
+__pycache__/
+*.pyc
+target/
+.env
+node_modules/
+tools/godot-mcp-server/build/
+dist/
+server/content/

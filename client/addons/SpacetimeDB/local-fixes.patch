@@ -1,0 +1,55 @@
+--- a/core/spacetimedb_client.gd
++++ b/core/spacetimedb_client.gd
+@@ -51,6 +51,8 @@
+ signal disconnected
+ signal connection_error(code: int, reason: String)
+ signal database_initialized
++signal protocol_error(message: String)
++signal subscription_error(message: String)
+ signal database_update(table_update: TableUpdateData) # Emitted for each table update
+ 
+ # From LocalDatabase
+@@ -283,6 +285,7 @@
+ 
+ 	if _deserializer.has_error() or result.is_empty():
+ 		printerr("SpacetimeDBClient: Failed to parse BSATN packet: ", _deserializer.get_last_error())
++		protocol_error.emit(_deserializer.get_last_error())
+ 		return []
+ 	return result
+ 
+@@ -328,7 +331,7 @@
+ 			sub.end.emit()
+ 			_pending_subscriptions.erase(sub.query_id)
+ 			sub.queue_free()
+-		printerr("SpacetimeDBClient: Received SubscriptionErrorMessage: %s", message.error_message)
++		subscription_error.emit(message.error_message)
+ 		return
+ 
+ 	elif message_resource is TransactionUpdateMessage:
+@@ -417,6 +420,7 @@
+ 	self.database_name = database_name.to_lower()
+ 	self.compression = options.compression
+ 	self.one_time_token = options.one_time_token
++	self.save_token = options.save_token
+ 	if not options.token.is_empty():
+ 		self._token = options.token
+ 	self.debug_mode = options.debug_mode
+--- a/core/spacetimedb_rest_api.gd
++++ b/core/spacetimedb_rest_api.gd
+@@ -62,7 +62,6 @@
+ 
+ 	if response_code >= 400 or json == null:
+ 		printerr("SpacetimeDBRestAPI: Token request failed. Response code: ", response_code)
+-		printerr("SpacetimeDBRestAPI: Response body: ", body_text)
+ 		emit_signal("token_request_failed", response_code, body_text)
+ 		return
+ 
+@@ -72,7 +71,7 @@
+ 		set_token(new_token) # Store it internally as well
+ 		emit_signal("token_received", new_token)
+ 	else:
+-		printerr("SpacetimeDBRestAPI: Token not found or empty in JSON response: ", body_text)
++		printerr("SpacetimeDBRestAPI: Token not found or empty in identity response")
+ 		emit_signal("token_request_failed", response_code, "Invalid token format in response")
+ 
+ 

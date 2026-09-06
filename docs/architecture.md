@@ -1,0 +1,225 @@
+# Architecture
+
+The game uses **standard Godot 4.7.2/GDScript** and a **Rust SpacetimeDB 2.8.3
+module**. The database owns identity, presence, positions, terrain height,
+collision, attacks, health, respawn and gold. Clients send intents and render
+subscribed state. This is a new game protocol, without compatibility with the
+original Metin2 executable.
+
+```mermaid
+flowchart LR
+    Source[Selected original assets] --> Blender[Offline Blender conversion]
+    Blender --> Visuals[Godot chunks and warrior GLB]
+    Blender --> Bake[Trusted heights and collision]
+    Bake --> Server[SpacetimeDB module]
+    Visuals --> Client[Godot Web or desktop]
+    Client -->|Movement and action intents| Server
+    Server --> Tick[Authoritative 50 ms simulation]
+    Tick --> Tables[Replicated player, monster and loot rows]
+    Tables --> Client
+```
+
+SpacetimeDB provides transactions, persistence, identity and subscriptions.
+Movement, content validation, combat rules and reward ownership are project code.
+
+## Shared map content
+
+The [map pipeline](map-import.md) resolves original source records at pinned
+revisions, converts geometry in background Blender, and builds Godot scenes.
+`tools/bake_yongan.py` reads the same heights, source attributes, water and
+authored model collision. It writes ignored server content plus client collision
+metadata. `server/src/content.rs` embeds that data at build time with the
+`yongan` feature; reducers never read host files or invoke Blender/Godot.
+
+Water blocks movement only where its surface reaches above at least one terrain
+corner, using the same four-corner rule as the rendered water mesh. Water records
+wholly buried below dry terrain do not add invisible blocking. Original terrain
+blocking attributes and authored model collision remain independent constraints.
+
+Yongan spans 1024 × 1280 meters in map-local positive X/Z coordinates. Source
+centimeters `(x,y,z)` become Godot meters `(x,z,-y)/100`. The bake includes a
+two-meter terrain grid, one-meter movement attributes, transformed collision
+shapes and authored elevated floor triangles. The server uses the terrain
+mesh's triangle diagonal for height interpolation and the highest applicable
+authored surface for bridges/platforms. This is not general multi-floor
+navigation: it cannot choose independently between overlapping traversable
+levels at one X/Z coordinate.
+
+Client chunk scenes contain terrain and authored walk-surface colliders for
+click picking. Building blocking remains a server rule. Both map identity and
+content hash are advertised by `world_info`; native metadata and the browser
+manifest must match before entry. The scheduled simulation refreshes this row
+from compiled metadata after module publication, preserving characters. The
+pinned SpacetimeDB 2.8.3 module has no update lifecycle hook, so the scheduled
+refresh handles same-map content updates. Changing map identity requires a new
+database or an explicit migration. The separate map-preview remains an inspector
+with no multiplayer connection.
+
+Without the Cargo feature, the server uses the small flat training ground with
+five box obstacles. Make enables Yongan by default; raw Cargo has no default
+feature. Both builds expose the same version-2 schema.
+
+## Networking and runtime boundaries
+
+The pinned [native GDScript SDK](https://github.com/flametime/Godot-SpacetimeDB-SDK/tree/f6c59d7068e5dacbde0559906746d0a6c5933ffb)
+is vendored in `client/addons/SpacetimeDB`, plugin version **0.3.2**. Tested
+compatibility is this exact SDK, Godot 4.7.2 and SpacetimeDB 2.8.3.
+
+The socket subprotocol is `v3.bsatn.spacetimedb`. In the pinned server,
+[wire protocol v3](https://github.com/clockworklabs/SpacetimeDB/blob/v2.8.3/crates/client-api-messages/src/websocket/v3.rs)
+coalesces messages using the
+[v2 binary schema](https://github.com/clockworklabs/SpacetimeDB/blob/v2.8.3/crates/client-api-messages/src/websocket/v2.rs).
+This transport version is separate from application
+`world_info.protocol_version = 2`, checked before joining.
+
+Decoding runs on the main thread, with no compression and
+`confirmed_reads = false`. Cached tables require primary keys; Brotli is
+unsupported. Local SDK changes have [separate provenance](../client/addons/SpacetimeDB/UPSTREAM.md).
+The standard engine and pure GDScript path support Web without a .NET dependency.
+
+| Location | Responsibility |
+| --- | --- |
+| `server/src/lib.rs` | Player/session tables, controlling connection, reducer validation, scheduled movement, chat |
+| `server/src/movement.rs` | Direction, speed and training-ground sweep/sliding rules |
+| `server/src/content.rs` | Trusted terrain, map bounds, building/water blocking and elevated surfaces |
+| `server/src/combat.rs` | Monster simulation, attacks, health, death/respawn and loot |
+| `client/scripts/net/game_connection.gd` | SDK lifecycle, tokens, version checks, subscriptions and dictionary signals |
+| `client/scripts/main.gd` | Input, entity instances, loading, camera and HUD |
+| `client/scripts/actors/` | Interpolated warriors and procedural monster/loot visuals |
+| `client/scripts/world/world_stream.gd` | Content manifest, downloaded packs, nearby chunk instances |
+| `tools/export_playable.py` | Isolated Web/Linux builds and optional test-only probes |
+| `deploy/`, `tools/deploy.py` | Isolated Docker services, HTTPS/WSS and deployment |
+
+Gameplay code consumes dictionaries and calls `GameConnection` methods. SDK
+resources, generated bindings and authentication tokens stay behind that
+boundary. `client/spacetime_bindings/` is generated, not manually maintained.
+
+## Application contract
+
+Positions are meters with Y up, heading is radians about Y, and activity is
+`0 = idle`, `1 = moving`, `2 = attacking`, `3 = dead`.
+
+| Public table | State |
+| --- | --- |
+| `player` | Identity primary key; name; X/Y/Z and heading; activity/online; attack sequence; health/max health; gold; respawn deadline |
+| `monster` | Numeric ID; X/Y/Z and heading; health/max health; activity; attack sequence; respawn deadline |
+| `loot` | Auto-increment ID; X/Y/Z; gold; owner identity; reservation and expiry deadlines |
+| `world_info` | ID, protocol version, map display name, map ID, content hash, tick interval and legacy half-size |
+| `obstacle` | Training-ground box IDs, centers, extents, height and visual kind |
+| `chat_message` | Auto-increment ID; sender, server-copied name, message and timestamp |
+
+The client subscribes to online players, monsters, loot, world information,
+training obstacles and retained chat. There is no spatial subscription filtering.
+Yongan's actual bounds come from baked content, not the legacy `half_size`
+field. Display names confer no ownership or authorization.
+
+| Reducer | Behavior |
+| --- | --- |
+| `enter_world(name)` | Validate a 2–16 character name; create/resume one character per identity; acquire its controlling connection |
+| `set_move_input(dx, dz)` | Validate finite components in [-1, 1]; store direction for scheduled movement |
+| `move_to(x, z)` | Validate a finite destination against trusted bounds and blockers |
+| `stop_moving()` | Clear held/destination movement |
+| `perform_attack()` | Enforce cooldown, stop movement, replicate animation and damage an eligible nearby enemy |
+| `pickup_loot(id)` | Validate a living controlling player, distance, clear path, expiry and reservation; grant gold and delete loot atomically |
+| `send_chat(message)` | Validate 1–160 printable characters, rate-limit to one per second and retain the latest 100 |
+
+Private tables hold socket sessions, controlling connections/input, simulation
+time, scheduled ticks and monster attack clocks. Simulation accepts only the
+scheduler's identity. Gameplay actions require the controlling socket, and
+movement/attacks/pickups reject dead characters.
+
+## Movement and combat
+
+The server ticks every **50 ms**, caps movement integration at **100 ms**, and
+limits speed to **5 m/s** with normalized diagonals. Held input expires after
+600 ms; clients refresh it every 100 ms. A 0.45 m character radius contributes
+to collision checks. Yongan travel is split into small steps with axis sliding,
+height-change limits and terrain/model blocking. Destinations do not determine
+the player's Y; the server computes it.
+
+Click movement is a straight destination vector, not a pathfinder. There is no
+local position prediction, reconciliation system, player-to-player collision
+or general layered navigation. Local and remote visuals interpolate toward
+replicated three-dimensional positions.
+
+The prototype Stone Sentinel is procedural geometry, not an imported Metin2 mob.
+A player hit deals 25 damage within 2.7 m and a 2 m height difference, with a
+clear path and an 850 ms cooldown. The sentinel has 100 health, chases eligible
+nearby players around its home, and deals 20 damage within 1.9 m every
+1.3 seconds. These are prototype rules, not an original-game balance claim.
+
+A defeated sentinel respawns after 12 seconds and drops five gold. Loot remains
+reserved for its slayer for 10 seconds, expires after 60 seconds, and requires
+a pickup within 2.5 m with compatible height and clear path. An atomic reducer
+deletes the loot and credits the player, preventing duplicate grants. A dead
+player respawns after 8 seconds at the town spawn with full health and retained
+gold. Reconnecting does not bypass death or attack deadlines.
+
+## Loading and identity lifecycle
+
+Connection advances through `connecting`, `subscribing`, optional `loading`,
+`joining`, then `connected`. Content is prepared after world metadata arrives
+and before the normal join reducer. Failures clear stale snapshots; reconnect
+constructs a fresh SDK instance/cache. If map identity/content changes while
+loading, joining or connected, the client disconnects with a refresh/restart
+notice. It does not keep playing against different collision data.
+
+Web exports use a core PCK plus a shared scenery pack and 20 section packs.
+The manifest and SHA-256 filenames tie downloads to their content; the loader
+checks hashes before mounting packs without replacement of mounted resources.
+The pack generator includes feature-specific imported texture dependencies as
+well as default resource remaps. Numeric terrain tile/attribute textures use
+lossless import without mipmaps or GPU compression, preserving each ID/bit.
+Every section is audited in a fresh Godot process with only its shared and
+section packs; the audit compares exported numeric texels against the source
+PNGs and checks shader, layered textures and textured prop dependencies.
+
+The loader refuses to combine a new scenery manifest with already mounted
+packs. A refresh/restart loads a coherent set after an update. Browser HTTP
+responses are validated after browser decompression, then saved and closed
+before cache-file hashing and mounting.
+Nearby sections are requested around the player and distant scene instances
+are released. Downloaded files may remain cached; unloading a scene is not a
+promise that every engine resource or mounted pack has left memory. Initial
+engine/core/shared/start-area loading still exists. Background section loading
+and browser reconnect are verified. The corrected public browser build also
+passed rendered terrain and keyboard combat checks. See
+[distribution](distribution.md#verification-status).
+
+Browser identity tokens use the SDK's WebSocket query-token path because the
+browser cannot set arbitrary handshake headers. HTTPS/WSS and disabled URL
+logging keep tokens out of proxy request logs. Desktop uses authorization
+headers. Tokens live under `user://identities/`, scoped by endpoint, database
+and local profile; they are absent from reports and packages. Browser storage
+depends on the browser retaining the origin's site data.
+
+A duplicate socket cannot displace an active controller. Its rejected join and
+disconnect leave the original player online. Disconnecting the controller
+stops movement and removes online presence while preserving character state.
+These are guest identities, not an account/character-selection system.
+
+## Protocol changes and evidence
+
+Publish a compatible module to the intended database, regenerate `make bindings`,
+then update the wrapper, client and live smoke tests together. Use a new database
+or deliberate migration for incompatible changes. The generator fetches
+`/v1/database/…/schema?version=10` and records the schema/SDK/generated-file hashes.
+`--offline` uses the saved schema. Increase the application version when the
+contract becomes incompatible.
+
+Current evidence includes 16 Yongan Rust tests, 22 live SDK multiplayer checks
+and 19 combat checks in `.local/yongan-network-final.json` and
+`.local/yongan-combat-final.json`. Real exported Web/Linux tests cover both the
+training ground and Yongan. Yongan's 26-check real-GPU browser run covers mutual
+rendered movement, background sections, keyboard movement/attacks/loot, monster
+and player death/respawn, rejection, reconnect/refresh and identity/position
+preservation across database-container replacement, with no engine errors.
+The report and screenshots are in `.local/browser-proof/20260906-161458/`.
+All 20 section packs also pass isolated resource loading and exact numeric
+texture-byte audits. Separate normal Web/Linux release checks confirm direct
+browser UI/keyboard movement, correct textures, mutual presence and absent test
+hooks; evidence is in `.local/release-browser/` and `.local/release-native/`.
+These checks do not establish full-game fidelity, a large
+player-count target or native Windows execution.
+See [distribution](distribution.md#verification-status) for current export
+evidence and remaining limits.

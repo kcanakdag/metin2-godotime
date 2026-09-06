@@ -1,0 +1,45 @@
+server {
+    listen 443 ssl;
+    server_name @HOST@;
+    ssl_certificate /etc/letsencrypt/live/@CERT@/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/@CERT@/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    root /srv/game/current;
+    index index.html;
+    # Browser WebSocket authentication uses a query token. Never log request URLs.
+    access_log off;
+    error_log /dev/stderr crit;
+    gzip_static on;
+    gzip_vary on;
+    client_max_body_size 64k;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy no-referrer always;
+
+    location = /health { return 200 '{"service":"metin2-godotime"}'; }
+    location = /v1/identity {
+        limit_except POST { deny all; }
+        proxy_pass http://db:3000;
+        proxy_http_version 1.1;
+    }
+    location = /v1/database/@DATABASE@/subscribe {
+        limit_except GET { deny all; }
+        proxy_pass http://db:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 90s;
+        proxy_buffering off;
+    }
+    location /v1/ { return 403; }
+    location ~ /\. { return 404; }
+    location ~ "^/world/[a-f0-9]{64}\.pck$" {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+    location / {
+        limit_except GET { deny all; }
+        try_files $uri $uri/ =404;
+        add_header Cache-Control "no-cache";
+    }
+}

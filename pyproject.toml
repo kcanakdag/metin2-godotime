@@ -1,0 +1,21 @@
+[tool.ruff]
+required-version = "==0.15.22"
+target-version = "py312"
+line-length = 100
+cache-dir = ".cache/ruff"
+force-exclude = true
+extend-exclude = [
+    ".local",
+    ".cache",
+    "assets/source",
+    "client/assets/imported",
+    "client/addons",
+    "tools/godot-mcp-server",
+]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# Blender must locate the pinned Carbon modules before importing them.
+"tools/blender_import_probe.py" = ["E402"]

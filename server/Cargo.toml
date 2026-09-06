@@ -1,0 +1,18 @@
+[package]
+name = "mt2-server"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+spacetimedb = "=2.8.3"
+
+[features]
+yongan = []
+
+[profile.release]
+lto = true
+opt-level = "s"

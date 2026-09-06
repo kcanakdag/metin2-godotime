@@ -1,0 +1,13 @@
+# Pinned development tools and their Python dependencies. Python >= 3.12.
+# Refresh deliberately, run all checks, and update docs/development.md together.
+colorama==0.4.6
+docopt-ng==0.9.0
+gdtoolkit==4.5.0
+lark==1.2.2
+mando==0.7.1
+PyYAML==6.0.3
+radon==6.0.1
+regex==2026.9.3
+ruff==0.15.22
+setuptools==84.0.0
+six==1.17.0

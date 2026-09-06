@@ -1,0 +1,1835 @@
+{
+  "sections": [
+    {
+      "Typespace": {
+        "types": [
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "U64": []
+                  },
+                  "name": {
+                    "some": "id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U256": []
+                          },
+                          "name": {
+                            "some": "__identity__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "sender"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "String": []
+                  },
+                  "name": {
+                    "some": "name"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "String": []
+                  },
+                  "name": {
+                    "some": "message"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "I64": []
+                          },
+                          "name": {
+                            "some": "__timestamp_micros_since_unix_epoch__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "sent_at"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U256": []
+                          },
+                          "name": {
+                            "some": "__identity__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "identity"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U128": []
+                          },
+                          "name": {
+                            "some": "__connection_id__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "connection_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "direction_x"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "direction_z"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "target_x"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "target_z"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U8": []
+                  },
+                  "name": {
+                    "some": "mode"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "last_input_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "attack_until_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "next_chat_us"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "U64": []
+                  },
+                  "name": {
+                    "some": "id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "x"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "y"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "z"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "gold"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U256": []
+                          },
+                          "name": {
+                            "some": "__identity__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "owner"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "reserved_until_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "expires_at_us"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "x"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "y"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "z"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "heading"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U16": []
+                  },
+                  "name": {
+                    "some": "health"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U16": []
+                  },
+                  "name": {
+                    "some": "max_health"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U8": []
+                  },
+                  "name": {
+                    "some": "activity"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "attack_sequence"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "respawn_at_us"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "next_attack_us"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "x"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "z"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "half_x"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "half_z"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "height"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "String": []
+                  },
+                  "name": {
+                    "some": "kind"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U256": []
+                          },
+                          "name": {
+                            "some": "__identity__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "identity"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "String": []
+                  },
+                  "name": {
+                    "some": "name"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "x"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "y"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "z"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "heading"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U8": []
+                  },
+                  "name": {
+                    "some": "activity"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Bool": []
+                  },
+                  "name": {
+                    "some": "online"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "attack_sequence"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U16": []
+                  },
+                  "name": {
+                    "some": "health"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U16": []
+                  },
+                  "name": {
+                    "some": "max_health"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "gold"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "respawn_at_us"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U128": []
+                          },
+                          "name": {
+                            "some": "__connection_id__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "connection_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U256": []
+                          },
+                          "name": {
+                            "some": "__identity__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "identity"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "U64": []
+                  },
+                  "name": {
+                    "some": "scheduled_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Sum": {
+                      "variants": [
+                        {
+                          "algebraic_type": {
+                            "Product": {
+                              "elements": [
+                                {
+                                  "algebraic_type": {
+                                    "I64": []
+                                  },
+                                  "name": {
+                                    "some": "__time_duration_micros__"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "name": {
+                            "some": "Interval"
+                          }
+                        },
+                        {
+                          "algebraic_type": {
+                            "Product": {
+                              "elements": [
+                                {
+                                  "algebraic_type": {
+                                    "I64": []
+                                  },
+                                  "name": {
+                                    "some": "__timestamp_micros_since_unix_epoch__"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "name": {
+                            "some": "Time"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "scheduled_at"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "U8": []
+                  },
+                  "name": {
+                    "some": "id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "I64": []
+                          },
+                          "name": {
+                            "some": "__timestamp_micros_since_unix_epoch__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "last_tick"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "U8": []
+                  },
+                  "name": {
+                    "some": "id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "protocol_version"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "String": []
+                  },
+                  "name": {
+                    "some": "map_name"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "String": []
+                  },
+                  "name": {
+                    "some": "map_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "String": []
+                  },
+                  "name": {
+                    "some": "content_hash"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "tick_ms"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "half_size"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "Types": [
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "Monster"
+          },
+          "ty": 3
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "MonsterClock"
+          },
+          "ty": 4
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "Session"
+          },
+          "ty": 7
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "Loot"
+          },
+          "ty": 2
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "Obstacle"
+          },
+          "ty": 5
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "Player"
+          },
+          "ty": 6
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "TickSchedule"
+          },
+          "ty": 8
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "Controller"
+          },
+          "ty": 1
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "WorldInfo"
+          },
+          "ty": 10
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "ChatMessage"
+          },
+          "ty": 0
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "SimulationClock"
+          },
+          "ty": 9
+        }
+      ]
+    },
+    {
+      "Tables": [
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "session_connection_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "connection_id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "session_connection_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 7,
+          "sequences": [],
+          "source_name": "session",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "simulation_clock_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "simulation_clock_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 9,
+          "sequences": [],
+          "source_name": "simulation_clock",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "tick_schedule_scheduled_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "scheduled_id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "tick_schedule_scheduled_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 8,
+          "sequences": [
+            {
+              "column": 0,
+              "increment": 1,
+              "max_value": {
+                "none": []
+              },
+              "min_value": {
+                "none": []
+              },
+              "source_name": {
+                "some": "tick_schedule_scheduled_id_seq"
+              },
+              "start": {
+                "none": []
+              }
+            }
+          ],
+          "source_name": "tick_schedule",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "chat_message_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "chat_message_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 0,
+          "sequences": [
+            {
+              "column": 0,
+              "increment": 1,
+              "max_value": {
+                "none": []
+              },
+              "min_value": {
+                "none": []
+              },
+              "source_name": {
+                "some": "chat_message_id_seq"
+              },
+              "start": {
+                "none": []
+              }
+            }
+          ],
+          "source_name": "chat_message",
+          "table_access": {
+            "Public": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "monster_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "monster_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 3,
+          "sequences": [],
+          "source_name": "monster",
+          "table_access": {
+            "Public": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "monster_clock_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "monster_clock_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 4,
+          "sequences": [],
+          "source_name": "monster_clock",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "world_info_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "world_info_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 10,
+          "sequences": [],
+          "source_name": "world_info",
+          "table_access": {
+            "Public": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "player_identity_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "identity"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "player_identity_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 6,
+          "sequences": [],
+          "source_name": "player",
+          "table_access": {
+            "Public": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "controller_identity_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "identity"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "controller_identity_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 1,
+          "sequences": [],
+          "source_name": "controller",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "obstacle_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "obstacle_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 5,
+          "sequences": [],
+          "source_name": "obstacle",
+          "table_access": {
+            "Public": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "loot_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "loot_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 2,
+          "sequences": [
+            {
+              "column": 0,
+              "increment": 1,
+              "max_value": {
+                "none": []
+              },
+              "min_value": {
+                "none": []
+              },
+              "source_name": {
+                "some": "loot_id_seq"
+              },
+              "start": {
+                "none": []
+              }
+            }
+          ],
+          "source_name": "loot",
+          "table_access": {
+            "Public": []
+          },
+          "table_type": {
+            "User": []
+          }
+        }
+      ]
+    },
+    {
+      "Reducers": [
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
+            "elements": []
+          },
+          "source_name": "client_connected",
+          "visibility": {
+            "Private": []
+          }
+        },
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
+            "elements": []
+          },
+          "source_name": "client_disconnected",
+          "visibility": {
+            "Private": []
+          }
+        },
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
+            "elements": [
+              {
+                "algebraic_type": {
+                  "String": []
+                },
+                "name": {
+                  "some": "name"
+                }
+              }
+            ]
+          },
+          "source_name": "enter_world",
+          "visibility": {
+            "ClientCallable": []
+          }
+        },
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
+            "elements": []
+          },
+          "source_name": "init",
+          "visibility": {
+            "Private": []
+          }
+        },
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
+            "elements": [
+              {
+                "algebraic_type": {
+                  "F32": []
+                },
+                "name": {
+                  "some": "x"
+                }
+              },
+              {
+                "algebraic_type": {
+                  "F32": []
+                },
+                "name": {
+                  "some": "z"
+                }
+              }
+            ]
+          },
+          "source_name": "move_to",
+          "visibility": {
+            "ClientCallable": []
+          }
+        },
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
+            "elements": []
+          },
+          "source_name": "perform_attack",
+          "visibility": {
+            "ClientCallable": []
+          }
+        },
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
+            "elements": [
+              {
+                "algebraic_type": {
+                  "U64": []
+                },
+                "name": {
+                  "some": "id"
+                }
+              }
+            ]
+          },
+          "source_name": "pickup_loot",
+          "visibility": {
+            "ClientCallable": []
+          }
+        },
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
+            "elements": [
+              {
+                "algebraic_type": {
+                  "String": []
+                },
+                "name": {
+                  "some": "message"
+                }
+              }
+            ]
+          },
+          "source_name": "send_chat",
+          "visibility": {
+            "ClientCallable": []
+          }
+        },
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
+            "elements": [
+              {
+                "algebraic_type": {
+                  "F32": []
+                },
+                "name": {
+                  "some": "direction_x"
+                }
+              },
+              {
+                "algebraic_type": {
+                  "F32": []
+                },
+                "name": {
+                  "some": "direction_z"
+                }
+              }
+            ]
+          },
+          "source_name": "set_move_input",
+          "visibility": {
+            "ClientCallable": []
+          }
+        },
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
+            "elements": [
+              {
+                "algebraic_type": {
+                  "Ref": 8
+                },
+                "name": {
+                  "some": "_schedule"
+                }
+              }
+            ]
+          },
+          "source_name": "simulate",
+          "visibility": {
+            "Private": []
+          }
+        },
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
+            "elements": []
+          },
+          "source_name": "stop_moving",
+          "visibility": {
+            "ClientCallable": []
+          }
+        }
+      ]
+    },
+    {
+      "Schedules": [
+        {
+          "function_name": "simulate",
+          "schedule_at_col": 1,
+          "source_name": {
+            "some": "tick_schedule_sched"
+          },
+          "table_name": "tick_schedule"
+        }
+      ]
+    },
+    {
+      "LifeCycleReducers": [
+        {
+          "function_name": "init",
+          "lifecycle_spec": {
+            "Init": []
+          }
+        },
+        {
+          "function_name": "client_connected",
+          "lifecycle_spec": {
+            "OnConnect": []
+          }
+        },
+        {
+          "function_name": "client_disconnected",
+          "lifecycle_spec": {
+            "OnDisconnect": []
+          }
+        }
+      ]
+    },
+    {
+      "ExplicitNames": {
+        "entries": [
+          {
+            "Table": {
+              "canonical_name": "session",
+              "source_name": "session"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "simulation_clock",
+              "source_name": "simulation_clock"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "tick_schedule",
+              "source_name": "tick_schedule"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "chat_message",
+              "source_name": "chat_message"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "monster",
+              "source_name": "monster"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "monster_clock",
+              "source_name": "monster_clock"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "world_info",
+              "source_name": "world_info"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "player",
+              "source_name": "player"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "controller",
+              "source_name": "controller"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "obstacle",
+              "source_name": "obstacle"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "loot",
+              "source_name": "loot"
+            }
+          },
+          {
+            "Function": {
+              "canonical_name": "client_connected",
+              "source_name": "client_connected"
+            }
+          },
+          {
+            "Function": {
+              "canonical_name": "client_disconnected",
+              "source_name": "client_disconnected"
+            }
+          },
+          {
+            "Function": {
+              "canonical_name": "enter_world",
+              "source_name": "enter_world"
+            }
+          },
+          {
+            "Function": {
+              "canonical_name": "init",
+              "source_name": "init"
+            }
+          },
+          {
+            "Function": {
+              "canonical_name": "move_to",
+              "source_name": "move_to"
+            }
+          },
+          {
+            "Function": {
+              "canonical_name": "perform_attack",
+              "source_name": "perform_attack"
+            }
+          },
+          {
+            "Function": {
+              "canonical_name": "pickup_loot",
+              "source_name": "pickup_loot"
+            }
+          },
+          {
+            "Function": {
+              "canonical_name": "send_chat",
+              "source_name": "send_chat"
+            }
+          },
+          {
+            "Function": {
+              "canonical_name": "set_move_input",
+              "source_name": "set_move_input"
+            }
+          },
+          {
+            "Function": {
+              "canonical_name": "simulate",
+              "source_name": "simulate"
+            }
+          },
+          {
+            "Function": {
+              "canonical_name": "stop_moving",
+              "source_name": "stop_moving"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

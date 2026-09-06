@@ -1,0 +1,5 @@
+# Optional real-browser integration tooling, separate from normal development setup.
+playwright==1.55.0
+greenlet==3.5.5
+pyee==13.0.1
+typing-extensions==4.16.0

@@ -1,0 +1,7 @@
+# Match gdformat's default. Other naming/complexity checks retain upstream defaults.
+max-line-length: 100
+excluded_directories:
+- .git
+- .godot
+- addons
+- assets

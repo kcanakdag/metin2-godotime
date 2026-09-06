@@ -1,0 +1,142 @@
+#!/usr/bin/env python3
+"""Export isolated Web/Linux clients; optional instrumentation exists only in test builds."""
+
+import argparse
+import gzip
+import json
+import os
+import shutil
+import tempfile
+from pathlib import Path
+
+from check_world_packs import check_world_packs
+from export_client import (
+    ROOT,
+    audit_pack,
+    digest,
+    package_notices,
+    run,
+    stage_project,
+    template_directory,
+)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--target", choices=["web", "linux"], default="web")
+    parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
+    parser.add_argument("--templates")
+    parser.add_argument("--server", default="http://127.0.0.1:3210")
+    parser.add_argument("--database", default="mt2-dev-world")
+    parser.add_argument("--include-map", action="store_true")
+    parser.add_argument("--test-probe", action="store_true")
+    args = parser.parse_args()
+    templates = template_directory(args.templates)
+    template = templates / (
+        "web_nothreads_release.zip" if args.target == "web" else "linux_release.x86_64"
+    )
+    if not template.is_file():
+        parser.error(f"Missing export template: {template}")
+    suffix = "-test" if args.test_probe else ""
+    destination = ROOT / "dist" / (args.target + suffix)
+    local = ROOT / ".local" / ("export-" + args.target + suffix)
+    local.mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ)
+    for variable in ["XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME"]:
+        folder = local / variable.lower()
+        folder.mkdir(exist_ok=True)
+        env[variable] = str(folder)
+    with tempfile.TemporaryDirectory(prefix="stage-", dir=local) as temp:
+        stage = Path(temp) / "project"
+        build = Path(temp) / "build"
+        build.mkdir()
+        stage_project(stage, templates, include_maps=args.include_map)
+        config = {"server_url": args.server, "database": args.database}
+        (stage / "client_config.json").write_text(json.dumps(config) + "\n")
+        if args.test_probe:
+            shutil.copy2(ROOT / "client/tests/export_probe.gd", stage / "scripts/export_probe.gd")
+            main_script = stage / "scripts/main.gd"
+            main_script.write_text(
+                main_script.read_text().replace(
+                    "func _ready() -> void:\n",
+                    'func _ready() -> void:\n\tadd_child(preload("res://scripts/export_probe.gd").new())\n',
+                )
+            )
+        platform = "Web" if args.target == "web" else "Linux"
+        preset = (
+            '[preset.0]\nname="Playable"\nplatform=' + json.dumps(platform) + "\n"
+            'runnable=true\nexport_filter="all_resources"\ninclude_filter="*.json"\n'
+            'exclude_filter="addons/godot_mcp/*,tests/*,*.md"\nscript_export_mode=2\n'
+            "[preset.0.options]\ncustom_template/release=" + json.dumps(str(template)) + "\n"
+            "variant/extensions_support=false\nvariant/thread_support=false\n"
+            "vram_texture_compression/for_desktop=true\n"
+            "vram_texture_compression/for_mobile=false\n"
+            "html/export_icon=true\nhtml/canvas_resize_policy=2\n"
+            "progressive_web_app/enabled=false\n"
+            'binary_format/architecture="x86_64"\nbinary_format/embed_pck=false\n'
+            "texture_format/s3tc_bptc=true\ntexture_format/etc2_astc=false\n"
+        )
+        (stage / "export_presets.cfg").write_text(preset)
+        common = [args.godot, "--headless", "--path", stage]
+        run([*common, "--editor", "--import", "--quit"], local / "import.log", env)
+        if args.include_map and args.target == "web":
+            full_pack = Path(temp) / "world.pck"
+            run([*common, "--export-pack", "Playable", full_pack], local / "world-export.log", env)
+            run(
+                [
+                    args.godot,
+                    "--headless",
+                    "--main-pack",
+                    full_pack,
+                    "--script",
+                    ROOT / "tools/pack_world.gd",
+                    "--",
+                    build / "world",
+                ],
+                local / "world-packs.log",
+                env,
+            )
+            check_world_packs(args.godot, build / "world", local, env)
+            # World data loads separately. Re-import a core-only staged project for the boot pack.
+            shutil.rmtree(stage / "assets/imported/maps")
+            run([*common, "--editor", "--import", "--quit"], local / "core-import.log", env)
+        executable = build / ("index.html" if args.target == "web" else "MT2Spacetime.x86_64")
+        run([*common, "--export-release", "Playable", executable], local / "export.log", env)
+        audit = audit_pack(
+            args.godot,
+            executable.with_suffix(".pck"),
+            local,
+            env,
+            allow_test_probe=args.test_probe,
+        )
+        package_notices(stage, build, local)
+        if args.target == "linux":
+            executable.chmod(0o755)
+            (build / "client_config.json").write_text(json.dumps(config) + "\n")
+        for path in list(build.rglob("*")):
+            if args.target == "web" and path.suffix in {".wasm", ".pck", ".js"}:
+                path.with_suffix(path.suffix + ".gz").write_bytes(
+                    gzip.compress(path.read_bytes(), compresslevel=9, mtime=0)
+                )
+        files = {
+            p.relative_to(build).as_posix(): {"bytes": p.stat().st_size, "sha256": digest(p)}
+            for p in sorted(build.rglob("*"))
+            if p.is_file()
+        }
+        manifest = {
+            "target": args.target,
+            "test_probe": args.test_probe,
+            "template_sha256": digest(template),
+            "pack_audit": audit,
+            "files": files,
+        }
+        (build / "build-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        if destination.exists():
+            shutil.rmtree(destination)
+        destination.parent.mkdir(exist_ok=True)
+        shutil.move(build, destination)
+    print(json.dumps({"output": str(destination), **manifest}, indent=2))
+
+
+if __name__ == "__main__":
+    main()
