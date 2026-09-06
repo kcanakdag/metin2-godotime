@@ -1,5 +1,5 @@
 //! First shared PvE loop. Targets, cooldowns, damage, respawn and rewards are server-owned.
-use crate::{active_controller, collision_bounds, content, controller, now_us, player};
+use crate::{active_controller, collision_bounds, content, controller, inventory, now_us, player};
 use spacetimedb::{Identity, ReducerContext, Table};
 
 const PLAYER_DAMAGE: u16 = 25;
@@ -99,10 +99,12 @@ pub fn player_attack(ctx: &ReducerContext) -> Result<(), String> {
     if let Some(mut monster) = target {
         player.heading = (player.x - monster.x).atan2(player.z - monster.z);
         ctx.db.player().identity().update(player);
-        monster.health = monster.health.saturating_sub(PLAYER_DAMAGE);
+        let damage = PLAYER_DAMAGE + inventory::weapon_bonus(ctx, ctx.sender());
+        monster.health = monster.health.saturating_sub(damage);
         if monster.health == 0 {
             monster.activity = 3;
             monster.respawn_at_us = now_us(ctx) + 12_000_000;
+            inventory::drop_potion(ctx, ctx.sender(), monster.x, monster.y, monster.z);
             ctx.db.loot().insert(Loot {
                 id: 0,
                 x: monster.x,
@@ -160,6 +162,7 @@ pub fn pickup_loot(ctx: &ReducerContext, id: u64) -> Result<(), String> {
 
 pub fn simulate(ctx: &ReducerContext, elapsed: f32) {
     let now = now_us(ctx);
+    inventory::expire_drops(ctx);
     let bounds = collision_bounds(ctx);
     for loot in ctx.db.loot().iter() {
         if now >= loot.expires_at_us {

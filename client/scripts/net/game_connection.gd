@@ -11,13 +11,24 @@ signal world_info_changed(info: Dictionary)
 signal reducer_failed(message: String)
 signal monsters_changed(rows: Array)
 signal loot_changed(rows: Array)
+signal inventory_changed(rows: Array)
+signal item_drops_changed(rows: Array)
 signal content_load_requested(info: Dictionary)
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
 const EXPECTED_PROTOCOL_VERSION := 2
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
-const TABLES := ["player", "obstacle", "world_info", "chat_message", "monster", "loot"]
+const TABLES := [
+	"player",
+	"obstacle",
+	"world_info",
+	"chat_message",
+	"monster",
+	"loot",
+	"inventory_item",
+	"item_drop"
+]
 const QUERIES := [
 	"SELECT * FROM player WHERE online = true",
 	"SELECT * FROM obstacle",
@@ -25,6 +36,8 @@ const QUERIES := [
 	"SELECT * FROM chat_message",
 	"SELECT * FROM monster",
 	"SELECT * FROM loot",
+	"SELECT * FROM inventory_item",
+	"SELECT * FROM item_drop",
 ]
 
 var local_identity := ""
@@ -45,6 +58,8 @@ var chat: Array = []
 var world_info: Dictionary = {}
 var monsters: Array = []
 var loot: Array = []
+var inventory: Array = []
+var item_drops: Array = []
 var require_content := false
 
 var _client: SpacetimeDBClient
@@ -151,6 +166,40 @@ func perform_attack() -> void:
 
 func pickup_loot(id: int) -> void:
 	_call_reducer("pickup_loot", [id], [&"U64"])
+
+
+func pickup_item_drop(id: int) -> void:
+	_call_reducer("pickup_item_drop", [id], [&"U64"])
+
+
+func move_item(id: int, cell: int) -> void:
+	if _valid_inventory_cell(cell):
+		_call_reducer("move_item", [id, cell], [&"U64", &"U8"])
+
+
+func equip_item(id: int) -> void:
+	_call_reducer("equip_item", [id], [&"U64"])
+
+
+func unequip_item(id: int, cell: int) -> void:
+	if _valid_inventory_cell(cell):
+		_call_reducer("unequip_item", [id, cell], [&"U64", &"U8"])
+
+
+func use_item(id: int) -> void:
+	_call_reducer("use_item", [id], [&"U64"])
+
+
+func own_inventory() -> Array:
+	return inventory.filter(func(row: Dictionary): return str(row.owner) == local_identity)
+
+
+func _valid_inventory_cell(cell: int) -> bool:
+	# Reject before U8 encoding can wrap; the server independently checks footprint/ownership.
+	if cell < 0 or cell >= 90:
+		reducer_failed.emit("Choose a slot inside the inventory.")
+		return false
+	return true
 
 
 func send_chat(message: String) -> void:
@@ -290,6 +339,12 @@ func _flush_snapshots() -> void:
 				values[field] = value.hex_encode() if value is PackedByteArray else value
 			rows.append(values)
 		match table_name:
+			"inventory_item":
+				inventory = rows
+				inventory_changed.emit(own_inventory())
+			"item_drop":
+				item_drops = rows
+				item_drops_changed.emit(item_drops)
 			"monster":
 				monsters = rows
 				monsters_changed.emit(monsters)
@@ -391,6 +446,10 @@ func _clear_snapshots() -> void:
 	world_info = {}
 	monsters = []
 	loot = []
+	inventory = []
+	item_drops = []
+	inventory_changed.emit(inventory)
+	item_drops_changed.emit(item_drops)
 	monsters_changed.emit(monsters)
 	loot_changed.emit(loot)
 	players_changed.emit(players)

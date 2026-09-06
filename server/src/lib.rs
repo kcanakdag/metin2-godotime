@@ -1,6 +1,7 @@
 //! Authoritative shared development map for the Godot client.
 mod combat;
 mod content;
+mod inventory;
 mod movement;
 
 use movement::{Bounds, HALF_SIZE, PLAYER_RADIUS, step, valid_direction};
@@ -219,7 +220,7 @@ pub fn enter_world(ctx: &ReducerContext, name: String) -> Result<(), String> {
     let previous_controller = ctx.db.controller().identity().find(ctx.sender());
     if let Some(controller) = &previous_controller {
         if controller.connection_id == connection_id {
-            return Ok(());
+            return inventory::ensure_starter(ctx);
         }
         if ctx
             .db
@@ -254,6 +255,7 @@ pub fn enter_world(ctx: &ReducerContext, name: String) -> Result<(), String> {
             respawn_at_us: 0,
         });
     }
+    inventory::ensure_starter(ctx)?;
     if let Some(mut controller) = previous_controller {
         controller.connection_id = connection_id;
         controller.direction_x = 0.0;

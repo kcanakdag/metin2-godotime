@@ -5,8 +5,11 @@ original-map importer and shared collision bake exist, as does one PvE loop with
 damage, death/respawn and gold loot. Browser multiplayer passed on the training
 ground and Yongan, including section loading, keyboard combat and reconnect.
 The corrected terrain and collision pipeline is verified in the public browser.
-Complete client interfaces, inventory, skills, quests and progression remain
-future work.
+An original UI/inventory slice is now implemented: selected original taskbar and
+inventory art, a two-page bag, one equipable sword, red potions, item drops and
+an original-image minimap. Its Web/Linux exports passed 39 public checks,
+including inventory mouse interactions, quickslots, persistence and potion drops.
+Complete client interfaces, skills, quests and progression remain future work.
 The implemented contract is in [architecture.md](architecture.md).
 
 Assume a faithful classic Metin2 baseline first. Before importing substantial
@@ -122,6 +125,14 @@ follow [reducer execution constraints](https://spacetimedb.com/docs/functions/re
 Keep the existing GameConnection boundary. Add focused scene/controllers as
 features grow, so the current main scene and HUD do not absorb every system.
 
+The current classic UI work uses the original selected raster fixture and layout
+observations, with new Godot controls and server-backed item operations. Original
+fidelity is the target rather than a claim of indistinguishability: login remains
+a prototype; unsupported character, skill and social systems are inactive; font
+and complete behavior parity are unverified against a running original client.
+The equipped sword currently changes damage and its inventory display, without
+a 3D attachment. Keep these limits separate from a passing UI asset conversion.
+
 | Client area | Server feature delivered with it |
 | --- | --- |
 | Login, character selection and creation | Accounts, persistent character IDs, ownership and session control |
@@ -192,9 +203,14 @@ The implementation covers parts of milestones 1–3 and a development deployment
 from milestone 7: Yongan import/bake, one warrior, authoritative movement, one
 procedural enemy, damage/death/respawn and a gold reward. That subset does not
 complete any broad milestone merely because SDK tests pass. Public browser/Linux
-multiplayer, combat and normal-release checks now pass for this slice. Next,
-expand the starter experience with inventory/equipment and progression as
-another two-client slice.
+multiplayer, combat and normal-release checks pass for the preceding Yongan
+slice. The next inventory/equipment slice is now implemented in source and under
+verification: once-only sword/potions, bounded bag cells/stacks, server equipment
+bonus, healing, item drops and original UI controls. Its 56 live inventory checks
+and additive data-preservation check pass. Complete browser mouse/keyboard and
+normal-export checks before treating the slice as done.
+Then extend item/equipment breadth and progression without implying that the
+entire original starter experience is complete.
 
 The full original map set, remaining classes and complete gameplay are not
 imported or verified. Docker hosting on port 8443 is a development deployment;

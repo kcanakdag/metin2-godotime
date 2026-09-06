@@ -5,7 +5,8 @@ original game asset rights remain separate.
 
 | Source | Pinned revision/version | Use and license |
 | --- | --- | --- |
-| [Metin2 client archive](https://git.old-metin2.com/metin2/client) | `bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7` | Warrior fixture and selected Yongan map dependencies; originals and converted derivatives are ignored by version control |
+| [Metin2 client archive](https://git.old-metin2.com/metin2/client) | `bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7` | Warrior, selected Yongan dependencies, original UI fixture and minimap tiles; originals and derivatives are ignored |
+| [Pillow](https://github.com/python-pillow/Pillow/tree/12.1.0) | `12.1.0` in `tools/requirements-assets.txt` | Build-time decoding/cropping of selected original raster UI assets; Pillow's own license applies independently of source art rights |
 | [Carbon Blender tools](https://github.com/carbonenginejs/tools-blender/tree/8cba23114bf1d30c9da597c1ecf49271e00b939d) | `8cba23114bf1d30c9da597c1ecf49271e00b939d` | MIT importer/reader, downloaded with its license into `.cache` |
 | [Native Godot SpacetimeDB SDK](https://github.com/flametime/Godot-SpacetimeDB-SDK/tree/f6c59d7068e5dacbde0559906746d0a6c5933ffb) | `f6c59d7068e5dacbde0559906746d0a6c5933ffb` | MIT; plugin version 0.3.2, vendored in `client/addons/SpacetimeDB` |
 | [SpacetimeDB Rust module library](https://docs.rs/spacetimedb/2.8.3/spacetimedb/) | `spacetimedb = "=2.8.3"` | Apache-2.0 module dependency; exact dependencies are in `server/Cargo.lock` |
@@ -132,6 +133,29 @@ server code or change the original assets' terms.
 The first enemy, Stone Sentinel, and its gold pickup use project-authored
 procedural Godot geometry. They introduce no downloaded monster mesh, animation
 or effect fixture, and should not be described as an original Metin2 mob import.
+
+## Original UI fixture
+
+`tools/import_metin_ui.py` fetches an explicit selection from the same pinned
+client archive: taskbar gauges/button states, quickslot legends, inventory and
+equipment art, common windows/tooltips, chat/minimap controls, sword icon `00010`
+and red-potion icon `27001`. It converts 148 UI images and stitches 20 original
+Yongan DDS minimap tiles into one 1024 × 1280 image, using 185 source files.
+
+`client/assets/imported/ui/manifest.json` records Git blob/SHA-256 hashes for
+sources, atlas/crop information, PNG hashes, pixel dimensions and consulted
+references. Output retains decoded RGBA pixels without recoloring/resizing;
+each PNG is reopened to verify its pixel round trip. `GrpSubImage.cpp` was
+consulted for `.sub` descriptor semantics, and selected taskbar, inventory,
+minimap, chat, tooltip and system-layout sources informed presentation. No
+downloaded Python/C++ is executed or copied as runtime implementation.
+
+Pillow is pinned and installed by development setup; it is not shipped in the
+player runtime. Original UI art has the same separate asset-rights constraints
+as the warrior/map, and both its originals and converted files remain ignored.
+This fixture adds no font: identical original text rendering and full behavioral
+parity have not been established. See [UI assets](ui-assets.md) for the precise
+source/layout contract and remaining fidelity limits.
 
 ## Gameplay reference
 

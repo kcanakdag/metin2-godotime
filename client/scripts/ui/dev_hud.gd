@@ -1,6 +1,6 @@
 class_name DevHud
 extends CanvasLayer
-## Runtime HUD: presentation and user intent only; networking belongs to the client session.
+## Classic Metin2 presentation and validated user intents; networking belongs to the session.
 
 signal connect_requested(server_url: String, database: String, player_name: String)
 signal disconnect_requested
@@ -12,6 +12,16 @@ signal chat_submitted(message: String)
 signal debug_option_changed(option: String, value: Variant)
 signal screenshot_requested
 signal copy_diagnostics_requested
+signal move_item_requested(item_id: int, cell: int)
+signal equip_item_requested(item_id: int)
+signal unequip_item_requested(item_id: int, cell: int)
+signal use_item_requested(item_id: int)
+
+const Art = preload("res://scripts/ui/classic_art.gd")
+const Inventory = preload("res://scripts/ui/classic_inventory.gd")
+const Taskbar = preload("res://scripts/ui/classic_taskbar.gd")
+const ItemTooltip = preload("res://scripts/ui/classic_tooltip.gd")
+const Minimap = preload("res://scripts/world/classic_minimap.gd")
 
 const INK := Color(0.055, 0.065, 0.077, 0.96)
 const BRONZE := Color(0.63, 0.47, 0.28)
@@ -50,19 +60,25 @@ var _connection_state: Label
 var _header_action: Button
 var _world_name: Label
 var _online_count: Label
-var _chat_panel: PanelContainer
+var _chat_panel: Control
 var _chat_log: RichTextLabel
 var _chat_input: LineEdit
-var _hotbar: PanelContainer
-var _attack_button: Button
-var _health: ProgressBar
-var _health_text: Label
-var _character_name: Label
+var _hotbar: Control
 var _debug: PanelContainer
 var _debug_values: Dictionary = {}
 var _roster: Label
 var _notice: Label
 var _notice_timer: Timer
+var _inventory: Control
+var _tooltip: Control
+var _carry_preview: TextureRect
+var _carry: Dictionary = {}
+var _inventory_rows: Array = []
+var _profile_key := ""
+var _minimap: Control
+var _minimap_panel: Control
+var _chat_entry: Control
+var _system: Control
 var _connected := false
 var _state := "disconnected"
 
@@ -75,13 +91,14 @@ func _ready() -> void:
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.theme = _make_theme()
 	add_child(_root)
-	_build_header()
 	_build_connection()
 	_build_chat()
 	_build_hotbar()
+	_build_inventory()
+	_build_minimap()
+	_build_system()
 	_build_debug()
 	_build_notice()
-	_allow_world_input(_root)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	set_connection_state("disconnected", "Choose a name and join the development map.")
@@ -102,6 +119,11 @@ func set_connection_state(state: String, message: String) -> void:
 	var busy := state in ["connecting", "subscribing", "joining"]
 	_connection.visible = not _connected
 	_chat_panel.visible = _connected
+	_minimap_panel.visible = _connected
+	if not _connected:
+		_inventory.hide()
+		_system.hide()
+		_cancel_carry()
 	_hotbar.visible = _connected
 	_connection_state.text = state.to_upper()
 	_connection_state.add_theme_color_override(
@@ -117,7 +139,6 @@ func set_connection_state(state: String, message: String) -> void:
 	_reset_identity_button.visible = state == "error"
 	_header_action.text = "Leave world" if _connected else "Connection"
 	_header_action.disabled = busy
-	_attack_button.disabled = not _connected
 	_chat_input.editable = _connected
 	_chat_input.placeholder_text = "Enter to chat…" if _connected else "Connect to chat"
 	for entry in [_server, _database, _player_name]:
@@ -125,28 +146,20 @@ func set_connection_state(state: String, message: String) -> void:
 
 
 func set_world_info(info: Dictionary) -> void:
+	_minimap.set_world_info(info)
 	_world_name.text = str(
 		info.get("map_name", info.get("display_name", info.get("name", "Development grounds")))
 	)
 
 
 func set_player_info(row: Dictionary) -> void:
-	var hp := float(row.get("hp", row.get("health", 0)))
-	var max_hp := maxf(1.0, float(row.get("max_hp", row.get("max_health", 100))))
-	_health.max_value = max_hp
-	_health.value = hp
-	_health_text.text = "%d / %d" % [hp, max_hp]
-	_character_name.text = (
-		"%s  ·  %d gold%s"
-		% [
-			row.get("name", "Warrior"),
-			row.get("gold", 0),
-			"  · Respawning…" if hp == 0 and not row.is_empty() else ""
-		]
-	)
+	_hotbar.set_player(row)
+	_inventory.set_gold(int(row.get("gold", 0)))
+	_minimap.set_player_info(row)
 
 
 func set_players(rows: Array, local_identity: String) -> void:
+	_minimap.set_players(rows, local_identity)
 	_online_count.text = "%d %s" % [rows.size(), "player" if rows.size() == 1 else "players"]
 	var names: PackedStringArray = []
 	for row in rows:
@@ -204,6 +217,7 @@ func is_debug_visible() -> bool:
 
 func focus_chat() -> void:
 	if _connected:
+		_chat_entry.show()
 		_chat_input.grab_focus()
 
 
@@ -275,43 +289,6 @@ func _panel(parent: Node) -> PanelContainer:
 	return panel
 
 
-func _allow_world_input(node: Node) -> void:
-	if node is Container and not node is ScrollContainer:
-		node.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for child in node.get_children():
-		_allow_world_input(child)
-
-
-func _build_header() -> void:
-	var panel := _panel(_root)
-	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	panel.offset_left = 16
-	panel.offset_right = -16
-	panel.offset_top = 14
-	var row := HBoxContainer.new()
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(row)
-	var title := VBoxContainer.new()
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.add_theme_constant_override("separation", 3)
-	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(title)
-	title.add_child(_label("METIN2 / SPACETIME", 18, GOLD))
-	_world_name = _label("Development grounds", 13, MUTED)
-	title.add_child(_world_name)
-	var status := VBoxContainer.new()
-	status.add_theme_constant_override("separation", 3)
-	status.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(status)
-	_connection_state = _label("DISCONNECTED", 13, GOLD)
-	status.add_child(_connection_state)
-	_online_count = _label("0 players", 13, MUTED)
-	status.add_child(_online_count)
-	_header_action = _button("Connection", _on_header_action)
-	row.add_child(_header_action)
-	row.add_child(_button("F3 · Tools", toggle_debug))
-
-
 func _build_connection() -> void:
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -325,6 +302,8 @@ func _build_connection() -> void:
 	column.add_theme_constant_override("separation", 11)
 	_connection.add_child(column)
 	column.add_child(_label("ENTER YONGAN", 21, GOLD))
+	_connection_state = _label("DISCONNECTED", 13, GOLD)
+	column.add_child(_connection_state)
 	column.add_child(_label("A familiar world. A new foundation.", 14, MUTED))
 	_server = _field(column, "SERVER ADDRESS", "http://127.0.0.1:3210")
 	_database = _field(column, "DATABASE", "mt2-dev-world")
@@ -366,61 +345,81 @@ func _field(parent: Node, title: String, placeholder: String) -> LineEdit:
 
 
 func _build_chat() -> void:
-	_chat_panel = _panel(_root)
+	_chat_panel = Control.new()
 	_chat_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	_chat_panel.offset_left = 16
-	_chat_panel.offset_right = 410
-	_chat_panel.offset_top = -207
-	_chat_panel.offset_bottom = -16
-	var column := VBoxContainer.new()
-	_chat_panel.add_child(column)
-	column.add_child(_label("LOCAL CHAT", 11, GOLD))
+	_chat_panel.position = Vector2(0, -210)
+	_chat_panel.size = Vector2(600, 173)
+	_chat_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_chat_panel)
 	_chat_log = RichTextLabel.new()
+	_chat_log.position = Vector2(10, 0)
+	_chat_log.size = Vector2(580, 140)
 	_chat_log.bbcode_enabled = false
-	_chat_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_chat_log.custom_minimum_size.y = 90
+	_chat_log.scroll_active = false
 	_chat_log.scroll_following = true
-	_chat_log.add_theme_font_size_override("normal_font_size", 14)
-	column.add_child(_chat_log)
+	_chat_log.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chat_log.add_theme_font_size_override("normal_font_size", 12)
+	_chat_log.add_theme_color_override("default_color", Color.WHITE)
+	_chat_log.add_theme_color_override("font_shadow_color", Color.BLACK)
+	_chat_log.add_theme_constant_override("shadow_offset_x", 1)
+	_chat_log.add_theme_constant_override("shadow_offset_y", 1)
+	_chat_panel.add_child(_chat_log)
+	_chat_entry = Control.new()
+	_chat_entry.position = Vector2(0, 141)
+	_chat_entry.size = Vector2(600, 32)
+	_chat_panel.add_child(_chat_entry)
+	Art.image(_chat_entry, "pattern/chat_bar_left", Vector2.ZERO)
+	Art.tile(_chat_entry, "pattern/chat_bar_middle", Rect2(64, 0, 472, 32))
+	Art.image(_chat_entry, "pattern/chat_bar_right", Vector2(536, 0))
+	Art.label(_chat_entry, "Normal", Vector2(11, 7), Color.WHITE)
 	_chat_input = LineEdit.new()
+	_chat_input.position = Vector2(62, 5)
+	_chat_input.size = Vector2(482, 22)
 	_chat_input.max_length = 160
-	_chat_input.custom_minimum_size.y = 34
+	_chat_input.add_theme_font_size_override("font_size", 12)
+	for state in ["normal", "focus", "read_only"]:
+		_chat_input.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	_chat_input.text_submitted.connect(_on_chat)
-	column.add_child(_chat_input)
+	_chat_entry.add_child(_chat_input)
+	Art.button(
+		_chat_entry,
+		"game/taskbar/send_chat_button_",
+		Vector2(549, 7),
+		func() -> void: _on_chat(_chat_input.text)
+	)
+	_chat_entry.hide()
 
 
 func _build_hotbar() -> void:
-	_hotbar = _panel(_root)
-	_hotbar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 7)
-	_hotbar.add_child(column)
-	_character_name = _label("Warrior", 13, GOLD)
-	column.add_child(_character_name)
-	_health = ProgressBar.new()
-	_health.custom_minimum_size.y = 23
-	_health.show_percentage = false
-	_health.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_health.add_theme_stylebox_override("background", _box(Color(0.14, 0.035, 0.045), BRONZE))
-	var fill := _box(Color(0.64, 0.10, 0.12), Color(0.78, 0.22, 0.18))
-	fill.content_margin_top = 0
-	fill.content_margin_bottom = 0
-	_health.add_theme_stylebox_override("fill", fill)
-	column.add_child(_health)
-	_health_text = _label("0 / 100", 12)
-	_health_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_health_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_health_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_health.add_child(_health_text)
-	var row := HBoxContainer.new()
-	column.add_child(row)
-	_attack_button = _button("ATTACK  [Space]", func() -> void: attack_requested.emit())
-	_attack_button.custom_minimum_size = Vector2(150, 44)
-	row.add_child(_attack_button)
-	row.add_child(_button("LOOT [E]", func(): pickup_requested.emit()))
-	var help := _label("WASD / click · Move\nEnter · Chat   F3 · Tools", 12, MUTED)
-	help.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(help)
+	_hotbar = Taskbar.new()
+	_root.add_child(_hotbar)
+	_hotbar.inventory_requested.connect(func() -> void: _inventory.toggle())
+	_hotbar.system_requested.connect(func() -> void: _system.visible = not _system.visible)
+	_connect_slots(_hotbar)
+	_hotbar.settings_changed.connect(_save_profile)
+
+
+func _build_inventory() -> void:
+	_inventory = Inventory.new()
+	_root.add_child(_inventory)
+	_connect_slots(_inventory)
+	_inventory.settings_changed.connect(_save_profile)
+	_tooltip = ItemTooltip.new()
+	_root.add_child(_tooltip)
+	_carry_preview = TextureRect.new()
+	_carry_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_carry_preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_carry_preview.z_index = 25
+	_root.add_child(_carry_preview)
+
+
+func _connect_slots(component: Control) -> void:
+	component.slot_primary.connect(_on_slot_primary)
+	component.slot_secondary.connect(_on_slot_secondary)
+	component.slot_dropped.connect(_on_slot_dropped)
+	component.drag_started.connect(_cancel_carry)
+	component.item_hovered.connect(func(row: Dictionary) -> void: _tooltip.show_item(row))
+	component.item_unhovered.connect(func() -> void: _tooltip.hide())
 
 
 func _build_debug() -> void:
@@ -441,8 +440,14 @@ func _build_debug() -> void:
 	var title := _label("DEVELOPER TOOLS", 17, GOLD)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.add_child(title)
-	heading.add_child(_button("Close · F3", toggle_debug))
+	heading.add_child(_button("Close · Ctrl+F3", toggle_debug))
 	column.add_child(_label("Live session diagnostics", 12, MUTED))
+	_world_name = _label("Yongan", 13)
+	column.add_child(_world_name)
+	_online_count = _label("0 players", 13)
+	column.add_child(_online_count)
+	_header_action = _button("Leave world", _on_header_action)
+	column.add_child(_header_action)
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 14)
@@ -525,16 +530,9 @@ func _build_notice() -> void:
 
 
 func _layout() -> void:
-	var size := get_viewport().get_visible_rect().size
-	_chat_panel.offset_right = minf(410, size.x * 0.42)
-	var anchor := 0.5 if size.x >= 1180 else 1.0
-	_hotbar.anchor_left = anchor
-	_hotbar.anchor_right = anchor
-	_hotbar.offset_left = -184 if anchor == 0.5 else -384
-	_hotbar.offset_right = 184 if anchor == 0.5 else -16
-	_hotbar.offset_top = -160
-	_hotbar.offset_bottom = -16
-	_debug.offset_bottom = maxf(300, size.y - 184)
+	var viewport_size := get_viewport().get_visible_rect().size
+	_chat_panel.position = Vector2(0, viewport_size.y - 210)
+	_debug.offset_bottom = maxf(300, viewport_size.y - 70)
 
 
 func _on_header_action() -> void:
@@ -565,7 +563,232 @@ func _on_chat(message: String) -> void:
 	if not trimmed.is_empty() and _connected:
 		chat_submitted.emit(trimmed)
 		_chat_input.clear()
+	_chat_input.release_focus()
+	_chat_entry.hide()
 
 
 func _on_debug_option(value: Variant, option: String) -> void:
 	debug_option_changed.emit(option, value)
+
+
+func _process(_delta: float) -> void:
+	if not _carry.is_empty():
+		_carry_preview.position = _root.get_global_mouse_position() - Vector2(16, 16)
+
+
+func set_inventory(rows: Array) -> void:
+	_inventory_rows = rows
+	_inventory.set_rows(rows)
+	_hotbar.set_rows(rows)
+	if not _carry.is_empty() and _find_item(int(_carry["id"])).is_empty():
+		_cancel_carry()
+
+
+func handle_key(event: InputEventKey) -> bool:
+	if not event.pressed or event.echo:
+		return false
+	if event.keycode == KEY_ESCAPE:
+		if wants_keyboard():
+			get_viewport().gui_get_focus_owner().release_focus()
+			_chat_entry.hide()
+		elif not _carry.is_empty():
+			_cancel_carry()
+		elif _inventory.visible:
+			_inventory.hide()
+			_tooltip.hide()
+		elif _connected:
+			_system.visible = not _system.visible
+		return true
+	if wants_keyboard() or not _connected or event.ctrl_pressed or event.alt_pressed:
+		return false
+	if event.keycode == KEY_I:
+		_inventory.toggle()
+		return true
+	var slot_keys := [KEY_1, KEY_2, KEY_3, KEY_4, KEY_F1, KEY_F2, KEY_F3, KEY_F4]
+	var index := slot_keys.find(event.keycode)
+	if index >= 0:
+		if event.shift_pressed and index < 4:
+			_hotbar.set_page(index)
+		else:
+			_activate_item(_hotbar.item_at(index))
+		return true
+	return false
+
+
+func inventory_snapshot() -> Dictionary:
+	var result: Dictionary = _inventory.snapshot()
+	var origin: Vector2 = _inventory.global_position
+	var quick: Dictionary = _hotbar.snapshot()
+	result["window_rect"] = [origin.x, origin.y, _inventory.size.x, _inventory.size.y]
+	result["grid_origin"] = [origin.x + 8, origin.y + 246]
+	result["equipment_origin"] = [origin.x + 16, origin.y + 39]
+	result["quickslot_centers"] = quick["slot_centers"]
+	result["quickslot_page"] = quick["page"]
+	result["quickslot_bindings"] = quick["bindings"].duplicate()
+	result["tab_centers"] = [[origin.x + 49, origin.y + 233], [origin.x + 127, origin.y + 233]]
+	result["tooltip_visible"] = _tooltip.visible
+	result["dragging"] = not _carry.is_empty() or get_viewport().gui_is_dragging()
+	return result
+
+
+func _on_slot_primary(slot: Control) -> void:
+	if not _carry.is_empty():
+		_on_slot_dropped(slot, _carry)
+	elif slot.kind == "quickslot":
+		_activate_item(slot.row)
+	elif not slot.row.is_empty():
+		_carry = slot.row.duplicate()
+		_carry_preview.texture = Art.item_icon(int(_carry["vnum"]))
+		_carry_preview.show()
+		_tooltip.hide()
+
+
+func _on_slot_secondary(slot: Control) -> void:
+	_cancel_carry()
+	if slot.kind == "quickslot":
+		_hotbar.bind_item(slot.cell, {})
+		_save_profile()
+	else:
+		_activate_item(slot.row)
+
+
+func _on_slot_dropped(slot: Control, row: Dictionary) -> void:
+	var current := _find_item(int(row.get("id", 0)))
+	_cancel_carry()
+	if current.is_empty():
+		return
+	var item_id := int(current["id"])
+	if slot.kind == "quickslot":
+		_hotbar.bind_item(slot.cell, current)
+		_save_profile()
+	elif slot.kind == "equipment":
+		equip_item_requested.emit(item_id)
+	elif bool(current.get("equipped", false)):
+		unequip_item_requested.emit(item_id, slot.cell)
+	elif int(current["cell"]) != slot.cell:
+		move_item_requested.emit(item_id, slot.cell)
+
+
+func _activate_item(row: Dictionary) -> void:
+	if row.is_empty():
+		return
+	var current := _find_item(int(row.get("id", 0)))
+	if current.is_empty():
+		return
+	var item_id := int(current["id"])
+	if int(current["vnum"]) == 10:
+		if bool(current.get("equipped", false)):
+			var cell: int = _inventory.first_free_cell(10)
+			if cell >= 0:
+				unequip_item_requested.emit(item_id, cell)
+			else:
+				show_notice("There is not enough space in your inventory.")
+		else:
+			equip_item_requested.emit(item_id)
+	else:
+		use_item_requested.emit(item_id)
+
+
+func _find_item(item_id: int) -> Dictionary:
+	for row: Dictionary in _inventory_rows:
+		if int(row.get("id", 0)) == item_id:
+			return row
+	return {}
+
+
+func _cancel_carry() -> void:
+	_carry.clear()
+	if is_instance_valid(_carry_preview):
+		_carry_preview.hide()
+
+
+func _build_minimap() -> void:
+	_minimap_panel = Control.new()
+	_minimap_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_minimap_panel.offset_left = -136
+	_minimap_panel.size = Vector2(136, 137)
+	_minimap_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_minimap_panel)
+	_minimap = Minimap.new()
+	_minimap.position = Vector2(4, 5)
+	_minimap_panel.add_child(_minimap)
+	Art.image(_minimap_panel, "minimap/minimap", Vector2.ZERO)
+	for entry in [
+		["minimap_scaleup", Vector2(101, 116), _minimap.zoom_in],
+		["minimap_scaledown", Vector2(115, 103), _minimap.zoom_out]
+	]:
+		var control := TextureButton.new()
+		control.position = entry[1]
+		control.texture_normal = Art.texture("minimap/" + entry[0] + "_default")
+		control.texture_hover = Art.texture("minimap/" + entry[0] + "_over")
+		control.texture_pressed = Art.texture("minimap/" + entry[0] + "_down")
+		control.focus_mode = Control.FOCUS_NONE
+		control.pressed.connect(entry[2])
+		_minimap_panel.add_child(control)
+
+
+func _build_system() -> void:
+	_system = Control.new()
+	_system.size = Vector2(200, 288)
+	_system.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_system.position = get_viewport().get_visible_rect().size / 2 - _system.size / 2
+	_root.add_child(_system)
+	Art.board(_system, _system.size, true)
+	for entry in [
+		["Help", 17, Callable()],
+		["Item Shop", 57, Callable()],
+		["System Options", 87, Callable()],
+		["Game Options", 117, Callable()],
+		["Change Character", 147, Callable()],
+		["Logout", 177, func() -> void: disconnect_requested.emit()],
+		["Exit Game", 217, func() -> void: disconnect_requested.emit()],
+		["Cancel", 247, _system.hide]
+	]:
+		var button := Art.button(_system, "public/xlarge_button_", Vector2(10, entry[1]), entry[2])
+		button.disabled = not entry[2].is_valid()
+		var caption := Art.label(button, entry[0], Vector2.ZERO)
+		caption.size = Vector2(180, 30)
+		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_system.hide()
+
+
+func set_profile(key: String) -> void:
+	if key == _profile_key:
+		return
+	_save_profile()
+	_profile_key = ""
+	_hotbar.bindings.fill(0)
+	_hotbar.set_page(0)
+	_inventory.restore_settings({})
+	if key.length() != 64 or not key.is_valid_hex_number():
+		return
+	var path := "user://ui/" + key + ".json"
+	if FileAccess.file_exists(path):
+		var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+		if data is Dictionary:
+			var bindings: Variant = data.get("bindings", [])
+			if bindings is Array and bindings.size() == 32:
+				for index in 32:
+					_hotbar.bindings[index] = maxi(0, int(bindings[index]))
+			_hotbar.set_page(int(data.get("quickslot_page", 0)))
+			_inventory.restore_settings(data)
+	_profile_key = key
+
+
+func _save_profile() -> void:
+	if _profile_key.is_empty():
+		return
+	DirAccess.make_dir_recursive_absolute("user://ui")
+	var file := FileAccess.open("user://ui/" + _profile_key + ".json", FileAccess.WRITE)
+	if file:
+		file.store_string(
+			JSON.stringify(
+				{
+					"bindings": _hotbar.bindings,
+					"quickslot_page": _hotbar.page,
+					"inventory_page": _inventory.page,
+					"inventory_position": [_inventory.position.x, _inventory.position.y]
+				}
+			)
+		)

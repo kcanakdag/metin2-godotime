@@ -30,6 +30,11 @@ independent Godot 4 parser/linter/formatter; it does not replace the actual
 Godot engine's import and runtime checks. Upgrade tool versions deliberately,
 including transitive pins, and run the checks before accepting formatter changes.
 
+The normal setup also includes `tools/requirements-assets.txt`, pinning
+**Pillow 12.1.0** for original raster UI conversion. Re-run `make dev-setup` after
+updating this checkout to install that added dependency in `.local/venv-dev`.
+It is a development tool, not a dependency in the exported game.
+
 `tools/gdtoolkit_local.py` relocates gdtoolkit's parser cache to
 `.cache/gdtoolkit`. Its pinned upstream version otherwise writes to the user's
 home cache even during read-only checks and does not honor `XDG_CACHE_HOME`.
@@ -107,6 +112,7 @@ network/gameplay checks:
 make server-publish DB=mt2-yongan-test
 make test-multiplayer DB=mt2-yongan-test
 make test-combat DB=mt2-yongan-test
+make test-inventory DB=mt2-yongan-test
 ```
 
 The tests create real guest characters and act on the selected world. The combat
@@ -116,6 +122,13 @@ directories when starting disposable SpacetimeDB processes, and do not reuse a
 port occupied by the development server. An empty `SERVER_FEATURES=` selects
 training for Make's server build/test/publish commands; raw Cargo defaults to
 training too.
+
+The inventory suite uses `client/tests/inventory_smoke.gd` and writes
+`.local/inventory-report.json`. It is intended to exercise starter initialization,
+ownership rejection, page/footprint collision, equipment effects, potion limits,
+reserved/distant/duplicate item pickups and persistence through death/reconnect.
+Run it against the freshly published additive inventory schema, not an older
+baseline database. Inspect its actual report before describing any path as tested.
 
 For gameplay or networking changes, verify that both clients show both players,
 that each player's movement reaches the server and the other client, and that
@@ -170,6 +183,24 @@ source manifest records commits and file hashes; conversion reports go in
 the result in Godot. Downloaded assets and converted output are ignored so they
 can be regenerated; they are not hand-maintained game source.
 
+Use `make import-ui` after `make dev-setup` for the selected original HUD,
+inventory, item icons and stitched Yongan minimap. This converts 148 UI images
+and 20 original DDS map tiles from 185 pinned source files with Pillow; Blender
+is unnecessary for these raster assets. For a cached rebuild and format tests:
+
+```sh
+.local/venv-dev/bin/python tools/import_metin_ui.py --offline
+.local/venv-dev/bin/python -m unittest discover -s tests -p test_metin_ui.py
+```
+
+Converted output and its hash/provenance manifest live in ignored
+`client/assets/imported/ui/`. The importer preserves decoded pixels and alpha,
+validates atlas/crop rules and never executes downloaded original client code.
+See [UI assets](ui-assets.md) for mappings and layout references. Verify the
+actual Godot layout, icon sizes, mouse carry/drag, right-click actions, page
+changes, quickslots and chat focus after UI changes. Conversion tests alone do
+not prove usable UI or original-client parity.
+
 Before sharing a client, execute the real export workflow, check that required
 SDK libraries/assets are included and MCP tooling/tokens are absent, then run
 the export against the configured server. The friend's machine must be able to
@@ -204,6 +235,33 @@ For a visible browser using the workstation's GPU, add `BROWSER_FLAGS=--hardware
 This requires an available graphical session. The default headless SwiftShader
 path can render Yongan too slowly for timing-sensitive combat checks; report its
 functional results separately from a real GPU playtest.
+
+For the original inventory interaction slice, use:
+
+```sh
+make test-browser PUBLIC_URL=https://YOUR_TEST_HOST:8443 DB=mt2-yongan-test \
+  BROWSER_FLAGS="--hardware --inventory"
+```
+
+`--inventory` adds mouse/keyboard inventory and quickslot checks to the browser
+runner. It requires newly exported test clients containing the classic UI and
+the matching inventory schema. The exported interface is exercised through
+mouse/key input; a helper calling reducers directly is separate server evidence.
+Verify reconnect and browser refresh preserve item state and local quickslots.
+Adding `--combat` also checks quickslot consumption after monster damage and
+collecting the potion drop with Z. The 2026-09-06 public run passed 39 checks:
+`.local/browser-proof/20260906-165921/report.json`. It used independent Chrome
+and Linux export identities, real mouse/keyboard UI actions and the workstation
+GPU, and recorded no engine errors. Cold world readiness was 15.98 seconds;
+the final combat sample was 59 FPS. These timings describe this run only.
+
+The current public development release `20260906T150508494693Z` intentionally
+retains the fixed test probe with the user's explicit authorization. Its actual
+Web/Linux PCK audits checked 556/1359 files, with no MCP bridge, runtime script
+evaluator, identity tokens or original source archives. Normal exports still
+exclude the test probe; inspect those separately before friend/release delivery.
+This final rebuild removes the default scrollbar from the passive chat overlay;
+the 39-check run above exercised the same gameplay and inventory implementation.
 
 The Web build connects to its page origin and the database baked into its config.
 The Linux export receives the same endpoint/database from the runner. Publishing
@@ -241,7 +299,8 @@ and failure recovery.
 
 After deployment, verify HTTPS and a real browser/client session against that
 endpoint. Health checks and successful Docker startup do not establish gameplay
-replication. Restore a normal Web export after instrumented tests. Deployment
+replication. Restore a normal Web export after instrumented tests unless the
+user has explicitly authorized keeping the development test build. Deployment
 details, prerequisites, backups and evidence are in [distribution](distribution.md).
 
 Implementation guidance for agents lives in the root [AGENTS.md](../AGENTS.md).

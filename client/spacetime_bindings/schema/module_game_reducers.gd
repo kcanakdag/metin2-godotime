@@ -10,6 +10,15 @@ func _init(p_client: SpacetimeDBClient) -> void:
 func enter_world(name: String) -> SpacetimeDBReducerCall:
 	return _client.call_reducer('enter_world', [name], [&'String'])
 
+## 0. id: int [br]
+func equip_item(id: int) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('equip_item', [id], [&'U64'])
+
+## 0. id: int [br]
+## 1. cell: int [br]
+func move_item(id: int, cell: int) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('move_item', [id, cell], [&'U64', &'U8'])
+
 ## 0. x: float [br]
 ## 1. z: float [br]
 func move_to(x: float, z: float) -> SpacetimeDBReducerCall:
@@ -18,6 +27,10 @@ func move_to(x: float, z: float) -> SpacetimeDBReducerCall:
 
 func perform_attack() -> SpacetimeDBReducerCall:
 	return _client.call_reducer('perform_attack', [], [])
+
+## 0. id: int [br]
+func pickup_item_drop(id: int) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('pickup_item_drop', [id], [&'U64'])
 
 ## 0. id: int [br]
 func pickup_loot(id: int) -> SpacetimeDBReducerCall:
@@ -35,4 +48,13 @@ func set_move_input(direction_x: float, direction_z: float) -> SpacetimeDBReduce
 
 func stop_moving() -> SpacetimeDBReducerCall:
 	return _client.call_reducer('stop_moving', [], [])
+
+## 0. id: int [br]
+## 1. cell: int [br]
+func unequip_item(id: int, cell: int) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('unequip_item', [id, cell], [&'U64', &'U8'])
+
+## 0. id: int [br]
+func use_item(id: int) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('use_item', [id], [&'U64'])
 

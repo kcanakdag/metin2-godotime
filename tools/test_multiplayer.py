@@ -23,7 +23,9 @@ def main() -> None:
     parser.add_argument("--database", default="mt2-dev-world")
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument(
-        "--script", choices=["multiplayer_smoke", "combat_smoke"], default="multiplayer_smoke"
+        "--script",
+        choices=["multiplayer_smoke", "combat_smoke", "inventory_smoke"],
+        default="multiplayer_smoke",
     )
     parser.add_argument("--report", type=Path, default=ROOT / ".local/multiplayer-report.json")
     options = parser.parse_args()

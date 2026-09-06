@@ -192,6 +192,193 @@
                 },
                 {
                   "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U256": []
+                          },
+                          "name": {
+                            "some": "__identity__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "owner"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "vnum"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U16": []
+                  },
+                  "name": {
+                    "some": "count"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U8": []
+                  },
+                  "name": {
+                    "some": "cell"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Bool": []
+                  },
+                  "name": {
+                    "some": "equipped"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U256": []
+                          },
+                          "name": {
+                            "some": "__identity__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "owner"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "next_potion_us"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "U64": []
+                  },
+                  "name": {
+                    "some": "id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "x"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "y"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "z"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "vnum"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U16": []
+                  },
+                  "name": {
+                    "some": "count"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U256": []
+                          },
+                          "name": {
+                            "some": "__identity__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "owner"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "reserved_until_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "expires_at_us"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "U64": []
+                  },
+                  "name": {
+                    "some": "id"
+                  }
+                },
+                {
+                  "algebraic_type": {
                     "F32": []
                   },
                   "name": {
@@ -762,9 +949,9 @@
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "Monster"
+            "source_name": "Session"
           },
-          "ty": 3
+          "ty": 10
         },
         {
           "custom_ordering": true,
@@ -772,21 +959,13 @@
             "scope": [],
             "source_name": "MonsterClock"
           },
-          "ty": 4
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "Session"
-          },
           "ty": 7
         },
         {
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "Loot"
+            "source_name": "InventoryItem"
           },
           "ty": 2
         },
@@ -794,15 +973,7 @@
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "Obstacle"
-          },
-          "ty": 5
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "Player"
+            "source_name": "Monster"
           },
           "ty": 6
         },
@@ -810,25 +981,17 @@
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "TickSchedule"
+            "source_name": "Player"
           },
-          "ty": 8
+          "ty": 9
         },
         {
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "Controller"
+            "source_name": "InventoryState"
           },
-          "ty": 1
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "WorldInfo"
-          },
-          "ty": 10
+          "ty": 3
         },
         {
           "custom_ordering": true,
@@ -842,59 +1005,62 @@
           "custom_ordering": true,
           "source_name": {
             "scope": [],
+            "source_name": "Obstacle"
+          },
+          "ty": 8
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "Loot"
+          },
+          "ty": 5
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "TickSchedule"
+          },
+          "ty": 11
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
             "source_name": "SimulationClock"
           },
-          "ty": 9
+          "ty": 12
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "WorldInfo"
+          },
+          "ty": 13
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "ItemDrop"
+          },
+          "ty": 4
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "Controller"
+          },
+          "ty": 1
         }
       ]
     },
     {
       "Tables": [
-        {
-          "constraints": [
-            {
-              "data": {
-                "Unique": {
-                  "columns": [
-                    0
-                  ]
-                }
-              },
-              "source_name": {
-                "some": "session_connection_id_key"
-              }
-            }
-          ],
-          "default_values": [],
-          "indexes": [
-            {
-              "accessor_name": {
-                "some": "connection_id"
-              },
-              "algorithm": {
-                "BTree": [
-                  0
-                ]
-              },
-              "source_name": {
-                "some": "session_connection_id_idx_btree"
-              }
-            }
-          ],
-          "is_event": false,
-          "primary_key": [
-            0
-          ],
-          "product_type_ref": 7,
-          "sequences": [],
-          "source_name": "session",
-          "table_access": {
-            "Private": []
-          },
-          "table_type": {
-            "User": []
-          }
-        },
         {
           "constraints": [
             {
@@ -930,7 +1096,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 9,
+          "product_type_ref": 12,
           "sequences": [],
           "source_name": "simulation_clock",
           "table_access": {
@@ -951,7 +1117,7 @@
                 }
               },
               "source_name": {
-                "some": "tick_schedule_scheduled_id_key"
+                "some": "monster_clock_id_key"
               }
             }
           ],
@@ -959,7 +1125,7 @@
           "indexes": [
             {
               "accessor_name": {
-                "some": "scheduled_id"
+                "some": "id"
               },
               "algorithm": {
                 "BTree": [
@@ -967,7 +1133,7 @@
                 ]
               },
               "source_name": {
-                "some": "tick_schedule_scheduled_id_idx_btree"
+                "some": "monster_clock_id_idx_btree"
               }
             }
           ],
@@ -975,26 +1141,9 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 8,
-          "sequences": [
-            {
-              "column": 0,
-              "increment": 1,
-              "max_value": {
-                "none": []
-              },
-              "min_value": {
-                "none": []
-              },
-              "source_name": {
-                "some": "tick_schedule_scheduled_id_seq"
-              },
-              "start": {
-                "none": []
-              }
-            }
-          ],
-          "source_name": "tick_schedule",
+          "product_type_ref": 7,
+          "sequences": [],
+          "source_name": "monster_clock",
           "table_access": {
             "Private": []
           },
@@ -1075,7 +1224,7 @@
                 }
               },
               "source_name": {
-                "some": "monster_id_key"
+                "some": "loot_id_key"
               }
             }
           ],
@@ -1091,7 +1240,7 @@
                 ]
               },
               "source_name": {
-                "some": "monster_id_idx_btree"
+                "some": "loot_id_idx_btree"
               }
             }
           ],
@@ -1099,9 +1248,26 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 3,
-          "sequences": [],
-          "source_name": "monster",
+          "product_type_ref": 5,
+          "sequences": [
+            {
+              "column": 0,
+              "increment": 1,
+              "max_value": {
+                "none": []
+              },
+              "min_value": {
+                "none": []
+              },
+              "source_name": {
+                "some": "loot_id_seq"
+              },
+              "start": {
+                "none": []
+              }
+            }
+          ],
+          "source_name": "loot",
           "table_access": {
             "Public": []
           },
@@ -1120,7 +1286,7 @@
                 }
               },
               "source_name": {
-                "some": "monster_clock_id_key"
+                "some": "item_drop_id_key"
               }
             }
           ],
@@ -1136,7 +1302,7 @@
                 ]
               },
               "source_name": {
-                "some": "monster_clock_id_idx_btree"
+                "some": "item_drop_id_idx_btree"
               }
             }
           ],
@@ -1145,10 +1311,27 @@
             0
           ],
           "product_type_ref": 4,
-          "sequences": [],
-          "source_name": "monster_clock",
+          "sequences": [
+            {
+              "column": 0,
+              "increment": 1,
+              "max_value": {
+                "none": []
+              },
+              "min_value": {
+                "none": []
+              },
+              "source_name": {
+                "some": "item_drop_id_seq"
+              },
+              "start": {
+                "none": []
+              }
+            }
+          ],
+          "source_name": "item_drop",
           "table_access": {
-            "Private": []
+            "Public": []
           },
           "table_type": {
             "User": []
@@ -1165,7 +1348,7 @@
                 }
               },
               "source_name": {
-                "some": "world_info_id_key"
+                "some": "inventory_item_id_key"
               }
             }
           ],
@@ -1181,7 +1364,7 @@
                 ]
               },
               "source_name": {
-                "some": "world_info_id_idx_btree"
+                "some": "inventory_item_id_idx_btree"
               }
             }
           ],
@@ -1189,9 +1372,26 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 10,
-          "sequences": [],
-          "source_name": "world_info",
+          "product_type_ref": 2,
+          "sequences": [
+            {
+              "column": 0,
+              "increment": 1,
+              "max_value": {
+                "none": []
+              },
+              "min_value": {
+                "none": []
+              },
+              "source_name": {
+                "some": "inventory_item_id_seq"
+              },
+              "start": {
+                "none": []
+              }
+            }
+          ],
+          "source_name": "inventory_item",
           "table_access": {
             "Public": []
           },
@@ -1234,9 +1434,99 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 6,
+          "product_type_ref": 9,
           "sequences": [],
           "source_name": "player",
+          "table_access": {
+            "Public": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "monster_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "monster_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 6,
+          "sequences": [],
+          "source_name": "monster",
+          "table_access": {
+            "Public": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "world_info_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "world_info_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 13,
+          "sequences": [],
+          "source_name": "world_info",
           "table_access": {
             "Public": []
           },
@@ -1324,7 +1614,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 5,
+          "product_type_ref": 8,
           "sequences": [],
           "source_name": "obstacle",
           "table_access": {
@@ -1345,7 +1635,7 @@
                 }
               },
               "source_name": {
-                "some": "loot_id_key"
+                "some": "inventory_state_owner_key"
               }
             }
           ],
@@ -1353,7 +1643,7 @@
           "indexes": [
             {
               "accessor_name": {
-                "some": "id"
+                "some": "owner"
               },
               "algorithm": {
                 "BTree": [
@@ -1361,7 +1651,7 @@
                 ]
               },
               "source_name": {
-                "some": "loot_id_idx_btree"
+                "some": "inventory_state_owner_idx_btree"
               }
             }
           ],
@@ -1369,7 +1659,97 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 2,
+          "product_type_ref": 3,
+          "sequences": [],
+          "source_name": "inventory_state",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "session_connection_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "connection_id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "session_connection_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 10,
+          "sequences": [],
+          "source_name": "session",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "tick_schedule_scheduled_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "scheduled_id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "tick_schedule_scheduled_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 11,
           "sequences": [
             {
               "column": 0,
@@ -1381,16 +1761,16 @@
                 "none": []
               },
               "source_name": {
-                "some": "loot_id_seq"
+                "some": "tick_schedule_scheduled_id_seq"
               },
               "start": {
                 "none": []
               }
             }
           ],
-          "source_name": "loot",
+          "source_name": "tick_schedule",
           "table_access": {
-            "Public": []
+            "Private": []
           },
           "table_type": {
             "User": []
@@ -1470,11 +1850,71 @@
             }
           },
           "params": {
+            "elements": [
+              {
+                "algebraic_type": {
+                  "U64": []
+                },
+                "name": {
+                  "some": "id"
+                }
+              }
+            ]
+          },
+          "source_name": "equip_item",
+          "visibility": {
+            "ClientCallable": []
+          }
+        },
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
             "elements": []
           },
           "source_name": "init",
           "visibility": {
             "Private": []
+          }
+        },
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
+            "elements": [
+              {
+                "algebraic_type": {
+                  "U64": []
+                },
+                "name": {
+                  "some": "id"
+                }
+              },
+              {
+                "algebraic_type": {
+                  "U8": []
+                },
+                "name": {
+                  "some": "cell"
+                }
+              }
+            ]
+          },
+          "source_name": "move_item",
+          "visibility": {
+            "ClientCallable": []
           }
         },
         {
@@ -1524,6 +1964,32 @@
             "elements": []
           },
           "source_name": "perform_attack",
+          "visibility": {
+            "ClientCallable": []
+          }
+        },
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
+            "elements": [
+              {
+                "algebraic_type": {
+                  "U64": []
+                },
+                "name": {
+                  "some": "id"
+                }
+              }
+            ]
+          },
+          "source_name": "pickup_item_drop",
           "visibility": {
             "ClientCallable": []
           }
@@ -1627,7 +2093,7 @@
             "elements": [
               {
                 "algebraic_type": {
-                  "Ref": 8
+                  "Ref": 11
                 },
                 "name": {
                   "some": "_schedule"
@@ -1653,6 +2119,66 @@
             "elements": []
           },
           "source_name": "stop_moving",
+          "visibility": {
+            "ClientCallable": []
+          }
+        },
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
+            "elements": [
+              {
+                "algebraic_type": {
+                  "U64": []
+                },
+                "name": {
+                  "some": "id"
+                }
+              },
+              {
+                "algebraic_type": {
+                  "U8": []
+                },
+                "name": {
+                  "some": "cell"
+                }
+              }
+            ]
+          },
+          "source_name": "unequip_item",
+          "visibility": {
+            "ClientCallable": []
+          }
+        },
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
+            "elements": [
+              {
+                "algebraic_type": {
+                  "U64": []
+                },
+                "name": {
+                  "some": "id"
+                }
+              }
+            ]
+          },
+          "source_name": "use_item",
           "visibility": {
             "ClientCallable": []
           }
@@ -1698,32 +2224,8 @@
         "entries": [
           {
             "Table": {
-              "canonical_name": "session",
-              "source_name": "session"
-            }
-          },
-          {
-            "Table": {
               "canonical_name": "simulation_clock",
               "source_name": "simulation_clock"
-            }
-          },
-          {
-            "Table": {
-              "canonical_name": "tick_schedule",
-              "source_name": "tick_schedule"
-            }
-          },
-          {
-            "Table": {
-              "canonical_name": "chat_message",
-              "source_name": "chat_message"
-            }
-          },
-          {
-            "Table": {
-              "canonical_name": "monster",
-              "source_name": "monster"
             }
           },
           {
@@ -1734,14 +2236,44 @@
           },
           {
             "Table": {
-              "canonical_name": "world_info",
-              "source_name": "world_info"
+              "canonical_name": "chat_message",
+              "source_name": "chat_message"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "loot",
+              "source_name": "loot"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "item_drop",
+              "source_name": "item_drop"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "inventory_item",
+              "source_name": "inventory_item"
             }
           },
           {
             "Table": {
               "canonical_name": "player",
               "source_name": "player"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "monster",
+              "source_name": "monster"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "world_info",
+              "source_name": "world_info"
             }
           },
           {
@@ -1758,8 +2290,20 @@
           },
           {
             "Table": {
-              "canonical_name": "loot",
-              "source_name": "loot"
+              "canonical_name": "inventory_state",
+              "source_name": "inventory_state"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "session",
+              "source_name": "session"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "tick_schedule",
+              "source_name": "tick_schedule"
             }
           },
           {
@@ -1782,8 +2326,20 @@
           },
           {
             "Function": {
+              "canonical_name": "equip_item",
+              "source_name": "equip_item"
+            }
+          },
+          {
+            "Function": {
               "canonical_name": "init",
               "source_name": "init"
+            }
+          },
+          {
+            "Function": {
+              "canonical_name": "move_item",
+              "source_name": "move_item"
             }
           },
           {
@@ -1796,6 +2352,12 @@
             "Function": {
               "canonical_name": "perform_attack",
               "source_name": "perform_attack"
+            }
+          },
+          {
+            "Function": {
+              "canonical_name": "pickup_item_drop",
+              "source_name": "pickup_item_drop"
             }
           },
           {
@@ -1826,6 +2388,18 @@
             "Function": {
               "canonical_name": "stop_moving",
               "source_name": "stop_moving"
+            }
+          },
+          {
+            "Function": {
+              "canonical_name": "unequip_item",
+              "source_name": "unequip_item"
+            }
+          },
+          {
+            "Function": {
+              "canonical_name": "use_item",
+              "source_name": "use_item"
             }
           }
         ]

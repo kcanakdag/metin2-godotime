@@ -2,6 +2,8 @@
 # FILE WILL NOT BE SAVED. MODIFY TABLES IN YOUR MODULE SOURCE CODE INSTEAD.
 
 const ChatMessage = preload('res://spacetime_bindings/schema/types/game_chat_message.gd')
+const InventoryItem = preload('res://spacetime_bindings/schema/types/game_inventory_item.gd')
+const ItemDrop = preload('res://spacetime_bindings/schema/types/game_item_drop.gd')
 const Loot = preload('res://spacetime_bindings/schema/types/game_loot.gd')
 const Monster = preload('res://spacetime_bindings/schema/types/game_monster.gd')
 const Obstacle = preload('res://spacetime_bindings/schema/types/game_obstacle.gd')

@@ -4,6 +4,7 @@ extends Node3D
 
 var row: Dictionary = {}
 var loot_mode := false
+var item_mode := false
 var _target := Vector3.ZERO
 var _visual: Node3D
 var _label: Label3D
@@ -16,7 +17,17 @@ func _ready() -> void:
 	_visual = Node3D.new()
 	add_child(_visual)
 	if loot_mode:
-		_part(Vector3(0, 0.35, 0), Vector3(0.35, 0.35, 0.35), Color("ffd26e"))
+		if item_mode:
+			var icon := Sprite3D.new()
+			var icon_path := "res://assets/imported/ui/icon/item/27001.png"
+			if ResourceLoader.exists(icon_path):
+				icon.texture = load(icon_path)
+			icon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+			icon.pixel_size = 0.018
+			icon.position.y = 0.35
+			_visual.add_child(icon)
+		else:
+			_part(Vector3(0, 0.35, 0), Vector3(0.35, 0.35, 0.35), Color("ffd26e"))
 	else:
 		_part(Vector3(0, 1.1, 0), Vector3(0.8, 1.15, 0.55), Color("5b6867"))
 		_part(Vector3(0, 1.9, -0.08), Vector3(0.6, 0.55, 0.5), Color("687c7b"))
@@ -39,7 +50,7 @@ func apply_state(value: Dictionary) -> void:
 	if first or position.distance_to(_target) > 8:
 		position = _target
 	if loot_mode:
-		_label.text = "%d gold  ·  E to collect" % int(row.gold)
+		_label.text = "Red Potion (S)" if item_mode else "%d Yang" % int(row.gold)
 		_label.modulate = Color("ffd26e")
 	else:
 		_label.text = "Stone Sentinel  %d / %d" % [int(row.health), int(row.max_health)]
@@ -56,7 +67,8 @@ func _process(delta: float) -> void:
 	_swing = maxf(0, _swing - delta)
 	position = position.lerp(_target, 1 - exp(-delta * 12))
 	if loot_mode:
-		_visual.rotation.y += delta
+		if not item_mode:
+			_visual.rotation.y += delta
 		_visual.position.y = sin(_time * 3) * 0.1
 		return
 	rotation.y = lerp_angle(rotation.y, float(row.heading), 1 - exp(-delta * 12))

@@ -9,18 +9,31 @@ connect to this game's new protocol.
 Repository: [kcanakdag/metin2-godotime](https://github.com/kcanakdag/metin2-godotime).
 The development browser deployment is [kcanakdag.com:8443](https://kcanakdag.com:8443/),
 on the VPS at `159.195.213.9`. It is updated during development and may restart.
+The current development build includes the explicitly authorized fixed test
+probe. The original HUD and inventory passed 39 public Chrome/Linux checks,
+including drag/drop, quickslots, browser refresh, combat and item pickup.
+Normal exports omit this probe as before.
 Browser multiplayer has passed real Web/Linux export tests on the training
 ground and Yongan. The public Yongan test verifies movement, terrain appearance,
 combat, loot, both respawns, reconnect and database-container replacement.
 Nearby scenery loads during play. Refresh an older open browser tab to load the
-corrected terrain and collision data. The normal public Web build and matching
-Linux export have also been checked directly, with test interfaces excluded.
+corrected terrain and collision data. The preceding normal Web/Linux release
+was also checked directly, with test interfaces excluded.
 
-The first PvE slice has a procedural **Stone Sentinel**, attacks, damage,
-player and monster death/respawn, and a five-gold pickup. There is no inventory,
-equipment, quests, skills, accounts or full Metin2 combat balance. Yongan has
-all 20 terrain sections and 601 building/prop placements; **368 trees and
-6 effects remain unsupported**. See [the rebuild roadmap](docs/full-rebuild-plan.md).
+The PvE slice has a procedural **Stone Sentinel**, attacks, damage, death/respawn
+and gold. The current UI/inventory work adds original taskbar and inventory art,
+a two-page bag, one starter sword, red potions and item drops. Its 56 live
+inventory checks pass, and native editor input equips the server-owned sword.
+The matching Web/Linux test exports passed mouse and keyboard inventory checks
+against the public server, including browser refresh and potion pickup.
+
+Original UI fidelity is the target, not completed parity with the original game.
+Login remains a prototype; character, skills and social systems are inactive;
+matching original fonts and behavior has not been established against a running
+original client. The sword changes server damage but has no 3D hand attachment
+yet. There are no quests, leveling or full Metin2 combat balance. Yongan has all
+20 terrain sections and 601 building/prop placements; **368 trees and 6 effects
+remain unsupported**. See [the rebuild roadmap](docs/full-rebuild-plan.md).
 
 ## Develop locally
 
@@ -40,6 +53,7 @@ make mcp-build
 # Fetch the pinned warrior fixture and conversion tools.
 make assets
 make import-assets BLENDER=/path/to/blender
+make import-ui
 
 # Reconstruct Yongan, then bake authoritative data and playable chunk scenes.
 make import-map BLENDER=/path/to/blender
@@ -87,16 +101,33 @@ Both variants use the version-2 gameplay schema.
 | Left click ground | Move toward terrain or an authored walk surface |
 | WASD / arrows | Move relative to the camera |
 | Right mouse drag; wheel | Orbit; zoom |
-| Space / Attack | Attack the nearest living enemy in validated range |
-| E / Loot | Collect nearby loot with server distance/ownership validation |
+| Space | Attack the nearest living enemy in validated range |
+| E / Z | Collect nearby gold/items with server distance/ownership validation |
+| I / Inventory button | Open the two-page inventory |
+| Item left click, then destination; drag/drop | Carry or move an item between valid bag/equipment/quickslot locations |
+| Item right click | Equip/unequip the sword or consume a potion |
+| 1–4 / F1–F4 | Activate one of the eight visible quickslots |
+| Shift+1–4 / quickslot arrows | Select a quickslot page |
 | Enter | Focus chat; Enter again sends |
-| Escape | Release UI focus |
-| F3 / Debug | Toggle local diagnostics |
+| Escape | Cancel carried item or close inventory; otherwise open/close the system menu |
+| Ctrl+F3 | Toggle local diagnostics; F3 remains a quickslot key |
 
 Approach the Stone Sentinel near the town spawn, attack it, and collect its
-gold. It can also defeat the player. Player respawn takes 8 seconds; monster
+gold and one red potion. It can also defeat the player. Player respawn takes 8 seconds; monster
 respawn takes 12. Loot is reserved for its slayer for 10 seconds and expires
 after 60. Reconnecting preserves gold, position and death state.
+
+Each identity receives one sword and five potions once. The sword occupies two
+vertical bag cells and adds 10 to the base 25 attack damage when equipped.
+A potion restores up to 40 HP with a one-second server cooldown; full-health
+and dead-player use is rejected. The 90 bag cells form two 5 × 9 pages, and
+potions stack to 200. Item ownership, placement, rewards and consumption belong
+to the server; quickslot assignments and window preferences are saved locally.
+
+`make import-ui` converts 148 selected original UI images and stitches Yongan's
+20 original DDS minimap tiles, using 185 pinned source files. The visible minimap
+uses that image and live player state. See [UI assets](docs/ui-assets.md) for
+pixel-preserving conversion, layout observations and fidelity limits.
 
 Click movement follows a straight line with collision/sliding; it does not
 route around walls. Visuals interpolate server positions without local
@@ -150,14 +181,17 @@ make check                  # Lint, server/tool tests, Godot checks
 make test-map               # Source formats and generated map resources
 make test-multiplayer DB=mt2-yongan-test
 make test-combat DB=mt2-yongan-test
+make test-inventory DB=mt2-yongan-test
 ```
 
 Publish the module to the selected disposable test database first. Live SDK
 checks use distinct identities and exercise mutual visibility, movement,
-rejection, disconnect/reconnect, and the combat/reward loop. They create
+rejection, disconnect/reconnect, and the combat/reward/inventory loop. They create
 characters and state in that database. For rendered browser/Linux checks, use
 explicit test exports as described in
 [development](docs/development.md#browser-integration-checks).
+The original inventory UI check adds `BROWSER_FLAGS="--hardware --inventory"`
+to `make test-browser` with matching test exports.
 
 After table/reducer changes, publish, run `make bindings`, and test before
 exporting. Generated bindings record the schema hash and SDK pin;
@@ -169,7 +203,7 @@ exporting. Generated bindings record the schema hash and SDK pin;
 client/scripts/net/          SDK, identity and subscription boundary
 client/scripts/actors/       Warrior, monster and loot presentation
 client/scripts/world/        Training ground and streamed Yongan sections
-client/scripts/ui/           Connection, chat, combat HUD and diagnostics
+client/scripts/ui/           Original taskbar/inventory/minimap, chat and diagnostics
 client/spacetime_bindings/   Generated version-2 schema and provenance
 client/addons/SpacetimeDB/   Pinned runtime SDK
 client/addons/godot_mcp/     Editor tooling, excluded from exports

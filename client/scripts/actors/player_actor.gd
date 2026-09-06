@@ -42,9 +42,9 @@ func _ready() -> void:
 	_name_label = Label3D.new()
 	_name_label.name = "Nameplate"
 	_name_label.position.y = 2.15
-	_name_label.font_size = 42
+	_name_label.font_size = 24
 	_name_label.pixel_size = 0.007
-	_name_label.outline_size = 9
+	_name_label.outline_size = 4
 	_name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	add_child(_name_label)
 
@@ -59,11 +59,10 @@ func apply_state(state_row: Dictionary, local: bool) -> void:
 		position = server_position
 		rotation.y = server_heading
 		_initialized = true
-	_name_label.text = str(row.name) + ("  • YOU" if local else "")
+	_name_label.text = str(row.name)
 	_name_label.modulate = Color("f0d087") if local else Color("dce8d9")
 	var activity := int(row.activity)
 	$Visual.rotation.z = PI * 0.5 if activity == 3 else 0.0
-	_name_label.text += "  • DEFEATED" if activity == 3 else ""
 	var sequence := int(row.attack_sequence)
 	var clip := "attack" if activity == 2 else ("run" if activity == 1 else "wait")
 	if clip != _current_clip or (clip == "attack" and sequence != _attack_sequence):

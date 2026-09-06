@@ -39,6 +39,8 @@ func _ready() -> void:
 	connection.content_load_requested.connect(_prepare_world)
 	connection.monsters_changed.connect(_on_monsters)
 	connection.loot_changed.connect(_on_loot)
+	connection.item_drops_changed.connect(_on_item_drops)
+	connection.inventory_changed.connect(hud.set_inventory)
 	connection.connection_state_changed.connect(_on_connection_state)
 	connection.players_changed.connect(_on_players)
 	connection.obstacles_changed.connect(world.set_obstacles)
@@ -51,6 +53,10 @@ func _ready() -> void:
 	hud.reset_identity_requested.connect(connection.reset_identity)
 	hud.attack_requested.connect(connection.perform_attack)
 	hud.pickup_requested.connect(_pickup)
+	hud.move_item_requested.connect(connection.move_item)
+	hud.equip_item_requested.connect(connection.equip_item)
+	hud.unequip_item_requested.connect(connection.unequip_item)
+	hud.use_item_requested.connect(connection.use_item)
 	hud.chat_submitted.connect(connection.send_chat)
 	hud.debug_option_changed.connect(_on_debug_option)
 	hud.screenshot_requested.connect(_save_screenshot)
@@ -119,14 +125,19 @@ func _physics_process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_F3 and event.ctrl_pressed:
+			hud.toggle_debug()
+			get_viewport().set_input_as_handled()
+			return
+		if hud.handle_key(event):
+			get_viewport().set_input_as_handled()
+			return
 		match event.keycode:
-			KEY_F3:
-				hud.toggle_debug()
 			KEY_ENTER:
 				hud.focus_chat()
 			KEY_SPACE:
 				connection.perform_attack()
-			KEY_E:
+			KEY_E, KEY_Z:
 				_pickup()
 			KEY_ESCAPE:
 				get_viewport().gui_release_focus()
@@ -178,6 +189,9 @@ func dev_snapshot() -> Dictionary:
 		"obstacles": connection.obstacles.size(),
 		"monsters": connection.monsters.duplicate(true),
 		"loot": connection.loot.duplicate(true),
+		"inventory": connection.own_inventory().duplicate(true),
+		"item_drops": connection.item_drops.duplicate(true),
+		"ui": hud.inventory_snapshot(),
 		"map_chunks": _stream.loaded.keys(),
 		"content_error": _stream.last_error,
 	}
@@ -215,6 +229,13 @@ func _connect_game(server_url: String, database: String, player_name: String) ->
 
 
 func _on_connection_state(state: String, message: String) -> void:
+	if state == "connected":
+		hud.set_profile(
+			(
+				(connection.endpoint + "/" + connection.database + "/" + connection.local_identity)
+				. sha256_text()
+			)
+		)
 	hud.set_connection_state(state, message)
 	if state in ["connecting", "disconnected", "error"]:
 		_content_generation += 1
@@ -284,8 +305,12 @@ func _on_loot(rows: Array) -> void:
 	_sync_pve(rows, true)
 
 
-func _sync_pve(rows: Array, loot_mode: bool) -> void:
-	var prefix := "Loot_" if loot_mode else "Monster_"
+func _on_item_drops(rows: Array) -> void:
+	_sync_pve(rows, true, true)
+
+
+func _sync_pve(rows: Array, loot_mode: bool, item_mode: bool = false) -> void:
+	var prefix := "Item_" if item_mode else ("Loot_" if loot_mode else "Monster_")
 	var present: Dictionary = {}
 	for row: Dictionary in rows:
 		var id := prefix + str(row.id)
@@ -294,6 +319,7 @@ func _sync_pve(rows: Array, loot_mode: bool) -> void:
 			var actor := PveActor.new()
 			actor.name = id
 			actor.loot_mode = loot_mode
+			actor.item_mode = item_mode
 			add_child(actor)
 			_pve[id] = actor
 		_pve[id].apply_state(row)
@@ -308,15 +334,21 @@ func _pickup() -> void:
 		return
 	var nearest: Dictionary = {}
 	var nearest_distance := INF
-	for row: Dictionary in connection.loot:
-		var d := Vector3(float(row.x), float(row.y), float(row.z)).distance_to(
-			_local_actor.position
-		)
-		if d < nearest_distance:
-			nearest = row
-			nearest_distance = d
+	var item_mode := false
+	for drops: Array in [connection.loot, connection.item_drops]:
+		for row: Dictionary in drops:
+			var d := Vector3(float(row.x), float(row.y), float(row.z)).distance_to(
+				_local_actor.position
+			)
+			if d < nearest_distance:
+				nearest = row
+				nearest_distance = d
+				item_mode = row.has("vnum")
 	if not nearest.is_empty():
-		connection.pickup_loot(int(nearest.id))
+		if item_mode:
+			connection.pickup_item_drop(int(nearest.id))
+		else:
+			connection.pickup_loot(int(nearest.id))
 
 
 func _click_move(screen_position: Vector2) -> void:

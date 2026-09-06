@@ -1,0 +1,2 @@
+# Pinned original raster UI/atlas conversion dependency; Python >= 3.12.
+Pillow==12.1.0

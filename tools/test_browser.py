@@ -14,6 +14,7 @@ import time
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
+from test_browser_inventory import exercise_inventory
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -32,6 +33,9 @@ def main():
     )
     parser.add_argument(
         "--combat", action="store_true", help="Exercise Yongan combat with keyboard controls"
+    )
+    parser.add_argument(
+        "--inventory", action="store_true", help="Exercise original inventory with mouse and keys"
     )
     parser.add_argument(
         "--restart-host", help="Replace only the game's DB container to test persistence"
@@ -209,6 +213,8 @@ def main():
             page.screenshot(path=str(output / "browser.png"))
             native_command("capture")
             samples["moved_web"], samples["moved_desktop"] = web(), desktop()
+            if args.inventory:
+                samples["inventory_ui"] = exercise_inventory(page, web, wait, output)
             position = seen(desktop(), web_id)
             web_command("disconnect")
             wait(
@@ -230,6 +236,24 @@ def main():
                     web().get("connection_state") == "connected" and web().get("identity") == web_id
                 ),
             )
+            if args.inventory:
+                wait(
+                    "browser_refresh_preserves_inventory_and_quickslots",
+                    lambda: (
+                        (
+                            sorted(web().get("inventory", []), key=lambda row: row["id"])
+                            == sorted(
+                                [
+                                    samples["inventory_ui"]["sword"],
+                                    samples["inventory_ui"]["potion"],
+                                ],
+                                key=lambda row: row["id"],
+                            )
+                        )
+                        and web()["ui"]["quickslot_bindings"][0]
+                        == samples["inventory_ui"]["potion"]["id"]
+                    ),
+                )
             native_command("disconnect")
             wait(
                 "desktop_disconnect_removes_browser_avatar", lambda: seen(web(), native_id) is None
@@ -307,6 +331,25 @@ def main():
                 )
                 web_command("stop")
                 page.locator("canvas").focus()
+                if args.inventory:
+                    wait(
+                        "monster_damage_reaches_both_before_potion",
+                        lambda: (
+                            0 < local_player(web())["health"] < 100
+                            and local_player(web())["health"] == local_player(desktop())["health"]
+                        ),
+                    )
+                    before_potion = next(row for row in web()["inventory"] if row["vnum"] == 27001)
+                    page.keyboard.press("1")
+                    wait(
+                        "quickslot_consumes_one_server_potion_after_damage",
+                        lambda: (
+                            next(row for row in web()["inventory"] if row["vnum"] == 27001)["count"]
+                            == before_potion["count"] - 1
+                        ),
+                        4,
+                    )
+                    samples["potion_used_web"] = web()
                 for _ in range(4):
                     page.keyboard.press("Space")
                     time.sleep(1.05)
@@ -331,6 +374,26 @@ def main():
                         and not desktop()["loot"]
                     ),
                 )
+                if args.inventory:
+                    wait(
+                        "item_drop_is_subscribed_by_both_clients",
+                        lambda: len(web()["item_drops"]) == 1 and len(desktop()["item_drops"]) == 1,
+                    )
+                    count_before = next(row for row in web()["inventory"] if row["vnum"] == 27001)[
+                        "count"
+                    ]
+                    page.keyboard.press("z")
+                    wait(
+                        "original_pickup_key_stacks_potion_and_removes_drop",
+                        lambda: (
+                            not web()["item_drops"]
+                            and not desktop()["item_drops"]
+                            and next(row for row in web()["inventory"] if row["vnum"] == 27001)[
+                                "count"
+                            ]
+                            == count_before + 1
+                        ),
+                    )
                 wait(
                     "monster_respawns_on_both_clients",
                     lambda: (

@@ -6,6 +6,8 @@ class_name GameModuleClient extends SpacetimeDBClient
 const Types = preload('res://spacetime_bindings/schema/module_game_types.gd')
 
 const ChatMessage = Types.ChatMessage
+const InventoryItem = Types.InventoryItem
+const ItemDrop = Types.ItemDrop
 const Loot = Types.Loot
 const Monster = Types.Monster
 const Obstacle = Types.Obstacle

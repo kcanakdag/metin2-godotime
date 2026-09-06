@@ -2,19 +2,23 @@
 # FILE WILL NOT BE SAVED. MODIFY TABLES IN YOUR MODULE SOURCE CODE INSTEAD.
 class_name GameModuleDb extends RefCounted
 
-const table_names : Array[String] = ["chat_message", "monster", "world_info", "player", "obstacle", "loot"]
+const table_names : Array[String] = ["chat_message", "loot", "item_drop", "inventory_item", "player", "monster", "world_info", "obstacle"]
 
 var chat_message: GameChatMessageTable
+var loot: GameLootTable
+var item_drop: GameItemDropTable
+var inventory_item: GameInventoryItemTable
+var player: GamePlayerTable
 var monster: GameMonsterTable
 var world_info: GameWorldInfoTable
-var player: GamePlayerTable
 var obstacle: GameObstacleTable
-var loot: GameLootTable
 
 func _init(p_local_db: LocalDatabase) -> void:
 	chat_message = preload('res://spacetime_bindings/schema/tables/game_chat_message_table.gd').create(p_local_db)
+	loot = preload('res://spacetime_bindings/schema/tables/game_loot_table.gd').create(p_local_db)
+	item_drop = preload('res://spacetime_bindings/schema/tables/game_item_drop_table.gd').create(p_local_db)
+	inventory_item = preload('res://spacetime_bindings/schema/tables/game_inventory_item_table.gd').create(p_local_db)
+	player = preload('res://spacetime_bindings/schema/tables/game_player_table.gd').create(p_local_db)
 	monster = preload('res://spacetime_bindings/schema/tables/game_monster_table.gd').create(p_local_db)
 	world_info = preload('res://spacetime_bindings/schema/tables/game_world_info_table.gd').create(p_local_db)
-	player = preload('res://spacetime_bindings/schema/tables/game_player_table.gd').create(p_local_db)
 	obstacle = preload('res://spacetime_bindings/schema/tables/game_obstacle_table.gd').create(p_local_db)
-	loot = preload('res://spacetime_bindings/schema/tables/game_loot_table.gd').create(p_local_db)

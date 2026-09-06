@@ -2,7 +2,7 @@
 
 The game uses **standard Godot 4.7.2/GDScript** and a **Rust SpacetimeDB 2.8.3
 module**. The database owns identity, presence, positions, terrain height,
-collision, attacks, health, respawn and gold. Clients send intents and render
+collision, attacks, health, respawn, gold and item instances. Clients send intents and render
 subscribed state. This is a new game protocol, without compatibility with the
 original Metin2 executable.
 
@@ -83,10 +83,12 @@ The standard engine and pure GDScript path support Web without a .NET dependency
 | `server/src/movement.rs` | Direction, speed and training-ground sweep/sliding rules |
 | `server/src/content.rs` | Trusted terrain, map bounds, building/water blocking and elevated surfaces |
 | `server/src/combat.rs` | Monster simulation, attacks, health, death/respawn and loot |
+| `server/src/inventory.rs` | Item ownership, grid placement, equipment, consumables and item drops |
 | `client/scripts/net/game_connection.gd` | SDK lifecycle, tokens, version checks, subscriptions and dictionary signals |
 | `client/scripts/main.gd` | Input, entity instances, loading, camera and HUD |
 | `client/scripts/actors/` | Interpolated warriors and procedural monster/loot visuals |
 | `client/scripts/world/world_stream.gd` | Content manifest, downloaded packs, nearby chunk instances |
+| `client/scripts/ui/classic_*.gd` | Original UI art/layout, inventory slots, taskbar, tooltips and minimap presentation |
 | `tools/export_playable.py` | Isolated Web/Linux builds and optional test-only probes |
 | `deploy/`, `tools/deploy.py` | Isolated Docker services, HTTPS/WSS and deployment |
 
@@ -104,12 +106,17 @@ Positions are meters with Y up, heading is radians about Y, and activity is
 | `player` | Identity primary key; name; X/Y/Z and heading; activity/online; attack sequence; health/max health; gold; respawn deadline |
 | `monster` | Numeric ID; X/Y/Z and heading; health/max health; activity; attack sequence; respawn deadline |
 | `loot` | Auto-increment ID; X/Y/Z; gold; owner identity; reservation and expiry deadlines |
+| `inventory_item` | Auto-increment ID; owner identity; item vnum; count; bag cell; equipped flag |
+| `item_drop` | Auto-increment ID; X/Y/Z; vnum/count; owner identity; reservation and expiry deadlines |
 | `world_info` | ID, protocol version, map display name, map ID, content hash, tick interval and legacy half-size |
 | `obstacle` | Training-ground box IDs, centers, extents, height and visual kind |
 | `chat_message` | Auto-increment ID; sender, server-copied name, message and timestamp |
 
-The client subscribes to online players, monsters, loot, world information,
-training obstacles and retained chat. There is no spatial subscription filtering.
+The client subscribes to online players, monsters, gold/item drops, inventory,
+world information, training obstacles and retained chat. `inventory_item` is a
+public prototype table; the UI filters to the local owner, but this is not
+inventory-read privacy. Reducers still validate ownership before every mutation.
+There is no spatial subscription filtering.
 Yongan's actual bounds come from baked content, not the legacy `half_size`
 field. Display names confer no ownership or authorization.
 
@@ -121,10 +128,16 @@ field. Display names confer no ownership or authorization.
 | `stop_moving()` | Clear held/destination movement |
 | `perform_attack()` | Enforce cooldown, stop movement, replicate animation and damage an eligible nearby enemy |
 | `pickup_loot(id)` | Validate a living controlling player, distance, clear path, expiry and reservation; grant gold and delete loot atomically |
+| `move_item(id, cell)` | Validate ownership, bag footprint, page bounds and empty destination cells |
+| `equip_item(id)` | Validate a single sword, move it to the weapon slot and return any previous weapon to a fitting bag location |
+| `unequip_item(id, cell)` | Validate the equipped item and a fitting unoccupied bag destination |
+| `use_item(id)` | Validate an owned potion, living/injured player and cooldown; heal and consume one atomically |
+| `pickup_item_drop(id)` | Validate distance, height, clear path, reservation, expiry and bag capacity; grant/stack the item and delete the drop atomically |
 | `send_chat(message)` | Validate 1–160 printable characters, rate-limit to one per second and retain the latest 100 |
 
 Private tables hold socket sessions, controlling connections/input, simulation
-time, scheduled ticks and monster attack clocks. Simulation accepts only the
+time, scheduled ticks, monster attack clocks and inventory initialization/potion
+cooldowns. Simulation accepts only the
 scheduler's identity. Gameplay actions require the controlling socket, and
 movement/attacks/pickups reject dead characters.
 
@@ -143,17 +156,67 @@ or general layered navigation. Local and remote visuals interpolate toward
 replicated three-dimensional positions.
 
 The prototype Stone Sentinel is procedural geometry, not an imported Metin2 mob.
-A player hit deals 25 damage within 2.7 m and a 2 m height difference, with a
+A player hit deals 25 base damage plus 10 for the equipped starter sword, within
+2.7 m and a 2 m height difference, with a
 clear path and an 850 ms cooldown. The sentinel has 100 health, chases eligible
 nearby players around its home, and deals 20 damage within 1.9 m every
 1.3 seconds. These are prototype rules, not an original-game balance claim.
 
-A defeated sentinel respawns after 12 seconds and drops five gold. Loot remains
+A defeated sentinel respawns after 12 seconds and drops five gold plus one red
+potion. Gold and item drops have separate authoritative rows. Both remain
 reserved for its slayer for 10 seconds, expires after 60 seconds, and requires
 a pickup within 2.5 m with compatible height and clear path. An atomic reducer
 deletes the loot and credits the player, preventing duplicate grants. A dead
 player respawns after 8 seconds at the town spawn with full health and retained
 gold. Reconnecting does not bypass death or attack deadlines.
+
+## Inventory and original UI
+
+The inventory slice is additive: the existing `Player`, `Monster`, `Loot` and
+world schema remain unchanged. Application protocol stays at version 2, while
+new clients require the added item tables/reducers and regenerated bindings.
+Publish that module before running the new client; an older database without
+the additional tables cannot satisfy its subscriptions.
+
+`inventory_state` marks once-only initialization and stores the potion cooldown.
+On first entry each identity receives one sword (`vnum=10`) and five red potions
+(`vnum=27001`); entry/reconnect never grants another starter set. Existing guest
+characters receive their first set when they enter after publication.
+
+The bag has 90 cells in two 45-cell pages, each five columns by nine rows.
+Items occupy one column: the sword is two cells tall and a potion one. A sword
+cannot wrap across a page boundary; the server checks every occupied cell.
+Potions stack to 200, swords to one. The equipment slot uses cell 255 as a
+server sentinel; its original artwork is 32 × 96 pixels, while the sword's
+32 × 64 icon still occupies only two bag cells. Equipping grants the server
+damage bonus without yet adding a 3D sword attachment to the warrior.
+
+A red potion heals up to 40 HP with a one-second cooldown. Full-health use,
+dead-player use, wrong ownership and unsupported item types fail without
+consumption. Item pickups respect the same 10-second reservation, 60-second
+expiry, 2.5 m reach and compatible height/clear-path rules as the gold loop.
+Stack filling and new-cell allocation occur in the same reducer transaction as
+drop deletion, so a full bag cannot partially consume a reward. Inventory,
+equipment and cooldown state survive death/reconnect; there is no player-driven
+item deletion, trading or arbitrary item/currency grant endpoint.
+
+The UI uses selected original raster artwork converted by
+`tools/import_metin_ui.py`: 148 UI images and one Yongan map assembled from 20
+original minimap tiles. Source resolution and alpha are preserved. Layout
+references guide the 176 × 565 inventory, 37-pixel taskbar, eight visible
+quickslots and minimap. See [UI assets](ui-assets.md) for provenance and limits.
+
+Mouse carry/drag sends normal item reducers; slots redraw from subscribed state
+after acceptance. `I` opens inventory, right click equips/uses, `1–4` and
+`F1–F4` activate quickslots, and `Ctrl+F3` opens developer inspection. Quickslot
+bindings, selected pages and inventory-window position are local UI preferences
+scoped to the character profile; they confer no item ownership or permission.
+
+Original UI fidelity is a target. Login is still a prototype, unsupported
+character/skills/social controls are inactive, and neither font rendering nor
+complete behavior has been compared with a running original client. The
+inventory introduces a narrow weapon/consumable loop, not a complete original
+equipment or progression system.
 
 ## Loading and identity lifecycle
 
@@ -207,7 +270,7 @@ or deliberate migration for incompatible changes. The generator fetches
 `--offline` uses the saved schema. Increase the application version when the
 contract becomes incompatible.
 
-Current evidence includes 16 Yongan Rust tests, 22 live SDK multiplayer checks
+The completed Yongan baseline has 16 Rust tests, 22 live SDK multiplayer checks
 and 19 combat checks in `.local/yongan-network-final.json` and
 `.local/yongan-combat-final.json`. Real exported Web/Linux tests cover both the
 training ground and Yongan. Yongan's 26-check real-GPU browser run covers mutual
@@ -219,6 +282,18 @@ All 20 section packs also pass isolated resource loading and exact numeric
 texture-byte audits. Separate normal Web/Linux release checks confirm direct
 browser UI/keyboard movement, correct textures, mutual presence and absent test
 hooks; evidence is in `.local/release-browser/` and `.local/release-native/`.
+The inventory extension has 20 passing Yongan Rust tests (14 in training), four
+UI conversion tests, a repeated 22-check movement smoke in
+`.local/inventory-movement-smoke.json`, and 56 live inventory checks in
+`.local/inventory-smoke.json`. Those include ownership/grid rejection, equipment
+damage, potions, item-drop reservation/stacking, and death/reconnect persistence.
+Publishing additively to an existing test world preserved all four player rows
+exactly, including identity, position, health and gold; the before/after evidence
+is `.local/inventory-migration-before.txt` and `inventory-migration-after.txt`.
+Native MCP inspection confirms I opens inventory and right click equips the
+sword through the server. Browser mouse/keyboard inventory interactions and
+fresh exports still require verification; baseline screenshots do not establish
+those new paths.
 These checks do not establish full-game fidelity, a large
 player-count target or native Windows execution.
 See [distribution](distribution.md#verification-status) for current export
