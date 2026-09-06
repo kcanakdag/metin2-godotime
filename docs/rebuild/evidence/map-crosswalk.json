@@ -1,0 +1,2095 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-06",
+  "inputs": [
+    "server-inventory.json",
+    "client-inventory.json"
+  ],
+  "method": "Case-folded literal match of server directory name and parent directory of client setting.txt. No fuzzy matching or alias inference. Includes server support/test directories and duplicate/patch client settings. Presence does not establish matched content, coordinates or a playable map.",
+  "counts": {
+    "server_directories": 112,
+    "client_setting_paths": 92,
+    "unique_client_names": 81,
+    "union_names": 124,
+    "server-directory-only": 43,
+    "both-source-names": 69,
+    "client-settings-only": 12
+  },
+  "rows": [
+    {
+      "normalized_name": "easter",
+      "presence": "server-directory-only",
+      "server_directory": "easter",
+      "server_file_kinds": [
+        "metin_regen_level10.txt",
+        "metin_regen_level20.txt",
+        "metin_regen_level30.txt",
+        "metin_regen_level40.txt",
+        "metin_regen_level50.txt",
+        "metin_regen_level60.txt",
+        "metin_regen_level70.txt",
+        "metin_regen_level80.txt",
+        "metin_regen_level90.txt",
+        "metin_regen_level95.txt"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "gm_guild_build",
+      "presence": "both-source-names",
+      "server_directory": "gm_guild_build",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "server_attr",
+        "server_attr_old"
+      ],
+      "client_setting_paths": [
+        "bin/pack/outdoorgmguildbuild/gm_guild_build/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "map_a2",
+      "presence": "client-settings-only",
+      "server_directory": null,
+      "server_file_kinds": [],
+      "client_setting_paths": [
+        "bin/pack/OutdoorA2/map_a2/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "map_b_fielddungeon",
+      "presence": "client-settings-only",
+      "server_directory": null,
+      "server_file_kinds": [],
+      "client_setting_paths": [
+        "bin/pack/outdoorfielddungeon1/map_b_fielddungeon/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "map_n_snowm_01",
+      "presence": "both-source-names",
+      "server_directory": "map_n_snowm_01",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/OutdoorSnow1/map_n_snowm_01/setting.txt",
+        "bin/pack/metin2_patch_snow/map_n_snowm_01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "map_n_snowm_02",
+      "presence": "both-source-names",
+      "server_directory": "map_n_snowm_02",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season2/season2/map_n_snowm_02/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "map_n_threeway",
+      "presence": "server-directory-only",
+      "server_directory": "map_n_threeway",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_ad4",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_ad4",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_guild_village",
+      "presence": "client-settings-only",
+      "server_directory": null,
+      "server_file_kinds": [],
+      "client_setting_paths": [
+        "bin/pack/metin2_patch_eu4/metin2_guild_village/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_guild_village_01",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_guild_village_01",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_guild_village_02",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_guild_village_02",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_guild_village_03",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_guild_village_03",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map",
+      "presence": "client-settings-only",
+      "server_directory": null,
+      "server_file_kinds": [],
+      "client_setting_paths": [
+        "bin/pack/Outdoor/metin2_map/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_a1",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_a1",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/OutdoorA1/metin2_map_a1/setting.txt"
+      ],
+      "project_status": "partial Yongan fixture",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_a2_1",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_a2_1",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season2/season2/metin2_map_a2_1/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_a3",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_a3",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/OutdoorA3/metin2_map_a3/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_b1",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_b1",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/OutdoorB1/metin2_map_b1/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_b3",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_b3",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/OutdoorB3/metin2_map_b3/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_battlearena01",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_battlearena01",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen00.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_battlearena02",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_battlearena02",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen00.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_battlearena03",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_battlearena03",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen00.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_bayblacksand",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_BayBlackSand",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/metin2_patch_dragon_rock/metin2_map_bayblacksand/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_bf",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_bf",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_bf_02",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_bf_02",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_bf_03",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_bf_03",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_c1",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_c1",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/OutdoorC1/metin2_map_c1/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_c3",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_c3",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/OutdoorC3/metin2_map_c3/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_capedragonhead",
+      "presence": "both-source-names",
+      "server_directory": "Metin2_map_CapeDragonHead",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/metin2_patch_dragon_rock/metin2_map_capedragonhead/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_dawnmistwood",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_dawnmistwood",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/metin2_patch_dragon_rock/metin2_map_dawnmistwood/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_dd",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_dd",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "base2_npc.txt",
+        "base2_regen.txt",
+        "base3_regen.txt",
+        "base4_portals.txt",
+        "base4_regen.txt",
+        "base5_regen.txt",
+        "base6_regen.txt",
+        "base7_regen.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_devilcatacomb",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_devilcatacomb",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_devilscatacomb",
+      "presence": "client-settings-only",
+      "server_directory": null,
+      "server_file_kinds": [],
+      "client_setting_paths": [
+        "bin/pack/metin2_patch_eu3/metin2_map_devilscatacomb/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_deviltower1",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_deviltower1",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/indoordeviltower1/metin2_map_deviltower1/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_dragon_timeattack_01",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_dragon_timeattack_01",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_dragon_timeattack_02",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_dragon_timeattack_02",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_dragon_timeattack_03",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_dragon_timeattack_03",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_duel",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_duel",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/outdoorduel/metin2_map_duel/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_empirewar01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_empirewar01",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season2/season2/metin2_map_empirewar01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_empirewar02",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_empirewar02",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season2/season2/metin2_map_empirewar02/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_empirewar03",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_empirewar03",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season2/season2/metin2_map_empirewar03/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_empirewar_a01",
+      "presence": "client-settings-only",
+      "server_directory": null,
+      "server_file_kinds": [],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_empirewar_a01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_ew02",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_ew02",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_ew02/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_fielddungeon",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_fielddungeon",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_football",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_football",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "Town.txt.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_guild_01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_guild_01",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/outdoorguild1/metin2_map_guild_01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_guild_02",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_guild_02",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/outdoorguild2/metin2_map_guild_02/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_guild_03",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_guild_03",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/outdoorguild3/metin2_map_guild_03/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_guild_inside01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_guild_inside01",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season2/season2/metin2_map_guild_inside01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_holyplace_flame",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_holyplace_flame",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_milgyo",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_milgyo",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/outdoormilgyo1/metin2_map_milgyo/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_milgyo_a",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_milgyo_a",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season2/season2/metin2_map_milgyo_a/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_monkey_dungeon",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_monkey_dungeon",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_monkey_dungeon2",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_monkey_dungeon2",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_monkey_dungeon3",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_monkey_dungeon3",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_monkey_dungeon_11",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_monkey_dungeon_11",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_monkey_dungeon_12",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_monkey_dungeon_12",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_monkey_dungeon_13",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_monkey_dungeon_13",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_monkeydungeon",
+      "presence": "client-settings-only",
+      "server_directory": null,
+      "server_file_kinds": [],
+      "client_setting_paths": [
+        "bin/pack/indoormonkeydungeon1/metin2_map_monkeydungeon/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_monkeydungeon_02",
+      "presence": "client-settings-only",
+      "server_directory": null,
+      "server_file_kinds": [],
+      "client_setting_paths": [
+        "bin/pack/indoormonkeydungeon2/metin2_map_monkeydungeon_02/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_monkeydungeon_03",
+      "presence": "client-settings-only",
+      "server_directory": null,
+      "server_file_kinds": [],
+      "client_setting_paths": [
+        "bin/pack/indoormonkeydungeon3/metin2_map_monkeydungeon_03/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_mt_thunder",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_Mt_Thunder",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/metin2_patch_dragon_rock/metin2_map_mt_thunder/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_n_desert_01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_n_desert_01",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/outdoordesert1/metin2_map_n_desert_01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_n_desert_02",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_n_desert_02",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season2/season2/metin2_map_n_desert_02/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_n_flame_01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_n_flame_01",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "server_attr_old",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/metin2_patch_flame/metin2_map_n_flame_01/setting.txt",
+        "bin/pack/outdoorflame1/metin2_map_n_flame_01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_n_flame_02",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_n_flame_02",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season2/season2/metin2_map_n_flame_02/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_n_flame_dungeon_01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_n_flame_dungeon_01",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/metin2_patch_flame_dungeon/metin2_map_n_flame_dungeon_01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_n_snow_dungeon_01",
+      "presence": "client-settings-only",
+      "server_directory": null,
+      "server_file_kinds": [],
+      "client_setting_paths": [
+        "bin/pack/metin2_patch_snow_dungeon/metin2_map_n_snow_dungeon_01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_naga1",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_naga1",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_nusluck01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_nusluck01",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_nusluck01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_oxevent",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_oxevent",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_oxevent/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_pvp_arena",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_pvp_arena",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_resources_zon",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_resources_zon",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_shinsutest_01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_shinsutest_01",
+      "server_file_kinds": [
+        "Setting.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_shinsutest_01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_siege_01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_siege_01",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_siege_01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_siege_02",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_siege_02",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_siege_02/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_siege_03",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_siege_03",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_siege_03/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_skipia_bossdungeon",
+      "presence": "client-settings-only",
+      "server_directory": null,
+      "server_file_kinds": [],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_skipia_bossdungeon/setting.txt",
+        "bin/pack/season2/season2/metin2_map_skipia_bossdungeon/setting.txt",
+        "bin/pack/season3_eu/season2/metin2_map_skipia_bossdungeon/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_skipia_dungeon_01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_skipia_dungeon_01",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_skipia_dungeon_01/setting.txt",
+        "bin/pack/season2/season2/metin2_map_skipia_dungeon_01/setting.txt",
+        "bin/pack/season3_eu/season2/metin2_map_skipia_dungeon_01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_skipia_dungeon_011",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_skipia_dungeon_011",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_skipia_dungeon_012",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_skipia_dungeon_012",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_skipia_dungeon_013",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_skipia_dungeon_013",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_skipia_dungeon_02",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_skipia_dungeon_02",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/patch2/metin2_map_skipia_dungeon_02/setting.txt",
+        "bin/pack/season1/season1/metin2_map_skipia_dungeon_02/setting.txt",
+        "bin/pack/season2/season2/metin2_map_skipia_dungeon_02/setting.txt",
+        "bin/pack/season3_eu/season2/metin2_map_skipia_dungeon_02/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_skipia_dungeon_021",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_skipia_dungeon_021",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_skipia_dungeon_022",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_skipia_dungeon_022",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_skipia_dungeon_023",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_skipia_dungeon_023",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_skipia_dungeon_boss",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_skipia_dungeon_boss",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "instance_regen.txt",
+        "npc.txt",
+        "regen.txt",
+        "regen.txt.bak",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/patch2/metin2_map_skipia_dungeon_boss/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_spider_bossdungeon",
+      "presence": "client-settings-only",
+      "server_directory": null,
+      "server_file_kinds": [],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_spider_bossdungeon/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_spiderd",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_spiderd",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_spiderdungeon",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_spiderdungeon",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/indoorspiderdungeon1/metin2_map_spiderdungeon/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_spiderdungeon_02",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_spiderdungeon_02",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/metin2_patch_sd/metin2_map_spiderdungeon_02/setting.txt",
+        "bin/pack/season1/season1/metin2_map_spiderdungeon_02/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_spiderdungeon_02_1",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_spiderdungeon_02_1",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_spiderdungeon_03",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_spiderdungeon_03",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/metin2_patch_sd/metin2_map_spiderdungeon_03/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_spiderdungeon_03_old",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_spiderdungeon_03_old",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_sungzi",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "regen00.txt",
+        "regen00_1.txt",
+        "regen00_2.txt",
+        "regen00_3.txt",
+        "regen00_4.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_sungzi/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_desert_01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_sungzi_desert_01",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "regen00.txt",
+        "regen00_1.txt",
+        "regen00_2.txt",
+        "regen00_3.txt",
+        "regen00_4.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_sungzi_desert_01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_desert_hill_01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_sungzi_desert_hill_01",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc00.txt",
+        "regen00.txt",
+        "regen00_1.txt",
+        "regen00_2.txt",
+        "regen00_3.txt",
+        "regen00_4.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_sungzi_desert_hill_01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_desert_hill_02",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_sungzi_desert_hill_02",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc00.txt",
+        "regen00.txt",
+        "regen00_1.txt",
+        "regen00_2.txt",
+        "regen00_3.txt",
+        "regen00_4.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_sungzi_desert_hill_02/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_desert_hill_03",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_sungzi_desert_hill_03",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc00.txt",
+        "regen00.txt",
+        "regen00_1.txt",
+        "regen00_2.txt",
+        "regen00_3.txt",
+        "regen00_4.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_sungzi_desert_hill_03/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_flame_hill_01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_sungzi_flame_hill_01",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc00.txt",
+        "regen00.txt",
+        "regen00_1.txt",
+        "regen00_2.txt",
+        "regen00_3.txt",
+        "regen00_4.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_sungzi_flame_hill_01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_flame_hill_02",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_sungzi_flame_hill_02",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc00.txt",
+        "regen00.txt",
+        "regen00_1.txt",
+        "regen00_2.txt",
+        "regen00_3.txt",
+        "regen00_4.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_sungzi_flame_hill_02/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_flame_hill_03",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_sungzi_flame_hill_03",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc00.txt",
+        "regen00.txt",
+        "regen00_1.txt",
+        "regen00_2.txt",
+        "regen00_3.txt",
+        "regen00_4.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_sungzi_flame_hill_03/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_flame_pass01",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_sungzi_flame_pass01",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_flame_pass02",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_sungzi_flame_pass02",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_flame_pass03",
+      "presence": "server-directory-only",
+      "server_directory": "metin2_map_sungzi_flame_pass03",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_milgyo",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_sungzi_milgyo",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_sungzi_milgyo/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_milgyo_pass_01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_sungzi_milgyo_pass_01",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "regen00.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_sungzi_milgyo_pass_01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_milgyo_pass_02",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_sungzi_milgyo_pass_02",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_sungzi_milgyo_pass_02/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_milgyo_pass_03",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_sungzi_milgyo_pass_03",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_sungzi_milgyo_pass_03/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_snow",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_sungzi_snow",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "regen.txt",
+        "regen00.txt",
+        "regen00_1.txt",
+        "regen00_2.txt",
+        "regen00_3.txt",
+        "regen00_4.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_sungzi_snow/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_snow_pass01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_sungzi_snow_pass01",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "npc00.txt",
+        "regen.txt",
+        "regen00.txt",
+        "regen00_1.txt",
+        "regen00_2.txt",
+        "regen00_3.txt",
+        "regen00_4.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_sungzi_snow_pass01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_snow_pass02",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_sungzi_snow_pass02",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "npc00.txt",
+        "regen.txt",
+        "regen00.txt",
+        "regen00_1.txt",
+        "regen00_2.txt",
+        "regen00_3.txt",
+        "regen00_4.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_sungzi_snow_pass02/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_sungzi_snow_pass03",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_sungzi_snow_pass03",
+      "server_file_kinds": [
+        "MapProperty.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "npc00.txt",
+        "regen.txt",
+        "regen00.txt",
+        "regen00_1.txt",
+        "regen00_2.txt",
+        "regen00_3.txt",
+        "regen00_4.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_sungzi_snow_pass03/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_t1",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_t1",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/outdoorempirebattle1/metin2_map_t1/setting.txt",
+        "bin/pack/outdoort1/metin2_map_t1/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_t2",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_t2",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/outdoort2/metin2_map_t2/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_t3",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_t3",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/outdoort3/metin2_map_t3/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_t4",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_t4",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/outdoort4/metin2_map_t4/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_trent",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_trent",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/outdoortrent/metin2_map_trent/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_trent02",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_trent02",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/outdoortrent02/metin2_map_trent02/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_trent02_a",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_trent02_a",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "boss.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt",
+        "trent02.msenv"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season2/season2/metin2_map_trent02_a/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_trent_a",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_trent_a",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "atlas.sub",
+        "npc.txt",
+        "regen.txt",
+        "server_attr",
+        "stone.txt"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season2/season2/metin2_map_trent_a/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_wedding_01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_wedding_01",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/outdoorwedding/metin2_map_wedding_01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin2_map_wl_01",
+      "presence": "both-source-names",
+      "server_directory": "metin2_map_WL_01",
+      "server_file_kinds": [
+        "MonsterArrange.txt",
+        "Setting.txt",
+        "Town.txt",
+        "npc.txt",
+        "regen.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [
+        "bin/pack/season1/season1/metin2_map_wl_01/setting.txt"
+      ],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "metin_test",
+      "presence": "server-directory-only",
+      "server_directory": "metin_test",
+      "server_file_kinds": [
+        "Setting.txt",
+        "Town.txt",
+        "server_attr"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    },
+    {
+      "normalized_name": "mob_invasion",
+      "presence": "server-directory-only",
+      "server_directory": "mob_invasion",
+      "server_file_kinds": [
+        "mobs_regen_1_1_1.txt",
+        "mobs_regen_1_1_2.txt",
+        "mobs_regen_1_1_3.txt",
+        "mobs_regen_21_1_1.txt",
+        "mobs_regen_41_1_1.txt"
+      ],
+      "client_setting_paths": [],
+      "project_status": "not imported/verified in project",
+      "remaining": "Resolve aliases and map index/atlas identities; compare settings/coordinates/bounds, collision, spawns/portals and all visual dependencies before acceptance."
+    }
+  ]
+}

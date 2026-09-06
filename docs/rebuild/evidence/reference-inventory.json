@@ -1,0 +1,267 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-09-06",
+  "method": "Static inspection of immutable source archives; no install, build, execution, or source copying.",
+  "status_policy": {
+    "implemented": "Concrete state transition or handler plus adjacent test evidence or a complete call path.",
+    "partial": "Scaffolding, constants, incomplete paths, material TODOs, or unverified implementation.",
+    "absent": "No implementation found in the complete inspected snapshot; other branches and forks were not assessed."
+  },
+  "sources": [
+    {
+      "id": "open-mt2",
+      "url": "https://github.com/willianmarquess/open-mt2",
+      "commit": "8d8800d470f0b69221886723eb5877a2ed9d9d8d",
+      "commit_date": "2026-08-18T11:48:30Z",
+      "current_head_checked_at": "2026-09-06",
+      "current_head": "8d8800d470f0b69221886723eb5877a2ed9d9d8d",
+      "pin_drift": false,
+      "archive_sha256": "de6eb107ccee990c0162a425125903c5a69b1a3444a664dd0bfff12b37933389",
+      "ignored_snapshot": ".cache/full-game-research/emulators/open-mt2",
+      "license_evidence": {
+        "repository_license": "GPL-3.0",
+        "metadata_license": "ISC",
+        "conflict": true,
+        "path": "LICENSE and package.json"
+      },
+      "counts": {
+        "source_files": 796,
+        "test_tree_files": 180,
+        "unit_test_files": 143,
+        "unit_it_cases_static": 973,
+        "inbound_packet_tree_ts_files": 89,
+        "inbound_handler_files": 31,
+        "inbound_validator_files": 26,
+        "outbound_packet_files": 53,
+        "concrete_quest_files": 11,
+        "active_skill_files": 48,
+        "passive_skill_files": 9,
+        "skill_registry_explicit_entries": 55,
+        "skill_registry_active_entries": 48,
+        "skill_registry_passive_entries": 7,
+        "passive_horse_classes_wired_outside_registry": 2,
+        "command_directories": 31,
+        "readme_feature_rows_excluding_header": 48,
+        "readme_done_claims": 32,
+        "readme_doing_claims": 9,
+        "readme_todo_claims": 7
+      },
+      "count_notes": [
+        "Counts are simple path/pattern inventories and do not establish test pass status.",
+        "README feature status is an upstream claim; source and tests take precedence.",
+        "The extracted archive has 6189 files because the repository contains sizable data/config trees."
+      ],
+      "representative_evidence": [
+        {"category": "movement", "path": "src/game/app/service/CharacterMoveService.ts", "symbol": "CharacterMoveService.execute"},
+        {"category": "movement_validation", "path": "src/core/domain/entities/game/player/Player.ts", "symbol": "Player.isMoveAllowed"},
+        {"category": "combat", "path": "src/core/domain/entities/game/player/delegate/battle/PlayerBattleAgainstMobStrategy.ts", "symbol": "PlayerBattleAgainstMobStrategy"},
+        {"category": "skills_registry", "path": "src/core/domain/manager/SkillManager.ts", "symbol": "SkillManager.load"},
+        {"category": "quests_registry", "path": "src/core/domain/quests/QuestManager.ts", "symbol": "QuestManager.load/registerTask"},
+        {"category": "private_shop", "path": "src/game/app/service/PrivateShopService.ts", "symbol": "PrivateShopService.openPrivateShop/buy"},
+        {"category": "horse", "path": "src/core/domain/entities/game/player/delegate/PlayerHorse.ts", "symbol": "PlayerHorse"},
+        {"category": "modern_schema_constants", "path": "src/core/enum/ItemTypeEnum.ts", "symbol": "ITEM_COSTUME/ITEM_DS/ITEM_BELT"},
+        {"category": "modern_window_constants", "path": "src/core/enum/WindowTypeEnum.ts", "symbol": "DRAGON_SOUL_INVENTORY/BELT_INVENTORY"},
+        {"category": "authoring_tools", "path": "tools", "symbol": "atlas/attr/mob/motion/drop/spawn converters"}
+      ]
+    },
+    {
+      "id": "quantum-core-x",
+      "url": "https://github.com/MeikelLP/quantum-core-x",
+      "commit": "ddab58ba493dfcedefd8b265513950f865edfffc",
+      "commit_date": "2026-08-30T14:41:14Z",
+      "current_head_checked_at": "2026-09-06",
+      "current_head": "ddab58ba493dfcedefd8b265513950f865edfffc",
+      "pin_drift": false,
+      "archive_sha256": "51fb09fe23af5c0cb0be98d0cc21f207f977801c3cc3fcc23cd36a7fb52ceff7",
+      "ignored_snapshot": ".cache/full-game-research/emulators/quantum-core-x",
+      "license_evidence": {
+        "repository_license": "MPL-2.0",
+        "path": "LICENSE",
+        "upstream_relationship": "README identifies QCX as a non-backward-compatible fork of QuantumCore C#."
+      },
+      "counts": {
+        "all_files": 711,
+        "csharp_files": 610,
+        "core_plugin_api_packet_files": 91,
+        "game_packet_handler_files": 38,
+        "guild_packet_handler_files": 9,
+        "game_command_files": 61,
+        "quest_files": 6,
+        "skill_implementation_files": 1,
+        "world_files": 12,
+        "test_cs_files": 33,
+        "test_files_with_fact_or_theory": 24,
+        "fact_or_theory_cases_static": 215
+      },
+      "count_notes": [
+        "Counts are simple path/pattern inventories and do not establish test pass status.",
+        "Packet count includes models, not only handlers.",
+        "Quest files include framework and test/example quests; it is not six production quest lines."
+      ],
+      "representative_evidence": [
+        {"category": "world_aoi", "path": "src/Libraries/Game.Server/World/Map.cs", "symbol": "Map.Update"},
+        {"category": "multicore_world", "path": "src/Libraries/Game.Server/World/World.cs", "symbol": "World.LoadRemoteMapsAsync"},
+        {"category": "combat", "path": "src/Libraries/Game.Server/World/Entities/Entity.cs", "symbol": "Entity.Attack/Damage"},
+        {"category": "guild", "path": "src/Libraries/Game.Server/GuildManager.cs", "symbol": "GuildManager"},
+        {"category": "quests", "path": "src/Libraries/Game.Server/Quest/QuestManager.cs", "symbol": "QuestManager.InitializePlayer"},
+        {"category": "skills", "path": "src/Libraries/Game.Server/Skills/PlayerSkills.cs", "symbol": "PlayerSkills"},
+        {"category": "commands_permissions", "path": "src/Libraries/Game.Commands/CommandManager.cs", "symbol": "CommandManager.Register/CanUseCommand"},
+        {"category": "packet_generation", "path": "src/Core.Networking.Generators/PacketSerializerGenerator.cs", "symbol": "PacketSerializerGenerator"},
+        {"category": "documentation_generation", "path": "src/Executables/DocsGenerator/Program.cs", "symbol": "PacketDocsGenerator/CommandDocsGenerator"},
+        {"category": "performance", "path": "src/Game.Benchmarks/Benchmarks/WorldUpdateBenchmark.cs", "symbol": "WorldUpdateBenchmark.World_Tick"},
+        {"category": "observability", "path": "src/Plugins/PrometheusPlugin", "symbol": "PacketOperationListener/ClientConnectedListener/GameEntityLifetimeListener/GameTickListener"}
+      ]
+    }
+  ],
+  "tree_absence_audit": {
+    "roots": [
+      "open-mt2/src",
+      "quantum-core-x/src"
+    ],
+    "terms": [
+      "lycan", "belt", "sash", "dragon soul", "alchemy", "energy", "mailbox",
+      "offline shop", "switchbot", "champion", "yohara", "party", "trade",
+      "duel", "marriage", "fishing", "mining", "refinement", "dungeon"
+    ],
+    "qualifications": [
+      "open-mt2 has compatibility constants for costume, Dragon Soul, belt, energy and elements; this is partial schema evidence, not workflow implementation.",
+      "open-mt2 has a passive MiningSkill and mining item types but no gathering loop.",
+      "Map/data filenames containing dungeon or guild do not establish instance, guild or dungeon gameplay.",
+      "QCX has guild implementation and costume body/hair equipment but lacks the other named modern workflows.",
+      "Switchbot was not confirmed as an official Gameforge feature and is classified as unverified/fork-specific policy."
+    ]
+  },
+  "wiki_source_relation": {
+    "domain": "en-wiki.metin2.gameforge.com",
+    "classification": "Gameforge-domain, community-maintained live-product index",
+    "authorship_limit": "The Main Page describes the wiki as a community system. Hosting under the publisher domain does not guarantee that a page is publisher-authored or that its text is an exact protocol, formula, balance, regional, or entitlement contract."
+  },
+  "official_feature_evidence": [
+    {"title": "Main Page", "revision": 61798, "timestamp": "2026-07-24T17:24:15Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Main_Page&oldid=61798", "confirms": ["five classes including Lycan", "current maps and dungeons", "named current systems"], "limit": "Index only; no detailed rules."},
+    {"title": "Lycan", "revision": 48334, "timestamp": "2021-12-23T20:23:15Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Lycan&oldid=48334", "confirms": ["Lycan class", "Instinct skill set"]},
+    {"title": "Belt System", "revision": 58127, "timestamp": "2025-09-15T18:03:47Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Belt_System&oldid=58127", "confirms": ["belt equipment", "belt storage", "refinement", "sockets"]},
+    {"title": "Costume System", "revision": 58122, "timestamp": "2025-09-15T18:02:54Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Costume_System&oldid=58122", "confirms": ["costume body/hair/weapon skins", "timers", "bonuses", "transmutation"]},
+    {"title": "Aura Outfit System", "revision": 60698, "timestamp": "2026-02-22T15:59:59Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Aura_Outfit_System&oldid=60698", "confirms": ["separate visible costume slot", "accessory absorption", "level and stage progression"]},
+    {"title": "Shoulder Sash System", "revision": 60665, "timestamp": "2026-02-21T21:45:52Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Shoulder_Sash_System&oldid=60665", "confirms": ["grades", "combination", "bonus absorption/removal/transfer"]},
+    {"title": "Binding System", "revision": 60675, "timestamp": "2026-02-22T13:22:42Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Binding_System&oldid=60675", "confirms": ["soulbound equipment restrictions", "timed unbinding"]},
+    {"title": "Pet System", "revision": 61698, "timestamp": "2026-05-14T19:14:51Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Pet_System&oldid=61698", "confirms": ["hatching", "lifetime and feeding", "EXP/evolution", "randomized types", "pet skills"]},
+    {"title": "Monster Card System", "revision": 47611, "timestamp": "2020-12-22T22:35:17Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Monster_Card_System&oldid=47611", "confirms": ["rotating kill missions", "account collection", "achievement bonus", "transformation", "map teleport unlock"]},
+    {"title": "Dragon Stone Alchemy", "revision": 60545, "timestamp": "2026-02-16T19:11:12Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Dragon_Stone_Alchemy&oldid=60545", "confirms": ["separate inventory", "two sets", "timed activation", "class/clarity/level upgrades"]},
+    {"title": "Relic System", "revision": 50531, "timestamp": "2023-12-21T14:35:13Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Relic_System&oldid=50531", "confirms": ["class Soul Relics", "irreversible installation", "duration/recharge", "up to four triggered bonuses"]},
+    {"title": "Energy System", "revision": 60423, "timestamp": "2026-02-15T13:40:17Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Energy_System&oldid=60423", "confirms": ["item destruction to fragments", "crystal crafting", "timed equipment bonus multiplier"]},
+    {"title": "Gaya System", "revision": 61530, "timestamp": "2026-04-14T18:28:10Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Gaya_System&oldid=61530", "confirms": ["capped currency", "probabilistic conversion", "per-player market", "refresh and row expansion"]},
+    {"title": "Mailbox", "revision": 61368, "timestamp": "2026-04-08T17:26:22Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Mailbox&oldid=61368", "confirms": ["messages", "Yang and Won attachments", "one item attachment", "fee and level gate"]},
+    {"title": "Private Shop", "revision": 61856, "timestamp": "2026-08-01T21:17:26Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Private_Shop&oldid=61856", "confirms": ["Bazaar restriction", "Yang/Won", "tax", "offline shop", "shop management and proceeds"]},
+    {"title": "Set Bonus", "revision": 61837, "timestamp": "2026-07-31T21:46:52Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Set_Bonus&oldid=61837", "confirms": ["temporary multi-item set bonuses", "two through five or more item thresholds"]},
+    {"title": "Set Effect", "revision": 58178, "timestamp": "2025-09-16T19:38:05Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Set_Effect&oldid=58178", "confirms": ["fallible equipment transformation", "two- and three-piece effects", "removal"]},
+    {"title": "Titles", "revision": 60744, "timestamp": "2026-02-24T20:40:59Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Titles&oldid=60744", "confirms": ["achievement/event title unlocks", "active visible title"]},
+    {"title": "Experience", "revision": 61873, "timestamp": "2026-08-02T19:42:45Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Experience&oldid=61873", "confirms": ["level 120 promotion", "Champion EXP", "Yohara access"]},
+    {"title": "Sung Mahi Tower", "revision": 61933, "timestamp": "2026-08-15T18:49:11Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Sung_Mahi_Tower&oldid=61933", "confirms": ["Sung Mahi Will checks", "staged tower", "ranking and rewards"]},
+    {"title": "Gloves", "revision": 56270, "timestamp": "2025-05-18T17:51:44Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Gloves&oldid=56270", "confirms": ["license-gated glove slot", "Demon Stone sockets", "four Sung Ma stat families", "Serpent gloves"]},
+    {"title": "Talismans", "revision": 61378, "timestamp": "2026-04-08T17:59:46Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Talismans&oldid=61378", "confirms": ["elemental talismans", "Will talismans", "Sung Ma stats"]},
+    {"title": "Precision (Skill)", "revision": 57871, "timestamp": "2025-08-30T14:30:49Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Precision_(Skill)&oldid=57871", "confirms": ["Champion passive skill", "book progression", "block-effect reduction"]},
+    {"title": "Serpent Design", "revision": 56642, "timestamp": "2025-06-30T16:40:49Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Serpent_Design&oldid=56642", "confirms": ["Serpent weapon/armour crafting family", "Serpent upgrade dependency"]},
+    {"title": "Bonuses", "revision": 60352, "timestamp": "2026-02-10T21:36:32Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Bonuses&oldid=60352", "confirms": ["six elemental power/resistance channels", "weapon elemental upgrades", "separate 1-5 and 6/7 bonus systems"]},
+    {"title": "Auto-Hunt", "revision": 58119, "timestamp": "2025-09-15T17:52:55Z", "url": "https://en-wiki.metin2.gameforge.com/index.php?title=Auto-Hunt&oldid=58119", "confirms": ["target filters", "focus range", "optional consumable/skill/resurrection automation"]}
+  ],
+  "main_page_system_index": {
+    "source_page_revision": 61798,
+    "source_template": "Template:Main Page/EquipmentAndOthersV2",
+    "source_template_revision": 57872,
+    "count": 17,
+    "resolved_count": 16,
+    "missing_destination_count": 1,
+    "entries": [
+      {"title": "Set Bonus", "revision": 61837, "exists": true},
+      {"title": "Set Effect", "revision": 58178, "exists": true},
+      {"title": "Energy System", "revision": 60423, "exists": true},
+      {"title": "Pet System", "revision": 61698, "exists": true},
+      {"title": "Dragon Stone Alchemy", "revision": 60545, "exists": true},
+      {"title": "Costume System", "revision": 58122, "exists": true},
+      {"title": "Relic System", "revision": 50531, "exists": true},
+      {"title": "Shoulder Sash System", "revision": 60665, "exists": true},
+      {"title": "Binding System", "revision": 60675, "exists": true},
+      {"title": "Aura Outfit System", "revision": 60698, "exists": true},
+      {"title": "Gaya System", "revision": 61530, "exists": true},
+      {"title": "Belt System", "revision": 58127, "exists": true},
+      {"title": "Private Shop", "revision": 61856, "exists": true},
+      {"title": "Monster Card System", "revision": 47611, "exists": true},
+      {"title": "Merc System", "exists": false, "note": "The link is present in the template and the interface page names a Merc button, but the destination page does not exist."},
+      {"title": "Auto-Hunt", "revision": 58119, "exists": true},
+      {"title": "Titles", "revision": 60744, "exists": true}
+    ]
+  },
+  "main_page_world_index": {
+    "source_page_revision": 61798,
+    "source_template": "Template:Main Page/World MapV2",
+    "source_template_revision": 61395,
+    "group_count": 11,
+    "destination_count": 86,
+    "missing_destination_count": 1,
+    "scope_limit": "Index presence only. A linked page does not establish map geometry, spawn completeness, entry rules, instance ownership, objectives, reconnect behavior, reset, or rewards.",
+    "groups": [
+      {
+        "name": "Empire maps",
+        "count": 12,
+        "entries": ["Joan", "Pyungmoo", "Yongan", "Bokjung", "Bakra", "Yayang", "Waryong", "Imha", "Jungrang", "Songpa", "Daeyami", "Miryang"]
+      },
+      {
+        "name": "Neutral Maps",
+        "count": 9,
+        "entries": ["Valley of Seungryong", "Yongbi Desert", "Mount Sohan", {"title": "Doyyumhwan", "display": "Fireland"}, "Hwang Temple", {"title": "Lungsam", "display": "Ghost Forest"}, "Red Forest", "Snakefield", "Land of Giants"]
+      },
+      {
+        "name": "Ape Dungeons",
+        "count": 3,
+        "entries": [{"title": "Hasun Dong", "display": "Hasun Dong (easy)"}, {"title": "Jungsun Dong", "display": "Jungsun Dong (normal)"}, {"title": "Sangsun Dong", "display": "Sangsun Dong (hard)"}]
+      },
+      {
+        "name": "Spider Dungeons",
+        "count": 3,
+        "entries": [{"title": "Kuahlo Dong", "display": "Spider Dungeon 1"}, "Spider Dungeon 2", "Spider Dungeon 3"]
+      },
+      {
+        "name": "Grotto of Exile",
+        "count": 2,
+        "entries": ["Grotto of Exile", "Grotto of Exile V2"]
+      },
+      {
+        "name": "The Dark Dragons",
+        "count": 4,
+        "entries": ["Cape Dragon Fire", "Nephrite Bay", "Thunder Mountains", "Gautama Cliff"]
+      },
+      {
+        "name": "Arboreal Menace",
+        "count": 2,
+        "entries": ["Temple of the Ochao", "Enchanted Forest"]
+      },
+      {
+        "name": "Yohara",
+        "count": 14,
+        "entries": ["Abandoned Fortress", "Dong Gwang Plain", "Seo Gwang Wastelands", "Gnoll Caves", "Nam Gwang Chasm", "Mysterious Dungeon", "Yilad Pass", "Mysterious Echo", "Northwind Canyon", "Serpent Temple (Base Floor)", "Northwind Shelter", "Soul Gorge", "Northwind Descent", "Moonshadow Vale"]
+      },
+      {
+        "name": "Dungeons",
+        "count": 17,
+        "entries": ["Demon Tower", "Devil's Catacomb", "Spider Queen's Nest", "Dragon's Temple", "Meley's Lair", "Ship Defence", "Zodiac Temple", "Erebus", "Red Dragon Fortress", "Nemere's Watchtower", "Plateau of Illusions", "Serpent Temple", "Sung Mahi Tower", "Northwind Deeps", "Sombre Plateau", "Depths of Greed", {"title": "Heart of Greed", "exists": false}]
+      },
+      {
+        "name": "Event Maps",
+        "count": 9,
+        "entries": ["Combat Zone", "Isle of Mist", "OX-Competition", "Playground", "Otherworld", "Salvation", "Battle Royale", "Sung Ma Invasion", "Treasure Island"]
+      },
+      {
+        "name": "Other Maps",
+        "count": 11,
+        "entries": ["Bazaar", "Harbour", "Castle Gate", "Elemental Realm", "Wedding Map", "Arena", "Guild War Area", "Palace of the Dragon King", "Enigma Temple", "Balathor's Crypt", "Colony"]
+      }
+    ]
+  },
+  "unverified_or_fork_policy": [
+    {
+      "name": "Switchbot",
+      "classification": "unverified official status / commonly fork-specific",
+      "reason": "No implementation in either inspected snapshot and no matching checked Gameforge-domain wiki system page. Require a primary official source or an explicit product-policy decision before adding it to official parity scope."
+    }
+  ]
+}

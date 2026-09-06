@@ -5,6 +5,14 @@
 Metin2 server emulator. It does not provide a Godot client or a SpacetimeDB module.
 The inspected commit is `8d8800d470f0b69221886723eb5877a2ed9d9d8d`.
 
+The 2026-09-06 [expanded implementation audit](rebuild/reference-audit.md)
+rechecked this pin against repository HEAD and inspected its handlers, rules,
+registries and tests alongside Quantum Core X. It distinguishes concrete code
+from unfinished or absent systems: open-mt2 is useful for selected rules and
+tests, but does not supply the full party/trade/guild/marriage/dungeon game.
+The [full rebuild catalog](rebuild/feature-catalog.md) uses original C++ source
+and content inventories to cover those gaps.
+
 | Area | Value to this project |
 | --- | --- |
 | Gameplay rules | Reference implementations for movement, stats, inventory, mob behavior, damage, and effects |

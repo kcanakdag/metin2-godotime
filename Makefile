@@ -28,6 +28,7 @@ AUTH_DATA_DIR ?= $(CURDIR)/.local/auth
 
 .PHONY: assets import-assets import-map import-ui test-ui test-inventory bake-map map-preview test-map test-world-packs editor client preview check server-build server-test server-start server-publish mcp-build mcp-check dev-setup lint format bindings test-tools test-multiplayer test-combat export-windows export-web export-linux browser-setup test-browser deploy share-setup share-start share-status share-stop export-shared
 .PHONY: auth-setup auth-start test-auth test-accounts
+.PHONY: check-plan
 
 assets:
 	python3 tools/fetch_test_assets.py
@@ -84,8 +85,11 @@ test-accounts:
 server-publish: server-build
 	$(SPACETIME) --config-path .local/spacetime-cli.toml publish --server "$(SERVER_URL)" --bin-path server/target/wasm32-unknown-unknown/release/mt2_server.wasm "$(DB)" --no-config
 
-check: lint server-test test-tools test-auth
+check: lint server-test test-tools test-auth check-plan
 	python3 tools/check_client.py --godot $(GODOT)
+
+check-plan:
+	python3 tools/check_rebuild_plan.py
 
 test-tools:
 	python3 -m unittest discover -s tests -p 'test_*.py'

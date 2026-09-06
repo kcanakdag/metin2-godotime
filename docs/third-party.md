@@ -16,6 +16,20 @@ original game asset rights remain separate.
 | [Godot MCP](https://github.com/mkdevkit/godot-mcp/tree/328e15f7d38092371b2aca8b81c40b8188bbe747) | `328e15f7d38092371b2aca8b81c40b8188bbe747` | MIT editor add-on and companion Node server, vendored with LICENSE files; development tooling |
 | [cloudflared](https://github.com/cloudflare/cloudflared/releases/tag/2026.8.3) | `2026.8.3`, Linux amd64 | Apache-2.0; optional host-only tunnel binary downloaded into `.cache/cloudflared`, excluded from the game ZIP |
 | [open-mt2](https://github.com/willianmarquess/open-mt2/tree/8d8800d470f0b69221886723eb5877a2ed9d9d8d) | `8d8800d470f0b69221886723eb5877a2ed9d9d8d` | Research reference only; its GPL-3.0 LICENSE conflicts with ISC package metadata; no implementation copied into this project |
+| [Metin2 server archive](https://git.old-metin2.com/metin2/server/src/commit/7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318) | `7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318` | Full-game planning reference: C++ systems, quest APIs and data catalogs; source/data availability is not a redistribution grant; no implementation executed or copied |
+| [NakiuS Metin2Client](https://github.com/NakiuS/Metin2Client/tree/40e2d9fef3bed9fa56a113001ae678efb72e06d3) | `40e2d9fef3bed9fa56a113001ae678efb72e06d3` | Narrow client-source comparison for planning; repository code license is MIT, original asset rights remain separate; no implementation copied |
+| [Quantum Core X](https://github.com/MeikelLP/quantum-core-x/tree/ddab58ba493dfcedefd8b265513950f865edfffc) | `ddab58ba493dfcedefd8b265513950f865edfffc` | MPL-2.0 independent emulator; static gameplay/tooling comparison only, no implementation copied |
+
+The [full-game source audits](full-rebuild-plan.md#source-and-coverage-discipline)
+record exact paths/symbols, feature flags, source-tree/registry metadata and
+known gaps. Research snapshots stay under ignored `.cache/full-game-research/`;
+tracked evidence contains metadata rather than third-party code or asset bytes.
+The primary client archive has no code LICENSE at the inspected pin. A mirror's
+license statement does not establish rights over every original contribution
+or bundled asset. Publisher-domain community wiki pages are additional feature
+discovery evidence with per-page revisions, not code dependencies or exact
+retail balance specifications. No new bulk asset fixture is introduced by this
+planning audit.
 
 The installed engine used for tests is standard **Godot 4.7.2**; conversion uses
 **Blender 5.2.1 LTS**. SpacetimeDB CLI/runtime and the Rust module dependency are

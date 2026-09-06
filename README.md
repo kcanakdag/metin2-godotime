@@ -43,6 +43,15 @@ against a running original client. The sword changes server damage but has no
 20 terrain sections and 601 building/prop placements; **368 trees and 6 effects
 remain unsupported**. See [the rebuild roadmap](docs/full-rebuild-plan.md).
 
+The [full-game plan](docs/full-rebuild-plan.md) now maps original server/client
+sources, open-mt2 and other references into a
+[feature catalog with dependencies](docs/rebuild/feature-catalog.md).
+It covers classic gameplay, marriage/weddings/divorce, guilds/land/wars,
+later-system variants, and [development/admin automation](docs/rebuild/development-and-admin.md).
+Source inventories and current implementation gaps are explicit; the plan is
+not a claim that these systems already work. Run `make check-plan` to validate
+the catalog and its acyclic implementation prerequisites.
+
 Authentication uses pinned Better Auth 1.7.3 in a separate Node service. Game
 JWTs last five minutes; the client refreshes after four minutes and reconnects
 the selected character. Remembered account sessions last up to 30 days. Recovery,

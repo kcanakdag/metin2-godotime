@@ -215,6 +215,32 @@ The development scene exposes `dev_snapshot()` for runtime inspection. Use it
 with scene trees, screenshots and actual input. Debug controls send normal
 validated reducers; privileged actions require explicit server authorization.
 
+## Maintaining the full-game plan
+
+[docs/full-rebuild-plan.md](full-rebuild-plan.md) is the entry point for the
+source-backed roadmap. The canonical feature/system records are
+`docs/rebuild/plan.json`; `feature-catalog.md` is generated from them. Keep source
+pins, project status, implementation prerequisites and behavioral coupling
+distinct. New evidence must update the corresponding source inventory/audit;
+do not turn upstream enum presence into an implemented-project claim.
+
+```sh
+make check-plan
+# After editing the canonical JSON:
+python3 tools/check_rebuild_plan.py --write
+```
+
+`make check` includes `check-plan`. The checker requires valid IDs, source
+provenance, scope/status/evidence, known prerequisites, acyclic implementation
+order, existing JSON inventories and a current generated catalog. It is an
+offline structural check, not proof of source semantics or full-game parity.
+The audit documents preserve source and runtime evidence limits separately.
+
+The [tooling plan](rebuild/development-and-admin.md) proposes general content,
+animation, quest, map, admin and test automation. Its future CLI names are not
+implemented commands. Continue using the tested commands elsewhere on this page
+until a vertical slice implements and documents their replacements.
+
 ## Working with the editor
 
 Use the configured `godot` MCP tools for live changes. Confirm `get_project_info`

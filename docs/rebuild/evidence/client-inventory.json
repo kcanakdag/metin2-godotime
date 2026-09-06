@@ -1,0 +1,895 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-06",
+  "purpose": "Reproducible metadata inventory for the full client rebuild plan; presence is not parser, enabled-feature, gameplay, or visual-parity evidence.",
+  "feature_catalog": "docs/rebuild/plan.json (CLI-* records)",
+  "primary_source": {
+    "repository": "https://git.old-metin2.com/metin2/client",
+    "commit": "bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7",
+    "tree_cache": ".cache/metin-archive/bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7/tree-*.json",
+    "retrieval": "Gitea recursive tree API, 61 cached pages; selected bodies via contents API with Git-blob verification.",
+    "tree_entries_including_directories": 60161,
+    "blob_files": 56037,
+    "source_body_filter": "All src/ files; *.py under root, uiscript, locale_en; eight named metadata/build files.",
+    "source_body_files": 842,
+    "source_body_bytes": 7396003,
+    "source_manifest": ".cache/full-game-research/client/source-manifest.json"
+  },
+  "supplementary_source": {
+    "repository": "https://github.com/NakiuS/Metin2Client",
+    "commit": "40e2d9fef3bed9fa56a113001ae678efb72e06d3",
+    "tree_sha": "25a0c275d351a5198f4cce8b3cb44952b54f4228",
+    "tree_entries": 11985,
+    "tree_truncated": false,
+    "selection": "Nine license/architecture comparison files only.",
+    "manifest": ".cache/full-game-research/client/supplementary-manifest.json",
+    "license_note": "MIT for repository code only; no grant for original game assets."
+  },
+  "source_projects": {
+    "CWebBrowser": 3,
+    "Config": 11,
+    "EffectLib": 38,
+    "EterBase": 46,
+    "EterGrnLib": 27,
+    "EterImageLib": 10,
+    "EterLib": 153,
+    "EterLocale": 13,
+    "EterPack": 13,
+    "EterPythonLib": 19,
+    "GameLib": 100,
+    "MilesLib": 22,
+    "PRTerrainLib": 9,
+    "ScriptLib": 14,
+    "SpeedTreeLib": 16,
+    "SphereLib": 12,
+    "UserInterface": 156
+  },
+  "python_ui": {
+    "filters": {
+      "root": "*.py recursively under bin/pack/root",
+      "uiscript": "*.py recursively under bin/pack/uiscript",
+      "locale_en": "*.py recursively under bin/pack/locale_en"
+    },
+    "counts": {
+      "root": 74,
+      "uiscript": 79,
+      "locale_en": 18
+    },
+    "root_modules": [
+      "bin/pack/root/colorinfo.py",
+      "bin/pack/root/consolemodule.py",
+      "bin/pack/root/constinfo.py",
+      "bin/pack/root/debuginfo.py",
+      "bin/pack/root/dragon_soul_refine_settings.py",
+      "bin/pack/root/emotion.py",
+      "bin/pack/root/exception.py",
+      "bin/pack/root/game.py",
+      "bin/pack/root/interfacemodule.py",
+      "bin/pack/root/introcreate.py",
+      "bin/pack/root/introempire.py",
+      "bin/pack/root/introloading.py",
+      "bin/pack/root/intrologin.py",
+      "bin/pack/root/intrologo.py",
+      "bin/pack/root/introselect.py",
+      "bin/pack/root/localeinfo.py",
+      "bin/pack/root/mousemodule.py",
+      "bin/pack/root/musicinfo.py",
+      "bin/pack/root/networkmodule.py",
+      "bin/pack/root/playersettingmodule.py",
+      "bin/pack/root/prototype.py",
+      "bin/pack/root/rootlibcythonizer.py",
+      "bin/pack/root/servercommandparser.py",
+      "bin/pack/root/serverinfo.py",
+      "bin/pack/root/stringcommander.py",
+      "bin/pack/root/system.py",
+      "bin/pack/root/test_affect.py",
+      "bin/pack/root/ui.py",
+      "bin/pack/root/uiaffectshower.py",
+      "bin/pack/root/uiattachmetin.py",
+      "bin/pack/root/uiauction.py",
+      "bin/pack/root/uiautoban.py",
+      "bin/pack/root/uicandidate.py",
+      "bin/pack/root/uicharacter.py",
+      "bin/pack/root/uichat.py",
+      "bin/pack/root/uicommon.py",
+      "bin/pack/root/uicube.py",
+      "bin/pack/root/uidragonsoul.py",
+      "bin/pack/root/uiequipmentdialog.py",
+      "bin/pack/root/uiex.py",
+      "bin/pack/root/uiexchange.py",
+      "bin/pack/root/uigamebutton.py",
+      "bin/pack/root/uigameoption.py",
+      "bin/pack/root/uiguild.py",
+      "bin/pack/root/uihelp.py",
+      "bin/pack/root/uiinventory.py",
+      "bin/pack/root/uimapnameshower.py",
+      "bin/pack/root/uimessenger.py",
+      "bin/pack/root/uiminimap.py",
+      "bin/pack/root/uioption.py",
+      "bin/pack/root/uiparty.py",
+      "bin/pack/root/uiphasecurtain.py",
+      "bin/pack/root/uipickmoney.py",
+      "bin/pack/root/uiplayergauge.py",
+      "bin/pack/root/uipointreset.py",
+      "bin/pack/root/uiprivateshopbuilder.py",
+      "bin/pack/root/uiquest.py",
+      "bin/pack/root/uirefine.py",
+      "bin/pack/root/uirestart.py",
+      "bin/pack/root/uisafebox.py",
+      "bin/pack/root/uiscriptlocale.py",
+      "bin/pack/root/uiselectitem.py",
+      "bin/pack/root/uiselectmusic.py",
+      "bin/pack/root/uishop.py",
+      "bin/pack/root/uisystem.py",
+      "bin/pack/root/uisystemoption.py",
+      "bin/pack/root/uitarget.py",
+      "bin/pack/root/uitaskbar.py",
+      "bin/pack/root/uitip.py",
+      "bin/pack/root/uitooltip.py",
+      "bin/pack/root/uiuploadmark.py",
+      "bin/pack/root/uiweb.py",
+      "bin/pack/root/uiwhisper.py",
+      "bin/pack/root/utils.py"
+    ],
+    "uiscript_modules": [
+      "bin/pack/uiscript/uiscript/936_createcharacterwindow.py",
+      "bin/pack/uiscript/uiscript/936_loginwindow.py",
+      "bin/pack/uiscript/uiscript/936_selectcharacterwindow.py",
+      "bin/pack/uiscript/uiscript/936_selectempirewindow.py",
+      "bin/pack/uiscript/uiscript/949_createcharacterwindow.py",
+      "bin/pack/uiscript/uiscript/949_loginwindow.py",
+      "bin/pack/uiscript/uiscript/949_selectcharacterwindow.py",
+      "bin/pack/uiscript/uiscript/949_selectempirewindow.py",
+      "bin/pack/uiscript/uiscript/acceptguildwardialog.py",
+      "bin/pack/uiscript/uiscript/atlaswindow.py",
+      "bin/pack/uiscript/uiscript/attachstonedialog.py",
+      "bin/pack/uiscript/uiscript/auctionwindow.py",
+      "bin/pack/uiscript/uiscript/auctionwindow_listpage.py",
+      "bin/pack/uiscript/uiscript/auctionwindow_registerpage.py",
+      "bin/pack/uiscript/uiscript/auctionwindow_uniqueauctionpage.py",
+      "bin/pack/uiscript/uiscript/beltinventorywindow.py",
+      "bin/pack/uiscript/uiscript/buildguildbuildingwindow.py",
+      "bin/pack/uiscript/uiscript/changegradenamedialog.py",
+      "bin/pack/uiscript/uiscript/changepassworddialog.py",
+      "bin/pack/uiscript/uiscript/characterwindow.py",
+      "bin/pack/uiscript/uiscript/connectingdialog.py",
+      "bin/pack/uiscript/uiscript/costumewindow.py",
+      "bin/pack/uiscript/uiscript/createcharacterwindow.py",
+      "bin/pack/uiscript/uiscript/cuberesultwindow.py",
+      "bin/pack/uiscript/uiscript/cubewindow.py",
+      "bin/pack/uiscript/uiscript/declareguildwardialog.py",
+      "bin/pack/uiscript/uiscript/equipmentdialog.py",
+      "bin/pack/uiscript/uiscript/exchangedialog.py",
+      "bin/pack/uiscript/uiscript/fishingwindow.py",
+      "bin/pack/uiscript/uiscript/gameoptiondialog.py",
+      "bin/pack/uiscript/uiscript/gamewindow.py",
+      "bin/pack/uiscript/uiscript/guildwindow.py",
+      "bin/pack/uiscript/uiscript/guildwindow_baseinfopage.py",
+      "bin/pack/uiscript/uiscript/guildwindow_boardpage.py",
+      "bin/pack/uiscript/uiscript/guildwindow_gradepage.py",
+      "bin/pack/uiscript/uiscript/guildwindow_guildinfopage.py",
+      "bin/pack/uiscript/uiscript/guildwindow_guildinfopage_eu.py",
+      "bin/pack/uiscript/uiscript/guildwindow_guildinfopage_jp.py",
+      "bin/pack/uiscript/uiscript/guildwindow_guildskillpage.py",
+      "bin/pack/uiscript/uiscript/guildwindow_memberpage.py",
+      "bin/pack/uiscript/uiscript/helpwindow.py",
+      "bin/pack/uiscript/uiscript/helpwindow2.py",
+      "bin/pack/uiscript/uiscript/imekor.py",
+      "bin/pack/uiscript/uiscript/inputdialog.py",
+      "bin/pack/uiscript/uiscript/inputdialogwithdescription.py",
+      "bin/pack/uiscript/uiscript/inputdialogwithdescription2.py",
+      "bin/pack/uiscript/uiscript/inventorywindow.py",
+      "bin/pack/uiscript/uiscript/loadingwindow.py",
+      "bin/pack/uiscript/uiscript/mallwindow.py",
+      "bin/pack/uiscript/uiscript/marklistwindow.py",
+      "bin/pack/uiscript/uiscript/messengerwindow.py",
+      "bin/pack/uiscript/uiscript/minimap.py",
+      "bin/pack/uiscript/uiscript/moneyinputdialog.py",
+      "bin/pack/uiscript/uiscript/mousebuttonwindow.py",
+      "bin/pack/uiscript/uiscript/musiclistwindow.py",
+      "bin/pack/uiscript/uiscript/partymemberinfoboard.py",
+      "bin/pack/uiscript/uiscript/passworddialog.py",
+      "bin/pack/uiscript/uiscript/pickmoneydialog.py",
+      "bin/pack/uiscript/uiscript/popupdialog.py",
+      "bin/pack/uiscript/uiscript/privateshopbuilder.py",
+      "bin/pack/uiscript/uiscript/questdialog.py",
+      "bin/pack/uiscript/uiscript/questiondialog.py",
+      "bin/pack/uiscript/uiscript/questiondialog2.py",
+      "bin/pack/uiscript/uiscript/refinedialog.py",
+      "bin/pack/uiscript/uiscript/restartdialog.py",
+      "bin/pack/uiscript/uiscript/rightmousebuttonwindow.py",
+      "bin/pack/uiscript/uiscript/safeboxwindow.py",
+      "bin/pack/uiscript/uiscript/selectcharacterwindow.py",
+      "bin/pack/uiscript/uiscript/selectempirewindow.py",
+      "bin/pack/uiscript/uiscript/selectitemwindow.py",
+      "bin/pack/uiscript/uiscript/shopdialog.py",
+      "bin/pack/uiscript/uiscript/skillpointresetdialog.py",
+      "bin/pack/uiscript/uiscript/systemdialog.py",
+      "bin/pack/uiscript/uiscript/systemdialog_formall.py",
+      "bin/pack/uiscript/uiscript/systemdialog_forportal.py",
+      "bin/pack/uiscript/uiscript/systemoptiondialog.py",
+      "bin/pack/uiscript/uiscript/taskbar.py",
+      "bin/pack/uiscript/uiscript/webwindow.py",
+      "bin/pack/uiscript/uiscript/whisperdialog.py"
+    ],
+    "locale_en_modules": [
+      "bin/pack/locale_en/locale/en/ui/createcharacterwindow.py",
+      "bin/pack/locale_en/locale/en/ui/dragonsoulrefinewindow.py",
+      "bin/pack/locale_en/locale/en/ui/dragonsoulwindow.py",
+      "bin/pack/locale_en/locale/en/ui/energybar.py",
+      "bin/pack/locale_en/locale/en/ui/expandedtaskbar.py",
+      "bin/pack/locale_en/locale/en/ui/giftbox.py",
+      "bin/pack/locale_en/locale/en/ui/inventorywindow.py",
+      "bin/pack/locale_en/locale/en/ui/loadingwindow.py",
+      "bin/pack/locale_en/locale/en/ui/loginwindow.py",
+      "bin/pack/locale_en/locale/en/ui/passworddialog.py",
+      "bin/pack/locale_en/locale/en/ui/selectcharacterwindow.py",
+      "bin/pack/locale_en/locale/en/ui/selectempirewindow.py",
+      "bin/pack/locale_en/locale/en/ui/systemdialog.py",
+      "bin/pack/locale_en/locale/en/ui/taskbar.py",
+      "bin/pack/locale_en/locale/en/ui/taskbar_easter.py",
+      "bin/pack/locale_en/locale/en/ui/taskbar_haloween.py",
+      "bin/pack/locale_en/locale/en/ui/taskbar_valentine.py",
+      "bin/pack/locale_en/locale/en/ui/webwindow.py"
+    ],
+    "feature_group_mapping": [
+      {
+        "feature_ids": [
+          "CLI-001"
+        ],
+        "name": "entry/lifecycle",
+        "modules": [
+          "intrologin.py",
+          "introempire.py",
+          "introcreate.py",
+          "introselect.py",
+          "introloading.py",
+          "networkmodule.py"
+        ]
+      },
+      {
+        "feature_ids": [
+          "CLI-006",
+          "CLI-007",
+          "CLI-010"
+        ],
+        "name": "HUD/inventory/character",
+        "modules": [
+          "uitaskbar.py",
+          "uiinventory.py",
+          "uicharacter.py",
+          "uitooltip.py",
+          "uiaffectshower.py"
+        ]
+      },
+      {
+        "feature_ids": [
+          "CLI-008",
+          "CLI-015",
+          "CLI-016",
+          "CLI-017"
+        ],
+        "name": "chat/social",
+        "modules": [
+          "uichat.py",
+          "uiwhisper.py",
+          "uimessenger.py",
+          "uiparty.py",
+          "uiguild.py"
+        ]
+      },
+      {
+        "feature_ids": [
+          "CLI-012",
+          "CLI-013",
+          "CLI-014",
+          "CLI-019"
+        ],
+        "name": "trade/item extensions",
+        "modules": [
+          "uishop.py",
+          "uiprivateshopbuilder.py",
+          "uiexchange.py",
+          "uisafebox.py",
+          "uirefine.py",
+          "uiattachmetin.py",
+          "uicube.py",
+          "uiauction.py",
+          "uidragonsoul.py"
+        ]
+      },
+      {
+        "feature_ids": [
+          "CLI-009",
+          "CLI-011",
+          "CLI-018",
+          "CLI-020"
+        ],
+        "name": "world/utility",
+        "modules": [
+          "uiminimap.py",
+          "uiquest.py",
+          "uitarget.py",
+          "uisystem.py",
+          "uioption.py",
+          "uisystemoption.py"
+        ]
+      }
+    ]
+  },
+  "protocol_inventory": {
+    "source_path": "src/UserInterface/Packet.h",
+    "header_filter": "distinct HEADER_CG_* and HEADER_GC_* tokens",
+    "client_to_server_count": 0,
+    "server_to_client_count": 0,
+    "client_to_server_headers": [],
+    "server_to_client_headers": [],
+    "network_stream_symbol_filter": "top-level CPythonNetworkStream definitions in PythonNetworkStream*.cpp",
+    "network_stream_symbol_count": 0,
+    "network_stream_files": [
+      {
+        "path": "src/UserInterface/PythonNetworkStream.cpp",
+        "symbol_count": 0,
+        "representative_symbols": []
+      },
+      {
+        "path": "src/UserInterface/PythonNetworkStreamCommand.cpp",
+        "symbol_count": 0,
+        "representative_symbols": []
+      },
+      {
+        "path": "src/UserInterface/PythonNetworkStreamEvent.cpp",
+        "symbol_count": 0,
+        "representative_symbols": []
+      },
+      {
+        "path": "src/UserInterface/PythonNetworkStreamModule.cpp",
+        "symbol_count": 0,
+        "representative_symbols": []
+      },
+      {
+        "path": "src/UserInterface/PythonNetworkStreamPhaseGame.cpp",
+        "symbol_count": 0,
+        "representative_symbols": []
+      },
+      {
+        "path": "src/UserInterface/PythonNetworkStreamPhaseGameActor.cpp",
+        "symbol_count": 0,
+        "representative_symbols": []
+      },
+      {
+        "path": "src/UserInterface/PythonNetworkStreamPhaseGameItem.cpp",
+        "symbol_count": 0,
+        "representative_symbols": []
+      },
+      {
+        "path": "src/UserInterface/PythonNetworkStreamPhaseHandShake.cpp",
+        "symbol_count": 0,
+        "representative_symbols": []
+      },
+      {
+        "path": "src/UserInterface/PythonNetworkStreamPhaseLoading.cpp",
+        "symbol_count": 0,
+        "representative_symbols": []
+      },
+      {
+        "path": "src/UserInterface/PythonNetworkStreamPhaseLogin.cpp",
+        "symbol_count": 0,
+        "representative_symbols": []
+      },
+      {
+        "path": "src/UserInterface/PythonNetworkStreamPhaseOffline.cpp",
+        "symbol_count": 0,
+        "representative_symbols": []
+      },
+      {
+        "path": "src/UserInterface/PythonNetworkStreamPhaseSelect.cpp",
+        "symbol_count": 0,
+        "representative_symbols": []
+      }
+    ],
+    "warning": "Legacy TCP surface only. Rebuild typed server-owned behavior; no original wire compatibility."
+  },
+  "feature_switches": {
+    "active_profile_path": "src/UserInterface/Locale.h",
+    "active_defines": [
+      "LOCALE_SERVICE_EUROPE",
+      "ENABLE_COSTUME_SYSTEM",
+      "ENABLE_ENERGY_SYSTEM",
+      "ENABLE_DRAGON_SOUL_SYSTEM",
+      "ENABLE_NEW_EQUIPMENT_SYSTEM"
+    ],
+    "python_exports_path": "src/UserInterface/PythonApplicationModule.cpp",
+    "python_exports": [
+      "ENABLE_COSTUME_SYSTEM",
+      "ENABLE_ENERGY_SYSTEM",
+      "ENABLE_DRAGON_SOUL_SYSTEM",
+      "ENABLE_NEW_EQUIPMENT_SYSTEM",
+      "USE_OPENID",
+      "OPENID_TEST"
+    ],
+    "build_variants": [
+      {
+        "name": "Debug|Win32",
+        "defines": [
+          "WIN32",
+          "_DEBUG",
+          "_WINDOWS",
+          "USE_LOD",
+          "HAVE_SNPRINTF"
+        ]
+      },
+      {
+        "name": "Distribute|Win32",
+        "defines": [
+          "WIN32",
+          "NDEBUG",
+          "_WINDOWS",
+          "USE_LOD",
+          "_DISTRIBUTE"
+        ]
+      },
+      {
+        "name": "Release|Win32",
+        "defines": [
+          "WIN32",
+          "NDEBUG",
+          "_WINDOWS",
+          "USE_LOD",
+          "DUNGEON_WORK"
+        ]
+      }
+    ],
+    "interpretation": "A define proves compiled availability in this profile, not that server support, data, UI reachability, or live behavior is complete. Supplementary pin selects Singapore and only costume/energy in Locale_inc.h."
+  },
+  "content_catalog": {
+    "count_filter": "Case-insensitive suffix over all primary blob paths; includes pack patch/override copies and does not deduplicate equal blobs.",
+    "format_counts": {
+      ".cpp": 326,
+      ".h": 295,
+      ".py": 430,
+      ".txt": 5010,
+      ".gr2": 8902,
+      ".dds": 8178,
+      ".tga": 4191,
+      ".jpg": 571,
+      ".png": 2,
+      ".sub": 1957,
+      ".msa": 6393,
+      ".msm": 2884,
+      ".mss": 3637,
+      ".mse": 1153,
+      ".msf": 98,
+      ".msenv": 61,
+      ".mde": 112,
+      ".mdatr": 1180,
+      ".prb": 1128,
+      ".spt": 118,
+      ".atr": 1353,
+      ".wtr": 1278,
+      ".raw": 3915,
+      ".msk": 246,
+      ".wav": 1601,
+      ".mp3": 34
+    },
+    "locale_pack_counts": {
+      "bin/pack/locale_cz": 229,
+      "bin/pack/locale_de": 234,
+      "bin/pack/locale_dk": 229,
+      "bin/pack/locale_en": 229,
+      "bin/pack/locale_es": 229,
+      "bin/pack/locale_fr": 232,
+      "bin/pack/locale_gr": 233,
+      "bin/pack/locale_hu": 229,
+      "bin/pack/locale_it": 229,
+      "bin/pack/locale_nl": 229,
+      "bin/pack/locale_pl": 229,
+      "bin/pack/locale_pt": 229,
+      "bin/pack/locale_ro": 229,
+      "bin/pack/locale_ru": 229,
+      "bin/pack/locale_tr": 231
+    },
+    "map_settings_count": 92,
+    "map_setting_paths": [
+      "bin/pack/Outdoor/metin2_map/setting.txt",
+      "bin/pack/OutdoorA1/metin2_map_a1/setting.txt",
+      "bin/pack/OutdoorA2/map_a2/setting.txt",
+      "bin/pack/OutdoorA3/metin2_map_a3/setting.txt",
+      "bin/pack/OutdoorB1/metin2_map_b1/setting.txt",
+      "bin/pack/OutdoorB3/metin2_map_b3/setting.txt",
+      "bin/pack/OutdoorC1/metin2_map_c1/setting.txt",
+      "bin/pack/OutdoorC3/metin2_map_c3/setting.txt",
+      "bin/pack/OutdoorSnow1/map_n_snowm_01/setting.txt",
+      "bin/pack/indoordeviltower1/metin2_map_deviltower1/setting.txt",
+      "bin/pack/indoormonkeydungeon1/metin2_map_monkeydungeon/setting.txt",
+      "bin/pack/indoormonkeydungeon2/metin2_map_monkeydungeon_02/setting.txt",
+      "bin/pack/indoormonkeydungeon3/metin2_map_monkeydungeon_03/setting.txt",
+      "bin/pack/indoorspiderdungeon1/metin2_map_spiderdungeon/setting.txt",
+      "bin/pack/metin2_patch_dragon_rock/metin2_map_bayblacksand/setting.txt",
+      "bin/pack/metin2_patch_dragon_rock/metin2_map_capedragonhead/setting.txt",
+      "bin/pack/metin2_patch_dragon_rock/metin2_map_dawnmistwood/setting.txt",
+      "bin/pack/metin2_patch_dragon_rock/metin2_map_mt_thunder/setting.txt",
+      "bin/pack/metin2_patch_eu3/metin2_map_devilscatacomb/setting.txt",
+      "bin/pack/metin2_patch_eu4/metin2_guild_village/setting.txt",
+      "bin/pack/metin2_patch_flame/metin2_map_n_flame_01/setting.txt",
+      "bin/pack/metin2_patch_flame_dungeon/metin2_map_n_flame_dungeon_01/setting.txt",
+      "bin/pack/metin2_patch_sd/metin2_map_spiderdungeon_02/setting.txt",
+      "bin/pack/metin2_patch_sd/metin2_map_spiderdungeon_03/setting.txt",
+      "bin/pack/metin2_patch_snow/map_n_snowm_01/setting.txt",
+      "bin/pack/metin2_patch_snow_dungeon/metin2_map_n_snow_dungeon_01/setting.txt",
+      "bin/pack/outdoordesert1/metin2_map_n_desert_01/setting.txt",
+      "bin/pack/outdoorduel/metin2_map_duel/setting.txt",
+      "bin/pack/outdoorempirebattle1/metin2_map_t1/setting.txt",
+      "bin/pack/outdoorfielddungeon1/map_b_fielddungeon/setting.txt",
+      "bin/pack/outdoorflame1/metin2_map_n_flame_01/setting.txt",
+      "bin/pack/outdoorgmguildbuild/gm_guild_build/setting.txt",
+      "bin/pack/outdoorguild1/metin2_map_guild_01/setting.txt",
+      "bin/pack/outdoorguild2/metin2_map_guild_02/setting.txt",
+      "bin/pack/outdoorguild3/metin2_map_guild_03/setting.txt",
+      "bin/pack/outdoormilgyo1/metin2_map_milgyo/setting.txt",
+      "bin/pack/outdoort1/metin2_map_t1/setting.txt",
+      "bin/pack/outdoort2/metin2_map_t2/setting.txt",
+      "bin/pack/outdoort3/metin2_map_t3/setting.txt",
+      "bin/pack/outdoort4/metin2_map_t4/setting.txt",
+      "bin/pack/outdoortrent/metin2_map_trent/setting.txt",
+      "bin/pack/outdoortrent02/metin2_map_trent02/setting.txt",
+      "bin/pack/outdoorwedding/metin2_map_wedding_01/setting.txt",
+      "bin/pack/patch2/metin2_map_skipia_dungeon_02/setting.txt",
+      "bin/pack/patch2/metin2_map_skipia_dungeon_boss/setting.txt",
+      "bin/pack/season1/season1/metin2_map_empirewar_a01/setting.txt",
+      "bin/pack/season1/season1/metin2_map_ew02/setting.txt",
+      "bin/pack/season1/season1/metin2_map_nusluck01/setting.txt",
+      "bin/pack/season1/season1/metin2_map_oxevent/setting.txt",
+      "bin/pack/season1/season1/metin2_map_shinsutest_01/setting.txt",
+      "bin/pack/season1/season1/metin2_map_siege_01/setting.txt",
+      "bin/pack/season1/season1/metin2_map_siege_02/setting.txt",
+      "bin/pack/season1/season1/metin2_map_siege_03/setting.txt",
+      "bin/pack/season1/season1/metin2_map_skipia_bossdungeon/setting.txt",
+      "bin/pack/season1/season1/metin2_map_skipia_dungeon_01/setting.txt",
+      "bin/pack/season1/season1/metin2_map_skipia_dungeon_02/setting.txt",
+      "bin/pack/season1/season1/metin2_map_spider_bossdungeon/setting.txt",
+      "bin/pack/season1/season1/metin2_map_spiderdungeon_02/setting.txt",
+      "bin/pack/season1/season1/metin2_map_sungzi/setting.txt",
+      "bin/pack/season1/season1/metin2_map_sungzi_desert_01/setting.txt",
+      "bin/pack/season1/season1/metin2_map_sungzi_desert_hill_01/setting.txt",
+      "bin/pack/season1/season1/metin2_map_sungzi_desert_hill_02/setting.txt",
+      "bin/pack/season1/season1/metin2_map_sungzi_desert_hill_03/setting.txt",
+      "bin/pack/season1/season1/metin2_map_sungzi_flame_hill_01/setting.txt",
+      "bin/pack/season1/season1/metin2_map_sungzi_flame_hill_02/setting.txt",
+      "bin/pack/season1/season1/metin2_map_sungzi_flame_hill_03/setting.txt",
+      "bin/pack/season1/season1/metin2_map_sungzi_milgyo/setting.txt",
+      "bin/pack/season1/season1/metin2_map_sungzi_milgyo_pass_01/setting.txt",
+      "bin/pack/season1/season1/metin2_map_sungzi_milgyo_pass_02/setting.txt",
+      "bin/pack/season1/season1/metin2_map_sungzi_milgyo_pass_03/setting.txt",
+      "bin/pack/season1/season1/metin2_map_sungzi_snow/setting.txt",
+      "bin/pack/season1/season1/metin2_map_sungzi_snow_pass01/setting.txt",
+      "bin/pack/season1/season1/metin2_map_sungzi_snow_pass02/setting.txt",
+      "bin/pack/season1/season1/metin2_map_sungzi_snow_pass03/setting.txt",
+      "bin/pack/season1/season1/metin2_map_wl_01/setting.txt",
+      "bin/pack/season2/season2/map_n_snowm_02/setting.txt",
+      "bin/pack/season2/season2/metin2_map_a2_1/setting.txt",
+      "bin/pack/season2/season2/metin2_map_empirewar01/setting.txt",
+      "bin/pack/season2/season2/metin2_map_empirewar02/setting.txt",
+      "bin/pack/season2/season2/metin2_map_empirewar03/setting.txt",
+      "bin/pack/season2/season2/metin2_map_guild_inside01/setting.txt",
+      "bin/pack/season2/season2/metin2_map_milgyo_a/setting.txt",
+      "bin/pack/season2/season2/metin2_map_n_desert_02/setting.txt",
+      "bin/pack/season2/season2/metin2_map_n_flame_02/setting.txt",
+      "bin/pack/season2/season2/metin2_map_skipia_bossdungeon/setting.txt",
+      "bin/pack/season2/season2/metin2_map_skipia_dungeon_01/setting.txt",
+      "bin/pack/season2/season2/metin2_map_skipia_dungeon_02/setting.txt",
+      "bin/pack/season2/season2/metin2_map_trent02_a/setting.txt",
+      "bin/pack/season2/season2/metin2_map_trent_a/setting.txt",
+      "bin/pack/season3_eu/season2/metin2_map_skipia_bossdungeon/setting.txt",
+      "bin/pack/season3_eu/season2/metin2_map_skipia_dungeon_01/setting.txt",
+      "bin/pack/season3_eu/season2/metin2_map_skipia_dungeon_02/setting.txt"
+    ],
+    "character_pack_summaries": {
+      "PC": {
+        "files": 2705,
+        "extensions": {
+          ".msa": 738,
+          ".gr2": 691,
+          ".mse": 528,
+          ".dds": 520,
+          ".msk": 117,
+          ".msf": 58,
+          ".mde": 29,
+          ".jpg": 13,
+          ".tga": 5,
+          ".py~": 3,
+          ".bmp": 1,
+          ".ifl": 1,
+          ".py": 1
+        }
+      },
+      "pc2": {
+        "files": 1739,
+        "extensions": {
+          ".msa": 754,
+          ".gr2": 673,
+          ".dds": 164,
+          ".msk": 117,
+          ".mse": 16,
+          ".jpg": 5,
+          ".msm": 4,
+          ".msa~": 3,
+          ".py": 2,
+          ".bmp": 1
+        }
+      },
+      "Monster": {
+        "files": 3092,
+        "extensions": {
+          ".gr2": 1483,
+          ".msa": 1302,
+          ".dds": 124,
+          ".msm": 100,
+          ".txt": 83
+        }
+      },
+      "monster2": {
+        "files": 1359,
+        "extensions": {
+          ".gr2": 639,
+          ".msa": 573,
+          ".dds": 56,
+          ".msm": 46,
+          ".txt": 45
+        }
+      },
+      "NPC": {
+        "files": 829,
+        "extensions": {
+          ".gr2": 349,
+          ".msa": 279,
+          ".msm": 77,
+          ".dds": 70,
+          ".txt": 50,
+          "<none>": 2,
+          ".mdatr": 1,
+          ".tga": 1
+        }
+      },
+      "npc2": {
+        "files": 14,
+        "extensions": {
+          ".gr2": 6,
+          ".msa": 2,
+          ".txt": 2,
+          ".msm": 2,
+          ".dds": 2
+        }
+      },
+      "item": {
+        "files": 2515,
+        "extensions": {
+          ".msm": 2271,
+          ".gr2": 164,
+          ".tga": 48,
+          ".dds": 30,
+          ".txt": 2
+        }
+      },
+      "icon": {
+        "files": 1952,
+        "extensions": {
+          ".tga": 1577,
+          ".sub": 220,
+          ".dds": 153,
+          ".py": 1,
+          ".db": 1
+        }
+      }
+    },
+    "player_motion_root_filter": "all .msa under virtual pc/pc2 roots grouped by first three components after ymir work",
+    "player_motion_roots": {
+      "pc2/shaman/skill": 153,
+      "pc/shaman/skill": 153,
+      "pc2/sura/skill": 100,
+      "pc/sura/skill": 100,
+      "pc2/assassin/skill": 95,
+      "pc/assassin/skill": 94,
+      "pc2/warrior/skill": 91,
+      "pc/warrior/skill": 85,
+      "pc/assassin/action": 28,
+      "pc/shaman/action": 28,
+      "pc/sura/action": 28,
+      "pc/warrior/action": 28,
+      "pc2/assassin/action": 28,
+      "pc2/shaman/action": 28,
+      "pc2/sura/action": 28,
+      "pc2/warrior/action": 28,
+      "pc2/warrior/onehand_sword": 24,
+      "pc/warrior/onehand_sword": 24,
+      "pc2/assassin/dualhand_sword": 23,
+      "pc/assassin/dualhand_sword": 23,
+      "pc2/assassin/onehand_sword": 22,
+      "pc/assassin/onehand_sword": 22,
+      "pc2/shaman/bell": 21,
+      "pc2/shaman/fan": 21,
+      "pc/shaman/bell": 21,
+      "pc/shaman/fan": 21,
+      "pc2/warrior/twohand_sword": 21,
+      "pc/warrior/twohand_sword": 21,
+      "pc2/sura/onehand_sword": 20,
+      "pc/sura/onehand_sword": 20,
+      "pc2/assassin/general": 18,
+      "pc2/shaman/general": 18,
+      "pc2/sura/general": 18,
+      "pc/shaman/general": 18,
+      "pc/assassin/general": 18,
+      "pc2/warrior/general": 18,
+      "pc/sura/general": 18,
+      "pc/warrior/general": 18,
+      "pc2/assassin/bow": 14,
+      "pc/assassin/bow": 14,
+      "pc2/shaman/horse": 12,
+      "pc2/sura/horse": 12,
+      "pc/shaman/horse": 12,
+      "pc/sura/horse": 12,
+      "pc2/assassin/horse": 10,
+      "pc/assassin/horse": 10,
+      "pc2/warrior/horse": 10,
+      "pc/warrior/horse": 10,
+      "pc2/assassin/fishing": 9,
+      "pc2/assassin/horse_bow": 9,
+      "pc2/shaman/fishing": 9,
+      "pc2/sura/fishing": 9,
+      "pc/shaman/fishing": 9,
+      "pc/assassin/fishing": 9,
+      "pc/assassin/horse_bow": 9,
+      "pc2/warrior/fishing": 9,
+      "pc/sura/fishing": 9,
+      "pc/warrior/fishing": 9,
+      "pc2/assassin/horse_dualhand_sword": 6,
+      "pc/assassin/horse_dualhand_sword": 6,
+      "pc/assassin/horse_onehand_sword": 6,
+      "pc2/warrior/horse_onehand_sword": 6,
+      "pc2/warrior/horse_twohand_sword": 6,
+      "pc/warrior/horse_onehand_sword": 6,
+      "pc/warrior/horse_twohand_sword": 6,
+      "pc2/assassin/horse_onehand_sword": 5,
+      "pc2/shaman/horse_bell": 4,
+      "pc2/shaman/horse_fan": 4,
+      "pc/shaman/horse_bell": 4,
+      "pc/shaman/horse_fan": 4,
+      "pc2/sura/horse_onehand_sword": 4,
+      "pc/sura/horse_onehand_sword": 4,
+      "pc2/assassin/intro": 3,
+      "pc2/shaman/intro": 3,
+      "pc/shaman/intro": 3,
+      "pc/assassin/intro": 3,
+      "pc2/sura/intro": 3,
+      "pc2/warrior/intro": 3,
+      "pc/sura/intro": 3,
+      "pc/warrior/intro": 3,
+      "pc2/assassin/wedding": 2,
+      "pc2/shaman/wedding": 2,
+      "pc/assassin/wedding": 2,
+      "pc/shaman/wedding": 2,
+      "pc2/sura/wedding": 2,
+      "pc2/warrior/wedding": 2,
+      "pc/warrior/wedding": 2,
+      "pc/sura/wedding": 2,
+      "pc2/shaman/angry.msa": 1,
+      "pc2/shaman/attractive.msa": 1,
+      "pc2/shaman/banter.msa": 1,
+      "pc2/shaman/cheerup.msa": 1,
+      "pc2/shaman/congratulation.msa": 1,
+      "pc2/shaman/forgive.msa": 1,
+      "pc2/shaman/joy.msa": 1,
+      "pc2/shaman/sad.msa": 1,
+      "pc2/shaman/shy.msa": 1
+    },
+    "catalog_metadata_paths": [
+      "bin/pack/Index",
+      "bin/pack/root/atlasinfo.txt",
+      "bin/pack/root/npclist.txt",
+      "bin/pack/root/20110915_ymir_item_proto",
+      "bin/pack/root/936mob_proto",
+      "bin/pack/root/936skilldesc.txt",
+      "bin/pack/root/936skilltable.txt"
+    ]
+  },
+  "format_coverage": [
+    {
+      "formats": [
+        ".gr2"
+      ],
+      "status": "fixture-only",
+      "gaps": "All variants, rigs, materials, LOD and batch libraries."
+    },
+    {
+      "formats": [
+        ".msm",
+        ".msa",
+        ".mss"
+      ],
+      "status": "source-inspected; no general importer",
+      "reader_evidence": [
+        "CRaceData::LoadRaceData",
+        "CRaceMotionData::LoadMotionData",
+        "CRaceMotionData::LoadSoundScriptData"
+      ],
+      "gaps": "Batch skin/hair/attachment manifests, timing/events and validation."
+    },
+    {
+      "formats": [
+        ".mse",
+        ".mde",
+        ".msf"
+      ],
+      "status": "unparsed",
+      "reader_evidence": [
+        "CEffectData::LoadScript",
+        "CEffectMesh::OnLoad",
+        "CFlyingData::LoadScriptFile"
+      ],
+      "gaps": "VFX/projectile graph and Godot material mapping."
+    },
+    {
+      "formats": [
+        ".spt"
+      ],
+      "status": "unparsed",
+      "gaps": "Licensed conversion or authored replacement plus wind/LOD."
+    },
+    {
+      "formats": [
+        "setting.txt",
+        "height.raw",
+        "tile.raw",
+        ".atr",
+        ".wtr",
+        "areadata.txt",
+        ".prb",
+        ".mdatr"
+      ],
+      "status": "Yongan subset",
+      "gaps": "All maps, indoor/portal/foliage/effect/environment and overlapping-floor semantics."
+    },
+    {
+      "formats": [
+        ".dds",
+        ".tga",
+        ".jpg",
+        ".png",
+        ".sub"
+      ],
+      "status": "selected fixture",
+      "gaps": "Full UI/locale, color/alpha/blend/font and Web budgets."
+    },
+    {
+      "formats": [
+        "item_proto",
+        "mob_proto",
+        "skilldesc.txt",
+        "skilltable.txt",
+        "npclist.txt",
+        "atlasinfo.txt"
+      ],
+      "status": "catalogued only",
+      "gaps": "Safe schema readers, authoritative joins, localization and precedence."
+    },
+    {
+      "formats": [
+        ".wav",
+        ".mp3"
+      ],
+      "status": "not batch imported",
+      "gaps": "MSS binding, loops/crossfades/attenuation/mix and browser recovery."
+    }
+  ],
+  "unparsed_or_unverified": [
+    "Complete item/mob/skill/quest records and every translation",
+    "All GR2 variants and skeleton compatibility groups",
+    "All MSM skin/hair/equipment attachment records",
+    "All MSA combo/loop/displacement/attack/event records",
+    "MSE/MDE/MSF graphs and SpeedTree SPT",
+    "All map indoor/portal/environment/foliage semantics",
+    "Original GDI/Tahoma output; archive has no TTF/OTF/FNT bytes",
+    "Virtual duplicate precedence across bin/pack/Index",
+    "Running original-client capture corpus"
+  ]
+}

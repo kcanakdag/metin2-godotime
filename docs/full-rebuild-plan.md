@@ -1,286 +1,215 @@
-# Client, world, and server rebuild plan
+# Full Metin2 rebuild plan
 
-This roadmap extends the current Yongan prototype toward a complete game. The
-original-map importer and shared collision bake exist, as does one PvE loop with
-damage, death/respawn and gold loot. Browser multiplayer passed on the training
-ground and Yongan, including section loading, keyboard combat and reconnect.
-The corrected terrain and collision pipeline is verified in the public browser.
-An original UI/inventory slice is now implemented: selected original taskbar and
-inventory art, a two-page bag, one equipable sword, red potions, item drops and
-an original-image minimap. Its Web/Linux exports passed 39 public checks,
-including inventory mouse interactions, quickslots, persistence and potion drops.
-The following panel pass adds working minimap close/reopen, the separate original
-Yongan atlas, centered fading chat and a movable/resizable chat log. It has local
-component checks and 45 passing loopback Chrome/Linux checks, including restored
-movement after chat. The deployed panel update also passes 45 public core/panel/
-inventory checks; actual chat sends remain tested on the separate loopback world.
-The account-to-world slice has original entry art, server-owned character slots
-and 58 passing local account/subscription checks. Public account deployment is
-live, with 103 passing Chrome/Linux checks both locally and publicly, including
-real automatic token renewal. Full client interfaces,
-skills, quests and progression remain future work.
-The implemented contract is in [architecture.md](architecture.md).
+The goal is a complete Metin2 experience with a standard Godot client and a
+SpacetimeDB server: preserve classic movement, combat rhythm, characters,
+world, progression, economy, social systems and recognizable UI, while
+modernizing architecture, performance, development automation and operations.
+Marriage, weddings and divorce are required planned systems, alongside the
+less visible quest, guild, event, content and administration work.
 
-Assume a faithful classic Metin2 baseline first. Before importing substantial
-content, choose the target release and list its classes, maps, items, skills,
-quests, and expected behavior. Keep later expansions as additional milestones.
-The converter has been exercised on the warrior fixture and Yongan's 20 terrain
-sections and 119 static models. Trees and effects remain unsupported; the
-procedural Stone Sentinel is not proof of an original monster importer.
+This source-backed plan supersedes the earlier seven-row prototype roadmap.
+It describes the whole rebuild, not just the next starter-town milestone.
+It was assembled on 2026-09-06 from original client/server source, two independent
+emulators, published feature references, and this repository's actual code and
+recorded test evidence. Source research used three Sol subagents in parallel.
+No original game code was executed or imported into the runtime, and the live
+game was not changed by the planning work.
 
-## One content source, two map outputs
+## Read the plan
 
-Build a repeatable content compiler that consumes selected original assets and
-metadata, plus explicit project corrections. Produce client and server artifacts
-from the same coordinates and stable identifiers.
+| Guide | Purpose |
+| --- | --- |
+| [Feature and dependency catalog](rebuild/feature-catalog.md) | Every audited server/client requirement, reference comparison and modernization task, with stable IDs, scope, status, prerequisites and evidence |
+| [Architecture and delivery](rebuild/architecture-and-delivery.md) | System boundaries, state-machine contracts, dependency order, phases, integration gates and work-package template |
+| [Development, automation and admin tools](rebuild/development-and-admin.md) | Reusable content compiler, batch animation/equipment/map/quest pipelines, inspectors, simulators, performance lab and operator controls |
+| [Original server audit](rebuild/server-audit.md) | C++ gameplay, commands, quest APIs/scripts, data catalogs, marriage, guilds, politics, events and conditional systems |
+| [Original client audit](rebuild/client-audit.md) | C++/Python UI, motion/asset/content formats, feature switches, another client source and presentation coverage |
+| [Emulator and later-feature audit](rebuild/reference-audit.md) | open-mt2 and Quantum Core X implementation evidence, omissions, tooling lessons and later official/fork-specific systems |
+| [Current implementation](rebuild/current-state.md) | What our prototype actually implements, recorded two-client evidence and concrete gaps |
+| [Coverage and decisions](rebuild/coverage-and-decisions.md) | Server/client map crosswalk, missing references and concrete decisions with exit conditions |
+| [Machine-readable plan](rebuild/plan.json) | Canonical system/feature IDs, acyclic implementation prerequisites, behavior coupling, source pins and coverage links |
+| [Planning validation](rebuild/validation.md) | Requirement coverage, source-review checks, catalog validation and the limits of this planning pass |
+
+The feature catalog is generated and validated with:
+
+```sh
+python3 tools/check_rebuild_plan.py
+# After editing docs/rebuild/plan.json:
+python3 tools/check_rebuild_plan.py --write
+```
+
+These commands only inspect/generate planning documents. Future content/admin
+command names in the tooling guide are proposals, not existing executable tools.
+
+## Scope and completeness rules
+
+Use a classic four-class experience as the first delivery profile: Warrior,
+Ninja, Sura and Shaman, their supported sex/appearance variants and skill
+schools, all three empires, the selected classic world/progression/economy,
+parties/PvP/guilds, horse/gathering, quests/dungeons, marriage and live events.
+Later official systems remain individually visible in the expansion ledger;
+private-server conveniences and disabled source experiments are separate
+policy decisions. This ordering does not remove them from the overall plan.
+
+There is no single source tree containing every feature from every Metin2
+release, region and private server. The honest completeness target is:
+**account for every discovered feature family and every selected content record
+in the pinned reference profile, and expose all missing or ambiguous evidence.**
+A directory, packet, enum or README checkbox is not a working feature. A
+historical archive plus a modern wiki is not a matched retail release.
+
+Before balancing or bulk importing content, record a versioned profile with
+exact client/server/data pins, enabled systems, formula/level caps, active quest
+list, map/item/mob/skill catalogs, locale, intended visual references and
+intentional differences. Cross-check IDs and shared definitions between sources.
+The currently inspected server and client revisions are evidence snapshots;
+their compatibility as one complete original-client release is not yet proven.
+A running original-client reference capture and provenance are needed to claim
+indistinguishable presentation and behavior.
+
+Every selected content row must eventually be classified as imported and
+verified, awaiting a supported converter, missing a dependency, intentionally
+excluded with a profile reason, or an explicitly authored replacement. Do not
+hide unsupported trees/effects, inactive quests or missing server tables behind
+an aggregate “map imported” or “quest system complete” label.
+
+## Source and coverage discipline
+
+The detailed audits record immutable source paths/symbols and their retrieval
+limits. Tracked evidence inventories contain metadata and registry names, not
+third-party implementation bodies or original asset archives:
+
+- [Server inventory](rebuild/evidence/server-inventory.json): source families,
+  commands, quest namespaces/bindings, enums/packets/switches, active/inactive
+  quests, maps and other data catalogs.
+- [Client inventory](rebuild/evidence/client-inventory.json): UI/source systems,
+  feature/packet registries, asset/motion/map categories and unparsed coverage.
+- [Reference inventory](rebuild/evidence/reference-inventory.json): pinned
+  emulator tree/handler/test/tooling evidence and official-domain feature index.
+- [Project inventory](rebuild/evidence/project-inventory.json): inspected owned
+  source hashes and existing report evidence for our current implementation.
+- [Map crosswalk](rebuild/evidence/map-crosswalk.json): 124 distinct names across
+  server directories/client settings; 69 literal matches, 43 server-only and
+  12 client-only names requiring alias/content adjudication. These are not
+  counts of complete or definitively missing playable maps.
+
+Registry enumeration supplies a reproducible omission check; representative
+source inspection explains semantics. Neither means every source line, formula,
+quest branch, item instance or live regional configuration has been verified.
+Unknowns remain actionable discovery work in the catalog and audits. Update
+pins deliberately and review the resulting feature/content delta rather than
+silently following repository HEAD.
+
+[Third-party provenance](third-party.md) governs source references and asset
+handling. The original source/assets, GPL open-mt2, MPL Quantum Core X and MIT
+conversion tooling have separate terms. Source availability is not permission
+to copy a whole implementation or redistribute every asset. The new gameplay
+implementation remains project code.
+
+## Main dependency chains
+
+The catalog contains the complete system graph. This view shows the main
+integration paths; it deliberately omits secondary edges for readability.
 
 ```mermaid
 flowchart TD
-    Sources[Selected original assets and map data] --> Compiler[Content compiler and validation]
-    Overrides[Versioned project corrections] --> Compiler
-    Compiler --> Visuals[Godot terrain chunks, models, textures and effects]
-    Compiler --> Rules[Server heights, collision, navigation and spawn definitions]
-    Compiler --> Manifest[Shared content IDs, coordinates and version manifest]
-    Visuals --> Client[Godot client]
-    Rules --> Server[SpacetimeDB Rust module]
-    Manifest --> Client
-    Manifest --> Server
-    Client -->|Movement and action requests| Server
-    Server -->|Authoritative entity updates| Client
+    F[Profiles, IDs, auth and persistence] --> D[Definitions and content compiler]
+    D --> A[Actors, animation and equipment]
+    D --> W[Maps, movement and replication]
+    A --> C[Stats, combat, mobs and progression]
+    W --> C
+    C --> Q[NPCs, skills and quests]
+    D --> I[Items and economy]
+    I --> T[Trade, shops and storage]
+    Q --> P[Party and dungeon lifecycle]
+    C --> V[PvP and alignment]
+    P --> G[Guilds, land and wars]
+    V --> G
+    P --> M[Marriage, ceremony and divorce]
+    I --> M
+    Q --> H[Horse, gathering and events]
+    G --> E[Empire politics and conflicts]
+    Q --> X[Later official expansions]
+    F --> O[Admin, metrics, migration and recovery]
+    D --> U[Importers, inspectors and test scenarios]
 ```
 
-| Content | Client representation | Server representation |
-| --- | --- | --- |
-| Terrain | Chunked mesh, material layers, water and presentation | Height samples, walkable areas, boundaries and region flags |
-| Buildings and props | Reusable scenes placed by source transforms | Simplified blockers and interaction anchors where relevant |
-| Monsters and NPCs | Models, animation sets, sounds and effects | Definitions, spawn regions, AI state, health and action rules |
-| Equipment and skills | Models, icons, tooltips and effects | Item/skill definitions, ownership, stats and validation |
-| Portals and dungeons | Visible entrance and loading presentation | Destination, access checks and instance membership |
+Some gameplay systems interact cyclically, such as stats, affects, skills and
+combat. The plan distinguishes **behavior coupling** from **implementation
+prerequisites**: build their shared definitions/contracts first, then integrate
+vertical slices. The checked prerequisite graph contains no cycles.
 
-Static visual assets ship in the client package. Live subscriptions carry
-changing game state. A tree mesh does not need to be transmitted each time a
-player joins. Destructible or interactive objects gain authoritative state and
-refer back to their static visual definitions.
+Marriage illustrates why dependencies matter: persistent character identities,
+mutual consent and eligibility, item/fee transactions, quest/NPC dialogue,
+private ceremony membership and guest transfer, effects/animations/UI, ring
+teleport validation, love/benefit timers, divorce cleanup and operator recovery
+all need coordinated contracts. It is not just a marriage table and a window.
 
-Each build records source hashes, converter version, content IDs, map dimensions,
-coordinate transforms and content version. The client checks compatibility
-before entering a map. This catches accidental content mismatches; server-side
-validation remains necessary even when a client reports a matching version.
+## Modernization and automation are part of the game plan
 
-## Prove one original map
+Keep player-visible classic rules deliberate; replace legacy packed TCP ABI,
+process globals, write-behind caches and client-trusted mutations with typed
+SpacetimeDB state and validated intents. Keep the standard Godot/GDScript path
+and measure the pinned SDK/runtime before introducing partitioning, native
+extensions or a different renderer. SpacetimeDB simplifies persistence and
+replication plumbing; it does not implement Metin2's rules, client or content.
 
-Start with one original starting-area map, then a small representative section
-of it containing a road, a slope, a building and an obstacle. The exact source
-files and required formats must be inventoried before promising full conversion.
+Extend the working map/texture import approach into a repeatable content
+compiler. One normalized record set generates Godot assets and trusted server
+definitions with the same IDs, coordinates and motion timing. Batch model and
+animation import, weapon attachment, NPC/mob/spawn definitions, effects/sounds,
+items/shops/refine, skill formulas, quest graphs and UI/localization all get
+explicit automated validation and preview workflows. See the
+[animation pipeline](rebuild/development-and-admin.md#animation-and-character-automation).
 
-The [archive inspection](original-map-data.md) and [map importer](map-import.md)
-cover terrain, placements, property/model references and source format rules for
-`metin2_map_a1`. All 601 building/prop placements convert; 368 tree and 6 effect
-placements remain unsupported. These steps are still the acceptance framework
-for expanding coverage and verifying fidelity.
+Developer tools include content/dependency browsing, motion/equipment previews,
+map/spawn/portal overlays, quest debugging, combat/economy simulations, network
+impairment and two-client scenarios. Admin tools include server-enforced roles,
+account/moderation support, audited repairs/grants, event scheduling, content
+activation, metrics and coordinated restore. Tools arrive with the systems
+they support; they are not deferred to a final polish phase.
 
-1. Inspect terrain heights, texture layers, object placement records, collision
-   or attribute data, spawn metadata, and dependencies. Record missing files and
-   unsupported formats explicitly.
-2. Establish source units, axes, origin, object pivots and height interpretation.
-   Validate known landmarks and distances against the selected reference.
-3. Generate terrain chunks and placed object instances in Godot. Extend the
-   existing Blender adapter for meshes and animations as fixtures require it.
-   Recreate engine-specific materials and effects where conversion cannot
-   preserve them. Blender is a conversion/inspection tool; map placement should
-   be reproducible from data.
-4. Generate server collision and navigation data from the same normalized map.
-   Visual chunk size, simulation cells and network interest areas can have
-   different dimensions while sharing a coordinate system.
-5. Display server collision, walkability, portals and spawn regions as Godot
-   debug overlays. Test both players against walls, slopes, corners, seams and
-   invalid destinations before expanding the imported area.
-6. Verify a second map and a round trip through a portal before importing the
-   remaining catalog. This tests that the converter and world logic generalize.
+## Delivery and completion
 
-Godot supports scene import through glTF/GLB and import customization; our
-specific legacy conversions still need fixtures and visual checks. See
-[Godot scene import](https://docs.godotengine.org/en/stable/classes/class_resourceimporterscene.html).
-Track inherited/project scene changes separately from regenerated assets.
+The [delivery plan](rebuild/architecture-and-delivery.md#delivery-phases-and-gates)
+has P0–P10 phases: evidence/contracts; content/motion automation; actual combat
+and progression; starter experience; world generalization; economy/social;
+instances/mounts/gathering; guild/empire; marriage/full classic content; optional
+expansion packs; and release qualification. Parallel tracks cover server/rules,
+Godot presentation, content/tools and QA/operations.
 
-## Movement and navigation across both runtimes
+The next implementation slice is the motion/equipment compiler with minimal
+shared-definition prerequisites: visible equipped sword, complete selected
+warrior motion metadata, one original hostile mob and authoritative combat
+feedback. It creates the automation needed for the remaining classes and
+monsters. Leveling and a complete NPC/quest progression route follow. This is
+the next step within the full plan, not a replacement for the remaining game.
 
-The server uses a compact height/attribute grid, authored collision shapes and
-elevated walk triangles. Add bounded Rust path searches before promising click
-navigation around buildings. Validate clearance, slopes, corners and dynamic
-blockers. Current height selection chooses the highest surface; independent
-travel through overlapping floors needs a layered representation or graph.
+A feature is complete only when its server rules, client/UI, selected content,
+authoring/admin needs and acceptance evidence agree. Use actual independent
+clients for presence, movement, permissions, concurrency, disconnect/reconnect
+and stateful workflows; an animated local avatar or direct database query does
+not establish the network contract. Use rendered original-reference comparisons
+for fidelity and exported clients on the intended endpoint/platform. Recovery,
+load and content coverage require their own evidence. See the
+[work-package checklist](rebuild/architecture-and-delivery.md#work-packages-and-realistic-planning).
 
-The server computes or validates traversable movement and owns the resulting
-position. The client renders that position and can later predict local motion
-using matching collision data, with sequence acknowledgements and correction.
-Movement and hit timing must be tested under delay and disconnects.
-
-Godot's NavigationServer is an engine subsystem, and its navigation meshes
-describe traversable space independently of rendering and physics. It does not
-automatically supply pathfinding inside a Rust SpacetimeDB module. See
-[Godot navigation meshes](https://docs.godotengine.org/en/stable/tutorials/navigation/navigation_using_navigationmeshes.html).
-
-SpacetimeDB reducers cannot read map files from the host filesystem or invoke
-Godot. The Yongan feature embeds trusted baked bytes at build time. If dynamic
-content installation is needed, use indexed private tables seeded by module
-initialization or owner-authorized imports. Benchmark storage, module size and
-access costs before expanding to more maps.
-Do not rely on persistent process globals between reducer calls. These choices
-follow [reducer execution constraints](https://spacetimedb.com/docs/functions/reducers/).
-
-## Build the complete client as connected features
-
-Keep the existing GameConnection boundary. Add focused scene/controllers as
-features grow, so the current main scene and HUD do not absorb every system.
-
-The current classic UI work uses the original selected raster fixture and layout
-observations, with new Godot controls and server-backed item operations. Original
-fidelity is the target rather than a claim of indistinguishability: login remains
-a prototype; unsupported character, skill and social systems are inactive; font
-and complete behavior parity are unverified against a running original client.
-The equipped sword currently changes damage and its inventory display, without
-a 3D attachment. Keep these limits separate from a passing UI asset conversion.
-
-| Client area | Server feature delivered with it |
-| --- | --- |
-| Login, character selection and creation | Accounts, persistent character IDs, ownership and session control |
-| World loading and map transitions | Map/instance membership, content version and validated entry position |
-| Targeting, combat feedback and skill bar | Target validation, damage, cooldowns, statuses, death and respawn |
-| Inventory, equipment and item tooltips | Item instances, slots, stat calculation and atomic validated operations |
-| NPC interaction, shops and quests | Interaction distance, dialogue conditions, prices, quest state and rewards |
-| Party, trading, guild and social screens | Membership, invitations, atomic exchanges and permissions |
-| Minimap, settings, audio and accessibility | Relevant public map/entity data and saved client preferences |
-
-Use definition IDs to connect presentation to gameplay: an equipped item ID
-selects a visual model in the client while the server calculates its effects.
-Damage is decided by the server; the client uses authoritative results and
-action sequences to show animations, sounds, effects and numbers. Create a
-documented policy for permissible latency compensation and animation timing.
-
-Retain the debug panel and extend it with map/content version, chunk boundaries,
-navigation, entity counts, simulation time, subscription size and corrections.
-Inspect real scenes and screenshots through MCP as each visible feature lands.
-The developer bridges remain excluded from friend builds.
-
-## Server organization and world growth
-
-Keep the current single database for the first small world. Stable character IDs and account ownership now exist. Add explicit
-map/instance membership before introducing more maps.
-Split Rust code into movement, world, combat, inventory, progression and session
-modules as those responsibilities appear.
-
-Subscribe clients to the map and nearby entities they need. Enforce access to
-private inventories, quest state and hidden entities on the server; voluntary
-client query filtering alone is not authorization. Measure subscription updates,
-decode cost and bandwidth with the pinned native Godot SDK. SpacetimeDB provides
-filtered live row replication, but we design the scope and benchmark it:
-[subscriptions](https://spacetimedb.com/docs/clients/subscriptions/).
-
-Separate client chunk loading from authoritative map transfers. For a portal,
-the server checks access and destination, commits membership and a valid spawn,
-and keeps the character noninteractive while the client loads compatible
-content and applies destination subscriptions. Timeout/reconnect handling must
-leave exactly one character in one valid location.
-
-Schedule work for active simulation areas and avoid updating idle world state
-unnecessarily. Test a declared player/entity population and hardware target
-before choosing database partitioning. Multiple database instances would add
-character transfer and cross-instance party/trade coordination; use measured
-requirements to justify that architecture.
-
-## Milestones and completion evidence
-
-Each milestone includes client, server, content and two-client verification.
-Update bindings with every schema change and use disposable test databases.
-
-| Milestone | Deliverable | Evidence required |
-| --- | --- | --- |
-| 1. Scope and representative map section | Fixed reference release, content manifest, one converted area and matching server geometry | Landmark/scale comparison, both clients see each other move, server rejects travel through blockers |
-| 2. Complete starter map | Chunk loading, navigation, interaction locations and map diagnostics | No visible chunk gaps or collision disagreement; measured loading, memory and frame times |
-| 3. Persistent playable loop | Character ownership, one class, a few enemies, combat, loot, inventory/equipment and leveling | Both players fight and receive valid rewards; duplicate actions cannot duplicate items; reconnect/server restart retains progress |
-| 4. Complete starter experience | NPC shop, quest, skills, death/respawn, minimap and useful settings | Both players complete the same defined progression route and use all relevant UI |
-| 5. Second map and instances | Portal transition, destination loading and membership handling | Two players transfer and return; interrupted loading/reconnect leaves valid presence and position |
-| 6. Broader classic content | Remaining selected classes, items, enemies, quests, maps and social systems | Feature checklist and comparisons against the chosen reference; representative fixtures for each new asset category |
-| 7. Release operation | Stable hosting, client updates, version compatibility, administration, backups and recovery | Declared load target met, recovery exercised, exported clients tested on the intended network/platform |
-
-Do a basic load probe before broad content expansion and repeat it when new
-systems materially change cost. The operational milestone formalizes the
-release target rather than postponing all performance work until the end.
-
-The implementation covers parts of milestones 1–3 and a development deployment
-from milestone 7: Yongan import/bake, one warrior, authoritative movement, one
-procedural enemy, damage/death/respawn and a gold reward. That subset does not
-complete any broad milestone merely because SDK tests pass. Public browser/Linux
-multiplayer, combat and normal-release checks pass for the preceding Yongan
-slice. The inventory/equipment slice is implemented and verified: once-only
-sword/potions, bounded bag cells/stacks, server equipment
-bonus, healing, item drops and original UI controls. Its 56 live inventory checks
-and additive data-preservation check pass, as do 39 public browser/Linux checks
-for the original HUD and inventory. The added map/chat panels now pass native,
-loopback and public browser checks with exact-pixel export audits. The account and character entry implementation now needs full exported-client
-verification before equipment and progression expansion resumes.
+This is a large multi-phase rebuild. Estimate from measured representative
+conversion and implementation throughput, then multiply by audited content
+families and account for integration/unknown-format risk. A source inventory
+alone cannot support a credible promise of a full game in a few weeks.
 
 ## Account-to-world milestone
 
-The account entry slice is implemented and verified through local account/server
-integration, public deployment/HTTPS and exported browser/Linux clients,
-including real timed token refresh.
-Better Auth **1.7.3** provides minimal username/password
-registration and login, remembered sessions, logout and RS256 game JWTs. The
-service, dependencies, HTTP tests and container are pinned. Registration also
-collects email; verification mail, recovery, account dashboards and social
-login are deferred. See [auth](../auth/README.md).
+The preceding milestone is implemented and remains the working baseline:
+username/password accounts, original entry artwork, four persistent slots,
+one male Warrior in Shinsoo/Yongan, character selection, entry, switching,
+logout and timed session renewal. Recorded checks are 58 local headless account
+checks and 103 rendered Chrome/Linux checks both locally and publicly.
+The public account database is `mt2-accounts-v3`; the old guest database is
+retained without migration. This planning work changes no deployment/database.
 
-The original server/channel, login, empire, creation and selection artwork is
-imported with the existing fixture pipeline: 196 UI PNGs and one stitched map
-from 260 pinned source files. Intro Python files are layout/behavior references,
-not copied implementations. One real server/channel is advertised using auth
-and game availability probes. Four character slots support a male warrior in
-Shinsoo/Yongan; other empires/classes/sex/shape options stay disabled. The 3D
-preview uses the current warrior and wait animation. Full intro animation,
-font and original behavior parity remain outside this slice.
-
-Accounts, character IDs and controlling sockets are separate. The server owns
-slot/name rules, selection and entry; account roster/state and inventory reads
-use server RLS. Gameplay reducers resolve the active character through the
-validated account session. Lobby subscriptions precede world/map loading;
-leaving returns to selection, and character switching preserves per-character
-inventory and cooldowns. One account cannot have two controlling connections.
-Game JWTs expire after five minutes; the client requests a replacement after
-four minutes and reconnects its selected character. Remembered account sessions
-last up to 30 days; logout clears local credentials and revokes the session.
-
-The public rollout uses a new `mt2-accounts-v3` database and preserves the old
-`mt2-yongan-v2` guest database. There is no guest offer/claim or migration flow;
-the proxy will expose only the account database. Auth accounts and signing keys
-remain persistent. Local development retains its tested database name, with
-the public database selected explicitly for exports and deployment. Legacy
-guest checks require the separate compile-time test opt-in and are not enabled
-in public account builds.
-
-Verification covers two real accounts creating/selecting characters, entering
-the same Yongan world, rendering each other and moving. Login, switching,
-logout, reconnect, JWT refresh and duplicate-session checks preserve valid
-presence and ownership. Tests cover account-filtered read privacy, rejected
-character/item writes, slot/name limits and the implemented native/browser UI.
-Two actual accounts pass 58 headless HTTP/Godot/SpacetimeDB checks, including
-raw subscription privacy, four slots, foreign-action rejection, both movement
-directions, switching and reconnect. Four auth HTTP suites and container
-persistence checks also pass. The isolated intro UI suite passes 27 native
-checks, and the main UI passes 19 including menu centering/resizing/clicks.
-Native editor character selection, entry with two starter item instances and
-return to the lobby have been observed. Both test exports verify all 197 UI/map
-images against source-pixel hashes. Public deployment completed without deleting
-guest data, and HTTPS availability/manifest checks pass. Local and public
-Chrome/Linux runs each pass 103 checks, including real four-minute refresh
-with unchanged identities and positions. Public player rows still include
-readable offline fields, and revocation of established reads at JWT expiry
-is not established; see [the privacy limits](architecture.md#accounts-and-application-contract).
-
-Next, implement visible weapon attachments, original enemy
-fixtures, combat feedback and leveling, followed by shops and starter quests.
-The full original map set, remaining classes and complete gameplay are not
-imported or verified. Hosting on port 8443 is a development deployment; load
-targets, complete recovery drills and broader platform verification remain work.
-Evidence is tracked in [distribution](distribution.md#verification-status).
+See [current-state.md](rebuild/current-state.md) for inspected evidence and
+limits, [architecture.md](architecture.md) for the implemented contract,
+[development.md](development.md) for runnable commands, and
+[distribution.md](distribution.md#verification-status) for deployment evidence.

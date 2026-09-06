@@ -24,6 +24,13 @@ flowchart LR
 SpacetimeDB provides transactions, persistence, identity and subscriptions.
 Movement, content validation, combat rules and reward ownership are project code.
 
+This page describes the implemented prototype. The
+[full-game design](rebuild/architecture-and-delivery.md) separately proposes
+module boundaries, state machines, modern replication/privacy contracts and
+delivery phases. Its [feature catalog](rebuild/feature-catalog.md) records the
+original-source requirements and dependencies; proposed boundaries are not
+implemented capabilities.
+
 ## Shared map content
 
 The [map pipeline](map-import.md) resolves original source records at pinned

@@ -1,0 +1,213 @@
+{
+  "inspected_at": "2026-09-06",
+  "project_revision": "d1b3bbdea24240e03e5e325549eb5c4bd01a377b",
+  "scope": "Owned source inventory and existence/hashes of recorded reports; not a new test run.",
+  "files_sha256": {
+    "server/src/combat.rs": "74e4e378e99d502d9c14c025d7e8b3e696d66ea3760e760ec1393938683f6064",
+    "server/src/lib.rs": "3c05ca4dc22886c02a80948b5d93aacd8b028333735b492274ed4a3fb6ad8d77",
+    "server/src/inventory.rs": "da813e54b519f9a282bf9b03b3c8927273a67cf80aa72aff5eca6c90c8a4e932",
+    "server/src/content.rs": "0c5bdfa081797114807e002f00c4283ca94c1cec6724302ac1e9652127fb88a4",
+    "server/src/accounts.rs": "0daf3a5b67ea3945a9dff44af27d9af8c2c30c64ec4e0eea9f78511ad072e9c1",
+    "server/src/movement.rs": "71b724217da8a7ce4d84f4b8d6b116bd652c4393c23eaeed98976701eae9dba4",
+    "client/scripts/warrior_preview.gd": "515c0ef38a14fc6e4794f43b6244d07cbd14f7a7f6945dc8300d8e2134a8a76a",
+    "client/scripts/character_preview.gd": "677d372649f977923c3d624dc1ae0b50db15d79409ed23e4e16104796150e55c",
+    "client/scripts/dev_capture.gd": "f4860986abea7f90e6c44cb7f3d3ded387f418cfc6aa9c0ce5ee19ad57d98379",
+    "client/scripts/map_preview.gd": "0013b1e27688af3458a0aefba44f2cbd7464c7dfaf543ca5a3b500df800ab0b1",
+    "client/scripts/main.gd": "17c295aa9b369d1f88835d6e3f83942c5777cbca79c814707061fe7fda090f3b",
+    "client/scripts/world/world_stream.gd": "39965bac5a455522c3f457fbbc56ff29f7a47e80dce749b87f0db54c34a5dbbe",
+    "client/scripts/world/classic_minimap.gd": "d509754d29183dba755f023acd412b6512a6365230ca27a653ca3efc8f6d6573",
+    "client/scripts/world/dev_map.gd": "ba2883ed726a41bd2ec6ca92c52a7b1e7d18ef25a57fea4a3f00b95a9f219d8d",
+    "client/scripts/camera/orbit_camera.gd": "b4567f8548e3ed30a77f302ff2c2c0a003841c933c7fe0aaddedc9f783619e71",
+    "client/scripts/net/account_flow.gd": "4783ca0722a1f64244366941fd72efd9463c4d35dd0904c52cb2b04ed70574bb",
+    "client/scripts/net/account_auth.gd": "13b91d3ea56c593291129849969f20da6dace967ea0cdd5fccafd3e6d19ab3dd",
+    "client/scripts/net/game_connection.gd": "769eec9c1b5fee2b02a783bb2a27f972c08001c765fdae987705dcc605862cbe",
+    "client/scripts/net/generate_bindings.gd": "183b5ab7c159a8ff27657217dffa0d165df7e0e43f403fa113e8d220e97ceab3",
+    "client/scripts/ui/classic_map_panel.gd": "0a0318d196f18e38a573ebb4c409928378274d3f08635cc4455fe18c519c5be3",
+    "client/scripts/ui/classic_tooltip.gd": "951e84a13b6da3b5aeb0cc6be0347a1eb1bd77e279a81dcc01db135af62b97b7",
+    "client/scripts/ui/classic_intro_preview.gd": "7a3cecb6282e080875e5620ed4e838777c75aba0aa7f011914bf36832b9a7c94",
+    "client/scripts/ui/classic_chat.gd": "a8a71f230b1b21e0de10ca6031df078e25ae71eb788e663803bdd35276827c29",
+    "client/scripts/ui/classic_art.gd": "ee911195ee3cd41e1a506ef3e0321bdc49d5c12672db83980d67897b685e9605",
+    "client/scripts/ui/classic_inventory.gd": "d6da35790498fe5c0b0fe157a8cb5b3b582395434ef3ef227dda16f313b367c6",
+    "client/scripts/ui/classic_intro.gd": "2f81d5d56f8b4b549ae97ec3ce501c8e88bd1f84825e9147c9b869ba500b9e59",
+    "client/scripts/ui/classic_taskbar.gd": "71b98e51c4fb8a785f0f02eb0610a6a6f73bc7a95fb6b2a749ca325469d70978",
+    "client/scripts/ui/dev_hud.gd": "df43455c0eb9a30fbf0ce14626b1627e30e7fc794aef470ac13b48d34a4ef7f7",
+    "client/scripts/ui/classic_slot.gd": "42eb92ee0d32e7e49015b12826a0e27ed1f40cc75bae642d6a5670187e992d19",
+    "client/scripts/actors/player_actor.gd": "1f1ba13432b5c464391d20716d8b8b84860da5a127e8e443546e269419327e3a",
+    "client/scripts/actors/pve_actor.gd": "cfbff1b5be6cd70a495a752cf2b439eb9b7367da32f320c4b357189769d32dc2",
+    "auth/src/main.ts": "dbda490d7b87af9bdb80a36b4bd8bc5345a193d79ccd32193539d3fec2b835cc",
+    "auth/src/config.ts": "7b7514a37cc8c2482450d7b70c3dd89c99ffd6c6a19e6c30d92113e6b6970954",
+    "auth/src/server.ts": "5cd40cb6ae43052f3e363bba6ac32faa04aec7ffde569ba440a7e1a90fa8eab1",
+    "auth/src/auth.ts": "aebf5075e0f259c1d76cd0b385944d732a297933c7704e42addf86fdb62a41b5",
+    "tools/import_metin_map.py": "c9ff7051ef952909e16a9226ad6adf1f3680309ddefd62f0ef24afdde290da8b",
+    "tools/test_browser.py": "d8722f7d15a10f451419e0ca12da785b6bd796cfb7b23cf34dfd8959287423d8",
+    "tools/generate_bindings.py": "7d326a88495e64132bb1d20010a07077f16df3ba5623fc8381fb3594fd612381",
+    "tools/playtest_gateway.py": "d39576a900429e1db8bbf7944925019f98da0f3b0c3f4e2fe1da005fef84ae04",
+    "tools/blender_map_convert.py": "bf38b587924b19722822afe272e4b214077ea845c5acd87e30e9b26d751fc016",
+    "tools/import_metin_intro.py": "2227df886e1d045965d279014c8633f103db518a553c37f3bf9ec09f9e1678c2",
+    "tools/test_classic_ui.py": "c73ee1a17a21ab7acf0167677806889a38e7e2bcffb475dc79ec3098016d1039",
+    "tools/metin_map_data.py": "395985e85a0172b63acca525a36e5ddb0e787c8bad1cfd104856f553cec7a46d",
+    "tools/export_client.py": "1e837afc717c86e02415203313a5faab7c037c277b4a36456306dab1782d6508",
+    "tools/check_client.py": "1cedcd77ba0b6db4330b9ff0cf8683dde395c2582e6e25e3a370b790a0ce185a",
+    "tools/metin_collision.py": "3d148abb1fcaf10f20dc34deb7b6faea710a1c554450e0b352ef66b0fccd4726",
+    "tools/check_world_packs.gd": "eb593a029fd2a6c0781071794aa89109fa993e7cd7e4a2fd3f07249c7880239f",
+    "tools/share_server.py": "08f156b014b46e9608d8cef6c7e0b22d216158794d9d1f9066b292e0f44fb1dd",
+    "tools/test_browser_inventory.py": "6193cae91e98eddaf515288e5ee85239845f504ac5b4e7cb08bebf6bd5e19fff",
+    "tools/serve_local.mjs": "565a8d88f1be3fd8fda6c86e9a081dfacfa80101d919a97766a4c0133988a694",
+    "tools/metin_archive.py": "af0de92f3c6a442a286fc6fd5fb0542b421fccef718a9dd5b9d8134e16f5a6fb",
+    "tools/bake_yongan.py": "d905f20c485a293e307b34799a60c690eed4871fd16e683f6f7eee5178d96c9c",
+    "tools/dev.py": "ec09d40f112826533570d54740d8474b642ed2902242f2ffaf2f613f13d3c399",
+    "tools/fetch_test_assets.py": "49e7f55eb51da8993176c63626c28bf378b002476e00e59656044e091842a6b1",
+    "tools/blender_import_probe.py": "0b3ce9578824fbd7c95ea977682c9a08c7d6bfcbf4dc60fa43edd4a3b987bd8e",
+    "tools/test_accounts.py": "1abb9214786f8ab4f9ac7cfd440c5f14d96edaad135e0a87cb06c19c4a73ae73",
+    "tools/test_browser_panels.py": "9bf49afc0707fb5927751fd45f5512565fc43d5bac73feeba98e3a2c16152095",
+    "tools/gdtoolkit_local.py": "931c557cd4121800547614f556d1b95c3d644a6944e22f0ff158be861cf912d0",
+    "tools/test_browser_accounts.py": "422bf1e16940380f346f26d0eceaef978272b217893342ff294a756eb36f6a0f",
+    "tools/export_playable.py": "5dc681ed5ccfd33c7c16dc201119d750777a5e89ba81693585e34c3166110ee0",
+    "tools/import_metin_ui.py": "b7eb948718510c1a284931dbf0439ae0e3b5a06bbc12a46ce70d8da8c7986a34",
+    "tools/deploy.py": "b6f1fef55bf2181a6fc13a3403b58d260a4668748ea8589f0b5177278010f81d",
+    "tools/godot_mcp_check.py": "e01ab82041f5d7422d4c4e7c2d758de07cfa6a73ec95ac5e01ac35f84b539f87",
+    "tools/metin_gr2_adapter.py": "eaaa68a738af82643b66c933c3db9be2b1a484999463899331e1a1b7e7e922e0",
+    "tools/check_world_packs.py": "b3fe0f755132c6f538682350fa1031a0edc78a6b8ba1eba22ff4d5e614299e9e",
+    "tools/pack_world.gd": "d830222382c75b398ba809116f180d4b2f63133e0ce6092fc2a96452cac8759b",
+    "tools/blender_finish_import.py": "298d8bee3fc6057283abb33187306c43f301a56952bdc271895ab8efe829b56b",
+    "tools/check_metin_map.gd": "00803767d2e7c85840b6913632c74d662aaad4e90bbd2dd848ac9f86f33d8eb1",
+    "tools/build_metin_map.gd": "07991dc720c3b12c3fe2761760b9241eb5ba253f061fe8fbc4c1809a9ac82c34",
+    "tools/test_multiplayer.py": "47ffe112f8a39186bfa111553470a778144379ab569eec6cd00025f08cb4e407"
+  },
+  "server_registry": [
+    {
+      "path": "server/src/accounts.rs",
+      "tables": [
+        "account_character",
+        "account_state",
+        "account_control",
+        "inventory_access"
+      ],
+      "reducers": [
+        "open_account",
+        "create_character",
+        "select_character",
+        "enter_selected_character",
+        "leave_world"
+      ]
+    },
+    {
+      "path": "server/src/combat.rs",
+      "tables": [
+        "monster",
+        "monster_clock",
+        "loot"
+      ],
+      "reducers": [
+        "pickup_loot"
+      ]
+    },
+    {
+      "path": "server/src/content.rs",
+      "tables": [],
+      "reducers": []
+    },
+    {
+      "path": "server/src/inventory.rs",
+      "tables": [
+        "inventory_item",
+        "inventory_state",
+        "item_drop"
+      ],
+      "reducers": [
+        "move_item",
+        "equip_item",
+        "unequip_item",
+        "use_item",
+        "pickup_item_drop"
+      ]
+    },
+    {
+      "path": "server/src/lib.rs",
+      "tables": [
+        "player",
+        "obstacle",
+        "world_info",
+        "chat_message",
+        "session",
+        "controller",
+        "simulation_clock",
+        "tick_schedule"
+      ],
+      "reducers": [
+        "init",
+        "client_connected",
+        "client_disconnected",
+        "enter_world",
+        "set_move_input",
+        "move_to",
+        "stop_moving",
+        "perform_attack",
+        "send_chat",
+        "simulate"
+      ]
+    },
+    {
+      "path": "server/src/movement.rs",
+      "tables": [],
+      "reducers": []
+    }
+  ],
+  "report_evidence": [
+    {
+      "path": ".local/accounts/integration-report.json",
+      "exists": true,
+      "sha256": "96a7ef5b9cff787e70011fab4bb6f2418294e3bb5c533645ea75a9af302762e4",
+      "top_level_keys": [
+        "checks",
+        "client_states",
+        "database",
+        "passed",
+        "reducer_errors_observed"
+      ]
+    },
+    {
+      "path": ".local/browser-accounts/20260906-193823/report.json",
+      "exists": true,
+      "sha256": "a060cfe79357d348844de4aa14eee21189e829f60edd28efadd4a4c9feb15448",
+      "top_level_keys": [
+        "passed",
+        "failure",
+        "url",
+        "database",
+        "checks",
+        "samples",
+        "desktop_final",
+        "browser_errors"
+      ]
+    },
+    {
+      "path": ".local/browser-accounts/20260906-194508/report.json",
+      "exists": true,
+      "sha256": "b75c7a94245c8cada0a35dcd3d4f04794f02945aaac02a528235051733220f16",
+      "top_level_keys": [
+        "passed",
+        "failure",
+        "url",
+        "database",
+        "checks",
+        "samples",
+        "desktop_final",
+        "browser_errors"
+      ]
+    },
+    {
+      "path": ".local/accounts/public-http-report.json",
+      "exists": true,
+      "sha256": "6a7dc797761cb164b4f82fbe0691366c2782c658bea549b36fef48aaf0191735",
+      "top_level_keys": [
+        "/health",
+        "/auth/health",
+        "/auth/.well-known/openid-configuration",
+        "/auth/jwks",
+        "/v1/database/mt2-accounts-v3/identity",
+        "/build-manifest.json"
+      ]
+    }
+  ]
+}
