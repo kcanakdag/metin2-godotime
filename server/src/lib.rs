@@ -7,6 +7,7 @@ mod content;
 mod inventory;
 mod movement;
 mod progression;
+mod targeting;
 
 mod definitions {
     include!(concat!(env!("OUT_DIR"), "/trusted_definitions.rs"));
@@ -107,6 +108,12 @@ pub struct Controller {
     pub pending_attack_hit_until_us: i64,
     pub pending_attack_damage: u16,
     pub pending_attack_range: f32,
+    pub pending_attack_target_revision: u64,
+    pub pending_attack_can_select_target: bool,
+    pub combat_target_id: u32,
+    pub combat_target_life_sequence: u32,
+    pub combat_target_change_not_before_us: i64,
+    pub combat_target_revision: u64,
     pub next_chat_us: i64,
 }
 
@@ -128,7 +135,7 @@ pub struct TickSchedule {
 fn compiled_world_info() -> WorldInfo {
     WorldInfo {
         id: 1,
-        protocol_version: 5,
+        protocol_version: 6,
         map_name: if content::YONGAN {
             "Yongan"
         } else {
@@ -142,7 +149,12 @@ fn compiled_world_info() -> WorldInfo {
         }
         .into(),
         tick_ms: TICK_MS,
-        content_hash: content::HASH.into(),
+        content_hash: if definitions::COMBAT_FIXTURE_CONTENT_HASH.is_empty() {
+            content::HASH
+        } else {
+            definitions::COMBAT_FIXTURE_CONTENT_HASH
+        }
+        .into(),
         definition_profile: definitions::PROFILE_ID.into(),
         definition_hash: definitions::DEFINITION_HASH.into(),
         half_size: HALF_SIZE,
@@ -298,6 +310,8 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
         controller.direction_z = 0.0;
         controller.mode = 0;
         controller.last_input_us = now_us(ctx);
+        targeting::clear_character_target(ctx, &mut controller)
+            .unwrap_or_else(|error| panic!("cannot clear re-entered character target: {error}"));
         ctx.db.controller().identity().update(controller);
     } else {
         ctx.db.controller().insert(Controller {
@@ -317,6 +331,12 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
             pending_attack_hit_until_us: 0,
             pending_attack_damage: 0,
             pending_attack_range: 0.0,
+            pending_attack_target_revision: 0,
+            pending_attack_can_select_target: false,
+            combat_target_id: 0,
+            combat_target_life_sequence: 0,
+            combat_target_change_not_before_us: 0,
+            combat_target_revision: 0,
             next_chat_us: 0,
         });
     }
@@ -375,7 +395,7 @@ pub fn perform_attack(ctx: &ReducerContext) -> Result<(), String> {
         return Err("Attack is cooling down.".into());
     }
     let character = accounts::selected_character(ctx)?;
-    let plan = combat::plan_player_attack(ctx, character);
+    let plan = combat::plan_player_attack(ctx, character, &controller);
     controller.mode = 0;
     controller.direction_x = 0.0;
     controller.direction_z = 0.0;
@@ -399,6 +419,8 @@ pub fn perform_attack(ctx: &ReducerContext) -> Result<(), String> {
     } else {
         plan.definition.range_m
     };
+    controller.pending_attack_target_revision = controller.combat_target_revision;
+    controller.pending_attack_can_select_target = plan.can_select_target;
     ctx.db.controller().identity().update(controller);
     let mut player = ctx
         .db

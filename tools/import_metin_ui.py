@@ -43,6 +43,7 @@ STATUS_ENGLISH_WINDOW_ASSETS = (
     "tab_3.sub",
     "tab_4.sub",
 )
+TARGET_WINDOW_ASSETS = ("pattern/gauge_red.tga",)
 REFERENCES = (
     "bin/pack/locale_en/locale/en/ui/taskbar.py",
     "bin/pack/locale_en/locale/en/ui/inventorywindow.py",
@@ -154,6 +155,7 @@ def selected_assets():
     return sorted(
         {UI_ROOT + name for name in names}
         | {UI_ROOT + name for name in STATUS_WINDOW_ASSETS}
+        | {UI_ROOT + name for name in TARGET_WINDOW_ASSETS}
         | {STATUS_ENGLISH_WINDOW_ROOT + name for name in STATUS_ENGLISH_WINDOW_ASSETS}
         | {"icon/item/00010.tga", "icon/item/27001.tga", "icon/item/27002.tga"}
         | set(selected_intro_assets())

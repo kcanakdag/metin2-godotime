@@ -10,7 +10,7 @@ use crate::progression::{
 };
 use spacetimedb::{ConnectionId, Filter, Identity, ReducerContext, Table, Timestamp};
 
-const PROTOCOL_VERSION: u32 = 5;
+const PROTOCOL_VERSION: u32 = 6;
 const RATE_INTERVAL_US: i64 = 1_000_000;
 const FEEDBACK_LIMIT: usize = 32;
 const REQUEST_ID_LEN: usize = 32;

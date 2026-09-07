@@ -66,7 +66,7 @@ with no multiplayer connection.
 
 Without the Cargo feature, the server uses the small flat training ground with
 five box obstacles. Make enables Yongan by default; raw Cargo has no default
-feature. Both builds expose the same protocol-5 schema.
+feature. Both normal builds expose the same protocol-6 schema.
 
 ## Networking and runtime boundaries
 
@@ -79,7 +79,7 @@ The socket subprotocol is `v3.bsatn.spacetimedb`. In the pinned server,
 coalesces messages using the
 [v2 binary schema](https://github.com/clockworklabs/SpacetimeDB/blob/v2.8.3/crates/client-api-messages/src/websocket/v2.rs).
 This transport version is separate from application
-`world_info.protocol_version = 5`, checked before joining.
+`world_info.protocol_version = 6`, checked before joining.
 
 Decoding runs on the main thread, with no compression and
 `confirmed_reads = false`. Cached tables require primary keys; Brotli is
@@ -94,6 +94,7 @@ The standard engine and pure GDScript path support Web without a .NET dependency
 | `server/src/movement.rs` | Direction, speed and training-ground sweep/sliding rules |
 | `server/src/content.rs` | Trusted terrain, map bounds, building/water blocking and elevated surfaces |
 | `server/src/combat.rs` | Monster simulation, attacks, health, death/respawn and loot |
+| `server/src/targeting.rs` | Private selected-target state, owner-only projection, churn limits and cleanup |
 | `server/src/inventory.rs` | Item ownership, grid placement, equipment, consumables and item drops |
 | `server/src/progression.rs` | Source-backed Warrior stats, experience quarters, levels and stat allocation |
 | `server/src/admin.rs` | Default-deny progression capabilities, private feedback, receipts and audit records |
@@ -141,12 +142,13 @@ names confer no ownership. `GameConnection.account_identity` and
 | `account_state` | Account Identity primary key; selected-character Identity (ZERO when unset), in-world flag; owner-only RLS |
 | `player` | Public character Identity primary key; name, X/Y/Z, heading, activity/online, action and life sequences, health/max health, gold, respawn and current-action timestamps; offline rows also readable |
 | `player_appearance` | Presence-only character projection with empire, class, sex and equipped weapon vnum; inserted on entry and removed on leave/expiry/disconnect |
-| `monster` | Numeric ID; Wild Dog definition identity/model/motion/action, position, heading, health, activity, action and life sequences, respawn and current-action timestamps |
+| `monster` | Numeric ID; Wild Dog definition identity/model/motion/action and authoritative level, position, heading, health, activity, action and life sequences, respawn and current-action timestamps |
 | `loot` | Numeric ID; position, gold, owner character, reservation and expiry |
 | `inventory_access` | Character-to-account mapping; public with a strict account-only read filter |
 | `inventory_item` | Numeric ID; owner character, server-assigned account, vnum, count, bag cell, equipped flag; account-owned rows only through RLS |
 | `item_drop` | Numeric ID; position, vnum/count, owner character, reservation and expiry |
 | `character_progression` | Character Identity primary key; owner account, level/current and next experience, quarter step, unspent points, base stats, random HP/SP growth and SP totals; owner-only RLS |
+| `combat_target_view` | Character Identity primary key; owner account and selected monster ID/life sequence only; owner-only RLS |
 | `command_feedback` | Bounded account-private command result stream ordered by server ID; owner-only RLS |
 | `world_info` | Protocol, map identity/content hash, trusted action profile/hash, tick interval and legacy half-size |
 | `simulation_clock` | Public authoritative tick timestamp used to seek late-joined action clips |
@@ -169,7 +171,8 @@ world has separate historical inventory evidence. See
 [verification evidence](distribution.md#verification-status).
 
 Read privacy covers account-to-character mappings, account state, inventory
-access mappings, inventory rows, character progression and command feedback.
+access mappings, inventory rows, character progression, selected combat targets
+and command feedback.
 Private operator receipts, rate state, capabilities, audits and monster-damage
 ledgers are not product subscriptions. The public `player` table has no
 server-enforced online-only filter: other authenticated accounts can read offline
@@ -196,6 +199,7 @@ Yongan bounds come from baked content rather than the legacy `half_size` field.
 | `leave_world()` | Stop movement, remove online presence and return to selection |
 | `set_move_input(dx, dz)`, `move_to(x, z)`, `stop_moving()` | Validate finite/ranged movement intents and trusted collision |
 | `perform_attack()` | Enforce cooldown, stop movement and damage an eligible nearby enemy |
+| `select_combat_target(target_id, target_life_sequence)`, `clear_combat_target()` | Select an exact live monster generation or clear presentation without accepting client position, health, name or level |
 | `pickup_loot(id)`, `pickup_item_drop(id)` | Validate owner/reservation, range, expiry and capacity; grant rewards atomically |
 | `move_item`, `equip_item`, `unequip_item`, `use_item` | Validate the active character's ownership, placement and consumable rules |
 | `allocate_stat(character_id, stat_code)` | Require the currently selected in-world character, ownership, live controller and an unspent point; accept only `st`, `ht`, `dx` or `iq` |
@@ -204,7 +208,7 @@ Yongan bounds come from baked content rather than the legacy `half_size` field.
 | `send_chat(message)` | Validate 1–160 printable characters, one message per second, retain latest 100 |
 
 Private `session` and `account_control` tables bind authenticated accounts to
-sockets. Character-keyed controllers retain attack/chat deadlines across
+sockets. Character-keyed controllers retain attack/chat and target-change deadlines across
 switching and reconnect. A second socket cannot control the same account or
 evict its current character on disconnect. Expired account leases stop active
 presence. Scheduled simulation accepts only the database scheduler's identity;
@@ -215,7 +219,7 @@ only for disposable legacy tests with compile-time `MT2_ALLOW_GUESTS=1`.
 The current public P1 development route uses `mt2-p1-v4`; the preceding
 `mt2-accounts-v3` account database and old `mt2-yongan-v2` guest database remain
 stored without exposing their gameplay routes. No guest claim or migration API
-is implemented. Protocol 5 progression development uses a new database until a
+is implemented. Protocol 6 target development uses a new database until a
 deliberate migration and compatible public client are ready. Deployment
 preserves existing data.
 
@@ -258,6 +262,75 @@ consuming a queued hit, the server reads the source's current pending action,
 life generation and controller state again. An earlier death, leave, respawn or
 replacement action therefore cancels a later copied event, while valid events
 retain their expiry and exactly-once consumption rules.
+
+Protocol 6 adds bounded monster targeting without changing the argument-free
+attack intent. The private controller stores the exact monster ID/life pair, a
+checked 64-bit revision and a checked server-time change deadline. The client
+receives only its `combat_target_view` row. The public monster row supplies the
+authoritative level used by the target board; the client does not hardcode
+`Lv.1`.
+
+Selecting the same live target succeeds and extends the one-second deadline.
+Changing to another target before that deadline rejects. Clearing succeeds
+immediately and increments the revision, but does not shorten the deadline, so
+clear/reselect and reconnect cannot bypass the churn limit. Missing or stale
+monster generations reject without consuming the deadline. Death, target life
+change, character switching, leave, disconnect and re-entry clear the private
+projection while preserving any future deadline held by the controller.
+
+An explicit target locks the next accepted swing to that exact monster
+generation even when another enemy is nearer. Authoritative range, height and
+path checks still run at the captured hit time; an out-of-range selected target
+misses without falling back. With no selected target, the established nearest
+eligible attack remains available. A successful fallback hit publishes that
+victim only as a best-effort presentation update when the target is still
+clear, the captured revision still matches and the deadline has elapsed.
+Failure of that presentation update never reverses valid damage. Equipment,
+action, target generation, damage and range remain captured at swing start;
+selecting or clearing during the swing changes later attacks only.
+
+Normal builds retain one map-native Wild Dog. The server-only
+`MT2_COMBAT_TEST_FIXTURE=dual-wild-dog-v1` selector compiles the reviewed
+training fixture with two copies of the same definition at separate trusted
+homes and advertises `training-v2-dual-wild-dog-v1`. Each monster's AI leash,
+return and respawn use its own private trusted home. Any other selector fails,
+and the dual fixture is rejected with `yongan`; an ordinary all-features build
+with no selector remains valid. The fixture is only for disposable two-client
+target-locking QA and adds no spawn reducer or player privilege.
+
+The accepted local default-deny run in
+`.local/p2-target/targets-root-reconnect-fixed-20260907.json` passed all 53
+checks against the dual fixture. Two authenticated clients proved owner privacy,
+far-target locking with a nearer in-range candidate, fallback presentation,
+clear/select during a pending hit, the target deadline across a sub-850 ms
+same-JWT reconnect, natural target respawn and both target-life and owner-death
+cleanup. That focused headless run does not cover a real JWT refresh timer or
+the full `AccountFlow`; the separate exported progression run covers those
+lifecycle paths. Protocol 6 remains local and does not implement queued combos
+or replace the public P1 route.
+
+The protocol-6 client derives its selected monster only from the owner-matching
+private projection and requires the same public monster ID and life generation
+before showing the target board or attached target effect. The board uses the
+public authoritative level, name and health. A ray-verified actor click sends
+selection without moving; a ground click and WASD preserve the accepted target,
+and the board close sends clear without movement. Space retains the established
+no-selection attack behavior and uses the exact accepted target when one exists.
+Pointer selection without automatic chase is an intentional interim boundary.
+Hover and accepted-target visuals are distinct source-derived effects attached
+to the exact actor generation; death or a new life detaches both, while an
+accepted target can survive temporary stream visibility changes. Actual
+exported Web/Linux verification passes 174 checks in
+`.local/p2-target/browser-root-final-20260907/report.json`. The bounded run uses
+real canvas input and the native probe's fixed input allowlist, kills one Wild
+Dog life with four ordinary 25-damage attacks, observes its production respawn
+in 11.946 seconds, and covers privacy, target churn, movement, death/new-life
+cleanup, character/account lifecycle and both real refresh timers. This remains
+local instrumented evidence; it does not qualify the public route, Windows, an
+original-client visual comparison or queued combos.
+The root acceptance record in `.local/p2-target/root-acceptance-review.json`
+binds the 175 unchanged client sources, 17 server source hashes, three module
+artifacts and both accepted instrumented PCKs.
 
 The P1 compiler produces a client presentation manifest and a separate trusted
 server action artifact from the same selected profile. The manifest identifies
@@ -348,12 +421,12 @@ ordinary kills and 20 actual Space attacks, exact +15 rewards, the first
 four-minute refresh timers, and clean browser/native engine results. Privileged
 operator success and an explicit
 selection-change replay assertion also remain pending with the unpublished local
-bootstrap fixture. Protocol 5 has not replaced the public P1 route.
+bootstrap fixture. Protocol 6 has not replaced the public P1 route.
 
 ## Inventory and original UI
 
 Inventory retains character-keyed `Player`, `Monster` and `Loot` state and adds
-a server-assigned account field to item rows under application protocol 5.
+a server-assigned account field to item rows under the current application protocol.
 Clients require the account tables, reducers and regenerated bindings. Publish
 the matching module before running the client; older schemas cannot satisfy
 its subscriptions. This milestone creates a separate public account database;
@@ -369,7 +442,8 @@ cannot wrap across a page boundary; the server checks every occupied cell.
 Potions stack to 200, swords to one. The equipment slot uses cell 255 as a
 server sentinel; its original artwork is 32 × 96 pixels, while the sword's
 32 × 64 icon still occupies only two bag cells. Equipping grants the server
-damage bonus without yet adding a 3D sword attachment to the warrior.
+damage bonus and projects the equipped vnum through public appearance state to
+the generated 3D sword attachment on the Warrior.
 
 A red potion heals up to 40 HP with a one-second cooldown. Full-health use,
 dead-player use, wrong ownership and unsupported item types fail without
@@ -381,8 +455,8 @@ equipment and cooldown state survive death/reconnect; there is no player-driven
 item deletion, trading or arbitrary item/currency grant endpoint.
 
 The UI uses selected original raster artwork converted by
-`tools/import_metin_ui.py`: 224 UI images and one Yongan map assembled from 20
-original minimap tiles, producing 225 images from 293 pinned source files.
+`tools/import_metin_ui.py`: 225 UI images and one Yongan map assembled from 20
+original minimap tiles, producing 226 images from 294 pinned source files.
 Source resolution and alpha are preserved. Layout
 references guide the 176 × 565 inventory, 37-pixel taskbar, eight visible
 quickslots and minimap. See [UI assets](ui-assets.md) for provenance and limits.

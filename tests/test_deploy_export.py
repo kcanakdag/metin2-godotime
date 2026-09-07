@@ -13,6 +13,8 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 import export_client  # noqa: E402
+import target_effect_export  # noqa: E402
+from PIL import Image  # noqa: E402
 
 import deploy  # noqa: E402
 
@@ -135,6 +137,8 @@ class PackExclusionTests(unittest.TestCase):
             "res://.env.production",
             "res://tests/multiplayer_smoke.gdc",
             "res://assets/imported/content/p0-warrior-dog/source.msa",
+            "res://assets/imported/effects/click_select.mde",
+            "res://assets/imported/effects/click_select.mse",
             "res://assets/imported/content/p0-warrior-dog/motion.msm",
             "res://assets/imported/content/p0-warrior-dog/skill.mss",
             "res://assets/imported/content/p0-warrior-dog/granny/model.bin",
@@ -155,6 +159,187 @@ class PackExclusionTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(RuntimeError, "no packaged test probe"):
             export_client.validate_pack_paths([], allow_test_probe=True)
+
+
+class TargetEffectExportTests(unittest.TestCase):
+    def make_project(self, root):
+        effect_root = root / target_effect_export.RELATIVE_ROOT
+        for relative in target_effect_export.MODEL_PATHS:
+            path = effect_root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(("model:" + relative).encode())
+        for index, relative in enumerate(target_effect_export.TEXTURE_PATHS):
+            path = effect_root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            height = 128 if "vertical" not in relative else 64
+            Image.new("RGBA", (128, height), (index, 14, 0, 255)).save(path)
+
+        files = {
+            relative: {
+                "bytes": (effect_root / relative).stat().st_size,
+                "sha256": target_effect_export.digest(effect_root / relative),
+            }
+            for relative in target_effect_export.FILE_PATHS
+        }
+        assets = []
+        for asset_id in target_effect_export.ASSET_IDS:
+            copy = "_copy" if asset_id == "click_glow_select" else ""
+            blend = (
+                "source_alpha_one"
+                if asset_id == "click_glow_select"
+                else "source_alpha_inverse_source_alpha"
+            )
+            surfaces = []
+            for index in range(2):
+                suffix = "_vertical" if index == 0 else ""
+                surfaces.append(
+                    {
+                        "index": index,
+                        "geometry": "Cylinder01" if index == 0 else "Plane01",
+                        "texture": f"textures/{asset_id}{suffix}{copy}.png",
+                        "tint_srgba8": [255, 14, 0, 255],
+                        "blend": blend,
+                        "unshaded": True,
+                        "cull_disabled": True,
+                        "depth_draw": False,
+                        "depth_test": True,
+                        "texture_repeat": True,
+                        "frame_alpha_u8": list(target_effect_export.FRAME_ALPHA[index]),
+                    }
+                )
+            assets.append({"id": asset_id, "model": f"models/{asset_id}.glb", "surfaces": surfaces})
+        document = {
+            "schema": "mt2spacetime.target-effect-catalog",
+            "schema_version": 1,
+            "resource_root": target_effect_export.RESOURCE_ROOT,
+            "files": files,
+            "playback": {
+                "frame_count": 11,
+                "frame_us": 20_000,
+                "loop": True,
+                "advance_boundary": "strict_remaining_lt_zero",
+                "max_advances_per_tick": 20,
+                "geometry_interpolation": "none",
+            },
+            "assets": assets,
+            "effects": [
+                {
+                    "id": "effect.actor.hover.v1",
+                    "attachment_space": "actor_local",
+                    "runtime_offset_m": [0.0, 0.0, 0.0],
+                    "layers": ["click_select"],
+                },
+                {
+                    "id": "effect.actor.target.v1",
+                    "attachment_space": "actor_local",
+                    "runtime_offset_m": [0.0, 0.0, 0.0],
+                    "layers": ["click_select", "click_glow_select"],
+                },
+            ],
+        }
+        document["content_hash"] = target_effect_export._canonical_hash(document)
+        catalog = effect_root / target_effect_export.CATALOG_NAME
+        catalog.write_text(json.dumps(document))
+        return document
+
+    def test_preflight_and_stage_use_only_authoritative_runtime_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_project(root)
+            effect_root = root / target_effect_export.RELATIVE_ROOT
+            source_texture = effect_root / target_effect_export.TEXTURE_PATHS[0]
+            derived = effect_root / "models/click_glow_select_click_glow_select_copy.png"
+            derived.write_bytes(source_texture.read_bytes())
+            derived.with_suffix(".png.import").write_text("editor generated")
+            expected = target_effect_export.target_effect_requirements(root)
+            stage = root / "stage"
+            (stage / target_effect_export.RELATIVE_ROOT).mkdir(parents=True)
+            (stage / target_effect_export.RELATIVE_ROOT / "untrusted.json").write_text("{}")
+            staged = target_effect_export.stage_target_effects(root, stage, expected)
+            self.assertEqual(staged, expected)
+            present = {
+                path.relative_to(stage / target_effect_export.RELATIVE_ROOT).as_posix()
+                for path in (stage / target_effect_export.RELATIVE_ROOT).rglob("*")
+                if path.is_file()
+            }
+            self.assertEqual(
+                present,
+                {
+                    target_effect_export.CATALOG_NAME,
+                    *target_effect_export.FILE_PATHS,
+                    *(relative + ".import" for relative in target_effect_export.TEXTURE_PATHS),
+                },
+            )
+
+    def test_preflight_rejects_reordered_catalog_and_unknown_payload(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            document = self.make_project(root)
+            effect_root = root / target_effect_export.RELATIVE_ROOT
+            document["files"] = dict(reversed(document["files"].items()))
+            document["content_hash"] = target_effect_export._canonical_hash(
+                {key: value for key, value in document.items() if key != "content_hash"}
+            )
+            (effect_root / target_effect_export.CATALOG_NAME).write_text(json.dumps(document))
+            with self.assertRaisesRegex(RuntimeError, "exactly two GLBs and four PNGs"):
+                target_effect_export.target_effect_requirements(root)
+
+            self.make_project(root)
+            (effect_root / "material-sidecar.json").write_text("{}")
+            with self.assertRaisesRegex(RuntimeError, "Unexpected target-effect installed payload"):
+                target_effect_export.target_effect_requirements(root)
+
+            document = self.make_project(root)
+            document["content_hash"] = "0" * 64
+            (effect_root / target_effect_export.CATALOG_NAME).write_text(json.dumps(document))
+            with self.assertRaisesRegex(RuntimeError, "content_hash does not match"):
+                target_effect_export.target_effect_requirements(root)
+
+    def test_preflight_rejects_changed_engine_extracted_pixels_and_stage_race(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_project(root)
+            expected = target_effect_export.target_effect_requirements(root)
+            effect_root = root / target_effect_export.RELATIVE_ROOT
+            derived = effect_root / "models/click_select_click_select.png"
+            Image.new("RGBA", (128, 128), (99, 0, 0, 255)).save(derived)
+            with self.assertRaisesRegex(RuntimeError, "Godot-extracted.*differs"):
+                target_effect_export.target_effect_requirements(root)
+
+            derived.unlink()
+            changed_model = effect_root / target_effect_export.MODEL_PATHS[0]
+            changed_model.write_bytes(b"changed")
+            document = json.loads((effect_root / target_effect_export.CATALOG_NAME).read_text())
+            document["files"][target_effect_export.MODEL_PATHS[0]] = {
+                "bytes": changed_model.stat().st_size,
+                "sha256": target_effect_export.digest(changed_model),
+            }
+            document["content_hash"] = target_effect_export._canonical_hash(
+                {key: value for key, value in document.items() if key != "content_hash"}
+            )
+            (effect_root / target_effect_export.CATALOG_NAME).write_text(json.dumps(document))
+            with self.assertRaisesRegex(RuntimeError, "inputs changed while.*staged"):
+                target_effect_export.stage_target_effects(root, root / "stage", expected)
+
+    def test_actual_pack_audit_cannot_reuse_a_stale_pass_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_project(root)
+            requirements = target_effect_export.target_effect_requirements(root)
+            output = root / "output"
+            output.mkdir()
+            report_path = output / "target-effect-pack-audit.json"
+            report_path.write_text(json.dumps({"passed": True, "catalog_sha256": "stale"}))
+            with (
+                patch.object(target_effect_export, "_run", return_value=""),
+                self.assertRaisesRegex(RuntimeError, "incomplete or inconsistent"),
+            ):
+                target_effect_export.audit_target_effect_pack(
+                    "godot", root / "fake.pck", output, {}, requirements
+                )
+            self.assertEqual(
+                json.loads(report_path.read_text()), {"passed": False, "status": "started"}
+            )
 
 
 class P1ProfileAuditTests(unittest.TestCase):

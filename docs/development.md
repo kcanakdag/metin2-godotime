@@ -211,8 +211,10 @@ Foreign item intents still verify server rejection. These runs use the current
 direct account RLS filter and generated schema, but do not exercise account
 registration or authenticated character selection.
 Do not enable guest access in the public deployment to make old checks pass.
-Training uses `SERVER_FEATURES=` and a separate training database; both maps
-use application protocol 4.
+Those historical guest Yongan/training reports used application protocol 4 and
+`SERVER_FEATURES=` for training. The later authenticated progression and target
+slices use separate databases and synchronized protocol 5 and 6 clients,
+respectively.
 
 For gameplay changes, verify two independently authenticated accounts see each
 other, each movement reaches the other subscription, and disconnect removes
@@ -250,9 +252,74 @@ animation, quest, map, admin and test automation. Its future CLI names are not
 implemented commands. Continue using the tested commands elsewhere on this page
 until a vertical slice implements and documents their replacements.
 
+## Protocol 6 target locking
+
+Target Slice A uses the same trusted action definitions and argument-free
+`perform_attack()` reducer as the preceding combat slice. Build outputs in this
+slice must use an isolated Cargo target directory so they cannot replace the P1
+module artifact:
+
+```sh
+MT2_AUTH_ISSUER=http://127.0.0.1:8186/auth \
+MT2_ALLOW_GUESTS=0 \
+MT2_PROGRESSION_BOOTSTRAP_IDENTITIES= \
+MT2_COMBAT_TEST_FIXTURE= \
+CARGO_TARGET_DIR="$PWD/.local/p2-target/server-target" \
+cargo build --manifest-path server/Cargo.toml --locked --no-default-features \
+  --target wasm32-unknown-unknown --release
+```
+
+With no fixture selector, training and `--features yongan` each retain their
+normal single Wild Dog. The disposable two-target module is a training-only
+build:
+
+```sh
+MT2_AUTH_ISSUER=http://127.0.0.1:8186/auth \
+MT2_ALLOW_GUESTS=0 \
+MT2_PROGRESSION_BOOTSTRAP_IDENTITIES= \
+MT2_COMBAT_TEST_FIXTURE=dual-wild-dog-v1 \
+CARGO_TARGET_DIR="$PWD/.local/p2-target/server-target" \
+cargo build --manifest-path server/Cargo.toml --locked --no-default-features \
+  --target wasm32-unknown-unknown --release
+```
+
+The selector accepts only `dual-wild-dog-v1`; combining it with `yongan`
+fails at build time. Leave the selector unset for the required all-features
+clippy check. The reviewed JSON fixture contains two Wild Dog 101 placements
+with independent trusted AI/leash/respawn homes and exposes a distinct
+`training-v2-dual-wild-dog-v1` content identity. Publish it only to a fresh,
+disposable database; it adds no runtime spawn reducer or capability.
+
+After publishing the exact default-deny dual artifact and generating matching
+Godot bindings, run:
+
+```sh
+python3 tools/test_targets.py \
+  --server http://127.0.0.1:8186 \
+  --game-server http://127.0.0.1:13223 \
+  --database <fresh-protocol-6-dual-target-database> \
+  --report .local/p2-target/targets-report.json
+```
+
+The runner checks auth health, the target schema, trusted definitions, an
+isolated Godot import and the real script parser before registering its two
+accounts. It then exercises the private target projection, same/clear/reselect
+deadline, stale and missing generations, selected-far/no-near-fallback behavior,
+fallback on-hit presentation, immutable pending hits, reconnect and both owner
+and monster-life cleanup. It restores a retained damaged test monster only by
+ordinary validated combat and natural production respawn.
+
+The accepted run in
+`.local/p2-target/targets-root-reconnect-fixed-20260907.json` passed 53 of 53
+checks with no engine or script errors. Its reconnect step completed within 850
+ms and opened the same account with the same still-valid JWT; the separate
+exported progression QA covers real auth-token refresh timers and full
+`AccountFlow` behavior. The local result does not qualify the public P1 route.
+
 ## Bounded P2 progression administration
 
-Protocol 5 adds three typed private command requests: `/help`, `/xp <amount>`,
+Protocol 5 introduced three typed private command requests, retained by protocol
+6: `/help`, `/xp <amount>`,
 and `/level <target>`. The client maps those spellings to dedicated reducers;
 they are not a general command interpreter. `/help` requires a valid account and
 controlling connection. XP and level changes additionally require the fixed
@@ -514,6 +581,109 @@ The accepted actual run passes 199 checks in
 `.local/p2/browser-positive-progression-fresh-read/report.json`. It recovered
 two transient partial native report reads in 11 ms each, had no unavailable
 snapshot, and recorded clean browser and native engine results.
+
+For protocol 6 target presentation, run the normal one-Wild-Dog Yongan module
+and its matching instrumented Web/Linux exports. `--targeting` runs after both
+accounts enter the world and before the runner's generic movement and reconnect
+checks. Inventory runs first when requested because its full-health potion
+rejection is a precondition; the actor presentation check runs afterward.
+
+```sh
+.local/venv-dev/bin/python tools/test_browser_accounts.py \
+  --url http://127.0.0.1:8186 \
+  --database '<isolated-protocol-6-Yongan-database>' \
+  --native '<matching-protocol-6-test-probe-linux-export>' \
+  --output .local/p2-target/browser-targeting \
+  --actors --hardware --headless --inventory --panels \
+  --progression --session-refresh --targeting
+```
+
+The reviewed protocol-6 instrumented packages check 832 Web paths and 1,635
+Linux paths, including exact decoded RGBA for all 226 UI images, three actor
+models, all 40 declared actor clips and all 20 Web world sections. Both packages
+also contain the two source-derived target-effect models with all 11 frames and
+the four declared textures matching the four engine-derived texture resources.
+The report is `.local/p2-target/exports-root-reviewed.json`. The second probe
+exports preserve those audits; a 175-file source-freeze comparison finds only
+the expected `export_probe.gd` change between the instrumented builds. Normal
+exports exclude that test probe. Their Web PCK SHA-256 is
+`a727af24fd4a6ba91a3c3973a5567968590a504ee48cc7bedf0d5e767d8dcf80`
+and Linux is
+`547791d7892d59b7b4dd24430d3849293fcb0cca3f9b9952ab069e1a581761ab`.
+The full configured lint suite and 139 Python tool tests pass for this package
+checkpoint. Package and static-tool results are separate from the exported
+gameplay evidence below.
+
+The Web half uses actual canvas pointer movement and clicks for hover, target
+selection, the target-board close control and a ray-verified ground point, plus
+ordinary `W` input. The Linux half uses only fixed test-probe `InputEvent`
+routes for pointer motion, left click and Space. Movement setup uses the existing
+validated move-to/stop actions. The probe has no script evaluator or direct
+target reducer action. The mode verifies the authoritative level/name/health
+board, owner-only target row, separate hover/target effects, selection retained
+through ground and WASD movement, rejection correction, selected-target damage
+as observed by the peer, natural death/respawn cleanup, character leave and
+`AccountFlow` reconnect. If a retained run left the dog damaged, setup finishes
+that life with ordinary Space attacks and waits for the production respawn,
+recording restoration separately from the one tested kill.
+
+Native pointer injection first validates a finite in-viewport point, moves the
+native test window's cursor there, then routes the fixed motion/button event.
+This cursor move exists only in instrumented exports through a test probe that
+normal exports exclude, so the production client's periodic pointer poll sees
+the same position as its input handler. An
+isolated focused Xvfb/Godot 4.7.2 check showed that both `Viewport.push_input()`
+and `Input.parse_input_event()` delivered an event without changing the native
+cursor position, while `Viewport.warp_mouse()` updated both display and viewport
+positions. The no-network evidence is retained in
+`.local/p2-target/probe-pointer-semantics-20260907.log`.
+
+`--targeting` is rejected with `--progression-combat`; the latter owns a separate
+five-life progression precondition. The normal fixture does not repeat the
+dual-target no-fallback proof from the accepted 53-check server run.
+
+The accepted protocol-6 exported run passes 174 checks in
+`.local/p2-target/browser-root-final-20260907/report.json`. Its one ordinary
+unarmed kill advances the Wild Dog from life 2 to 3 through four exact 25-damage
+hits and observes the production respawn after 11.946 seconds against the
+server's 12-second schedule. It also covers the complete target flow above,
+actor/inventory/panel composition, mutual movement, reducer rejection,
+character switching, reconnect, page reload, logout/login and both real
+four-minute refresh timers. The 53-row refresh trace contains 51 valid positions
+per client with zero maximum authoritative drift; two transient unavailable
+position rows per client occur during the exercised lifecycle transitions.
+Three partial native JSON reads recovered within 52 ms with no unavailable
+snapshot; the report's 72 ms maximum includes first-attempt file I/O. Browser
+and native engine error lists are empty.
+
+An earlier retained 85-check diagnostic run clicked a momentarily valid respawn
+projection while the rendered dog was still 1.82 m behind its authoritative
+position. The independent cursor record in
+`.local/p2-target/browser-root-settled-20260907/root-pointer-review.json` showed
+that the actual OS cursor
+matched the requested viewport point plus the 112-pixel window offset, then the
+projection moved by more than 100 pixels on the next refresh. The runner now
+requires a ray-verified point to remain within one pixel for at least 0.5 seconds
+and checks both rendered actors against their authoritative positions before
+each lifecycle click. It sends one pointer event after the gate succeeds.
+
+The native pointer and Space route is confined to the fixed instrumented test
+probe, which normal exports exclude; the Web path uses real canvas input. Godot
+MCP was unavailable for this
+checkpoint, so the evidence comes from the actual instrumented Web/Linux exports
+and the isolated native checks. This run is one-kill target evidence. The
+protocol-5 five-kill progression result remains the separate 199-check report
+above. Neither result establishes public protocol-6 deployment, native Windows
+execution, or an original-client side-by-side pixel comparison.
+
+Account registration is rate-limited. Honor the auth response's retry interval
+and do not infer readiness only from a count of recent registrations; the
+observed limiter required 300 seconds without an allowed signup after its last
+accepted request updated the window timestamp.
+
+The root acceptance record
+`.local/p2-target/root-acceptance-review.json` binds the 175 unchanged client
+sources, 17 server source hashes, three module artifacts and both accepted PCKs.
 
 Add `--session-refresh` to wait for both clients' real four-minute refresh
 timers and verify that they reconnect into the same world state; this is a

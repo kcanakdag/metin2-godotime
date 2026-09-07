@@ -19,6 +19,7 @@ signal equip_item_requested(item_id: int)
 signal unequip_item_requested(item_id: int, cell: int)
 signal use_item_requested(item_id: int)
 signal stat_allocation_requested(character_id: String, stat_code: String)
+signal combat_target_clear_requested
 
 const Art = preload("res://scripts/ui/classic_art.gd")
 const Inventory = preload("res://scripts/ui/classic_inventory.gd")
@@ -27,6 +28,7 @@ const ItemTooltip = preload("res://scripts/ui/classic_tooltip.gd")
 const MapPanel = preload("res://scripts/ui/classic_map_panel.gd")
 const ChatPanel = preload("res://scripts/ui/classic_chat.gd")
 const StatusPanel = preload("res://scripts/ui/classic_status.gd")
+const TargetPanel = preload("res://scripts/ui/classic_target.gd")
 
 const INK := Color(0.055, 0.065, 0.077, 0.96)
 const BRONZE := Color(0.63, 0.47, 0.28)
@@ -50,6 +52,8 @@ const DIAGNOSTIC_FIELDS := {
 	"activity": "Activity",
 	"world_tick_ms": "World tick (ms)",
 }
+
+var target_panel: Control
 
 var _root: Control
 var _connection: PanelContainer
@@ -98,6 +102,7 @@ func _ready() -> void:
 	_build_connection()
 	_build_chat()
 	_build_hotbar()
+	_build_target()
 	_build_status()
 	_build_inventory()
 	_build_minimap()
@@ -127,6 +132,7 @@ func set_connection_state(state: String, message: String) -> void:
 	_minimap.visible = _connected
 	if not _connected:
 		_inventory.hide()
+		target_panel.clear_view()
 		_status.set_connected(false)
 		_minimap.close_top()
 		_system.hide()
@@ -404,6 +410,13 @@ func _build_status() -> void:
 	_status.settings_changed.connect(_save_profile)
 
 
+func _build_target() -> void:
+	target_panel = TargetPanel.new()
+	_root.add_child(target_panel)
+	target_panel.clear_requested.connect(func() -> void: combat_target_clear_requested.emit())
+	target_panel.presentation_failed.connect(show_notice)
+
+
 func _status_toggle() -> void:
 	if _connected:
 		_status.toggle()
@@ -643,6 +656,7 @@ func inventory_snapshot() -> Dictionary:
 	result["map"] = _minimap.snapshot()
 	result["chat"] = _chat_panel.snapshot()
 	result["status"] = _status.snapshot()
+	result["target"] = target_panel.snapshot()
 	result["taskbar"] = quick
 	var system := {"visible": _system.is_visible_in_tree()}
 	for key: String in _system_buttons:

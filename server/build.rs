@@ -7,6 +7,15 @@ use std::path::{Path, PathBuf};
 
 const PROFILE: &str = "p0-warrior-dog";
 const DEFINITIONS: &str = "content/p0-warrior-dog/actions.v1.json";
+const TARGET_FIXTURE: &str = "fixtures/p2-target-dual-wild-dog.v1.json";
+const TARGET_FIXTURE_ENV: &str = "MT2_COMBAT_TEST_FIXTURE";
+
+#[derive(Clone, Copy)]
+struct MonsterSpawn {
+    id: u32,
+    home_x: f32,
+    home_z: f32,
+}
 
 fn fail(message: impl AsRef<str>) -> ! {
     panic!(
@@ -217,6 +226,75 @@ fn rust_string(value: &str) -> String {
     format!("{value:?}")
 }
 
+fn selected_monster_spawns(mob_vnum: u32) -> (Vec<MonsterSpawn>, &'static str) {
+    let selector = std::env::var(TARGET_FIXTURE_ENV).unwrap_or_default();
+    if selector.is_empty() {
+        let home = if std::env::var_os("CARGO_FEATURE_YONGAN").is_some() {
+            (675.0, 575.0)
+        } else {
+            (3.0, 3.0)
+        };
+        return (
+            vec![MonsterSpawn {
+                id: 1,
+                home_x: home.0,
+                home_z: home.1,
+            }],
+            "",
+        );
+    }
+    if selector != "dual-wild-dog-v1" {
+        fail(format!(
+            "{TARGET_FIXTURE_ENV} must be empty or exactly dual-wild-dog-v1"
+        ));
+    }
+    if std::env::var_os("CARGO_FEATURE_YONGAN").is_some() {
+        fail(
+            "dual-wild-dog-v1 is a training-map-only test fixture and cannot be built with yongan",
+        );
+    }
+    let bytes = fs::read(TARGET_FIXTURE)
+        .unwrap_or_else(|error| fail(format!("cannot read {TARGET_FIXTURE} ({error})")));
+    let payload: Value = serde_json::from_slice(&bytes)
+        .unwrap_or_else(|error| fail(format!("{TARGET_FIXTURE} is not valid JSON ({error})")));
+    let root = object(&payload, "combat_spawn_fixture");
+    if text(root, "schema", "combat_spawn_fixture") != "mt2spacetime.combat-spawn-fixture"
+        || u64_value(root, "schema_version", "combat_spawn_fixture") != 1
+        || text(root, "fixture_id", "combat_spawn_fixture") != "dual-wild-dog-v1"
+        || text(root, "map_id", "combat_spawn_fixture") != "training"
+    {
+        fail("combat spawn fixture schema, identity, or map does not match this server");
+    }
+    let placements = array(
+        field(root, "placements", "combat_spawn_fixture"),
+        "combat_spawn_fixture.placements",
+    );
+    if placements.len() != 2 {
+        fail("dual-wild-dog-v1 must contain exactly two placements");
+    }
+    let expected = [(1_u32, 3.0_f32, 3.0_f32), (2, 10.0, 3.0)];
+    let mut result = Vec::with_capacity(2);
+    for (index, (value, expected)) in placements.iter().zip(expected).enumerate() {
+        let row = object(value, "combat_spawn_fixture.placement");
+        let id = bounded_u32(row, "id", "combat_spawn_fixture.placement", u32::MAX);
+        let definition_vnum = bounded_u32(
+            row,
+            "definition_vnum",
+            "combat_spawn_fixture.placement",
+            u32::MAX,
+        );
+        let home_x = positive_f32(row, "home_x", "combat_spawn_fixture.placement");
+        let home_z = positive_f32(row, "home_z", "combat_spawn_fixture.placement");
+        if (id, home_x, home_z) != expected || definition_vnum != mob_vnum {
+            fail(format!(
+                "combat spawn fixture placement {index} does not match the reviewed dual Wild Dog fixture"
+            ));
+        }
+        result.push(MonsterSpawn { id, home_x, home_z });
+    }
+    (result, "training-v2-dual-wild-dog-v1")
+}
+
 fn emit_attack(output: &mut String, name: &str, attack: Attack<'_>) {
     writeln!(
         output,
@@ -233,7 +311,9 @@ fn emit_attack(output: &mut String, name: &str, attack: Attack<'_>) {
 
 fn main() {
     println!("cargo:rerun-if-changed={DEFINITIONS}");
+    println!("cargo:rerun-if-changed={TARGET_FIXTURE}");
     println!("cargo:rerun-if-env-changed=MT2_PROGRESSION_BOOTSTRAP_IDENTITIES");
+    println!("cargo:rerun-if-env-changed={TARGET_FIXTURE_ENV}");
     let path = Path::new(DEFINITIONS);
     let bytes = fs::read(path).unwrap_or_else(|error| {
         fail(format!(
@@ -508,6 +588,7 @@ fn main() {
     if reward_gold_min > reward_gold_max {
         fail("mob reward_gold_min exceeds reward_gold_max");
     }
+    let (monster_spawns, combat_fixture_content_hash) = selected_monster_spawns(mob_vnum);
 
     let item = items
         .iter()
@@ -745,6 +826,31 @@ fn main() {
     )
     .unwrap();
     emit_attack(&mut output, "MOB_ATTACK", mob_attack);
+    writeln!(
+        output,
+        "pub const COMBAT_FIXTURE_CONTENT_HASH: &str = {};",
+        rust_string(combat_fixture_content_hash)
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "#[derive(Clone, Copy, Debug)]\npub struct MonsterSpawnDefinition {{ pub id: u32, pub home_x: f32, pub home_z: f32 }}"
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "pub const MONSTER_SPAWNS: &[MonsterSpawnDefinition] = &["
+    )
+    .unwrap();
+    for spawn in monster_spawns {
+        writeln!(
+            output,
+            "\tMonsterSpawnDefinition {{ id: {}, home_x: {:?}, home_z: {:?} }},",
+            spawn.id, spawn.home_x, spawn.home_z
+        )
+        .unwrap();
+    }
+    writeln!(output, "];").unwrap();
 
     let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("Cargo sets OUT_DIR"));
     fs::write(out_dir.join("trusted_definitions.rs"), output)

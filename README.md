@@ -51,6 +51,23 @@ operator success still awaits explicit authorization for its isolated bootstrap
 fixture. Protocol 5 remains local; this does not change the public `mt2-p1-v4`
 route.
 
+The bounded local protocol-6 Target Slice A is accepted. Its separate actual-PCK
+audits cover 832 Web paths and 1,635 Linux paths, including all 226 UI/map
+images. The target-effect audit loads both models through all 11 frames and
+checks four runtime textures plus four matching engine-extracted derivatives;
+the Python tool suite passes 139 checks. The final 174-check exported hardware
+Chrome/Linux run verifies owner-private exact-life selection, stationary hover,
+the authoritative panel and effects, ground/WASD target retention, clear and
+rejection handling, four ordinary 25-damage attacks, death/new-life cleanup,
+actor equipment with exact inventory restoration, account lifecycle and both
+real four-minute token refreshes, with no engine errors. The native pointer path
+uses fixed production-routed InputEvents from the authorized test probe. Root
+reviewed both final selected-target captures; they show the source effects
+grounded with the expected orientation. The report is
+`.local/p2-target/browser-root-final-20260907/report.json`. This local acceptance
+does not change the public `mt2-p1-v4` route or establish original-client pixel
+parity, current Windows execution, or full P2 behavior.
+
 The preceding guest build, release `20260906T154235134255Z`, passed 45 public
 Chrome/Linux panel, inventory and multiplayer checks. Earlier Yongan tests also
 verified terrain appearance, combat, loot, both respawns and database-container
@@ -129,7 +146,18 @@ make import-ui
 make content-build BLENDER=/path/to/blender
 make content-validate
 make content-probe
+
+# Fetch, convert, install, and test the two required target effects.
+.local/venv-dev/bin/python tools/import_target_effects.py --fetch \
+  --blender /path/to/blender --godot /path/to/godot \
+  --geometry-only --install
+.local/venv-dev/bin/python tools/test_target_effects.py --godot /path/to/godot \
+  --output .local/p2-target/effects/smoke
+
+# Exercise actor/effect attachment and target UI/picking in isolated projects.
 make test-actors
+python3 tools/test_target_client.py --godot /path/to/godot \
+  --output .local/p2-target/client-smoke
 
 # Reconstruct Yongan, then bake authoritative data and playable chunk scenes.
 make import-map BLENDER=/path/to/blender
@@ -139,6 +167,15 @@ make test-map
 # Leave the database running in this terminal.
 make server-start
 ```
+
+Target-effect conversion requires Blender 5.2.1 and Godot 4.7.2. The first
+`--fetch` downloads the nine pinned conversion inputs plus the archive Index and
+inventory metadata; later runs use the cache.
+Generated development output stays under `.local/p2-target/effects/generated`,
+and `--install` writes the ignored runtime package under
+`client/assets/imported/content/p2-target-effects`. `--geometry-only` validates
+the source transforms and bounds; use the separate `--render` mode for native
+visual comparison.
 
 Run the authentication service in another terminal:
 
@@ -161,9 +198,9 @@ commands below. A saved editor profile may override the built-in endpoint.
 Register an account, choose the supported empire, create a character and enter.
 Game data is in `.local/spacetimedb`; account data and keys are in `.local/auth`.
 Use a new database or an explicit migration for incompatible changes. The
-Makefile's retained legacy placeholder is `mt2-yongan-v2`; current protocol-5
+Makefile's retained legacy placeholder is `mt2-yongan-v2`; current protocol-6
 development should pass a fresh explicit `DB`, such as
-`DB=mt2-p2-yongan-local`. Public P1 exports/deployment still use
+`DB=mt2-p2-target-yongan-local`. Public P1 exports/deployment still use
 `DB=mt2-p1-v4` until a separately qualified P2 rollout.
 
 Two clients on one machine use different local profiles and separate accounts:
@@ -179,20 +216,21 @@ Make enables the `yongan` Cargo feature by default, requiring the ignored
 For the smaller training world, use
 `make server-publish SERVER_FEATURES= DB=mt2-training-v2` and select that database
 in both clients. Raw Cargo without `--features yongan` also selects training.
-Both variants use application protocol 5. Protocol-4 databases do not contain
-the private progression/command-feedback tables and need a new database or an
-explicit migration before using a current client. The production default
-requires an account token. Legacy guest smoke tests need a separate module
+Both variants use application protocol 6. Earlier databases do not contain all
+private progression, command-feedback, and combat-target tables and need a new
+database or an explicit migration before using a current client. The production
+default requires an account token. Legacy guest smoke tests need a separate module
 compiled with `MT2_ALLOW_GUESTS=1`; never enable that option in a public build.
 
 ## Play and inspect
 
 | Control | Action |
 | --- | --- |
-| Left click ground | Move toward terrain or an authored walk surface |
+| Left click ground | Move toward terrain or an authored walk surface; preserve the selected target |
+| Left click living monster | Request selection of that exact subscribed monster generation |
 | WASD / arrows | Move relative to the camera |
 | Right mouse drag; wheel | Orbit; zoom |
-| Space | Attack the nearest living enemy in validated range |
+| Space | Attack the selected exact monster, or the nearest valid enemy when no target is selected |
 | E / Z | Collect nearby gold/items with server distance/ownership validation |
 | I / Inventory button | Open the two-page inventory |
 | Item left click, then destination; drag/drop | Carry or move an item between valid bag/equipment/quickslot locations |
@@ -208,6 +246,15 @@ compiled with `MT2_ALLOW_GUESTS=1`; never enable that option in a public build.
 | Escape | Cancel chat/carry or close a panel; otherwise open/close the system menu |
 | Ctrl+F3 | Toggle local diagnostics; F3 remains a quickslot key |
 | System menu: Change Character / Logout | Return to character selection / end the account session |
+
+The target board and ground effect appear only after the owner-private selection
+row matches the same subscribed live monster ID and life sequence. Closing the
+board sends the normal clear-target action. This first pointer slice selects
+only; the original smart click's chase/attack behavior remains future work.
+Picking respects whichever terrain, authored walk surface, or other collider is
+actually nearest to the camera ray. Buildings without a client collider cannot
+visually occlude a target proxy, while server movement blocking remains
+authoritative.
 
 Approach the Wild Dog near the town spawn, attack it, and collect its
 gold and one red potion. It can also defeat the player. Player respawn takes 8 seconds; monster
@@ -239,14 +286,14 @@ and dead-player use is rejected. The 90 bag cells form two 5 × 9 pages, and
 potions stack to 200. Item ownership, placement, rewards and consumption belong
 to the server; quickslot assignments and window preferences are saved locally.
 
-`make import-ui` converts 224 selected original UI images and stitches Yongan's
-20 original DDS minimap tiles into image 225, using 293 pinned source files.
+`make import-ui` converts 225 selected original UI images and stitches Yongan's
+20 original DDS minimap tiles into image 226, using 294 pinned source files.
 The minimap uses that stitched image; the area-map window uses its separate
-original 171 × 214 image. Player markers come from subscribed state. Chat uses the original
-centered entry and fading passive lines, with normal messages still limited to
-160 characters by the server. Every exported UI texture is checked against its
-decoded source-pixel hash. See [UI assets](docs/ui-assets.md) for conversion,
-layout references and fidelity limits.
+original 171 × 214 image. Player markers come from subscribed state. Chat uses
+the original centered entry and fading passive lines. Normal messages remain
+limited to 160 characters by the server. Every exported UI texture is checked
+against its decoded source-pixel hash. See [UI assets](docs/ui-assets.md) for
+conversion, layout references and fidelity limits.
 
 Chat sits at the bottom center. Sending, closing with Escape, or clicking the
 world releases text focus and restores WASD/camera input. This passes native
@@ -340,7 +387,7 @@ client/scripts/net/          SDK, identity and subscription boundary
 client/scripts/actors/       Warrior, monster and loot presentation
 client/scripts/world/        Training ground and streamed Yongan sections
 client/scripts/ui/           Original taskbar/inventory/minimap, chat and diagnostics
-client/spacetime_bindings/   Generated protocol-4 schema and provenance
+client/spacetime_bindings/   Generated protocol-6 schema and provenance
 client/addons/SpacetimeDB/   Pinned runtime SDK
 client/addons/godot_mcp/     Editor tooling, excluded from exports
 server/src/                 Identity, movement, map content and combat rules

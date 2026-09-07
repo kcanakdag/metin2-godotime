@@ -204,6 +204,83 @@ cap, champion progression and reset/lower-level operations for later catalog
 work. The current Wild Dog attack, health and damage values remain prototype
 balance even though its level and EXP reward are source-backed.
 
+## Protocol 6 target Slice A
+
+The local target slice adds an owner-private selected monster ID/life projection,
+a public authoritative monster level and validated select/clear intents. Server
+controllers retain a checked 64-bit target revision and change deadline across
+clear and reconnect. Explicit selection locks later attacks to that exact
+generation without nearest-enemy fallback, while the already accepted pending
+hit retains its captured target, equipment, action and damage. The reviewed dual
+Wild Dog fixture gives each copy its own trusted AI/leash/respawn home and adds
+no spawn reducer or player capability.
+
+The default-deny two-account server run passes 53 of 53 checks in
+`.local/p2-target/targets-root-reconnect-fixed-20260907.json`. It verifies
+private ownership, same/clear/reselect deadlines, stale and missing rejection,
+far selection with a nearer candidate, fallback presentation, unchanged pending
+hits, a sub-850 ms same-JWT reconnect, natural respawn and target-life/owner-death
+cleanup. This is focused server evidence; it does not qualify a public route or
+an exported client.
+
+The client implementation now includes ray-verified actor and ground picks, an
+authoritative level/name/health target board, separate source-derived hover and
+target effects, and selected-target Space routing. The exported Web/Linux runner
+exercises real browser canvas input and the native probe's fixed
+pointer/Space allowlist against the normal one-dog Yongan fixture. The reviewed
+instrumented packages pass actual-PCK audits for 832 Web and 1,635 Linux paths,
+all 226 UI images at exact decoded RGBA, three actor models, all 40 declared
+clips, all 20 Web world sections and both 11-frame source-derived target effects
+with four declared and four engine-derived texture hashes. The report is
+`.local/p2-target/exports-root-reviewed.json`. Second probe exports pass the same
+audits, and their 175-file source-freeze comparison differs only at
+`export_probe.gd` as expected between instrumented builds; normal exports exclude
+that test probe. The second Web PCK SHA-256 is
+`a727af24fd4a6ba91a3c3973a5567968590a504ee48cc7bedf0d5e767d8dcf80`
+and Linux is
+`547791d7892d59b7b4dd24430d3849293fcb0cca3f9b9952ab069e1a581761ab`.
+The native probe now moves its isolated test-window cursor before routing its
+fixed pointer event because a focused Xvfb/Godot 4.7.2 check proved that pushed
+or parsed events alone do not update the cursor read by the production polling
+path. This behavior remains confined to instrumented test code that normal
+exports exclude; the no-network record is
+`.local/p2-target/probe-pointer-semantics-20260907.log`.
+The full configured lint suite and 139 Python tool tests pass.
+
+The final exported Web/Linux run passes 174 checks in
+`.local/p2-target/browser-root-final-20260907/report.json`, with no engine
+errors. It exercises actual Web canvas input and the native probe's fixed
+pointer/Space allowlist, target privacy/UI/effects, selected-target damage,
+target churn and movement, death/respawn, character and account lifecycle,
+actor/inventory/panel composition, mutual movement, rejection, switch,
+reconnect, reload, logout/login and both real four-minute refresh timers. One
+ordinary unarmed kill uses four exact 25-damage hits, advances Wild Dog life 2
+to 3 and observes the production respawn after 11.946 seconds; the distinct
+protocol-5 199-check progression run remains the five-kill evidence. The 53-row
+refresh trace contains 51 valid positions per client with zero maximum
+authoritative drift and two transient unavailable position rows per client
+during lifecycle transitions. Three partial native report reads recover within
+52 ms, no snapshot read becomes unavailable, and the report's 72 ms maximum
+includes initial file I/O.
+
+A retained earlier 85-check failure and
+`.local/p2-target/browser-root-settled-20260907/root-pointer-review.json` show why
+the lifecycle setup now waits: after respawn, a momentarily valid projected
+point moved by more than 100 pixels while the rendered dog closed a 1.82 m gap
+to its authoritative row. The actual OS cursor matched the requested point plus
+the native window offset. The runner consequently requires a stable ray-verified
+projection and matching rendered/authoritative positions for 0.5 seconds before
+sending one input.
+Godot MCP was unavailable for this checkpoint. The accepted evidence is local
+and instrumented; it does not establish an original-client pixel comparison.
+Queued combo sequencing, automatic chase, broader combat and social target
+actions, public protocol-6 deployment, Windows execution, full P2 and the full
+game remain incomplete.
+
+The root acceptance record
+`.local/p2-target/root-acceptance-review.json` binds the 175 unchanged client
+sources, 17 server source hashes, three module artifacts and both accepted PCKs.
+
 ## Required QA evidence
 
 | Package | Required task evidence before review | Integration gate |

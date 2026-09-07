@@ -16,6 +16,13 @@ import zipfile
 from pathlib import Path
 from urllib.parse import urlparse
 
+from target_effect_export import (
+    audit_target_effect_pack,
+    prepare_target_effect_imports,
+    stage_target_effects,
+    target_effect_requirements,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 GODOT_VERSION = "4.7.2"
 PRESET = "Windows Desktop"
@@ -509,6 +516,8 @@ def validate_pack_paths(paths, *, allow_test_probe=False):
                 ".log",
                 ".gr2",
                 ".msa",
+                ".mde",
+                ".mse",
                 ".msm",
                 ".mss",
                 ".epk",
@@ -1032,6 +1041,7 @@ def main():
     if not options.database:
         parser.error("--database cannot be empty")
     p1_requirements = p1_profile_requirements()
+    live_target_effects = target_effect_requirements(ROOT / "client")
     if p1_requirements is None and not (ROOT / "client/assets/imported/warrior.glb").is_file():
         parser.error("Warrior asset missing: run make assets and make import-assets first")
     godot = shutil.which(options.godot)
@@ -1059,10 +1069,17 @@ def main():
         build = Path(temporary) / "windows-x86_64"
         build.mkdir()
         stage_project(stage, templates, include_maps=False, p1_enabled=p1_requirements is not None)
+        staged_target_effects = stage_target_effects(ROOT / "client", stage, live_target_effects)
         executable = build / "MT2Spacetime.exe"
         run(
             [godot, "--headless", "--path", stage, "--editor", "--import", "--quit"],
             local / "import.log",
+            env,
+        )
+        prepare_target_effect_imports(stage, staged_target_effects)
+        run(
+            [godot, "--headless", "--path", stage, "--editor", "--import", "--quit"],
+            local / "target-effect-reimport.log",
             env,
         )
         run(
@@ -1076,6 +1093,13 @@ def main():
             local,
             env,
             p1_requirements=p1_requirements,
+        )
+        pack_audit["target_effects"] = audit_target_effect_pack(
+            godot,
+            executable.with_suffix(".pck"),
+            local,
+            env,
+            staged_target_effects,
         )
         package_notices(stage, build, local)
         connection = {

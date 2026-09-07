@@ -5,8 +5,8 @@ original game asset rights remain separate.
 
 | Source | Pinned revision/version | Use and license |
 | --- | --- | --- |
-| [Metin2 client archive](https://git.old-metin2.com/metin2/client) | `bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7` | Warrior, selected Yongan dependencies, original UI fixture and minimap tiles; originals and derivatives are ignored |
-| [Pillow](https://github.com/python-pillow/Pillow/tree/12.1.0) | `12.1.0` in `tools/requirements-assets.txt` | Build-time decoding/cropping of selected original raster UI assets; Pillow's own license applies independently of source art rights |
+| [Metin2 client archive](https://git.old-metin2.com/metin2/client) | `bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7` | Warrior, selected Yongan dependencies, original UI fixture/minimap tiles and two target-selection effect fixtures; originals and derivatives are ignored |
+| [Pillow](https://github.com/python-pillow/Pillow/tree/12.1.0) | `12.1.0` in `tools/requirements-assets.txt` | Build-time decoding/cropping of selected original raster UI and target-effect texture assets; Pillow's own license applies independently of source art rights |
 | [Carbon Blender tools](https://github.com/carbonenginejs/tools-blender/tree/8cba23114bf1d30c9da597c1ecf49271e00b939d) | `8cba23114bf1d30c9da597c1ecf49271e00b939d` | MIT importer/reader, downloaded with its license into `.cache` |
 | [Native Godot SpacetimeDB SDK](https://github.com/flametime/Godot-SpacetimeDB-SDK/tree/f6c59d7068e5dacbde0559906746d0a6c5933ffb) | `f6c59d7068e5dacbde0559906746d0a6c5933ffb` | MIT; plugin version 0.3.2, vendored in `client/addons/SpacetimeDB` |
 | [SpacetimeDB Rust module library](https://docs.rs/spacetimedb/2.8.3/spacetimedb/) | `spacetimedb = "=2.8.3"` | Apache-2.0 module dependency; exact dependencies are in `server/Cargo.lock` |
@@ -134,6 +134,37 @@ supported. Original GR2/MSA/MSM/MSS files, Granny and Blender runtimes, and
 source archives remain build-time inputs only and are rejected from player
 exports. The generated output remains ignored under the same distribution
 constraints described above; see [P1 actor content import](content-import.md).
+
+## Target-selection effect fixture
+
+The same client pin supplies exactly two bounded mesh effects:
+`click_select.mse/.mde` and `click_glow_select.mse/.mde`, plus their four named
+TGA/JPEG textures. `tools/import_target_effects.py --fetch` uses the existing
+archive reader to fetch nine explicit conversion inputs and verifies their Git
+blob IDs, byte counts and SHA-256 values before parsing. Resolving those paths
+also downloads `bin/pack/Index` and caches archive tree inventory metadata. The
+conversion provenance set contains the nine inputs; it excludes the Index and
+inventory metadata. MSE and MDE files, downloaded images, conversion caches,
+Blender files and development reports stay in ignored source/local directories.
+The authoritative player inputs are the generated runtime catalog, two GLBs and
+four PNGs; Godot may retain remapped resources derived from those files inside
+its package.
+
+The MDE/MSE parser and Blender adapter are project code implemented from direct
+format and pinned-client behavior inspection. GPL research implementations were
+not copied. Pinned client sources were consulted for D3D blend constants, D3DX
+color-byte quantization, mesh-frame stepping, the strict frame boundary and the
+20-advance cap. This source reading does not change the original assets' rights
+or grant redistribution rights.
+
+The converter records exact source/output hashes, coordinate conversion,
+unsupported records and the known Godot material/playback boundary. Isolated
+Godot checks validate geometry, imported animation and selected rendered samples;
+the actual-PCK audit also checks decoded texture bytes. This is evidence for the
+two named fixtures only. It does not establish frame-for-frame, color-space or
+pixel-identical parity with the original D3D client, and it does not generalize
+to other MSE effect types, particles, sounds or arbitrary MDE files. See
+[Target-selection effect fixture](content-import.md#target-selection-effect-fixture).
 
 ## Original-map conversion
 

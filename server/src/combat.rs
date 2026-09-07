@@ -1,5 +1,5 @@
 //! PvE actions, delayed hit windows, damage, death, respawn and rewards.
-use crate::definitions::{self, AttackDefinition};
+use crate::definitions::{self, AttackDefinition, MonsterSpawnDefinition};
 use crate::progression::{self, character_progression};
 use crate::{
     Controller, active_controller, collision_bounds, content, controller, inventory, now_us,
@@ -24,6 +24,7 @@ pub struct Monster {
     pub definition_vnum: u32,
     pub actor_id: String,
     pub name: String,
+    pub level: u8,
     pub model_key: String,
     pub motion_set: String,
     pub attack_action_id: String,
@@ -45,6 +46,8 @@ pub struct Monster {
 pub struct MonsterClock {
     #[primary_key]
     pub id: u32,
+    pub home_x: f32,
+    pub home_z: f32,
     pub next_attack_us: i64,
     pub attack_until_us: i64,
     pub pending_target: Identity,
@@ -88,6 +91,7 @@ pub struct PlayerAttackPlan {
     pub target_generation: u32,
     pub damage: u16,
     pub heading: Option<f32>,
+    pub can_select_target: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -96,6 +100,8 @@ pub struct PendingPlayerHit {
     target_generation: u32,
     damage: u16,
     range_m: f32,
+    target_revision: u64,
+    can_select_target: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -140,17 +146,40 @@ fn visit_due_hits(events: &mut [DueHitEvent], mut visit: impl FnMut(DueHitEvent)
 }
 
 pub fn initialize(ctx: &ReducerContext) {
-    ctx.db.monster().insert(fresh_monster(0, 0));
-    ctx.db.monster_clock().insert(fresh_monster_clock());
+    debug_assert_eq!(
+        (
+            definitions::MONSTER_SPAWNS[0].home_x,
+            definitions::MONSTER_SPAWNS[0].home_z,
+        ),
+        content::MONSTER_HOME,
+        "the primary trusted spawn must preserve the selected map baseline"
+    );
+    for spawn in definitions::MONSTER_SPAWNS {
+        ctx.db.monster().insert(fresh_monster(*spawn, 0, 0));
+        ctx.db.monster_clock().insert(fresh_monster_clock(*spawn));
+    }
 }
 
-fn fresh_monster(life_sequence: u32, attack_sequence: u32) -> Monster {
-    let (x, z) = content::MONSTER_HOME;
+fn trusted_spawn(id: u32) -> Option<MonsterSpawnDefinition> {
+    definitions::MONSTER_SPAWNS
+        .iter()
+        .copied()
+        .find(|spawn| spawn.id == id)
+}
+
+fn fresh_monster(
+    spawn: MonsterSpawnDefinition,
+    life_sequence: u32,
+    attack_sequence: u32,
+) -> Monster {
+    let x = spawn.home_x;
+    let z = spawn.home_z;
     Monster {
-        id: 1,
+        id: spawn.id,
         definition_vnum: definitions::MOB_VNUM,
         actor_id: definitions::MOB_ACTOR_ID.into(),
         name: definitions::MOB_NAME.into(),
+        level: definitions::MOB_LEVEL,
         model_key: definitions::MOB_MODEL_KEY.into(),
         motion_set: definitions::MOB_MOTION_SET.into(),
         attack_action_id: definitions::MOB_ATTACK.id.into(),
@@ -169,9 +198,11 @@ fn fresh_monster(life_sequence: u32, attack_sequence: u32) -> Monster {
     }
 }
 
-fn fresh_monster_clock() -> MonsterClock {
+fn fresh_monster_clock(spawn: MonsterSpawnDefinition) -> MonsterClock {
     MonsterClock {
-        id: 1,
+        id: spawn.id,
+        home_x: spawn.home_x,
+        home_z: spawn.home_z,
         next_attack_us: 0,
         attack_until_us: 0,
         pending_target: Identity::ZERO,
@@ -182,7 +213,11 @@ fn fresh_monster_clock() -> MonsterClock {
     }
 }
 
-pub fn plan_player_attack(ctx: &ReducerContext, character: Identity) -> PlayerAttackPlan {
+pub fn plan_player_attack(
+    ctx: &ReducerContext,
+    character: Identity,
+    control: &Controller,
+) -> PlayerAttackPlan {
     let definition = if inventory::equipped_weapon(ctx, character) == definitions::WEAPON_VNUM {
         &definitions::PLAYER_ONEHAND_ATTACK
     } else {
@@ -198,8 +233,25 @@ pub fn plan_player_attack(ctx: &ReducerContext, character: Identity) -> PlayerAt
             target_generation: 0,
             damage,
             heading: None,
+            can_select_target: false,
         };
     };
+    if control.combat_target_id != 0 {
+        let selected = ctx
+            .db
+            .monster()
+            .id()
+            .find(control.combat_target_id)
+            .filter(|monster| monster.life_sequence == control.combat_target_life_sequence);
+        return PlayerAttackPlan {
+            definition,
+            target_id: control.combat_target_id,
+            target_generation: control.combat_target_life_sequence,
+            damage,
+            heading: selected.map(|monster| (player.x - monster.x).atan2(player.z - monster.z)),
+            can_select_target: false,
+        };
+    }
     let target = ctx
         .db
         .monster()
@@ -223,7 +275,10 @@ pub fn plan_player_attack(ctx: &ReducerContext, character: Identity) -> PlayerAt
         target_id: target.as_ref().map_or(0, |monster| monster.id),
         target_generation: target.as_ref().map_or(0, |monster| monster.life_sequence),
         damage,
-        heading: target.map(|monster| (player.x - monster.x).atan2(player.z - monster.z)),
+        heading: target
+            .as_ref()
+            .map(|monster| (player.x - monster.x).atan2(player.z - monster.z)),
+        can_select_target: target.is_some(),
     }
 }
 
@@ -239,6 +294,8 @@ pub fn take_due_player_hit(controller: &mut Controller, now: i64) -> Option<Pend
         target_generation: controller.pending_attack_target_generation,
         damage: controller.pending_attack_damage,
         range_m: controller.pending_attack_range,
+        target_revision: controller.pending_attack_target_revision,
+        can_select_target: controller.pending_attack_can_select_target,
     });
     cancel_player_attack(controller);
     hit
@@ -251,6 +308,8 @@ pub fn cancel_player_attack(controller: &mut Controller) {
     controller.pending_attack_hit_until_us = 0;
     controller.pending_attack_damage = 0;
     controller.pending_attack_range = 0.0;
+    controller.pending_attack_target_revision = 0;
+    controller.pending_attack_can_select_target = false;
 }
 
 pub fn cancel_attacks_targeting(ctx: &ReducerContext, character: Identity) {
@@ -388,7 +447,18 @@ pub fn resolve_player_hit(ctx: &ReducerContext, character: Identity, hit: Pendin
     if apply_damage(&mut monster.health, hit.damage) {
         kill_monster(ctx, &mut monster, character);
     }
+    let target_id = monster.id;
+    let target_life_sequence = monster.life_sequence;
     ctx.db.monster().id().update(monster);
+    if hit.can_select_target {
+        crate::targeting::select_fallback_after_hit(
+            ctx,
+            character,
+            target_id,
+            target_life_sequence,
+            hit.target_revision,
+        );
+    }
 }
 
 fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, character: Identity) {
@@ -397,6 +467,8 @@ fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, character: Identity
     monster.action_started_at_us = now;
     monster.respawn_at_us = now.saturating_add(definitions::MOB_RESPAWN_US);
     monster.action_ends_at_us = monster.respawn_at_us;
+    crate::targeting::clear_monster_targets(ctx, monster.id, monster.life_sequence)
+        .unwrap_or_else(|error| panic!("cannot clear defeated monster targets: {error}"));
     if let Some(mut clock) = ctx.db.monster_clock().id().find(monster.id) {
         clock.attack_until_us = 0;
         cancel_monster_hit(&mut clock);
@@ -701,29 +773,52 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) {
         }
     }
     for mut monster in ctx.db.monster().iter() {
+        if monster.level != definitions::MOB_LEVEL {
+            monster.level = definitions::MOB_LEVEL;
+            let monster_id = monster.id;
+            ctx.db.monster().id().update(monster);
+            monster = ctx
+                .db
+                .monster()
+                .id()
+                .find(monster_id)
+                .expect("updated monster disappeared during one reducer");
+        }
         if monster.health == 0 {
             if now >= monster.respawn_at_us {
                 let life_sequence = monster.life_sequence.wrapping_add(1);
                 clear_monster_damage(ctx, monster.id, monster.life_sequence);
+                let spawn = trusted_spawn(monster.id)
+                    .expect("a persisted monster must have a trusted spawn definition");
+                ctx.db.monster().id().update(fresh_monster(
+                    spawn,
+                    life_sequence,
+                    monster.attack_sequence,
+                ));
                 ctx.db
-                    .monster()
+                    .monster_clock()
                     .id()
-                    .update(fresh_monster(life_sequence, monster.attack_sequence));
-                ctx.db.monster_clock().id().update(fresh_monster_clock());
+                    .update(fresh_monster_clock(spawn));
             }
             continue;
         }
+        let spawn = trusted_spawn(monster.id)
+            .expect("a persisted monster must have a trusted spawn definition");
         let mut clock = ctx
             .db
             .monster_clock()
             .id()
             .find(monster.id)
-            .unwrap_or_else(fresh_monster_clock);
-        let target = nearest_target(ctx, &monster, &bounds);
+            .unwrap_or_else(|| fresh_monster_clock(spawn));
+        if (clock.home_x, clock.home_z) != (spawn.home_x, spawn.home_z) {
+            clock.home_x = spawn.home_x;
+            clock.home_z = spawn.home_z;
+        }
+        let target = nearest_target(ctx, &monster, &clock, &bounds);
         let (tx, tz) = target
             .as_ref()
             .map(|player| (player.x, player.z))
-            .unwrap_or(content::MONSTER_HOME);
+            .unwrap_or((clock.home_x, clock.home_z));
         let distance = (tx - monster.x).hypot(tz - monster.z);
         monster.activity = 0;
         if now < clock.attack_until_us {
@@ -778,6 +873,7 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) {
 fn nearest_target(
     ctx: &ReducerContext,
     monster: &Monster,
+    clock: &MonsterClock,
     bounds: &[crate::movement::Bounds],
 ) -> Option<crate::Player> {
     ctx.db
@@ -785,7 +881,7 @@ fn nearest_target(
         .iter()
         .filter(|player| player.online && player.health > 0)
         .filter(|player| {
-            (player.x - content::MONSTER_HOME.0).hypot(player.z - content::MONSTER_HOME.1)
+            (player.x - clock.home_x).hypot(player.z - clock.home_z)
                 < definitions::MOB_CHASE_HOME_RANGE_M
         })
         .filter(|player| {
@@ -862,6 +958,8 @@ fn resolve_monster_hit(ctx: &ReducerContext, monster_id: u32, hit: PendingMonste
             controller.direction_z = 0.0;
             controller.attack_until_us = 0;
             cancel_player_attack(&mut controller);
+            crate::targeting::clear_character_target(ctx, &mut controller)
+                .unwrap_or_else(|error| panic!("cannot clear defeated character target: {error}"));
             ctx.db.controller().identity().update(controller);
         }
     }
@@ -913,6 +1011,12 @@ mod tests {
             pending_attack_hit_until_us: hit_until_us,
             pending_attack_damage: 35,
             pending_attack_range: 2.7,
+            pending_attack_target_revision: 9,
+            pending_attack_can_select_target: true,
+            combat_target_id: 0,
+            combat_target_life_sequence: 0,
+            combat_target_change_not_before_us: 0,
+            combat_target_revision: 9,
             next_chat_us: 0,
         }
     }
@@ -920,6 +1024,8 @@ mod tests {
     fn monster_clock_with_hit(hit_at_us: i64, hit_until_us: i64) -> MonsterClock {
         MonsterClock {
             id: 1,
+            home_x: 3.0,
+            home_z: 3.0,
             next_attack_us: 0,
             attack_until_us: 2_000_000,
             pending_target: Identity::from_claims("test", "target"),
@@ -997,6 +1103,44 @@ mod tests {
         assert_eq!(hit.target_generation, 11);
         assert_eq!(hit.damage, 35);
         assert_eq!(take_due_player_hit(&mut controller, 1_300_000), None);
+    }
+
+    #[test]
+    fn target_change_cannot_rewrite_the_pending_hit_snapshot() {
+        let mut controller = controller_with_hit(1_192_308, 1_315_385);
+        controller.combat_target_id = 99;
+        controller.combat_target_life_sequence = 42;
+        controller.combat_target_revision = 10;
+        let hit = take_due_player_hit(&mut controller, 1_250_000).unwrap();
+        assert_eq!(hit.target_id, 7);
+        assert_eq!(hit.target_generation, 11);
+        assert_eq!(hit.damage, 35);
+        assert_eq!(hit.target_revision, 9);
+        assert!(hit.can_select_target);
+    }
+
+    #[test]
+    fn generated_monsters_keep_distinct_trusted_homes() {
+        assert!(!definitions::MONSTER_SPAWNS.is_empty());
+        for (index, spawn) in definitions::MONSTER_SPAWNS.iter().enumerate() {
+            assert!(spawn.home_x.is_finite() && spawn.home_z.is_finite());
+            assert!(
+                definitions::MONSTER_SPAWNS[..index]
+                    .iter()
+                    .all(|previous| previous.id != spawn.id)
+            );
+            let monster = fresh_monster(*spawn, 4, 8);
+            let clock = fresh_monster_clock(*spawn);
+            assert_eq!((monster.x, monster.z), (spawn.home_x, spawn.home_z));
+            assert_eq!((clock.home_x, clock.home_z), (spawn.home_x, spawn.home_z));
+        }
+        if !definitions::COMBAT_FIXTURE_CONTENT_HASH.is_empty() {
+            assert_eq!(definitions::MONSTER_SPAWNS.len(), 2);
+            assert_ne!(
+                definitions::MONSTER_SPAWNS[0].home_x,
+                definitions::MONSTER_SPAWNS[1].home_x
+            );
+        }
     }
 
     #[test]

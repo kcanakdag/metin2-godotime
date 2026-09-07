@@ -21,6 +21,10 @@ func admin_raise_progression_level(request_id: String, target_text: String) -> S
 func allocate_stat(character_id: PackedByteArray, stat_code: String) -> SpacetimeDBReducerCall:
 	return _client.call_reducer('allocate_stat', [character_id, stat_code], [&'__identity__', &'String'])
 
+
+func clear_combat_target() -> SpacetimeDBReducerCall:
+	return _client.call_reducer('clear_combat_target', [], [])
+
 ## 0. slot: int [br]
 ## 1. name: String [br]
 func create_character(slot: int, name: String) -> SpacetimeDBReducerCall:
@@ -82,6 +86,11 @@ func request_command_help(request_id: String) -> SpacetimeDBReducerCall:
 ## 0. character_id: PackedByteArray [br]
 func select_character(character_id: PackedByteArray) -> SpacetimeDBReducerCall:
 	return _client.call_reducer('select_character', [character_id], [&'__identity__'])
+
+## 0. target_id: int [br]
+## 1. target_life_sequence: int [br]
+func select_combat_target(target_id: int, target_life_sequence: int) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('select_combat_target', [target_id, target_life_sequence], [&'U32', &'U32'])
 
 ## 0. message: String [br]
 func send_chat(message: String) -> SpacetimeDBReducerCall:

@@ -135,13 +135,13 @@ test-actors:
 	python3 tools/test_actors.py --godot "$(GODOT)" $(UI_FLAGS)
 
 export-windows:
-	python3 tools/export_client.py --godot "$(GODOT)" --server "$(SERVER_URL)" --database "$(WINDOWS_DB)"
+	.local/venv-dev/bin/python tools/export_client.py --godot "$(GODOT)" --server "$(SERVER_URL)" --database "$(WINDOWS_DB)"
 
 export-web:
-	python3 tools/export_playable.py --target web --godot "$(GODOT)" --server "$(SERVER_URL)" --database "$(DB)" $(INCLUDE_MAP) $(TEST_PROBE)
+	.local/venv-dev/bin/python tools/export_playable.py --target web --godot "$(GODOT)" --server "$(SERVER_URL)" --database "$(DB)" $(INCLUDE_MAP) $(TEST_PROBE)
 
 export-linux:
-	python3 tools/export_playable.py --target linux --godot "$(GODOT)" --server "$(SERVER_URL)" --database "$(DB)" $(INCLUDE_MAP) $(TEST_PROBE)
+	.local/venv-dev/bin/python tools/export_playable.py --target linux --godot "$(GODOT)" --server "$(SERVER_URL)" --database "$(DB)" $(INCLUDE_MAP) $(TEST_PROBE)
 
 browser-setup:
 	$(BROWSER_PYTHON) -m pip install -r tools/requirements-browser.txt

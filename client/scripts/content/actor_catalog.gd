@@ -123,6 +123,28 @@ func actor(id: String) -> Dictionary:
 	return _actors.get(id, {})
 
 
+func actor_bounds(id: String) -> Dictionary:
+	var definition: Dictionary = actor(id)
+	var artifact_id := str(definition.get("model", {}).get("artifact_id", ""))
+	var artifact: Dictionary = _artifacts.get(artifact_id, {})
+	var source: Variant = artifact.get("bounds_m")
+	if not source is Array or source.size() != 2:
+		return {}
+	var minimum: Variant = _finite_vector(source[0])
+	var maximum: Variant = _finite_vector(source[1])
+	if minimum == null or maximum == null:
+		return {}
+	var result_minimum: Vector3 = minimum
+	var result_maximum: Vector3 = maximum
+	if (
+		result_maximum.x <= result_minimum.x
+		or result_maximum.y <= result_minimum.y
+		or result_maximum.z <= result_minimum.z
+	):
+		return {}
+	return {"minimum": result_minimum, "maximum": result_maximum}
+
+
 func item(id: String) -> Dictionary:
 	return _items.get(id, {})
 
@@ -330,14 +352,19 @@ func _valid_resource_path(path: String) -> bool:
 
 
 func _valid_vector(value: Variant) -> bool:
+	return _finite_vector(value) != null
+
+
+func _finite_vector(value: Variant) -> Variant:
 	if not value is Array or value.size() != 3:
-		return false
+		return null
 	for component: Variant in value:
 		if not component is int and not component is float:
-			return false
+			return null
 		if not is_finite(float(component)):
-			return false
-	return true
+			return null
+	var result := Vector3(float(value[0]), float(value[1]), float(value[2]))
+	return result if result.is_finite() else null
 
 
 func _positive_integer(value: Variant) -> bool:

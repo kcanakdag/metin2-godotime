@@ -20,6 +20,12 @@ from export_client import (
     stage_project,
     template_directory,
 )
+from target_effect_export import (
+    audit_target_effect_pack,
+    prepare_target_effect_imports,
+    stage_target_effects,
+    target_effect_requirements,
+)
 
 
 def main():
@@ -43,6 +49,7 @@ def main():
     )
     args = parser.parse_args()
     p1_requirements = p1_profile_requirements()
+    live_target_effects = target_effect_requirements(ROOT / "client")
     templates = template_directory(args.templates)
     template = templates / (
         "web_nothreads_release.zip" if args.target == "web" else "linux_release.x86_64"
@@ -74,6 +81,7 @@ def main():
             include_maps=args.include_map,
             p1_enabled=p1_requirements is not None,
         )
+        staged_target_effects = stage_target_effects(ROOT / "client", stage, live_target_effects)
         config = {"server_url": args.server, "database": args.database}
         (stage / "client_config.json").write_text(json.dumps(config) + "\n")
         if args.test_probe:
@@ -102,6 +110,12 @@ def main():
         (stage / "export_presets.cfg").write_text(preset)
         common = [args.godot, "--headless", "--path", stage]
         run([*common, "--editor", "--import", "--quit"], local / "import.log", env)
+        prepare_target_effect_imports(stage, staged_target_effects)
+        run(
+            [*common, "--editor", "--import", "--quit"],
+            local / "target-effect-reimport.log",
+            env,
+        )
         if args.include_map and args.target == "web":
             full_pack = Path(temp) / "world.pck"
             run([*common, "--export-pack", "Playable", full_pack], local / "world-export.log", env)
@@ -132,6 +146,13 @@ def main():
             env,
             allow_test_probe=args.test_probe,
             p1_requirements=p1_requirements,
+        )
+        audit["target_effects"] = audit_target_effect_pack(
+            args.godot,
+            executable.with_suffix(".pck"),
+            local,
+            env,
+            staged_target_effects,
         )
         package_notices(stage, build, local)
         if args.target == "linux":

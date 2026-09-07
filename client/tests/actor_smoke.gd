@@ -4,6 +4,7 @@ extends SceneTree
 var _checks := 0
 var _failed := false
 var _catalog := ActorCatalog.new()
+var _effect_catalog := TargetEffectCatalog.new()
 var _stage: Node3D
 var _camera: Camera3D
 
@@ -15,6 +16,24 @@ func _initialize() -> void:
 func _run() -> void:
 	root.size = Vector2i(1280, 800)
 	_check(_catalog.load_required(), "generated P1 manifest loads")
+	_check(
+		_effect_catalog.load_required(),
+		"generated target-effect catalog loads: %s" % _effect_catalog.error_message
+	)
+	var dog_bounds := _catalog.actor_bounds(ActorCatalog.WILD_DOG_ID)
+	_check(
+		(
+			(
+				dog_bounds.get("minimum")
+				== Vector3(-0.1642078459262848, 0.0009163692593574524, -0.681254506111145)
+			)
+			and (
+				dog_bounds.get("maximum")
+				== Vector3(0.20082877576351166, 0.8910432457923889, 0.588355302810669)
+			)
+		),
+		"Wild Dog pick bounds come from the pinned artifact"
+	)
 	if _failed:
 		_finish()
 		return
@@ -251,7 +270,7 @@ func _test_shared_catalog() -> void:
 func _test_monster() -> void:
 	var dog := PveActor.new()
 	dog.name = "FixtureDog"
-	dog.configure(_catalog)
+	dog.configure(_catalog, _effect_catalog)
 	_stage.add_child(dog)
 	var row := {
 		"id": 1,
@@ -278,6 +297,109 @@ func _test_monster() -> void:
 	var state := dog.presentation_snapshot()
 	_check(state.actor_id == ActorCatalog.WILD_DOG_ID, "vnum 101 uses original Wild Dog actor")
 	_check(state.definition_vnum == 101, "monster presentation retains definition vnum")
+	var pick_body := dog.get_node("TargetPickBody") as StaticBody3D
+	var pick_shape := pick_body.get_node("TargetPickShape") as CollisionShape3D
+	var expected_bounds := _catalog.actor_bounds(ActorCatalog.WILD_DOG_ID)
+	var expected_minimum: Vector3 = expected_bounds.minimum
+	var expected_maximum: Vector3 = expected_bounds.maximum
+	_check(
+		(
+			pick_body.collision_layer == 2
+			and pick_body.collision_mask == 0
+			and pick_body.position.is_equal_approx((expected_minimum + expected_maximum) * 0.5)
+			and (pick_shape.shape as BoxShape3D).size.is_equal_approx(
+				expected_maximum - expected_minimum
+			)
+		),
+		"Wild Dog pick proxy uses pinned bounds on dedicated layer 2"
+	)
+	_check(state.pickable, "live streamed Wild Dog is pickable")
+	var projection := dog.pick_projection(_camera, root.get_visible_rect())
+	_check(
+		(
+			projection.available
+			and Vector2(float(projection.screen[0]), float(projection.screen[1])).is_finite()
+			and projection.target_id == 1
+			and projection.target_life_sequence == 0
+		),
+		"live in-front Wild Dog exposes a finite viewport pick point and exact generation"
+	)
+	dog.set_targeted(true)
+	dog.set_hovered(true)
+	var target_effect := dog.get_node("AcceptedTargetEffect") as Node3D
+	var hover_effect := dog.get_node("HoverTargetEffect") as Node3D
+	target_effect.set_process(false)
+	hover_effect.set_process(false)
+	target_effect._process(0.020001)
+	hover_effect._process(0.020001)
+	state = dog.presentation_snapshot()
+	_check(
+		(
+			state.target_effect.visible
+			and state.target_effect.effect_id == TargetEffectCatalog.TARGET_ID
+			and state.target_effect.layer_count == 2
+			and state.hover_effect.visible
+			and state.hover_effect.effect_id == TargetEffectCatalog.HOVER_ID
+			and state.hover_effect.layer_count == 1
+		),
+		"accepted target and local hover effects coexist with their source layers"
+	)
+	row.health = 99
+	dog.apply_state(row, 1_000_000)
+	dog.set_targeted(true)
+	state = dog.presentation_snapshot()
+	_check(
+		(
+			state.targeted
+			and state.hovered
+			and state.target_effect.frame == 1
+			and state.hover_effect.frame == 1
+			and dog.get_node("AcceptedTargetEffect") == target_effect
+			and dog.get_node("HoverTargetEffect") == hover_effect
+		),
+		"same-life HP and accepted-target renewals preserve both effect instances and clocks"
+	)
+	dog.set_targeted(false)
+	dog.set_hovered(false)
+	state = dog.presentation_snapshot()
+	_check(
+		not state.target_effect.visible and not state.hover_effect.visible,
+		"inactive target and hover roles hide their retained effect instances"
+	)
+	dog.set_targeted(true)
+	dog.set_hovered(true)
+	state = dog.presentation_snapshot()
+	_check(
+		(
+			state.target_effect.frame == 0
+			and state.hover_effect.frame == 0
+			and dog.get_node("AcceptedTargetEffect") == target_effect
+			and dog.get_node("HoverTargetEffect") == hover_effect
+		),
+		"role reactivation resets the retained effect clocks"
+	)
+	target_effect._process(0.020001)
+	dog.set_stream_visible(false)
+	state = dog.presentation_snapshot()
+	_check(
+		(
+			not state.pickable
+			and not state.hovered
+			and not state.hover_effect.visible
+			and not state.target_effect.visible
+		),
+		"unstreamed Wild Dog disables picking and hides both effects"
+	)
+	dog.set_stream_visible(true)
+	state = dog.presentation_snapshot()
+	_check(
+		(
+			state.target_effect.visible
+			and state.target_effect.frame == 1
+			and dog.get_node("AcceptedTargetEffect") == target_effect
+		),
+		"stream restoration resumes the same accepted-target effect instance and clock"
+	)
 	_check(_skinned_meshes(dog) > 0, "Wild Dog uses an imported skinned mesh")
 	_check(_skeleton_pose_is_sane(dog), "Wild Dog wait pose remains in meter bounds")
 	row.activity = 2
@@ -306,6 +428,15 @@ func _test_monster() -> void:
 	var death := _catalog.motion(ActorCatalog.WILD_DOG_ID, "general", "", "front_death")
 	dog.apply_state(row, 4_000_000 + int(death.duration_us) + 10_000)
 	_check(dog.presentation_snapshot().frozen_pose, "Wild Dog death holds its final pose")
+	_check(
+		(
+			not dog.presentation_snapshot().pickable
+			and not dog.presentation_snapshot().targeted
+			and dog.presentation_snapshot().hover_effect.is_empty()
+			and dog.presentation_snapshot().target_effect.is_empty()
+		),
+		"death/new life disables picking and detaches prior-generation effects"
+	)
 	var dog_death_bounds := _skeleton_pose_bounds(dog)
 	print("ACTOR_POSE dog_death ", JSON.stringify(dog_death_bounds))
 	_check(_pose_bounds_are_sane(dog_death_bounds), "Wild Dog death remains near actor origin")
@@ -347,6 +478,28 @@ func _test_malformed() -> void:
 	invalid.report_errors = false
 	_check(not invalid.load_document(malformed), "fractional motion duration is rejected")
 	_check(not invalid.error_message.is_empty(), "malformed profile reports a reason")
+	var malformed_bounds: Dictionary = _catalog.manifest.duplicate(true)
+	for artifact: Dictionary in malformed_bounds.artifacts:
+		if artifact.id == ActorCatalog.WILD_DOG_ID:
+			artifact.bounds_m[1][0] = artifact.bounds_m[0][0]
+	var invalid_bounds := ActorCatalog.new()
+	invalid_bounds.report_errors = false
+	_check(invalid_bounds.load_document(malformed_bounds), "bounds do not change the P1 schema")
+	_check(
+		invalid_bounds.actor_bounds(ActorCatalog.WILD_DOG_ID).is_empty(),
+		"unordered artifact bounds cannot construct a pick shape"
+	)
+	var overflowing_bounds: Dictionary = _catalog.manifest.duplicate(true)
+	for artifact: Dictionary in overflowing_bounds.artifacts:
+		if artifact.id == ActorCatalog.WILD_DOG_ID:
+			artifact.bounds_m[1][0] = 1.0e300
+	var invalid_overflow := ActorCatalog.new()
+	invalid_overflow.report_errors = false
+	_check(invalid_overflow.load_document(overflowing_bounds), "bounds remain optional P1 metadata")
+	_check(
+		invalid_overflow.actor_bounds(ActorCatalog.WILD_DOG_ID).is_empty(),
+		"finite float64 bounds that overflow Vector3 cannot construct a pick shape"
+	)
 
 
 func _player_row() -> Dictionary:

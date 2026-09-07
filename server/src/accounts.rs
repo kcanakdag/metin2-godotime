@@ -226,6 +226,14 @@ pub fn ensure_guest_access(ctx: &ReducerContext, character: Identity) {
     }
 }
 
+pub fn owner_account(ctx: &ReducerContext, character: Identity) -> Option<Identity> {
+    ctx.db
+        .inventory_access()
+        .character_id()
+        .find(character)
+        .map(|row| row.account)
+}
+
 pub fn unique_name(ctx: &ReducerContext, name: &str) -> Result<(), String> {
     let folded = name.to_lowercase();
     // Scanning existing names reserves legacy duplicates without rewriting them.
@@ -384,6 +392,8 @@ pub fn stop_character(ctx: &ReducerContext, character: Identity) {
         control.direction_z = 0.0;
         control.attack_until_us = 0;
         crate::combat::cancel_player_attack(&mut control);
+        crate::targeting::clear_character_target(ctx, &mut control)
+            .unwrap_or_else(|error| panic!("cannot clear stopped character target: {error}"));
         ctx.db.controller().identity().update(control);
     }
     crate::combat::cancel_attacks_targeting(ctx, character);

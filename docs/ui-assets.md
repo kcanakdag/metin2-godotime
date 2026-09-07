@@ -9,6 +9,8 @@ account/character entry art, sword icon `00010`, potion icons `27001` and
 `27002`, and one English male-Warrior Status-page fixture. The original sword
 icon occupies 32 × 64 pixels; the potions are 32 × 32. This is an asset
 pipeline, separate from gameplay item definitions.
+The target-window addition is limited to the original 16 × 8 red gauge image;
+its board, close button, and three gauge-slot pieces were already selected.
 
 ```sh
 python3 tools/dev.py setup
@@ -44,6 +46,7 @@ drive prefix. Below `res://assets/imported/ui/`, remove the initial
 | `icon/item/27001.tga` | `icon/item/27001.png` |
 | `icon/item/27002.tga` | `icon/item/27002.png` |
 | `d:/ymir work/ui/game/windows/face_warrior.sub` | `game/windows/face_warrior.png` |
+| `d:/ymir work/ui/pattern/gauge_red.tga` | `pattern/gauge_red.png` |
 | `locale/en/ui/windows/tab_1.sub` | `locale/en/ui/windows/tab_1.png` |
 | `locale/en/ui/login/loginwindow.sub` | `locale/en/ui/login/loginwindow.png` |
 
@@ -77,6 +80,22 @@ input for the server-owned quarter reward. It does not add an item-use effect or
 expand the item catalog. Exact generated resources, dimensions, descriptor and
 atlas provenance, PNG SHA-256, and decoded RGBA SHA-256 are recorded in the
 ignored `client/assets/imported/ui/manifest.json` after running the converter.
+
+## P2 target-window fixture
+
+The target panel uses the original top-center ThinBoard layout. Its default
+size is 250 × 40, and a live target expands its width to
+`200 + 7 × display-name length`. The name begins at `(23, 13)`, and the close
+button is 30 pixels from the right edge at Y 13. The 130-pixel health gauge
+begins beneath the name. The existing slot art follows `Gauge.MakeGauge` from
+the pinned `root/ui.py`: left at X 0, center at X 16 with width 98, and right at
+X 114. The newly selected red fill begins at X 12 and has 106 usable pixels,
+matching the source `(width - 24) × health ratio` rule.
+
+The runtime shows the board only when the owner-private accepted target row
+matches one subscribed live monster ID and life sequence. Name, level, and
+health come from that public row. The panel consumes pointer input and its close
+button sends the ordinary clear-target intent.
 
 Original `src/EterLib/GrpSubImage.cpp` establishes the descriptor rules:
 version 1.0 resolves atlas filenames under `ymir work/ui/`; version 2.0 resolves
@@ -184,7 +203,7 @@ the small minimap instead starts at scale 2, doubles/halves zoom, and clamps
 to `[0.5, 4]`. Its source cell scale is two meters, so the default minimap
 scale corresponds to one rendered pixel per meter.
 
-The current conversion produces 224 UI images and one stitched map using 293
+The current conversion produces 225 UI images and one stitched map using 294
 pinned source files. Synthetic tests cover atlas version rules, invalid crops,
 alpha preservation and map tile orientation. Actual conversion verified PNG
 pixel round trips; Godot rendering and interaction require separate client

@@ -85,6 +85,16 @@ class UIAssets(unittest.TestCase):
             Path("locale/en/ui/windows/title_status.png"),
         )
 
+    def test_target_fixture_adds_only_the_pinned_red_gauge(self):
+        assets = set(ui.selected_assets())
+        self.assertEqual(ui.TARGET_WINDOW_ASSETS, ("pattern/gauge_red.tga",))
+        self.assertIn("ymir work/ui/pattern/gauge_red.tga", assets)
+        self.assertNotIn("ymir work/ui/pattern/gauge_blue.tga", assets)
+        self.assertEqual(
+            ui.output_path("D:/Ymir Work/UI/Pattern/Gauge_Red.tga"),
+            Path("pattern/gauge_red.png"),
+        )
+
     def test_exclusive_crop_preserves_alpha_and_rejects_padding(self):
         original = Image.new("RGBA", (4, 5), (20, 40, 60, 0))
         original.putpixel((2, 3), (10, 30, 50, 77))

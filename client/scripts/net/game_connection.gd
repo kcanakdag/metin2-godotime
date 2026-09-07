@@ -25,9 +25,10 @@ signal appearances_changed(rows: Array)
 signal server_clock_changed(server_time_us: int)
 signal progression_changed(rows: Array)
 signal command_feedback_changed(rows: Array)
+signal combat_target_changed(info: Dictionary)
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
-const EXPECTED_PROTOCOL_VERSION := 5
+const EXPECTED_PROTOCOL_VERSION := 6
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
 const TABLES := [
@@ -45,6 +46,7 @@ const TABLES := [
 	"simulation_clock",
 	"character_progression",
 	"command_feedback",
+	"combat_target_view",
 ]
 const LOBBY_QUERIES := [
 	"SELECT * FROM account_character",
@@ -63,6 +65,7 @@ const QUERIES := [
 	"SELECT * FROM item_drop",
 	"SELECT * FROM player_appearance",
 	"SELECT * FROM simulation_clock",
+	"SELECT * FROM combat_target_view",
 ]
 
 var local_identity := ""
@@ -93,6 +96,7 @@ var appearances: Array = []
 var server_time_us := 0
 var progression: Array = []
 var command_feedback: Array = []
+var combat_target: Dictionary = {}
 
 var _client: SpacetimeDBClient
 var _session := 0
@@ -254,6 +258,20 @@ func perform_attack() -> void:
 	_call_reducer("perform_attack")
 
 
+func select_combat_target(target_id: int, target_life_sequence: int) -> void:
+	if target_id <= 0 or target_id > 0xFFFFFFFF:
+		reducer_failed.emit("Choose a valid combat target.")
+		return
+	if target_life_sequence < 0 or target_life_sequence > 0xFFFFFFFF:
+		reducer_failed.emit("The selected target generation is invalid.")
+		return
+	_call_reducer("select_combat_target", [target_id, target_life_sequence], [&"U32", &"U32"])
+
+
+func clear_combat_target() -> void:
+	_call_reducer("clear_combat_target")
+
+
 func pickup_loot(id: int) -> void:
 	_call_reducer("pickup_loot", [id], [&"U64"])
 
@@ -300,6 +318,12 @@ func progression_for(character_id: String) -> Dictionary:
 
 func selected_progression() -> Dictionary:
 	return progression_for(local_identity)
+
+
+func selected_combat_target() -> Dictionary:
+	if _is_own_combat_target(combat_target):
+		return combat_target
+	return {}
 
 
 func allocate_stat(character_id: String, stat_code: String) -> void:
@@ -575,6 +599,13 @@ func _flush_snapshots() -> void:
 				rows.sort_custom(func(a: Dictionary, b: Dictionary): return int(a.id) < int(b.id))
 				command_feedback = rows
 				command_feedback_changed.emit(command_feedback)
+			"combat_target_view":
+				combat_target = {}
+				for row: Dictionary in rows:
+					if _is_own_combat_target(row):
+						combat_target = row
+						break
+				combat_target_changed.emit(combat_target)
 			"inventory_item":
 				inventory = rows
 				inventory_changed.emit(own_inventory())
@@ -622,6 +653,15 @@ func _flush_snapshots() -> void:
 	if not _dirty_tables.is_empty():
 		last_snapshot_msec = Time.get_ticks_msec()
 	_dirty_tables.clear()
+
+
+func _is_own_combat_target(row: Dictionary) -> bool:
+	return (
+		not account_identity.is_empty()
+		and not local_identity.is_empty()
+		and str(row.get("account", "")) == account_identity
+		and str(row.get("character_id", "")) == local_identity
+	)
 
 
 func _on_disconnected(session: int) -> void:
@@ -700,10 +740,12 @@ func _clear_world_snapshots() -> void:
 	inventory = []
 	item_drops = []
 	appearances = []
+	combat_target = {}
 	server_time_us = 0
 	inventory_changed.emit(inventory)
 	item_drops_changed.emit(item_drops)
 	appearances_changed.emit(appearances)
+	combat_target_changed.emit(combat_target)
 	server_clock_changed.emit(server_time_us)
 	monsters_changed.emit(monsters)
 	loot_changed.emit(loot)

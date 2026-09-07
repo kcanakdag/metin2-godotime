@@ -141,6 +141,12 @@ func _dispatch(command: Dictionary) -> void:
 			connection.move_to(float(command.get("x", 0)), float(command.get("z", 0)))
 		"stop":
 			connection.stop_moving()
+		"pointer_move":
+			_inject_pointer(command, false)
+		"pointer_click":
+			_inject_pointer(command, true)
+		"space":
+			_inject_space()
 		"attack":
 			connection.perform_attack()
 		"disconnect":
@@ -153,3 +159,44 @@ func _dispatch(command: Dictionary) -> void:
 				get_viewport().get_texture().get_image().save_png(
 					_report.get_base_dir().path_join("desktop.png")
 				)
+
+
+func _inject_pointer(command: Dictionary, click: bool) -> void:
+	var x_value: Variant = command.get("x")
+	var y_value: Variant = command.get("y")
+	if not x_value is float and not x_value is int:
+		_errors.append("Test pointer input requires a finite in-viewport point.")
+		return
+	if not y_value is float and not y_value is int:
+		_errors.append("Test pointer input requires a finite in-viewport point.")
+		return
+	var point := Vector2(float(x_value), float(y_value))
+	if not point.is_finite() or not get_viewport().get_visible_rect().has_point(point):
+		_errors.append("Test pointer input requires a finite in-viewport point.")
+		return
+	# A pushed motion reaches input handlers but does not move the native OS cursor.
+	# Keep the fixed native probe route aligned with production's periodic pointer poll.
+	if not OS.has_feature("web"):
+		get_viewport().warp_mouse(point)
+	var motion := InputEventMouseMotion.new()
+	motion.position = point
+	motion.global_position = point
+	get_viewport().push_input(motion, true)
+	if not click:
+		return
+	for pressed: bool in [true, false]:
+		var button := InputEventMouseButton.new()
+		button.button_index = MOUSE_BUTTON_LEFT
+		button.pressed = pressed
+		button.position = point
+		button.global_position = point
+		get_viewport().push_input(button, true)
+
+
+func _inject_space() -> void:
+	for pressed: bool in [true, false]:
+		var event := InputEventKey.new()
+		event.keycode = KEY_SPACE
+		event.physical_keycode = KEY_SPACE
+		event.pressed = pressed
+		get_viewport().push_input(event, true)

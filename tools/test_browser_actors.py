@@ -55,6 +55,24 @@ def exercise_actors(
     def sword() -> dict:
         return next(row for row in web()["inventory"] if row["vnum"] == 10)
 
+    def ui() -> dict:
+        return web()["ui"]
+
+    def cell_point(cell: int) -> list[float]:
+        origin = ui()["grid_origin"]
+        return [origin[0] + (cell % 5) * 32 + 16, origin[1] + (cell % 45 // 5) * 32 + 16]
+
+    def drag(start: list[float], end: list[float]) -> None:
+        page.mouse.move(*start)
+        page.mouse.down()
+        page.mouse.move(start[0] + 12, start[1] + 5, steps=5)
+        page.mouse.move(*end, steps=20)
+        page.mouse.up()
+
+    def show_page(page_index: int, check: str) -> None:
+        page.mouse.click(*ui()["tab_centers"][page_index])
+        wait(check, lambda: ui()["visible"] and ui()["page"] == page_index)
+
     def dogs_match() -> bool:
         local = local_dog()
         peer = peer_dog()
@@ -97,12 +115,14 @@ def exercise_actors(
         "browser_receives_sword_for_actor_projection",
         lambda: any(row["vnum"] == 10 for row in web()["inventory"]),
     )
+    original_cell = int(sword()["cell"])
+    assert 0 <= original_cell < 90 and not sword().get("equipped")
+    sword_page = original_cell // 45
+    incoming_page = int(ui()["page"])
     page.keyboard.press("i")
-    wait("actor_projection_inventory_opens", lambda: web()["ui"]["visible"])
-    origin = web()["ui"]["grid_origin"]
-    cell = sword()["cell"]
-    point = [origin[0] + (cell % 5) * 32 + 16, origin[1] + (cell % 45 // 5) * 32 + 16]
-    page.mouse.click(*point, button="right")
+    wait("actor_projection_inventory_opens", lambda: ui()["visible"])
+    show_page(sword_page, "actor_projection_shows_original_sword_page")
+    page.mouse.click(*cell_point(original_cell), button="right")
     wait(
         "equipped_appearance_projects_to_both_clients",
         lambda: (
@@ -139,20 +159,22 @@ def exercise_actors(
         "accepted_onehand_action_projects_to_both_clients",
         onehand_action_matches,
     )
-    equipment = web()["ui"]["equipment_origin"]
-    page.mouse.click(equipment[0] + 16, equipment[1] + 16, button="right")
+    equipment = ui()["equipment_origin"]
+    drag([equipment[0] + 16, equipment[1] + 16], cell_point(original_cell))
     wait(
-        "unequipped_appearance_projects_to_both_clients",
+        "original_sword_cell_and_unequipped_appearance_restore_for_both_clients",
         lambda: (
             not sword().get("equipped")
+            and sword().get("cell") == original_cell
             and local_actor().get("weapon_vnum") == 0
             and not local_actor().get("equipment_attached")
             and peer_actor().get("weapon_vnum") == 0
             and not peer_actor().get("equipment_attached")
         ),
     )
+    show_page(incoming_page, "actor_projection_restores_incoming_inventory_page")
     page.keyboard.press("Escape")
-    wait("actor_projection_inventory_closes", lambda: not web()["ui"]["visible"])
+    wait("actor_projection_inventory_closes", lambda: not ui()["visible"])
     return {
         "local": local_actor(),
         "peer": peer_actor(),

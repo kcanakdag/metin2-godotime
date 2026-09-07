@@ -7,6 +7,8 @@ const module_name : String = "Game"
 const table_names: Array[String] = []
 
 @export var id: int
+@export var home_x: float
+@export var home_z: float
 @export var next_attack_us: int
 @export var attack_until_us: int
 @export var pending_target: PackedByteArray
@@ -19,6 +21,8 @@ const table_names: Array[String] = []
 const primary_key: StringName = &'id'
 const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"id": "U32",
+	"home_x": "F32",
+	"home_z": "F32",
 	"next_attack_us": "I64",
 	"attack_until_us": "I64",
 	"pending_target": "__identity__",
@@ -29,16 +33,20 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 }
 
 ## 1. id: int[br]
-## 2. next_attack_us: int[br]
-## 3. attack_until_us: int[br]
-## 4. pending_target: PackedByteArray[br]
-## 5. pending_target_generation: int[br]
-## 6. pending_hit_at_us: int[br]
-## 7. pending_hit_until_us: int[br]
-## 8. pending_damage: int[br]
-static func create(p_id: int, p_next_attack_us: int, p_attack_until_us: int, p_pending_target: PackedByteArray, p_pending_target_generation: int, p_pending_hit_at_us: int, p_pending_hit_until_us: int, p_pending_damage: int) -> GameMonsterClock:
+## 2. home_x: float[br]
+## 3. home_z: float[br]
+## 4. next_attack_us: int[br]
+## 5. attack_until_us: int[br]
+## 6. pending_target: PackedByteArray[br]
+## 7. pending_target_generation: int[br]
+## 8. pending_hit_at_us: int[br]
+## 9. pending_hit_until_us: int[br]
+## 10. pending_damage: int[br]
+static func create(p_id: int, p_home_x: float, p_home_z: float, p_next_attack_us: int, p_attack_until_us: int, p_pending_target: PackedByteArray, p_pending_target_generation: int, p_pending_hit_at_us: int, p_pending_hit_until_us: int, p_pending_damage: int) -> GameMonsterClock:
 	var result: GameMonsterClock = GameMonsterClock.new()
 	result.id = p_id
+	result.home_x = p_home_x
+	result.home_z = p_home_z
 	result.next_attack_us = p_next_attack_us
 	result.attack_until_us = p_attack_until_us
 	result.pending_target = p_pending_target

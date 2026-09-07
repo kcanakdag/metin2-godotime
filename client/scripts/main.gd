@@ -6,6 +6,10 @@ const DEFAULT_DATABASE := "mt2-yongan-v2"
 const LEGACY_SETTINGS_PATH := "user://client_settings.json"
 const AccountScreens = preload("res://scripts/net/account_flow.gd")
 const ActorCatalogScript := preload("res://scripts/content/actor_catalog.gd")
+const TargetEffectCatalogScript := preload("res://scripts/content/target_effect_catalog.gd")
+const WorldPickerScript := preload("res://scripts/world/world_picker.gd")
+const HOVER_REFRESH_SECONDS := 0.1
+const GROUND_PICK_RADIUS_M := 2.0
 
 var _actors: Dictionary = {}
 var _local_actor: PlayerActor
@@ -23,10 +27,14 @@ var _original_map := false
 var _content_generation := 0
 var _account_flow: AccountScreens
 var _actor_catalog := ActorCatalogScript.new()
+var _target_effect_catalog := TargetEffectCatalogScript.new()
 var _player_rows: Array = []
 var _appearance_rows: Array = []
 var _player_sync_queued := false
 var _last_server_time_us := 0
+var _world_picker := WorldPickerScript.new()
+var _hovered_actor: PveActor
+var _hover_elapsed := 0.0
 
 @onready var connection: GameConnection = $GameConnection
 @onready var world: DevMap = $DevMap
@@ -54,6 +62,7 @@ func _ready() -> void:
 	connection.appearances_changed.connect(_on_appearances)
 	connection.server_clock_changed.connect(_on_server_clock)
 	connection.progression_changed.connect(_on_progression)
+	connection.combat_target_changed.connect(_on_combat_target)
 	connection.command_feedback_changed.connect(hud.set_command_feedback)
 	connection.obstacles_changed.connect(world.set_obstacles)
 	connection.chat_changed.connect(hud.set_chat)
@@ -73,12 +82,15 @@ func _ready() -> void:
 	hud.chat_submitted.connect(connection.send_chat)
 	hud.command_requested.connect(_on_command_requested)
 	hud.stat_allocation_requested.connect(connection.allocate_stat)
+	hud.combat_target_clear_requested.connect(connection.clear_combat_target)
 	hud.debug_option_changed.connect(_on_debug_option)
 	hud.screenshot_requested.connect(_save_screenshot)
 	hud.copy_diagnostics_requested.connect(_copy_diagnostics)
 	_load_settings()
 	if not _actor_catalog.load_required():
 		hud.show_notice(_actor_catalog.error_message)
+	if not _target_effect_catalog.load_required():
+		hud.show_notice(_target_effect_catalog.error_message)
 	hud.set_connection_defaults(
 		_settings.server_url, _settings.database, _settings.player_name, _profile
 	)
@@ -103,7 +115,23 @@ func _process(delta: float) -> void:
 		for actor: PlayerActor in _actors.values():
 			actor.visible = _stream.ready_at(actor.server_position)
 		for actor: PveActor in _pve.values():
-			actor.visible = _stream.ready_at(actor.position)
+			actor.set_stream_visible(_stream.ready_at(actor.position))
+	var pointer_blocked := (
+		connection.state != "connected"
+		or not get_window().has_focus()
+		or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+		or is_instance_valid(get_viewport().gui_get_hovered_control())
+	)
+	if pointer_blocked:
+		_set_hovered_actor(null)
+		_hover_elapsed = 0.0
+	else:
+		if is_instance_valid(_hovered_actor) and not _hovered_actor.is_pickable():
+			_set_hovered_actor(null)
+		_hover_elapsed += delta
+		if _hover_elapsed >= HOVER_REFRESH_SECONDS:
+			_hover_elapsed = 0.0
+			_update_hover(get_viewport().get_mouse_position())
 	_diagnostic_elapsed += delta
 	if _diagnostic_elapsed >= 0.25:
 		_diagnostic_elapsed = 0.0
@@ -157,6 +185,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		if hud.handle_key(event):
 			get_viewport().set_input_as_handled()
 			return
+		if hud.wants_keyboard():
+			return
 		match event.keycode:
 			KEY_ENTER:
 				hud.focus_chat()
@@ -166,8 +196,13 @@ func _unhandled_input(event: InputEvent) -> void:
 				_pickup()
 			KEY_ESCAPE:
 				get_viewport().gui_release_focus()
-	if event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
-		camera_rig.orbit(event.relative)
+	if event is InputEventMouseMotion:
+		if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+			_set_hovered_actor(null)
+			camera_rig.orbit(event.relative)
+		elif connection.state == "connected":
+			_hover_elapsed = 0.0
+			_update_hover(event.position)
 	if event is InputEventMouseButton and event.pressed:
 		if (
 			connection.state == "connected"
@@ -181,7 +216,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				camera_rig.zoom(0.7)
 			MOUSE_BUTTON_LEFT:
 				if connection.state == "connected":
-					_click_move(event.position)
+					_click_world(event.position)
 
 
 func dev_snapshot() -> Dictionary:
@@ -222,6 +257,10 @@ func dev_snapshot() -> Dictionary:
 		"camera_distance": camera_rig.distance,
 		"obstacles": connection.obstacles.size(),
 		"monsters": connection.monsters.duplicate(true),
+		"combat_target": connection.selected_combat_target().duplicate(true),
+		"hover_target":
+		_hovered_actor.combat_target_intent() if is_instance_valid(_hovered_actor) else {},
+		"ground_pick": _ground_pick_snapshot(),
 		"monster_presentations": _monster_snapshots(),
 		"loot": connection.loot.duplicate(true),
 		"inventory": connection.own_inventory().duplicate(true),
@@ -229,6 +268,7 @@ func dev_snapshot() -> Dictionary:
 		"ui": hud.inventory_snapshot(),
 		"map_chunks": _stream.loaded.keys(),
 		"content_error": _stream.last_error,
+		"target_effect_error": _target_effect_catalog.error_message,
 		"account": _account_flow.snapshot() if is_instance_valid(_account_flow) else {},
 		"connected_at_msec": connection.connected_at_msec,
 		"definition_profile": str(connection.world_info.get("definition_profile", "")),
@@ -295,6 +335,7 @@ func _on_connection_state(state: String, message: String) -> void:
 		_stream.set_active(false)
 	if state != "connected":
 		_held_movement = false
+		_set_hovered_actor(null)
 
 
 func _on_players(rows: Array) -> void:
@@ -309,6 +350,10 @@ func _on_appearances(rows: Array) -> void:
 
 func _on_progression(_rows: Array) -> void:
 	hud.set_progression(connection.selected_progression())
+
+
+func _on_combat_target(_target: Dictionary) -> void:
+	_refresh_combat_target()
 
 
 func _on_server_clock(server_time_us: int) -> void:
@@ -376,6 +421,8 @@ func _on_world_info(info: Dictionary) -> void:
 		_original_map = str(info.get("map_id", "training")) == "metin2_map_a1"
 		world.visible = not _original_map
 		_stream.visible = _original_map
+		for actor: PveActor in _pve.values():
+			actor.set_stream_visible(not _original_map or _stream.ready_at(actor.position))
 
 
 func _prepare_world(info: Dictionary) -> void:
@@ -383,6 +430,10 @@ func _prepare_world(info: Dictionary) -> void:
 	if _actor_catalog.manifest.is_empty() and not _actor_catalog.load_required():
 		connection.disconnect_game()
 		hud.show_notice(_actor_catalog.error_message)
+		return
+	if not _target_effect_catalog.loaded and not _target_effect_catalog.load_required():
+		connection.disconnect_game()
+		hud.show_notice(_target_effect_catalog.error_message)
 		return
 	if not _actor_catalog.validate_world(info):
 		connection.disconnect_game()
@@ -401,7 +452,16 @@ func _prepare_world(info: Dictionary) -> void:
 
 
 func _on_monsters(rows: Array) -> void:
+	var hovered_intent := (
+		_hovered_actor.combat_target_intent() if is_instance_valid(_hovered_actor) else {}
+	)
 	_sync_pve(rows, false)
+	if (
+		is_instance_valid(_hovered_actor)
+		and _hovered_actor.combat_target_intent() != hovered_intent
+	):
+		_set_hovered_actor(null)
+	_refresh_combat_target()
 
 
 func _on_loot(rows: Array) -> void:
@@ -433,12 +493,17 @@ func _sync_pve(rows: Array, loot_mode: bool, item_mode: bool = false) -> void:
 			actor.name = id
 			actor.loot_mode = loot_mode
 			actor.item_mode = item_mode
-			actor.configure(_actor_catalog)
+			actor.configure(_actor_catalog, _target_effect_catalog)
 			add_child(actor)
 			_pve[id] = actor
-		_pve[id].apply_state(row, connection.server_time_us)
+		var pve_actor: PveActor = _pve[id]
+		pve_actor.apply_state(row, connection.server_time_us)
+		pve_actor.set_stream_visible(not _original_map or _stream.ready_at(pve_actor.position))
 	for id: String in _pve.keys():
 		if id.begins_with(prefix) and not present.has(id):
+			if _pve[id] == _hovered_actor:
+				_set_hovered_actor(null)
+			_pve[id].set_stream_visible(false)
 			_pve[id].queue_free()
 			_pve.erase(id)
 
@@ -465,17 +530,27 @@ func _pickup() -> void:
 			connection.pickup_loot(int(nearest.id))
 
 
-func _click_move(screen_position: Vector2) -> void:
-	var hit: Variant = camera_rig.ground_point(screen_position)
-	if _original_map:
-		var camera := camera_rig.camera
-		var origin := camera.project_ray_origin(screen_position)
-		var query := PhysicsRayQueryParameters3D.create(
-			origin, origin + camera.project_ray_normal(screen_position) * 500
+func _click_world(screen_position: Vector2) -> void:
+	var pick: Dictionary = _world_picker.pick(
+		camera_rig.camera, get_world_3d().direct_space_state, screen_position
+	)
+	if pick.get("kind") == "target":
+		var actor: Variant = pick.get("actor")
+		if not _pve.values().has(actor):
+			return
+		var intent: Dictionary = pick.get("intent", {})
+		connection.select_combat_target(
+			int(intent.get("target_id", 0)), int(intent.get("target_life_sequence", -1))
 		)
-		var result := get_world_3d().direct_space_state.intersect_ray(query)
-		hit = result.get("position")
-	if hit == null:
+		_marker_time = 0.0
+		return
+	if pick.get("kind") == "blocked":
+		return
+	var plane_fallback: Variant = (
+		camera_rig.ground_point(screen_position) if not _original_map else null
+	)
+	var hit: Variant = _world_picker.movement_point(pick, plane_fallback)
+	if not hit is Vector3:
 		return
 	var point: Vector3 = hit
 	if not _original_map:
@@ -486,6 +561,53 @@ func _click_move(screen_position: Vector2) -> void:
 	connection.move_to(point.x, point.z)
 	_marker.position = point + Vector3.UP * 0.1
 	_marker_time = 1.5
+
+
+func _update_hover(screen_position: Vector2) -> void:
+	if (
+		not get_window().has_focus()
+		or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+		or is_instance_valid(get_viewport().gui_get_hovered_control())
+	):
+		_set_hovered_actor(null)
+		return
+	var pick: Dictionary = _world_picker.pick(
+		camera_rig.camera, get_world_3d().direct_space_state, screen_position
+	)
+	var actor: Variant = pick.get("actor") if pick.get("kind") == "target" else null
+	_set_hovered_actor(actor if actor is PveActor and _pve.values().has(actor) else null)
+
+
+func _set_hovered_actor(actor: PveActor) -> void:
+	if _hovered_actor == actor:
+		if is_instance_valid(_hovered_actor) and not _hovered_actor.is_pickable():
+			_hovered_actor.set_hovered(false)
+			_hovered_actor = null
+		return
+	if is_instance_valid(_hovered_actor):
+		_hovered_actor.set_hovered(false)
+	_hovered_actor = actor
+	if is_instance_valid(_hovered_actor):
+		_hovered_actor.set_hovered(true)
+
+
+func _refresh_combat_target() -> void:
+	var target := connection.selected_combat_target()
+	for actor: PveActor in _pve.values():
+		if actor.loot_mode:
+			continue
+		var intent := actor.target_identity()
+		actor.set_targeted(
+			(
+				not target.is_empty()
+				and int(intent.get("target_id", 0)) == int(target.get("target_id", 0))
+				and (
+					int(intent.get("target_life_sequence", -1))
+					== int(target.get("target_life_sequence", -1))
+				)
+			)
+		)
+	hud.target_panel.set_target(target, connection.monsters)
 
 
 func _create_marker() -> void:
@@ -542,8 +664,65 @@ func _monster_snapshots() -> Array:
 	var rows: Array = []
 	for actor: PveActor in _pve.values():
 		if not actor.loot_mode:
-			rows.append(actor.presentation_snapshot())
+			var snapshot := actor.presentation_snapshot()
+			var projection := actor.pick_projection(
+				camera_rig.camera, get_viewport().get_visible_rect()
+			)
+			if bool(projection.available):
+				var pick: Dictionary = _world_picker.pick(
+					camera_rig.camera,
+					get_world_3d().direct_space_state,
+					Vector2(float(projection.screen[0]), float(projection.screen[1]))
+				)
+				if pick.get("kind") != "target" or pick.get("actor") != actor:
+					projection.available = false
+					projection.screen = []
+			snapshot["pick"] = projection
+			rows.append(snapshot)
 	return rows
+
+
+func _ground_pick_snapshot() -> Dictionary:
+	var unavailable := {"available": false, "screen": [], "world": []}
+	if not is_instance_valid(_local_actor) or not is_instance_valid(camera_rig.camera):
+		return unavailable
+	var viewport_rect := get_viewport().get_visible_rect()
+	var origin := _local_actor.position
+	var offsets: Array[Vector2] = [
+		Vector2(GROUND_PICK_RADIUS_M, 0.0),
+		Vector2(-GROUND_PICK_RADIUS_M, 0.0),
+		Vector2(0.0, GROUND_PICK_RADIUS_M),
+		Vector2(0.0, -GROUND_PICK_RADIUS_M),
+		Vector2(GROUND_PICK_RADIUS_M, GROUND_PICK_RADIUS_M),
+		Vector2(-GROUND_PICK_RADIUS_M, GROUND_PICK_RADIUS_M),
+		Vector2(GROUND_PICK_RADIUS_M, -GROUND_PICK_RADIUS_M),
+		Vector2(-GROUND_PICK_RADIUS_M, -GROUND_PICK_RADIUS_M),
+	]
+	for offset in offsets:
+		var candidate := origin + Vector3(offset.x, 0.0, offset.y)
+		if camera_rig.camera.is_position_behind(candidate):
+			continue
+		var screen := camera_rig.camera.unproject_position(candidate)
+		if not screen.is_finite() or not viewport_rect.has_point(screen):
+			continue
+		var pick := _world_picker.pick(camera_rig.camera, get_world_3d().direct_space_state, screen)
+		if pick.get("kind") != "ground" or not pick.get("position") is Vector3:
+			continue
+		var point: Vector3 = pick.position
+		var horizontal_distance := Vector2(point.x - origin.x, point.z - origin.z).length()
+		if (
+			not point.is_finite()
+			or horizontal_distance < 0.5
+			or horizontal_distance > GROUND_PICK_RADIUS_M * 2.0
+			or not _stream.ready_at(point)
+		):
+			continue
+		return {
+			"available": true,
+			"screen": [screen.x, screen.y],
+			"world": [point.x, point.y, point.z],
+		}
+	return unavailable
 
 
 func _load_settings() -> void:

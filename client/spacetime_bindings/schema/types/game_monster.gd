@@ -10,6 +10,7 @@ const table_names: Array[String] = ['monster']
 @export var definition_vnum: int
 @export var actor_id: String
 @export var name: String
+@export var level: int
 @export var model_key: String
 @export var motion_set: String
 @export var attack_action_id: String
@@ -33,6 +34,7 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"definition_vnum": "U32",
 	"actor_id": "String",
 	"name": "String",
+	"level": "U8",
 	"model_key": "String",
 	"motion_set": "String",
 	"attack_action_id": "String",
@@ -54,27 +56,29 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 ## 2. definition_vnum: int[br]
 ## 3. actor_id: String[br]
 ## 4. name: String[br]
-## 5. model_key: String[br]
-## 6. motion_set: String[br]
-## 7. attack_action_id: String[br]
-## 8. x: float[br]
-## 9. y: float[br]
-## 10. z: float[br]
-## 11. heading: float[br]
-## 12. health: int[br]
-## 13. max_health: int[br]
-## 14. activity: int[br]
-## 15. attack_sequence: int[br]
-## 16. life_sequence: int[br]
-## 17. respawn_at_us: int[br]
-## 18. action_started_at_us: int[br]
-## 19. action_ends_at_us: int[br]
-static func create(p_id: int, p_definition_vnum: int, p_actor_id: String, p_name: String, p_model_key: String, p_motion_set: String, p_attack_action_id: String, p_x: float, p_y: float, p_z: float, p_heading: float, p_health: int, p_max_health: int, p_activity: int, p_attack_sequence: int, p_life_sequence: int, p_respawn_at_us: int, p_action_started_at_us: int, p_action_ends_at_us: int) -> GameMonster:
+## 5. level: int[br]
+## 6. model_key: String[br]
+## 7. motion_set: String[br]
+## 8. attack_action_id: String[br]
+## 9. x: float[br]
+## 10. y: float[br]
+## 11. z: float[br]
+## 12. heading: float[br]
+## 13. health: int[br]
+## 14. max_health: int[br]
+## 15. activity: int[br]
+## 16. attack_sequence: int[br]
+## 17. life_sequence: int[br]
+## 18. respawn_at_us: int[br]
+## 19. action_started_at_us: int[br]
+## 20. action_ends_at_us: int[br]
+static func create(p_id: int, p_definition_vnum: int, p_actor_id: String, p_name: String, p_level: int, p_model_key: String, p_motion_set: String, p_attack_action_id: String, p_x: float, p_y: float, p_z: float, p_heading: float, p_health: int, p_max_health: int, p_activity: int, p_attack_sequence: int, p_life_sequence: int, p_respawn_at_us: int, p_action_started_at_us: int, p_action_ends_at_us: int) -> GameMonster:
 	var result: GameMonster = GameMonster.new()
 	result.id = p_id
 	result.definition_vnum = p_definition_vnum
 	result.actor_id = p_actor_id
 	result.name = p_name
+	result.level = p_level
 	result.model_key = p_model_key
 	result.motion_set = p_motion_set
 	result.attack_action_id = p_attack_action_id

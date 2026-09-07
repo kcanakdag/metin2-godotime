@@ -33,6 +33,7 @@ from test_browser_actors import exercise_actors
 from test_browser_inventory import exercise_inventory
 from test_browser_panels import exercise_panels
 from test_browser_progression import exercise_progression, exercise_progression_combat
+from test_browser_target import exercise_targeting
 
 ROOT = Path(__file__).resolve().parents[1]
 RENEWAL_INPUT_AUDIT = """() => {
@@ -143,6 +144,11 @@ def main() -> None:
     parser.add_argument("--panels", action="store_true")
     parser.add_argument("--progression", action="store_true")
     parser.add_argument(
+        "--targeting",
+        action="store_true",
+        help="Exercise protocol-6 target picking, private UI, effects, combat, and cleanup",
+    )
+    parser.add_argument(
         "--progression-combat",
         action="store_true",
         help="Kill five production Wild Dogs and allocate the first VIT point",
@@ -157,6 +163,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.progression_combat and not args.progression:
         parser.error("--progression-combat requires --progression")
+    if args.targeting and args.progression_combat:
+        parser.error("--targeting cannot be combined with the five-kill --progression-combat mode")
     if not args.native.is_file():
         parser.error("Missing exported Linux test client; export with --test-probe first.")
     if not shutil.which("xvfb-run"):
@@ -558,7 +566,27 @@ def main() -> None:
                     native_id,
                     output,
                 )
+            if args.targeting and args.inventory:
+                # Inventory's full-health potion rejection must run before the
+                # targeting slice allows ordinary monster damage.
+                samples["inventory"] = exercise_inventory(page, web, wait, output)
+            if args.targeting:
+                samples["targeting_diagnostics"] = {}
+                samples["targeting"] = exercise_targeting(
+                    page,
+                    web,
+                    desktop,
+                    web_command,
+                    native_command,
+                    wait,
+                    web_id,
+                    native_id,
+                    output,
+                    samples["targeting_diagnostics"],
+                )
             if args.actors:
+                # Targeting leaves both actors unarmed and outside dog chase
+                # range, so this presentation-only attack cannot alter its fixture.
                 samples["actors"] = exercise_actors(
                     page,
                     web,
