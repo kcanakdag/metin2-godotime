@@ -29,6 +29,13 @@ require regenerated bindings and the same installed character catalog used for
 the server build. Publish incompatible schemas to a fresh database and preserve
 existing data. A local auth issuer build must stay on its matching local endpoint.
 
+The isolated `tools/test_target_client.py` runner requires the installed base
+actor, UI and character packages. It stages all three, including the character
+catalog hash in its report. Run `--suite content_gate --suite screen_wave` to
+check class-aware camera-event routing and the existing screen-wave timing and
+lifecycle rules. Class routing uses synthetic events on registered motions;
+this is not evidence that additional original camera events have been imported.
+
 ## Install the quality tools
 
 Use Python 3.12 or newer. This creates an ignored virtual environment at

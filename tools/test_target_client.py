@@ -78,10 +78,13 @@ def main() -> None:
     report_path.write_text(json.dumps({"passed": False, "status": "started"}, indent=2) + "\n")
     actor_profile = CLIENT / "assets/imported/content/p0-warrior-dog"
     ui_profile = CLIENT / "assets/imported/ui"
+    character_profile = CLIENT / "assets/imported/characters"
     if not (actor_profile / "manifest.v1.json").is_file():
         raise SystemExit("Missing P1 actor profile; run the content import first.")
     if not (ui_profile / "manifest.json").is_file():
         raise SystemExit("Missing original UI fixture; run make import-ui first.")
+    if not (character_profile / "catalog.v1.json").is_file():
+        raise SystemExit("Missing character catalog; run make characters-build first.")
     with tempfile.TemporaryDirectory(prefix="project-", dir=options.output) as scratch:
         stage = Path(scratch)
         shutil.copytree(CLIENT / "scripts", stage / "scripts")
@@ -89,6 +92,7 @@ def main() -> None:
         shutil.copytree(CLIENT / "spacetime_bindings", stage / "spacetime_bindings")
         shutil.copytree(actor_profile, stage / "assets/imported/content/p0-warrior-dog")
         shutil.copytree(ui_profile, stage / "assets/imported/ui")
+        shutil.copytree(character_profile, stage / "assets/imported/characters")
         (stage / "scenes").mkdir()
         shutil.copy2(CLIENT / "scenes/main.tscn", stage / "scenes/main.tscn")
         (stage / "tests").mkdir()
@@ -98,6 +102,7 @@ def main() -> None:
             shutil.copy2(CLIENT / "tests" / script, stage / "tests" / script)
         (stage / "project.godot").write_text(PROJECT)
         tested_files = {
+            "character_catalog": sha256(stage / "assets/imported/characters/catalog.v1.json"),
             "main": sha256(stage / "scripts/main.gd"),
             "main_scene": sha256(stage / "scenes/main.tscn"),
             "actor_catalog": sha256(stage / "scripts/content/actor_catalog.gd"),

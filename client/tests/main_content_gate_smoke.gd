@@ -4,6 +4,20 @@ extends SceneTree
 const MainScript := preload("res://scripts/main.gd")
 
 
+class WaveCatalog:
+	extends ActorCatalog
+
+	# Synthetic wave on real registered motions tests routing independently of
+	# which original events have been adapted by the content compiler.
+	func motion(actor_id: String, mode_id: String, action_id := "", action := "") -> Dictionary:
+		var result := super.motion(actor_id, mode_id, action_id, action).duplicate(true)
+		if not result.is_empty():
+			result.screen_wave = {
+				"activation_offset_us": 100000, "duration_us": 200000, "viewer_range_m": 2.0
+			}
+		return result
+
+
 class ConnectionSpy:
 	extends GameConnection
 	var disconnects := 0
@@ -45,6 +59,7 @@ func _initialize() -> void:
 	_test_failure("Required target-effect catalog is missing.", "missing")
 	_test_failure("Required target-effect catalog is not valid JSON.", "invalid")
 	_test_screen_wave_setting_round_trip()
+	_test_class_wave_dispatch()
 	if not _failed:
 		print("MAIN_CONTENT_GATE_SMOKE PASS ", _checks, " checks")
 	quit(1 if _failed else 0)
@@ -123,6 +138,66 @@ func _test_screen_wave_setting_round_trip() -> void:
 	)
 	writer.free()
 	reader.free()
+
+
+func _test_class_wave_dispatch() -> void:
+	var main := MainScript.new()
+	var connection := ConnectionSpy.new()
+	var camera := OrbitCamera.new()
+	var catalog := WaveCatalog.new()
+	_check(catalog.load_required(), "wave dispatch loads all installed class definitions")
+	main.connection = connection
+	main.camera_rig = camera
+	main.set("_actor_catalog", catalog)
+	connection.state = "connected"
+	connection.local_identity = "viewer"
+	for definition: Dictionary in catalog.characters.classes:
+		for variant: Dictionary in definition.variants:
+			var appearance := {
+				"character_id": "attacker",
+				"character_class": definition.class_id,
+				"sex": variant.sex
+			}
+			connection.appearances = [appearance]
+			var mode := "fan" if int(definition.class_id) == 3 else "onehand"
+			var row := {
+				"identity": "attacker",
+				"online": true,
+				"activity": 2,
+				"attack_action_id": str(variant.actor_id) + "." + mode + ".combo_4",
+				"attack_sequence": 1,
+				"action_started_at_us": 1000000,
+				"action_ends_at_us": 2000000,
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0,
+			}
+			main.set(
+				"_player_rows",
+				[{"identity": "viewer", "online": true, "x": 0.0, "y": 0.0, "z": 0.0}, row]
+			)
+			camera.reset_screen_waves()
+			main.call("_observe_screen_waves", 1000000)
+			main.call("_observe_screen_waves", 1100000)
+			_check(
+				camera.screen_wave_snapshot().trigger_count == 1,
+				"remote wave resolves its own appearance: " + str(variant.actor_id)
+			)
+			main.call("_observe_screen_waves", 1100000)
+			_check(
+				camera.screen_wave_snapshot().trigger_count == 1,
+				"repeated class observation does not replay the wave"
+			)
+			camera.reset_screen_waves()
+			connection.appearances = []
+			main.call("_observe_screen_waves", 1100000)
+			_check(
+				camera.screen_wave_snapshot().trigger_count == 0,
+				"missing appearance cannot borrow a Warrior event"
+			)
+	main.free()
+	connection.free()
+	camera.free()
 
 
 func _check(passed: bool, description: String) -> void:

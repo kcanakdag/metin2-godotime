@@ -30,6 +30,28 @@ feature records across 41 systems are a scope inventory with different sizes,
 dependencies and acceptance criteria, so their record counts do not support a
 meaningful percentage-complete claim.
 
+## Class-aware camera-event routing follow-up
+
+Main now resolves each subscribed attack's camera event using that character's
+appearance, rather than always querying the male Warrior. Missing appearances
+produce no event. The isolated target-client runner now stages the required
+character package and records its catalog hash; previously it omitted this new
+runtime dependency.
+
+`.local/p4-class-effects/components-r2/report.json` records 34 main/content-gate
+checks and 29 screen-wave checks. The routing regression exercises all eight
+installed appearances, repeat suppression and missing-appearance rejection. It
+uses synthetic camera events on real registered motions: additional original
+class camera events are **not** adapted by this change. The existing Warrior
+event is independently tested from the generated catalog. Owned-source lint
+passes in `.local/p4-class-effects/lint.log`.
+
+This is a source-level follow-up, not a newly deployed gameplay milestone.
+The local and public exports remain as described below. Godot editor MCP was
+unavailable; these checks used an isolated headless Godot project, with no new
+rendered, exported-client or multiplayer evidence. The first sandbox run failed
+on engine socket creation; the host run completed successfully.
+
 ## Protocol 14 Shaman Fan+0 and shared weapon combos
 
 The local endpoint **http://127.0.0.1:8186** now serves

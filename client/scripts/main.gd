@@ -496,7 +496,10 @@ func _observe_screen_waves(server_time_us: int) -> void:
 		var action_id := str(row.get("attack_action_id", ""))
 		if action_id.is_empty():
 			continue
-		var motion := _actor_catalog.motion(ActorCatalogScript.WARRIOR_ID, "", action_id)
+		var actor_id := _actor_catalog.player_actor_id(
+			connection.appearance_for(str(row.get("identity", "")))
+		)
+		var motion := _actor_catalog.motion(actor_id, "", action_id)
 		var event: Variant = motion.get("screen_wave", {})
 		var actor_position: Variant = _subscribed_position(row)
 		if not event is Dictionary or event.is_empty() or not actor_position is Vector3:
