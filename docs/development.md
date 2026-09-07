@@ -14,6 +14,11 @@ Each output is a new revision; replacement preserves the previous installed
 package. The [character workflow](characters.md) documents inputs, receipts,
 runtime limits, the two-client `make test-classes` command, and exported
 `tools/test_browser_accounts.py --classes` qualification.
+The item package now includes Fan+0; run `make content-build` and the UI importer
+when updating selected weapon models/icons. `tools/test_actors.py --scenario fan
+--native` checks both Shaman attachments and held input. For a focused live replay,
+use `tools/test_physical_combat.py --scenario classes --class-id 3` with the usual
+explicit server, database, Godot and report arguments.
 
 Use separate `--work-dir` and `--output-dir` values when running Web/Linux exports
 concurrently. Each `tools/export_playable.py` invocation also supplies its own

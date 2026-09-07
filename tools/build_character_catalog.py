@@ -64,7 +64,7 @@ def public_catalog(normalized: dict, artifacts: dict) -> dict:
             modes.append(
                 {
                     "id": mode["id"],
-                    "required_item_vnums": [10] if mode["id"] == "onehand" else [],
+                    "required_item_vnums": {"onehand": [10], "fan": [7000]}.get(mode["id"], []),
                     "combo_chains": registered_combo_chains(
                         registrations, actor["model_key"].split("_")[0].capitalize(), mode["id"]
                     )
@@ -117,12 +117,15 @@ def validate_catalog(document: dict) -> None:
     class_ids, ids, races, actor_ids = set(), set(), set(), {BASE_WARRIOR}
     for row in classes:
         if (
-            set(row) != {"id", "class_id", "name", "initial_points", "variants"}
+            set(row)
+            != {"id", "class_id", "name", "initial_points", "variants", "starter_weapon_vnum"}
             or not re.fullmatch(r"[a-z][a-z0-9-]*", row["id"])
             or row["id"] in ids
             or type(row["class_id"]) is not int
             or row["class_id"] not in range(4)
             or row["class_id"] in class_ids
+            or type(row["starter_weapon_vnum"]) is not int
+            or not 0 < row["starter_weapon_vnum"] < 2**32
         ):
             raise ValueError("Invalid or duplicate character class")
         class_ids.add(row["class_id"])

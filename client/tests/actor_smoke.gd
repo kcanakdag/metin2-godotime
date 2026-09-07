@@ -788,8 +788,8 @@ func _skinned_meshes(node: Node) -> int:
 	return count
 
 
-func _equipment_bounds_are_sane(node: Node) -> bool:
-	var attachment := node.find_child("Equipment_10", true, false) as BoneAttachment3D
+func _equipment_bounds_are_sane(node: Node, weapon_vnum: int = 10) -> bool:
+	var attachment := node.find_child("Equipment_%d" % weapon_vnum, true, false) as BoneAttachment3D
 	if attachment == null:
 		return false
 	var bounds := AABB()
@@ -811,8 +811,10 @@ func _equipment_bounds_are_sane(node: Node) -> bool:
 	)
 
 
-func _equipment_landmark(node: Node3D, source: Dictionary) -> Dictionary:
-	var attachment := node.find_child("Equipment_10", true, false) as BoneAttachment3D
+func _equipment_landmark(
+	node: Node3D, source: Dictionary, weapon_vnum: int = 10, weapon_length_m: float = 1.3
+) -> Dictionary:
+	var attachment := node.find_child("Equipment_%d" % weapon_vnum, true, false) as BoneAttachment3D
 	if attachment == null or attachment.get_child_count() != 1:
 		return {}
 	var equipment_model := attachment.get_child(0) as Node3D
@@ -823,7 +825,7 @@ func _equipment_landmark(node: Node3D, source: Dictionary) -> Dictionary:
 		node.global_transform.affine_inverse() * equipment_model.global_transform
 	)
 	var observed_start := node_from_attachment.origin
-	var observed_end := node_from_equipment * Vector3(0.0, 1.3, 0.0)
+	var observed_end := node_from_equipment * Vector3(0.0, weapon_length_m, 0.0)
 	var expected_start := _vector3(source.get("start_m", []))
 	var expected_end := _vector3(source.get("end_m", []))
 	return {

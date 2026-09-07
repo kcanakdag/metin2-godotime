@@ -6,6 +6,7 @@ use crate::progression::character_progression;
 use crate::{active_controller, collision_bounds, content, now_us, player};
 use spacetimedb::{Identity, ReducerContext, Table};
 
+#[cfg(test)]
 pub(crate) const SWORD: u32 = crate::definitions::WEAPON_VNUM;
 const RED_POTION: u32 = crate::definitions::SMALL_POTION_VNUM;
 const EQUIPPED_CELL: u8 = 255;
@@ -277,16 +278,18 @@ pub fn ensure_starter(ctx: &ReducerContext, owner: Identity) -> Result<(), Strin
         return Ok(());
     }
     let appearance = crate::characters::owned_appearance(ctx, owner)?;
-    if crate::item_catalog::check_requirements(
-        crate::item_catalog::definition(SWORD)?,
+    let weapon = crate::characters::class(appearance.class_id)?.starter_weapon_vnum;
+    if !crate::item_catalog::is_weapon(weapon) {
+        return Err("The configured starter item is not a weapon.".into());
+    }
+    crate::item_catalog::check_requirements(
+        crate::item_catalog::definition(weapon)?,
         1,
         appearance.class_id,
         appearance.sex,
-    )
-    .is_ok()
-    {
-        grant(ctx, owner, SWORD, 1, Cause::Starter)?;
-    }
+    )?;
+    crate::characters::attack(ctx, owner, weapon)?;
+    grant(ctx, owner, weapon, 1, Cause::Starter)?;
     grant(ctx, owner, RED_POTION, 5, Cause::Starter)?;
     if crate::definitions::ITEM_RECOVERY_TEST_STARTER {
         grant(

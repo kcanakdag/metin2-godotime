@@ -78,8 +78,13 @@ contribution, so later state changes cannot rewrite a queued hit.
 
 All eight appearances have general movement and basic unarmed attacks. Warrior,
 Ninja and Sura receive Sword+0 and use their original four-step common sword chain
-in both appearances. Every class receives five small red potions. Shaman currently
-starts unarmed; its fan item and fan combat are pending. Holding Space sends
+in both appearances. Shaman receives Fan+0 (vnum 7000) and uses its original
+four-step fan chain in both appearances. Every class receives five small red potions.
+The class profile explicitly selects `starter_weapon_vnum`; the item registry
+provides equipment requirements, dimensions and physical power. Fan+0 occupies
+one cell, is restricted to Shaman, and uses source physical power 11–15. The
+original fan mesh, texture and inventory icon join the baseline item package.
+Holding Space sends
 ordinary attack intents at the current action's source input windows. The server
 owns every transition, hit and equipment check. Releasing Space, focusing chat or
 losing window focus stops new held-key intents; an already accepted link may finish.
@@ -95,8 +100,10 @@ unused field. Finite Sura combo input times extending beyond the clip remain in
 source metadata; the playable common chain expires at clip end. Terminal input
 metadata never enables a fifth hit. Warrior/Ninja finishers use their original
 area-event timing and the shared validated area policy; the source's disabled
-ordinary 0..0 hit window cannot produce an extra hit. Sura's fourth hit currently
-uses ordinary damage; its original force-15 knockback remains pending. Advanced
+ordinary 0..0 hit window cannot produce an extra hit. Sura and Shaman fourth hits currently
+use ordinary damage; their original force-15 knockback remains pending.
+Weapon attack-speed applies are not yet integrated; these chains use the
+unscaled authored clip and input times. Advanced
 combo registrations are imported as data but are not enabled as gameplay.
 
 Skills, Ninja daggers/bows, Sura abilities, Shaman fans/bells, additional armor,
@@ -105,6 +112,15 @@ The current catalog deliberately validates four classic classes and eight
 appearances. A future class extends those validators and the supported mechanics
 alongside its data; it does not need a separate account or networking system.
 Quests remain deferred.
+
+The fan's original on-foot attachment is `weapon_right` / `equip_right`, as
+`src/GameLib/ActorInstanceAttach.cpp` specifies. Conversion preserves the shared
+item coordinate transform. The pinned male Shaman MSA files repeat the female
+hit samples despite different GR2 animations. The visual fixture therefore
+checks both attachments against their own skeletons and checks female geometry
+against those source landmarks. It records the male discrepancy instead of
+altering the male rig to fit copied metadata. Current ordinary melee uses the
+shared server range/timing policy, not these sampled hand traces.
 
 ## Qualification
 
@@ -120,6 +136,17 @@ The live test uses two ordinary authenticated accounts, creates all eight
 appearances, checks rejected IDs and private subscriptions, moves both players,
 attacks actual mobs, and reconnects without duplicating starter items. It requires
 a disposable `mt2-p2-` database with the normal six-dog Yongan population.
+Add `--class-id 3` to `tools/test_physical_combat.py --scenario classes` to focus
+on both Shamans while still checking all eight private character/starter records.
+The focused native visual/input check is:
+
+```sh
+python3 tools/test_actors.py --scenario fan --native --godot /path/to/godot \
+  --output .local/characters/fan-render-qa
+```
+
+It saves both models in idle and all four fan attacks, checks bone attachments,
+source metadata limits, held-input windows, duplicate scheduling and release.
 
 For actual Web/Linux exports, use the existing export commands with the intended
 endpoint/database. Package audits load every added character model and verify

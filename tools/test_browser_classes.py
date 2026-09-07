@@ -35,7 +35,9 @@ def exercise_previews(page, account, click, wait, output):
     return snapshots
 
 
-def exercise_class_world(page, web, desktop, wait, identity, actor_id, output, *, sword=False):
+def exercise_class_world(
+    page, web, desktop, wait, identity, actor_id, output, *, weapon_vnum=0, mode="general"
+):
     def local():
         return rendered_actor(web(), identity)
 
@@ -58,28 +60,28 @@ def exercise_class_world(page, web, desktop, wait, identity, actor_id, output, *
     page.screenshot(path=str(output / f"{label}-status.png"))
     page.keyboard.press("Escape")
     wait(f"{label}_status_closes", lambda: not web()["ui"]["status"]["visible"])
-    if sword:
+    if weapon_vnum:
         page.keyboard.press("i")
         wait(f"{label}_inventory_opens", lambda: web()["ui"]["visible"])
-        item = next(row for row in web()["inventory"] if row["vnum"] == 10)
+        item = next(row for row in web()["inventory"] if row["vnum"] == weapon_vnum)
         cell = int(item["cell"])
         origin = web()["ui"]["grid_origin"]
         page.mouse.click(
             origin[0] + cell % 5 * 32 + 16, origin[1] + cell // 5 * 32 + 16, button="right"
         )
         wait(
-            f"{label}_sword_attaches_for_both_players",
+            f"{label}_weapon_attaches_for_both_players",
             lambda: all(
                 row.get("equipment_attached")
-                and row.get("weapon_vnum") == 10
-                and row.get("mode") == "onehand"
+                and row.get("weapon_vnum") == weapon_vnum
+                and row.get("mode") == mode
                 for row in (local(), peer())
             ),
         )
         page.keyboard.press("Escape")
         wait(f"{label}_inventory_closes", lambda: not web()["ui"]["visible"])
     before = local()["attack_sequence"]
-    expected = actor_id + (".onehand.combo_1" if sword else ".general.normal_attack")
+    expected = actor_id + (f".{mode}.combo_1" if weapon_vnum else ".general.normal_attack")
     page.keyboard.down("Space")
     try:
         wait(
@@ -95,9 +97,9 @@ def exercise_class_world(page, web, desktop, wait, identity, actor_id, output, *
             5,
             poll_interval=0.03,
         )
-        if sword:
+        if weapon_vnum:
             for step in range(2, 5):
-                action = actor_id + f".onehand.combo_{step}"
+                action = actor_id + f".{mode}.combo_{step}"
                 wait(
                     f"{label}_held_space_reaches_step_{step}_on_both_clients",
                     lambda action=action: all(
@@ -128,7 +130,7 @@ def exercise_class_world(page, web, desktop, wait, identity, actor_id, output, *
         lambda: (
             local()
             .get("action_id", "")
-            .startswith(actor_id + (".onehand.wait" if sword else ".general.wait"))
+            .startswith(actor_id + (f".{mode}.wait" if weapon_vnum else ".general.wait"))
         ),
         5,
     )

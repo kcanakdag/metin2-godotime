@@ -457,6 +457,7 @@ def _selected_physical_definitions(profile: dict) -> dict:
         "power_max": int(mob["DAMAGE_MAX"]),
         "damage_multiplier": float(mob["DAM_MULTIPLY"]),
         "sword_resistance_percent": int(mob["RESIST_SWORD"]),
+        "fan_resistance_percent": int(mob["RESIST_FAN"]),
     }
     if selected_mob != {
         "level": 1,
@@ -468,6 +469,7 @@ def _selected_physical_definitions(profile: dict) -> dict:
         "power_max": 24,
         "damage_multiplier": 1.0,
         "sword_resistance_percent": 0,
+        "fan_resistance_percent": 0,
     }:
         raise ValueError("Pinned Wild Dog physical columns changed")
 
@@ -519,6 +521,7 @@ def _selected_physical_definitions(profile: dict) -> dict:
                         "power_max": "DAMAGE_MAX",
                         "damage_multiplier": "DAM_MULTIPLY",
                         "sword_resistance_percent": "RESIST_SWORD",
+                        "fan_resistance_percent": "RESIST_FAN",
                     },
                 },
             }
@@ -1765,6 +1768,7 @@ def _validate_physical_damage(payload: dict) -> None:
         "power_max",
         "damage_multiplier",
         "sword_resistance_percent",
+        "fan_resistance_percent",
         "source",
     }:
         raise ValueError("Selected physical mob fields changed")
@@ -1780,6 +1784,7 @@ def _validate_physical_damage(payload: dict) -> None:
         "power_max": 24,
         "damage_multiplier": 1.0,
         "sword_resistance_percent": 0,
+        "fan_resistance_percent": 0,
     }
     if any(
         mob.get(key) != value or type(mob.get(key)) is not type(value)
@@ -1811,6 +1816,7 @@ def _validate_physical_damage(payload: dict) -> None:
         "power_max": "DAMAGE_MAX",
         "damage_multiplier": "DAM_MULTIPLY",
         "sword_resistance_percent": "RESIST_SWORD",
+        "fan_resistance_percent": "RESIST_FAN",
     }:
         raise ValueError("Selected Wild Dog physical columns changed")
 
@@ -2163,9 +2169,9 @@ def make_client_payload(normalized: dict, server: dict, blender_report: dict) ->
         }
         actors.append(entry)
     physical_weapons = {
-        row["item_id"]: row
-        for row in server["physical_damage"]["weapons"]
-        if isinstance(row, dict) and isinstance(row.get("item_id"), str)
+        row["id"]: row["weapon"]
+        for row in server["item_catalog"]["items"]
+        if row["kind"] == "weapon"
     }
     items = []
     for item in normalized["items"]:

@@ -139,7 +139,11 @@ func _update_held_attack() -> void:
 		_attack_input.release()
 		return
 	if _attack_input.should_send(
-		_local_actor.row, _actor_catalog, connection.server_time_us, Time.get_ticks_msec()
+		_local_actor.row,
+		_actor_catalog,
+		connection.server_time_us,
+		Time.get_ticks_msec(),
+		_actor_catalog.player_actor_id(connection.appearance_for(connection.local_identity))
 	):
 		connection.perform_attack()
 

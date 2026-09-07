@@ -15,7 +15,9 @@ func release() -> void:
 	held = false
 
 
-func should_send(row: Dictionary, catalog: ActorCatalog, server_us: int, now_ms: int) -> bool:
+func should_send(
+	row: Dictionary, catalog: ActorCatalog, server_us: int, now_ms: int, actor_id: String
+) -> bool:
 	if not held or row.is_empty() or int(row.get("health", 0)) <= 0:
 		return false
 	if now_ms - _last_sent_ms < 150:
@@ -26,23 +28,24 @@ func should_send(row: Dictionary, catalog: ActorCatalog, server_us: int, now_ms:
 		return true
 	if server_us >= end or int(row.get("attack_sequence", 0)) == _last_sequence:
 		return false
-	if not _in_combo_window(row, catalog, server_us):
+	if not _in_combo_window(row, catalog, server_us, actor_id):
 		return false
 	_record(row, now_ms)
 	return true
 
 
-func _in_combo_window(row: Dictionary, catalog: ActorCatalog, server_us: int) -> bool:
+func _in_combo_window(
+	row: Dictionary, catalog: ActorCatalog, server_us: int, actor_id: String
+) -> bool:
 	var action_id := str(row.get("attack_action_id", ""))
-	# The common sword chain has four steps; advanced chains remain disabled.
+	# The common weapon chain has four steps; advanced chains remain disabled.
 	if (
 		not action_id.ends_with(".combo_1")
 		and not action_id.ends_with(".combo_2")
 		and not action_id.ends_with(".combo_3")
 	):
 		return false
-	var actor_id := action_id.get_slice(".onehand.", 0)
-	var motion := catalog.motion(actor_id, "onehand", action_id)
+	var motion := catalog.motion(actor_id, "", action_id)
 	var combo: Variant = motion.get("combo")
 	if not combo is Dictionary:
 		return false

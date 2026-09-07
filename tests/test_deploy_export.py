@@ -1,5 +1,6 @@
 """Artifact integrity, package exclusions, and deployment recovery without remote services."""
 
+import copy
 import io
 import json
 import os
@@ -544,6 +545,52 @@ class P1ProfileAuditTests(unittest.TestCase):
                     )
                 with self.assertRaisesRegex(RuntimeError, "physical"):
                     export_client.validate_p1_manifest(manifest)
+
+    def test_registered_fan_requires_matching_stats_model_and_pack_artifact(self):
+        manifest = self.manifest()
+        physical = {"power_min": 11, "power_max": 15, "refine_attack": 0}
+        fan = {
+            "id": "item.weapon.fan-7000",
+            "vnum": 7000,
+            "physical": physical,
+            "model": {
+                "artifact_id": "fan-7000",
+                "path": "res://assets/imported/content/p0-warrior-dog/items/fan-7000.glb",
+            },
+        }
+        manifest["item_catalog"] = {
+            "schema_version": 1,
+            "items": [
+                {
+                    "id": fan["id"],
+                    "vnum": 7000,
+                    "kind": "weapon",
+                    "weapon": {"class": "fan", **physical},
+                }
+            ],
+        }
+        manifest["items"].append(fan)
+        artifact = copy.deepcopy(manifest["artifacts"][2])
+        artifact.update(id="fan-7000", path=fan["model"]["path"])
+        manifest["artifacts"].append(artifact)
+        self.assertEqual(len(export_client.validate_p1_manifest(manifest)), 4)
+        for mutation in ("power", "vnum", "artifact", "model_id", "path", "presentation"):
+            changed = copy.deepcopy(manifest)
+            if mutation == "power":
+                changed["items"][1]["physical"]["power_min"] = 13
+            elif mutation == "vnum":
+                changed["items"][1]["vnum"] = 10
+            elif mutation == "artifact":
+                changed["artifacts"].pop()
+            elif mutation == "model_id":
+                changed["items"][1]["model"]["artifact_id"] = "sword-10"
+            elif mutation == "path":
+                changed["items"][1]["model"]["path"] = "res://assets/source/fan.gr2"
+            else:
+                changed["items"].pop()
+                changed["artifacts"].pop()
+            with self.subTest(mutation=mutation), self.assertRaises(RuntimeError):
+                export_client.validate_p1_manifest(changed)
 
     def test_generated_manifest_requires_only_selected_warrior_default_hair(self):
         export_client.validate_p1_manifest(self.manifest())

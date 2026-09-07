@@ -238,7 +238,12 @@ fn transition_to_next_step(
     if next_step > COMBO_STEP_FOUR {
         return Err(BOUNDED_ERROR.into());
     }
-    let definition = crate::characters::combo_step(ctx, control.identity, next_step)?;
+    let definition = crate::characters::combo_step(
+        ctx,
+        control.identity,
+        control.combo_equipped_vnum,
+        next_step,
+    )?;
     transition_is_valid(ctx, control)?;
     combat::discard_expired_player_hit(control, now);
     if control.pending_attack_hit_at_us != 0 {
@@ -304,9 +309,14 @@ pub fn handle_follow_up(
         COMBO_STEP_ONE | COMBO_STEP_TWO | COMBO_STEP_THREE => {}
         _ => return Err("Combo chain state is invalid.".into()),
     }
-    let input = crate::characters::combo_step(ctx, control.identity, control.combo_step)?
-        .combo_input
-        .ok_or("The trusted combo step has no input timing.")?;
+    let input = crate::characters::combo_step(
+        ctx,
+        control.identity,
+        control.combo_equipped_vnum,
+        control.combo_step,
+    )?
+    .combo_input
+    .ok_or("The trusted combo step has no input timing.")?;
     match classify_follow_up(
         now,
         control.combo_action_started_at_us,

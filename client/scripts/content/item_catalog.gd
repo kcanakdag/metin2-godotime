@@ -118,7 +118,7 @@ func _valid_weapon(row: Dictionary) -> bool:
 	var weapon: Variant = row.weapon
 	if not weapon is Dictionary or weapon.size() != 4 or row.recovery != null:
 		return false
-	if weapon.get("class") != "sword" or row.stack_limit != 1:
+	if weapon.get("class") not in ["sword", "fan"] or row.stack_limit != 1:
 		return false
 	for key: String in ["power_min", "power_max", "refine_attack"]:
 		if not _integer(weapon.get(key), 0, 65535):

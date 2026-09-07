@@ -103,7 +103,7 @@ def validate_catalog(catalog: object) -> None:
                 item["weapon"], {"class", "power_min", "power_max", "refine_attack"}, "item weapon"
             )
             if (
-                weapon["class"] != "sword"
+                weapon["class"] not in {"sword", "fan"}
                 or item["recovery"] is not None
                 or item["stack_limit"] != 1
             ):
@@ -175,10 +175,14 @@ def compile_catalog(selection: dict, proto_text: str, names_text: str, source: d
             "recovery": None,
             "source": {**source, "row_number": number},
         }
-        if row[2:4] == ["ITEM_WEAPON", "WEAPON_SWORD"] and row[7] == "WEAR_WEAPON":
+        if (
+            row[2] == "ITEM_WEAPON"
+            and row[3] in {"WEAPON_SWORD", "WEAPON_FAN"}
+            and row[7] == "WEAR_WEAPON"
+        ):
             item["kind"] = "weapon"
             item["weapon"] = {
-                "class": "sword",
+                "class": {"WEAPON_SWORD": "sword", "WEAPON_FAN": "fan"}[row[3]],
                 "power_min": int(row[27]),
                 "power_max": int(row[28]),
                 "refine_attack": int(row[29]),

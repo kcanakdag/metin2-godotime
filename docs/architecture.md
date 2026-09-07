@@ -1,9 +1,13 @@
 # Architecture
 
 Classic class presentation and combat share the installed character catalog
-(see [characters](characters.md)). The common Sword+0 chain resolves each step
-from the server-owned character appearance. All six Warrior/Ninja/Sura sword
-appearances use the existing queue, target, equipment and action-revision checks.
+(see [characters](characters.md)). The common Sword+0 and Fan+0 chains resolve each step
+from the server-owned character appearance and captured weapon vnum. All eight
+appearances use the shared queue, target, equipment and action-revision checks.
+The class profile selects a starter weapon; creation validates that item and
+its registered attack before granting it transactionally. Physical weapon class
+selects the corresponding victim resistance. The item registry supplies runtime
+weapon power; the older pinned Sword arithmetic record remains a reference.
 Held Space is a client intent scheduler; it cannot choose damage or bypass those
 checks. The original common-chain registrations and bounded action timings are
 compiled into the server, while intro-only preview models use `intro.wait`.

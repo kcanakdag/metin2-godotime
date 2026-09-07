@@ -30,9 +30,73 @@ feature records across 41 systems are a scope inventory with different sizes,
 dependencies and acceptance criteria, so their record counts do not support a
 meaningful percentage-complete claim.
 
+## Protocol 14 Shaman Fan+0 and shared weapon combos
+
+The local endpoint **http://127.0.0.1:8186** now serves
+`.local/p4-fan/exports/web-r3`, using `mt2-p2-fan-r1-20260908`.
+Previous development databases and auth accounts are preserved. Existing accounts
+can create characters in this fresh development database. The public deployment
+has not been updated by this milestone.
+
+Both Shamans receive the selected original Fan+0, with one inventory cell,
+Shaman-only requirements and physical power 11–15 derived from the pinned proto.
+The converted model, texture and icon use the existing item import pipeline.
+Class data selects `starter_weapon_vnum`; creation validates its requirements and
+registered attack before granting the item transactionally. Common combos resolve
+against the captured weapon and character appearance. Held Space looks up the
+registered actor action without assuming a sword mode. Fan resistance is distinct
+from sword resistance. The package audits now validate every registered weapon's
+model and public stats against the item registry and load each packaged model.
+
+Evidence in `.local/p4-fan/`:
+
+- `characters-r2`: all eight original appearances and 234 clips converted in
+  background Blender, verified and installed with the prior package retained.
+  `base-build-r2.log` and `ui-import.log` cover the selected fan model and icon.
+- `server-tests-r2.log`: 130 Rust unit/integration tests pass, including all
+  compiled common chains, Shaman restrictions and separate weapon resistance.
+- `native-r5/report.json`: 69 real Godot checks, ten rendered captures, both
+  Shaman skeletons and four fan clips, hand attachment, input windows, duplicate
+  scheduling and release. The isolated fixture also checks texture imports.
+- `two-client-r3.json`: 106 live checks on `mt2-p2-fan-qa-20260908`, using the
+  identical module. The focused `--class-id 3` run checks all eight private
+  starter records, both Shaman appearances, unarmed/fan actions, four-step links,
+  duplicate queues, foreign/stale item rejection, actual Wild Dog damage,
+  movement in both directions and disconnect/reconnect without starter duplication.
+- `exports/web-r3` and `exports/linux-r3`: actual exports and audits cover 996
+  and 1,799 resource paths, eight character packages, both weapon models and
+  238 UI images. Fan+0 loads as one textured static mesh attached at runtime.
+- `browser-r1/report.json`: 105 checks pass with zero browser engine errors.
+  Actual Chrome/Linux exports exercise all eight creation previews, female Ninja
+  sword combos and male Shaman fan combos through held Space, equipment,
+  movement/rejection, character switching, reconnect, reload and login/logout.
+- `tool-tests-final.log`: all 211 Python tooling tests pass. `export-tests-final.log`
+  independently covers 41 package/export tests. `lint-final-r2.log` passes the
+  owned Python, GDScript, Rust and TypeScript checks.
+- `acceptance-r1.json` binds this evidence to the module, generated catalogs,
+  export hashes and reviewed source files.
+
+Module SHA-256: `5d4a218bb5a21aa9317730875c7deb81bd4ae1d2fc1f05fe20a29206c1d1ccec`.
+Character catalog SHA-256: `500e1a72dd38c625e9c7c059863d67577ebf203bf118bbcfd7613e6d4a72930a`.
+Web PCK SHA-256: `68283cc456979d1caea700cc01dc0a8a42efac958b2659b52101b37fb9d213a8`.
+Linux PCK SHA-256: `8476b042f77f11f99151310db065aa375c791cbdcd92361523c02e276dffc1ba`.
+
+The pinned male Shaman MSA files copy female hit landmarks despite distinct GR2
+poses. The native fixture records that discrepancy, checks both attachments against
+their own right-hand bones, and retains the female source-geometry check. No male
+rig correction was invented to fit copied landmarks. Failed diagnostic runs remain
+in the evidence directory. The first sandboxed Blender runs hung during shutdown;
+the completed conversions ran outside that sandbox.
+
+This remains ordinary physical combat at authored, unscaled animation times.
+Attack-speed modifiers, force-15 ordinary finisher knockback, advanced chains and
+skills remain pending. Godot editor MCP was unavailable; isolated rendered Godot
+and actual exported clients provide the visual/input evidence. No Windows execution
+or public internet gameplay qualification was performed for this build.
+
 ## Protocol 14 creation lineup and held common combos
 
-The local endpoint **http://127.0.0.1:8186** serves
+The preceding local checkpoint at **http://127.0.0.1:8186** served
 `exports/web-r4` from `.local/p4-classes/`, using the new database
 `mt2-p2-class-combos-r1-20260908`. The previous databases and exports remain intact.
 The public endpoint remains on the older protocol-4 release.

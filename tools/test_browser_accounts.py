@@ -654,7 +654,8 @@ def main() -> None:
                     web_id,
                     "actor.player.ninja-female",
                     output,
-                    sword=True,
+                    weapon_vnum=10,
+                    mode="onehand",
                 )
             page.screenshot(path=str(output / "account-world.png"))
             native_command("capture")
@@ -854,7 +855,15 @@ def main() -> None:
             )
             if args.classes:
                 samples["shaman"] = exercise_class_world(
-                    page, web, desktop, wait, second_id, "actor.player.shaman-male", output
+                    page,
+                    web,
+                    desktop,
+                    wait,
+                    second_id,
+                    "actor.player.shaman-male",
+                    output,
+                    weapon_vnum=7000,
+                    mode="fan",
                 )
             system_action("change_character")
             stage("select", "second_character_leaves_for_selection")

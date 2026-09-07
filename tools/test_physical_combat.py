@@ -79,12 +79,14 @@ def run_segment(
             "--",
             "--account-config",
             str(fixture),
+            *(["--class-id", str(options.class_id)] if options.class_id is not None else []),
             timeout=360 if options.scenario == "classes" else 240,
         )
     finally:
         if private_report.is_file():
             result = json.loads(private_report.read_text())
             result["scenario"] = options.scenario
+            result["class_id"] = options.class_id
             result["tested_sources"] = tested_sources
             result["staged_sources_unchanged"] = all(
                 hashlib.sha256((stage / relative).read_bytes()).hexdigest() == digest
@@ -120,6 +122,12 @@ def main() -> None:
         ],
         default="melee",
     )
+    parser.add_argument(
+        "--class-id",
+        type=int,
+        choices=range(4),
+        help="Focus the classes scenario on one class while validating the full private rosters",
+    )
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument(
         "--population-profile", type=Path, default=ROOT / "content/worlds/yongan.population.json"
@@ -128,6 +136,8 @@ def main() -> None:
         "--report", type=Path, default=ROOT / ".local/p2-physical/combat-report.json"
     )
     options = parser.parse_args()
+    if options.class_id is not None and options.scenario != "classes":
+        parser.error("--class-id requires --scenario classes")
     if not options.database.startswith("mt2-p2-"):
         raise RuntimeError("Physical smoke requires a disposable mt2-p2- database.")
     report_path = options.report.resolve()
@@ -214,6 +224,7 @@ def main() -> None:
                 json.dumps(
                     {
                         "scenario": options.scenario,
+                        "class_id": options.class_id,
                         "definition_hash": definition_hash,
                         "tested_sources": tested_sources,
                     },
@@ -252,6 +263,7 @@ def main() -> None:
                 "passed": False,
                 "database": options.database,
                 "scenario": options.scenario,
+                "class_id": options.class_id,
                 "checks": [],
                 "segments": [],
             }

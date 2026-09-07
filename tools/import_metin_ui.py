@@ -158,7 +158,12 @@ def selected_assets():
         | {UI_ROOT + name for name in STATUS_WINDOW_ASSETS}
         | {UI_ROOT + name for name in TARGET_WINDOW_ASSETS}
         | {STATUS_ENGLISH_WINDOW_ROOT + name for name in STATUS_ENGLISH_WINDOW_ASSETS}
-        | {"icon/item/00010.tga", "icon/item/27001.tga", "icon/item/27002.tga"}
+        | {
+            "icon/item/00010.tga",
+            "icon/item/07000.tga",
+            "icon/item/27001.tga",
+            "icon/item/27002.tga",
+        }
         | {
             f"icon/face/{source_class}_{sex}.tga"
             for source_class in ("warrior", "assassin", "sura", "shaman")

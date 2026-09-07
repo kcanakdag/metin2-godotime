@@ -26,19 +26,22 @@ fixture is simulated. A separate **103-check authenticated Web/Linux run**
 qualifies approach, dialogue, Close/Escape, WASD and account lifecycle. Another
 59 live checks cover private sessions, rejection, expiry and reconnect.
 The updated development build is served at **http://127.0.0.1:8186** against
-`mt2-p2-class-combos-r1-20260908`. Click the City Guard to approach and talk;
+`mt2-p2-fan-r1-20260908`. Click the City Guard to approach and talk;
 Close or Escape dismisses the dialogue, and movement resumes normally.
 Character creation shows Warrior, Ninja, Sura and Shaman together, with the
 selected class in front, original intro idle animations, hair, titles and
 portraits. Both sexes are available. Native creation UI passes 61 checks.
 Holding Space repeats attacks and links the common four-step Sword+0 chain for
-Warrior, Ninja and Sura. The left hotbar button uses the original attack icon.
-The updated slice passes 282 live two-client checks and 100 Chrome/Linux checks,
-including held sword/unarmed input. See the
-[status ledger](docs/rebuild/implementation-status.md) for evidence. Trees,
-new mob types, Shaman weapons, additional
-weapon modes and abilities remain pending. The public endpoint
-remains unchanged.
+Warrior, Ninja and Sura, and the Fan+0 chain for Shaman. Both Shaman appearances
+receive the original starter fan, with its converted model and inventory icon.
+Starter weapons are selected by class data; equipment and damage remain server-owned.
+The fan milestone passes 106 live two-client checks, 69 rendered Godot checks
+and 105 Chrome/Linux checks. The left hotbar button uses the original attack icon.
+See the [status ledger](docs/rebuild/implementation-status.md) for evidence.
+Trees, new mob types, additional weapon modes, attack-speed modifiers, ordinary
+finisher knockback and abilities remain pending. The local build uses a fresh
+character database; previous databases and auth accounts are preserved. The public
+endpoint remains unchanged.
 
 The current worktree is protocol 14 / trusted content schema 7. Item actions
 carry the server item's revision, rejecting stale/replayed mutations. Quantity

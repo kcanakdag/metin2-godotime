@@ -71,6 +71,7 @@ def editor_scene_use(godot: str, project: Path, environment: dict[str, str], log
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
+    parser.add_argument("--scenario", choices=["actors", "fan"], default="actors")
     parser.add_argument("--native", action="store_true", help="Render under Xvfb and save a PNG.")
     parser.add_argument(
         "--texture-editor-check",
@@ -97,12 +98,18 @@ def main() -> None:
         stage = Path(scratch)
         shutil.copytree(ROOT / "client/scripts/actors", stage / "scripts/actors")
         shutil.copytree(ROOT / "client/scripts/content", stage / "scripts/content")
+        (stage / "scripts/world").mkdir()
+        shutil.copy2(
+            ROOT / "client/scripts/world/world_picker.gd", stage / "scripts/world/world_picker.gd"
+        )
         shutil.copytree(ACTOR_PROFILE, stage / "assets/imported/content/p0-warrior-dog")
         shutil.copytree(
             ROOT / "client/assets/imported/characters", stage / "assets/imported/characters"
         )
         shutil.copytree(TARGET_EFFECT_PROFILE, stage / "assets/imported/content/p2-target-effects")
+        selected_smoke = "fan_actor_smoke.gd" if options.scenario == "fan" else "actor_smoke.gd"
         (stage / "tests").mkdir()
+        shutil.copy2(ROOT / "client/tests/fan_actor_smoke.gd", stage / "tests/fan_actor_smoke.gd")
         shutil.copy2(ROOT / "client/tests/actor_smoke.gd", stage / "tests/actor_smoke.gd")
         shutil.copy2(
             ROOT / "tools/actor_texture_import_probe.gd",
@@ -164,7 +171,10 @@ def main() -> None:
             "target_effect_catalog": sha256(stage / "scripts/content/target_effect_catalog.gd"),
             "target_effect_node": sha256(stage / "scripts/actors/target_effect.gd"),
             "target_effect_runtime_catalog": sha256(staged_target_catalog),
-            "smoke": sha256(stage / "tests/actor_smoke.gd"),
+            "smoke": sha256(stage / "tests" / selected_smoke),
+            "smoke_base": sha256(stage / "tests/actor_smoke.gd"),
+            "character_catalog": sha256(stage / "assets/imported/characters/catalog.v1.json"),
+            "attack_input": sha256(stage / "scripts/actors/attack_input.gd"),
             "actor_texture_import_probe": sha256(stage / "tests/actor_texture_import_probe.gd"),
             "actor_texture_3d_probe": sha256(stage / "tests/actor_texture_3d_probe.gd"),
             "actor_texture_3d_scene": sha256(stage / "tests/actor_texture_3d_scene.tscn"),
@@ -309,12 +319,18 @@ def main() -> None:
         texture_match = re.search(r"ACTOR_TEXTURE_IMPORT PASS (\d+) textures", texture_output)
         if not texture_match:
             raise SystemExit("Actor texture import probe did not report completion.")
-        command = [options.godot, "--path", str(stage), "--script", "res://tests/actor_smoke.gd"]
+        command = [options.godot, "--path", str(stage), "--script", "res://tests/" + selected_smoke]
         if options.native:
             command = ["xvfb-run", "-a", "-s", "-screen 0 1280x800x24", *command]
         else:
             command.insert(1, "--headless")
-        output = run(command, environment, options.output / "runtime.log")
+        try:
+            output = run(command, environment, options.output / "runtime.log")
+        finally:
+            for screenshot in (stage / ".data/godot/app_userdata/MT2 Actor Test").glob(
+                "actors-*.png"
+            ):
+                shutil.copy2(screenshot, options.output / screenshot.name)
         match = re.search(r"ACTOR_SMOKE PASS (\d+) checks", output)
         if not match:
             raise SystemExit("Godot actor smoke did not report completion.")
@@ -322,6 +338,7 @@ def main() -> None:
             "passed": True,
             "checks": int(match.group(1)),
             "native": options.native,
+            "scenario": options.scenario,
             "profile": "p0-warrior-dog",
             "target_effect_content_hash": json.loads(staged_target_catalog.read_text())[
                 "content_hash"

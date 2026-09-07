@@ -10,6 +10,7 @@ const INITIAL := [
 var _catalog: Dictionary = {}
 var _base_catalog: Dictionary = {}
 var _class_actions: Array = []
+var _last_class_id := 3
 
 
 func _run() -> void:
@@ -22,7 +23,14 @@ func _run() -> void:
 	var male := _make_client()
 	var female := _make_client()
 	var ready := await _create_class_rosters(male, female)
-	for class_id in 4:
+	var selected_classes: Array = range(4)
+	var args := OS.get_cmdline_user_args()
+	if "--class-id" in args:
+		var class_id := int(args[args.find("--class-id") + 1])
+		if class_id in range(4):
+			selected_classes = [class_id]
+	_last_class_id = int(selected_classes.back())
+	for class_id: int in selected_classes:
 		if not ready:
 			break
 		ready = await _exercise_class_pair(male, female, class_id)
@@ -80,7 +88,7 @@ func _create_class_rosters(male: GameConnection, female: GameConnection) -> bool
 					return (
 						_private_roster(client, 4)
 						and _private_progression(client, 4)
-						and client.inventory.size() == 7
+						and client.inventory.size() == 8
 						and _private_inventory(client)
 					),
 				5.0
@@ -113,6 +121,14 @@ func _character(client: GameConnection, class_id: int) -> Dictionary:
 	return {}
 
 
+func _owned_starter_weapon(client: GameConnection, owner: String, class_id: int) -> Dictionary:
+	var vnum := int(_catalog.classes[class_id].starter_weapon_vnum)
+	for item: Dictionary in client.inventory:
+		if str(item.owner) == owner and int(item.vnum) == vnum:
+			return item
+	return {}
+
+
 func _initial_class(client: GameConnection, class_id: int, sex: int) -> bool:
 	var character := _character(client, class_id)
 	var row := client.progression_for(str(character.character_id))
@@ -129,7 +145,7 @@ func _initial_class(client: GameConnection, class_id: int, sex: int) -> bool:
 			and int(row.experience) == 0
 			and int(row.max_sp) == expected[5]
 			and int(row.current_sp) == expected[5]
-			and _owned_sword(client, str(character.character_id)).is_empty() == (class_id == 3)
+			and not _owned_starter_weapon(client, str(character.character_id), class_id).is_empty()
 		)
 	)
 
@@ -179,7 +195,7 @@ func _exercise_class_pair(male: GameConnection, female: GameConnection, class_id
 		var observer: GameConnection = female if sex == 0 else male
 		if not await _exercise_appearance(client, observer, class_id, sex):
 			return false
-	if class_id == 3:
+	if class_id == _last_class_id:
 		return true
 	male.leave_world()
 	female.leave_world()
@@ -227,9 +243,8 @@ func _exercise_appearance(
 	await _movement(client, observer, id, -1.0 if sex else 1.0, "class_%d_%d" % [class_id, sex])
 	if not await _class_attack(client, observer, class_id, sex, false):
 		return false
-	if class_id != 3:
-		if not await _equip_and_combo(client, observer, class_id, sex):
-			return false
+	if not await _equip_and_combo(client, observer, class_id, sex):
+		return false
 	return await _class_mob_hit(client, observer, class_id, sex)
 
 
@@ -237,20 +252,36 @@ func _equip_and_combo(
 	client: GameConnection, observer: GameConnection, class_id: int, sex: int
 ) -> bool:
 	var id := client.local_identity
-	client.equip_item(int(_owned_sword(client, id).id))
+	var weapon := _owned_starter_weapon(client, id, class_id)
+	var vnum := int(weapon.vnum)
+	client.equip_item(int(weapon.id))
 	if not _check(
-		"class_sword_replication_%d_%d" % [class_id, sex],
-		await _wait_until(
-			func(): return int(observer.appearance_for(id).get("weapon_vnum", 0)) == 10
-		)
+		"class_weapon_replication_%d_%d" % [class_id, sex],
+		await _wait_until(func(): return observer.appearance_for(id).weapon_vnum == vnum)
 	):
 		return false
+	await _raw_rejection(
+		observer,
+		"equip_item",
+		[int(weapon.id), int(weapon.revision)],
+		[&"U64", &"U32"],
+		"foreign_weapon_%d_%d" % [class_id, sex],
+		"another player"
+	)
+	await _raw_rejection(
+		client,
+		"equip_item",
+		[int(weapon.id), int(weapon.revision)],
+		[&"U64", &"U32"],
+		"stale_weapon_%d_%d" % [class_id, sex],
+		"changed"
+	)
 	if not await _class_attack(client, observer, class_id, sex, true):
 		return false
 	return await _class_combo(client, observer, class_id, sex)
 
 
-func _motion(class_id: int, sex: int, sword: bool, step: int = 1) -> Dictionary:
+func _motion(class_id: int, sex: int, armed: bool, step: int = 1) -> Dictionary:
 	var definition: Dictionary = _catalog.classes[class_id]
 	var actor_id := str(definition.variants[sex].actor_id)
 	var actors: Array = _base_catalog.actors if class_id == 0 and sex == 0 else _catalog.actors
@@ -258,10 +289,10 @@ func _motion(class_id: int, sex: int, sword: bool, step: int = 1) -> Dictionary:
 		if actor.id != actor_id:
 			continue
 		for mode: Dictionary in actor.modes:
-			if mode.id != ("onehand" if sword else "general"):
+			if mode.id != (("fan" if class_id == 3 else "onehand") if armed else "general"):
 				continue
 			for motion: Dictionary in mode.motions:
-				if motion.action == ("combo_%d" % step if sword else "normal_attack"):
+				if motion.action == ("combo_%d" % step if armed else "normal_attack"):
 					return motion
 	return {}
 
@@ -319,13 +350,13 @@ func _class_combo(
 
 
 func _class_attack(
-	client: GameConnection, observer: GameConnection, class_id: int, sex: int, sword: bool
+	client: GameConnection, observer: GameConnection, class_id: int, sex: int, armed: bool
 ) -> bool:
 	var id := client.local_identity
-	var motion := _motion(class_id, sex, sword)
+	var motion := _motion(class_id, sex, armed)
 	var before := int(_player(observer, id).attack_sequence)
 	var result := await _raw_result(client, "perform_attack", [], [])
-	var label := "class_action_%d_%d_%s" % [class_id, sex, "sword" if sword else "unarmed"]
+	var label := "class_action_%d_%d_%s" % [class_id, sex, "weapon" if armed else "unarmed"]
 	_record_raw_result(label, "perform_attack", result)
 	if not _check(label + "_accepted", bool(result.accepted)):
 		return false
@@ -336,7 +367,7 @@ func _class_attack(
 		label + "_source_duration",
 		int(action.action_ends_at_us) - int(action.action_started_at_us) == int(motion.duration_us)
 	)
-	_class_actions.append({"class_id": class_id, "sex": sex, "sword": sword, "action": action})
+	_class_actions.append({"class_id": class_id, "sex": sex, "armed": armed, "action": action})
 	return _check(
 		label + "_finishes", await _wait_action_end(observer, id, int(action.action_ends_at_us))
 	)
@@ -361,7 +392,7 @@ func _class_mob_hit(
 	):
 		return false
 	var health := int(dog.health)
-	if not await _class_attack(client, observer, class_id, sex, class_id != 3):
+	if not await _class_attack(client, observer, class_id, sex, true):
 		return false
 	if not _check(
 		"class_damage_seen_by_both_%d_%d" % [class_id, sex],

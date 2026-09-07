@@ -84,30 +84,31 @@ pub fn combo_start(action_id: &str) -> bool {
         || definitions::CHARACTER_BASIC_ATTACKS
             .iter()
             .any(|(_, weapon, action)| {
-                *weapon == 10 && action.id == action_id && action.id.ends_with(".combo_1")
+                *weapon != 0 && action.id == action_id && action.id.ends_with(".combo_1")
             })
 }
 
 pub fn combo_step(
     ctx: &ReducerContext,
     character: Identity,
+    weapon_vnum: u32,
     step: u8,
 ) -> Result<&'static AttackDefinition, String> {
     if !(1..=4).contains(&step) {
         return Err("Invalid common combo step.".into());
     }
     let selected = owned_appearance(ctx, character)?;
-    if selected.actor_id == "actor.player.warrior-male" {
+    if selected.actor_id == "actor.player.warrior-male" && weapon_vnum == 10 {
         return Ok(&definitions::PLAYER_ONEHAND_COMBO[usize::from(step - 1)]);
     }
     let suffix = format!(".combo_{step}");
     definitions::CHARACTER_BASIC_ATTACKS
         .iter()
         .find(|(actor, weapon, action)| {
-            *actor == selected.actor_id && *weapon == 10 && action.id.ends_with(&suffix)
+            *actor == selected.actor_id && *weapon == weapon_vnum && action.id.ends_with(&suffix)
         })
         .map(|(_, _, action)| action)
-        .ok_or("The selected class has no common sword combo.".into())
+        .ok_or("The selected class has no common combo for that weapon.".into())
 }
 
 pub fn root_actions() -> impl Iterator<Item = &'static AttackDefinition> {
@@ -123,14 +124,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_added_sword_chain_has_three_links_and_a_valid_terminal_hit() {
+    fn every_added_weapon_chain_has_three_links_and_a_valid_terminal_hit() {
         for appearance in CHARACTER_APPEARANCES {
-            if appearance.class_id == 3 || appearance.actor_id == "actor.player.warrior-male" {
+            if appearance.actor_id == "actor.player.warrior-male" {
                 continue;
             }
+            let weapon = class(appearance.class_id).unwrap().starter_weapon_vnum;
+            let item = crate::item_catalog::definition(weapon).unwrap();
+            crate::item_catalog::check_requirements(item, 1, appearance.class_id, appearance.sex)
+                .unwrap();
             let steps: Vec<_> = definitions::CHARACTER_BASIC_ATTACKS
                 .iter()
-                .filter(|(actor, weapon, _)| *actor == appearance.actor_id && *weapon == 10)
+                .filter(|(actor, vnum, _)| *actor == appearance.actor_id && *vnum == weapon)
                 .map(|(_, _, action)| action)
                 .collect();
             assert_eq!(steps.len(), 4);

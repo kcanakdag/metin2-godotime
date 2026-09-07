@@ -9,7 +9,7 @@ pub fn definition(vnum: u32) -> Result<&'static ItemDefinition, String> {
 }
 
 pub fn is_weapon(vnum: u32) -> bool {
-    definition(vnum).is_ok_and(|item| matches!(item.kind, ItemKind::Sword))
+    definition(vnum).is_ok_and(|item| matches!(item.kind, ItemKind::Weapon))
 }
 
 pub fn check_requirements(
@@ -45,6 +45,15 @@ mod tests {
             ItemKind::Recovery { hp: 800, sp: 0 }
         ));
         assert!(is_weapon(10));
+        assert!(is_weapon(7000));
+        for class_id in 0..4 {
+            for sex in 0..2 {
+                assert_eq!(
+                    check_requirements(definition(7000).unwrap(), 1, class_id, sex).is_ok(),
+                    class_id == 3
+                );
+            }
+        }
         assert!(!is_weapon(27001));
         assert!(definition(999999).is_err());
         let sword = definition(10).unwrap();

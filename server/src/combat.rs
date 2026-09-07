@@ -317,9 +317,9 @@ pub fn start_player_action(
         .checked_add(1)
         .ok_or("Attack sequence limit reached.")?;
     let has_ordinary_hit = plan.target_id != 0 && plan.definition.special_area.is_none();
-    let requires_sword = crate::characters::requires_weapon(plan.definition.id);
+    let requires_weapon = crate::characters::requires_weapon(plan.definition.id);
     let captured_attacker = (has_ordinary_hit || plan.definition.special_area.is_some())
-        .then(|| crate::physical_damage::capture_player(ctx, controller.identity, requires_sword))
+        .then(|| crate::physical_damage::capture_player(ctx, controller.identity, requires_weapon))
         .transpose()?;
     let validated_target = has_ordinary_hit
         .then(|| {

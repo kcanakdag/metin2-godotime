@@ -421,6 +421,8 @@ def validate_p1_presentation_fields(manifest):
     for item_index, item in enumerate(manifest.get("items", [])):
         item_path = f"$.items[{item_index}]"
         reject_unknown_fields(item, P1_ITEM_FIELDS, item_path)
+        if "physical" not in item:
+            raise RuntimeError(f"Registered weapon has invalid physical dictionary at {item_path}")
         if "model" in item:
             reject_unknown_fields(item["model"], P1_MODEL_FIELDS, item_path + ".model")
         if "attachment_transform" in item:
@@ -433,11 +435,22 @@ def validate_p1_presentation_fields(manifest):
             physical_path = item_path + ".physical"
             physical = item["physical"]
             reject_unknown_fields(physical, P1_PHYSICAL_FIELDS, physical_path)
+            expected_values = P1_SWORD_PHYSICAL
             if item.get("id") != P1_SWORD_ITEM_ID:
-                raise RuntimeError(
-                    f"P1 presentation manifest permits physical only for starter Sword+0 at {physical_path}"
-                )
-            for field, expected in P1_SWORD_PHYSICAL.items():
+                matches = [
+                    row
+                    for row in manifest.get("item_catalog", {}).get("items", [])
+                    if row.get("id") == item.get("id")
+                    and row.get("vnum") == item.get("vnum")
+                    and row.get("kind") == "weapon"
+                ]
+                if len(matches) != 1 or matches[0].get("weapon", {}).get("class") not in {
+                    "sword",
+                    "fan",
+                }:
+                    raise RuntimeError(f"No registered physical weapon at {physical_path}")
+                expected_values = {key: matches[0]["weapon"][key] for key in P1_PHYSICAL_FIELDS}
+            for field, expected in expected_values.items():
                 value = physical.get(field)
                 if (
                     not isinstance(value, (int, float))
@@ -446,7 +459,7 @@ def validate_p1_presentation_fields(manifest):
                     or value != expected
                 ):
                     raise RuntimeError(
-                        f"P1 starter Sword+0 has invalid physical.{field} at {physical_path}"
+                        f"Registered weapon has invalid physical.{field} at {physical_path}"
                     )
 
 
@@ -476,8 +489,27 @@ def validate_p1_manifest(manifest):
         if resource in by_resource:
             raise RuntimeError(f"P1 actor manifest duplicates artifact path {resource}")
         by_resource[resource] = artifact
-    missing = [path for path in P1_ARTIFACTS if path not in by_resource]
-    unexpected = sorted(set(by_resource).difference(P1_ARTIFACTS))
+    expected_resources = set(P1_ARTIFACTS)
+    for item in manifest.get("items", []):
+        if item.get("id") == P1_SWORD_ITEM_ID:
+            continue
+        resource = item.get("model", {}).get("path", "")
+        if not re.fullmatch(
+            r"res://assets/imported/content/p0-warrior-dog/items/[a-z0-9-]+\.glb", resource
+        ):
+            raise RuntimeError("Registered weapon has an invalid model path")
+        if resource in expected_resources:
+            raise RuntimeError("Registered weapon duplicates an artifact path")
+        expected_resources.add(resource)
+        if resource in by_resource:
+            model_reference(
+                item,
+                label="registered weapon",
+                expected_artifact_id=by_resource[resource]["id"],
+                expected_path=resource,
+            )
+    missing = [path for path in expected_resources if path not in by_resource]
+    unexpected = sorted(set(by_resource).difference(expected_resources))
     if missing or unexpected:
         detail = []
         if missing:
@@ -485,7 +517,7 @@ def validate_p1_manifest(manifest):
         if unexpected:
             detail.append("unexpected " + ", ".join(unexpected))
         raise RuntimeError("P1 actor manifest artifacts are invalid: " + "; ".join(detail))
-    for resource in P1_ARTIFACTS:
+    for resource in expected_resources:
         artifact = by_resource[resource]
         if not isinstance(artifact.get("id"), str) or not artifact["id"]:
             raise RuntimeError(f"P1 actor manifest {resource} has invalid id")
@@ -550,6 +582,11 @@ def validate_p1_manifest(manifest):
         if item["id"] in items_by_id:
             raise RuntimeError(f"P1 actor manifest duplicates item {item['id']}")
         items_by_id[item["id"]] = item
+    for row in manifest.get("item_catalog", {}).get("items", []):
+        if row.get("kind") == "weapon" and items_by_id.get(row.get("id"), {}).get(
+            "vnum"
+        ) != row.get("vnum"):
+            raise RuntimeError("Registered weapon is missing its matching presentation")
     sword = items_by_id.get(P1_SWORD_ITEM_ID)
     if not isinstance(sword, dict):
         raise RuntimeError("P1 actor manifest is missing starter Sword+0 vnum 10")
@@ -668,6 +705,9 @@ def validate_pack_paths(paths, *, allow_test_probe=False):
 
 def audit_pack(godot, pck, output, env, *, allow_test_probe=False, p1_requirements=None):
     # Load the actual exported PCK, checking remapped meshes and animations too.
+    pck = Path(pck).resolve()
+    if not pck.is_file():
+        raise RuntimeError(f"Exported PCK is missing: {pck}")
     npc_path = ROOT / "client/assets/imported/npcs" / NPC_CATALOG
     npc_hash = digest(npc_path) if npc_path.is_file() else ""
     character_path = ROOT / "client/assets/imported/characters/catalog.v1.json"
@@ -953,6 +993,9 @@ func validate_presentation_fields(manifest: Dictionary) -> bool:
         var item_path := "$.items[%d]" % item_index
         if not has_no_unknown_fields(item, ["id", "kind", "name", "vnum", "model", "actor_attachment", "attachment_transform", "equipment_mode", "physical"], item_path):
             return false
+        if not item.has("physical"):
+            push_error("Registered weapon has no physical presentation at " + item_path)
+            return false
         if item.has("model") and not has_no_unknown_fields(item["model"], ["artifact_id", "path"], item_path + ".model"):
             return false
         if item.has("attachment_transform") and not has_no_unknown_fields(item["attachment_transform"], ["translation_m", "rotation_degrees", "scale"], item_path + ".attachment_transform"):
@@ -962,14 +1005,21 @@ func validate_presentation_fields(manifest: Dictionary) -> bool:
             var physical_path := item_path + ".physical"
             if not has_no_unknown_fields(physical, ["power_min", "power_max", "refine_attack"], physical_path):
                 return false
-            if item.get("id") != "item.weapon.sword-10":
-                push_error("P1 presentation manifest permits physical only for starter Sword+0 at " + physical_path)
-                return false
             var physical_expected := {"power_min": 13.0, "power_max": 15.0, "refine_attack": 0.0}
+            if item.get("id") != "item.weapon.sword-10":
+                var matches := []
+                for row in manifest.get("item_catalog", {}).get("items", []):
+                    if row.get("id") == item.get("id") and row.get("vnum") == item.get("vnum") and row.get("kind") == "weapon":
+                        matches.append(row)
+                if matches.size() != 1 or matches[0].get("weapon", {}).get("class") not in ["sword", "fan"]:
+                    push_error("No registered physical weapon at " + physical_path)
+                    return false
+                for field in physical_expected:
+                    physical_expected[field] = matches[0].weapon[field]
             for field in physical_expected:
                 var value = physical.get(field)
                 if (not value is int and not value is float) or not is_finite(float(value)) or float(value) != physical_expected[field]:
-                    push_error("P1 starter Sword+0 has invalid physical." + str(field) + " at " + physical_path)
+                    push_error("Registered weapon has invalid physical." + str(field) + " at " + physical_path)
                     return false
     return true
 
@@ -998,8 +1048,8 @@ func audit_p1_profile(expected_manifest_hash: String, required: bool) -> Variant
             push_error("Packaged P1 actor manifest has invalid " + hash_key)
             return null
     var artifacts = manifest.get("artifacts")
-    if not artifacts is Array or artifacts.size() != P1_PATHS.size():
-        push_error("Packaged P1 actor manifest must list exactly the required artifacts")
+    if not artifacts is Array or artifacts.size() < P1_PATHS.size():
+        push_error("Packaged P1 actor manifest is missing required artifacts")
         return null
     var by_path := {}
     for artifact in artifacts:
@@ -1015,12 +1065,24 @@ func audit_p1_profile(expected_manifest_hash: String, required: bool) -> Variant
             push_error("Packaged P1 actor manifest duplicates artifact " + resource)
             return null
         by_path[resource] = artifact
-    for resource in P1_PATHS:
+    var expected_paths := P1_PATHS.duplicate()
+    for item in manifest.get("items", []):
+        if item.get("id") == "item.weapon.sword-10":
+            continue
+        var resource: String = item.get("model", {}).get("path", "")
+        if resource.get_base_dir() != "res://assets/imported/content/p0-warrior-dog/items" or resource.get_extension() != "glb" or resource in expected_paths:
+            push_error("Registered weapon has an invalid or duplicate artifact path")
+            return null
+        expected_paths.append(resource)
+    if expected_paths.size() != by_path.size():
+        push_error("Packaged item artifact set differs from the registered models")
+        return null
+    for resource in expected_paths:
         if not by_path.has(resource):
             push_error("Packaged P1 actor manifest is missing " + resource)
             return null
     var result := {"p1_profile": P1_PROFILE, "p1_gameplay_definition_hash": manifest["gameplay_definition_hash"], "actors": []}
-    for resource in P1_PATHS:
+    for resource in expected_paths:
         var artifact: Dictionary = by_path[resource]
         if not is_sha256(artifact.get("sha256", "")):
             push_error("Packaged P1 artifact path or SHA-256 is invalid: " + resource)
@@ -1225,11 +1287,23 @@ func has_required_entities(manifest: Dictionary, artifacts: Dictionary) -> bool:
                 warrior = warrior or (actor.get("id") == "actor.player.warrior-male" and actor.get("race_id") == 0 and model.get("artifact_id") == warrior_id)
                 dog = dog or (actor.get("id") == "actor.mob.wild-dog-101" and actor.get("vnum") == 101 and model.get("artifact_id") == dog_id)
     var sword := false
+    var items_by_id := {}
     for item in manifest.get("items", []):
         if item is Dictionary:
+            if items_by_id.has(item.get("id")):
+                push_error("Duplicate packaged item presentation")
+                return false
+            items_by_id[item.get("id")] = item
             var model = item.get("model")
+            if not model is Dictionary or not artifacts.has(model.get("path")) or artifacts[model.path].id != model.get("artifact_id"):
+                push_error("Packaged item refers to a mismatched artifact")
+                return false
             if model is Dictionary and item.get("id") == "item.weapon.sword-10" and item.get("vnum") == 10 and model.get("artifact_id") == sword_id and item.get("physical") == {"power_min": 13.0, "power_max": 15.0, "refine_attack": 0.0}:
                 sword = true
+    for row in manifest.get("item_catalog", {}).get("items", []):
+        if row.get("kind") == "weapon" and items_by_id.get(row.get("id"), {}).get("vnum") != row.get("vnum"):
+            push_error("Registered weapon has no matching packaged presentation")
+            return false
     if not warrior or not dog or not sword:
         push_error("Packaged P1 actor manifest must include warrior, WildDog 101 and starter Sword+0 vnum 10")
         return false

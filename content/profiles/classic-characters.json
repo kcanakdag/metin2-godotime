@@ -40,7 +40,8 @@
           "sex": 1,
           "model_key": "warrior_w"
         }
-      ]
+      ],
+      "starter_weapon_vnum": 10
     },
     {
       "id": "ninja",
@@ -56,7 +57,8 @@
           "sex": 1,
           "model_key": "assassin_w"
         }
-      ]
+      ],
+      "starter_weapon_vnum": 10
     },
     {
       "id": "sura",
@@ -72,7 +74,8 @@
           "sex": 1,
           "model_key": "sura_w"
         }
-      ]
+      ],
+      "starter_weapon_vnum": 10
     },
     {
       "id": "shaman",
@@ -88,7 +91,8 @@
           "sex": 1,
           "model_key": "shaman_w"
         }
-      ]
+      ],
+      "starter_weapon_vnum": 7000
     }
   ],
   "distribution": {

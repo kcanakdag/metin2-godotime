@@ -100,7 +100,7 @@ pub fn generate(value: &Value) -> Result<String, String> {
     }
     let mut output = String::from(
         "#[derive(Clone, Copy, Debug, PartialEq, Eq)]\n\
-         pub enum ItemKind { Sword, Recovery { hp: u32, sp: u32 } }\n\
+         pub enum ItemKind { Weapon, Recovery { hp: u32, sp: u32 } }\n\
          #[derive(Clone, Copy, Debug)]\n\
          pub struct ItemDefinition {\n\
          pub id: &'static str, pub vnum: u32,\n\
@@ -191,7 +191,12 @@ pub fn generate(value: &Value) -> Result<String, String> {
                     &row["weapon"],
                     &["class", "power_min", "power_max", "refine_attack"],
                 )?;
-                if w["class"] != "sword" || !row["recovery"].is_null() || stack_limit != 1 {
+                let class = match w["class"].as_str() {
+                    Some("sword") => "Sword",
+                    Some("fan") => "Fan",
+                    _ => return Err("unsupported physical weapon class".into()),
+                };
+                if !row["recovery"].is_null() || stack_limit != 1 {
                     return Err("unsupported weapon kind or stack".into());
                 }
                 let low = number(&w["power_min"], 0, 65535)?;
@@ -201,9 +206,9 @@ pub fn generate(value: &Value) -> Result<String, String> {
                     return Err("invalid weapon range".into());
                 }
                 (
-                    String::from("ItemKind::Sword"),
+                    String::from("ItemKind::Weapon"),
                     format!(
-                        "Some(WeaponPhysicalDefinition {{ item_id: {id:?}, vnum: {vnum}, class: PhysicalWeaponClass::Sword, power_min: {low}, power_max: {high}, refine_attack: {refine} }})"
+                        "Some(WeaponPhysicalDefinition {{ item_id: {id:?}, vnum: {vnum}, class: PhysicalWeaponClass::{class}, power_min: {low}, power_max: {high}, refine_attack: {refine} }})"
                     ),
                 )
             }

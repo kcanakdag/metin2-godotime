@@ -129,6 +129,7 @@ def compile_profile(path: Path, *, offline: bool) -> dict:
                 "class_id": class_id,
                 "name": selected["name"],
                 "initial_points": points[class_id],
+                "starter_weapon_vnum": selected["starter_weapon_vnum"],
                 "variants": variants,
             }
         )

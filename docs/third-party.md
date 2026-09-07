@@ -20,6 +20,13 @@ original game asset rights remain separate.
 | [NakiuS Metin2Client](https://github.com/NakiuS/Metin2Client/tree/40e2d9fef3bed9fa56a113001ae678efb72e06d3) | `40e2d9fef3bed9fa56a113001ae678efb72e06d3` | Narrow client-source comparison for planning; repository code license is MIT, original asset rights remain separate; no implementation copied |
 | [Quantum Core X](https://github.com/MeikelLP/quantum-core-x/tree/ddab58ba493dfcedefd8b265513950f865edfffc) | `ddab58ba493dfcedefd8b265513950f865edfffc` | MPL-2.0 independent emulator; static gameplay/tooling comparison only, no implementation copied |
 
+The Shaman weapon slice selects Fan+0 (vnum 7000) from the same pinned original
+archive: `ymir work/item/07000.msm`, `ymir work/item/weapon/07000.gr2`,
+`weapon_chogeup_02.dds` and `icon/item/07000.tga`. Its item values/restrictions come
+from the pinned server `item_proto.txt` row 1164. These use the existing ignored
+source and conversion directories and retain hashes in the generated receipts;
+this selection does not alter the original assets' terms.
+
 The [full-game source audits](full-rebuild-plan.md#source-and-coverage-discipline)
 record exact paths/symbols, feature flags, source-tree/registry metadata and
 known gaps. Research snapshots stay under ignored `.cache/full-game-research/`;

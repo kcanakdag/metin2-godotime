@@ -38,10 +38,10 @@ fn build_boundary_rejects_invalid_ranges_unknown_handlers_and_collisions() {
         assert!(build_items::generate(&data).is_err(), "{field}");
     }
     let mut data = catalog();
-    data["items"][1]["recovery"]["hp"] = json!(65536);
+    data["items"][2]["recovery"]["hp"] = json!(65536);
     assert!(build_items::generate(&data).is_err());
     let mut data = catalog();
-    data["items"][1]["recovery"]["handler"] = json!("execute");
+    data["items"][2]["recovery"]["handler"] = json!("execute");
     assert!(build_items::generate(&data).is_err());
     let mut data = catalog();
     data["items"][1]["vnum"] = data["items"][0]["vnum"].clone();
@@ -60,7 +60,7 @@ fn item_links_cannot_disagree_with_combat_or_reward_contracts() {
     changed["item_catalog"]["items"][0]["weapon"]["power_max"] = json!(20);
     assert!(build_items::validate_links(&changed).is_err());
     let mut changed = original;
-    changed["item_catalog"]["items"][1]["stack_limit"] = json!(10);
+    changed["item_catalog"]["items"][2]["stack_limit"] = json!(10);
     assert!(build_items::validate_links(&changed).is_err());
 }
 

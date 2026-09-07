@@ -555,6 +555,37 @@
           1.0
         ]
       }
+    },
+    {
+      "id": "item.weapon.fan-7000",
+      "vnum": 7000,
+      "name": "Fan+0",
+      "kind": "weapon",
+      "equipment_mode": "fan",
+      "script": "bin/pack/item/ymir work/item/07000.msm",
+      "model": "bin/pack/item/ymir work/item/weapon/07000.gr2",
+      "output": "items/fan-7000.glb",
+      "textures": [
+        "bin/pack/item/ymir work/item/weapon/weapon_chogeup_02.dds"
+      ],
+      "actor_attachment": "weapon_right",
+      "attachment_transform": {
+        "translation_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation_degrees": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
     }
   ],
   "trusted_gameplay": {
@@ -644,6 +675,12 @@
         "revision": 1,
         "vnum": 10,
         "icon": "icon/item/00010"
+      },
+      {
+        "id": "item.weapon.fan-7000",
+        "revision": 1,
+        "vnum": 7000,
+        "icon": "icon/item/07000"
       },
       {
         "id": "item.consumable.red-potion-small",

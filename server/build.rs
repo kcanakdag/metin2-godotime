@@ -681,7 +681,7 @@ fn main() {
         fail("physical_damage.mobs must contain exactly Wild Dog 101");
     }
     let dog = object(&physical_mobs[0], "physical_damage.mob");
-    if dog.len() != 12
+    if dog.len() != 13
         || text(dog, "actor_id", "physical_damage.mob") != "actor.mob.wild-dog-101"
         || exact_u32(dog, "vnum", "physical_damage.mob", 101) != 101
     {
@@ -697,6 +697,8 @@ fn main() {
     let dog_damage_multiplier = exact_one_f32(dog, "damage_multiplier", "physical_damage.mob");
     let dog_sword_resistance =
         exact_u32(dog, "sword_resistance_percent", "physical_damage.mob", 0) as u8;
+    let dog_fan_resistance =
+        exact_u32(dog, "fan_resistance_percent", "physical_damage.mob", 0) as u8;
     if dog_power_min > dog_power_max
         || dog.get("source")
             != Some(&json!({
@@ -708,7 +710,7 @@ fn main() {
                 "columns": {
                     "level": "LEVEL", "strength": "ST", "vitality": "HT", "dexterity": "DX",
                     "proto_defense": "DEF", "power_min": "DAMAGE_MIN", "power_max": "DAMAGE_MAX",
-                    "damage_multiplier": "DAM_MULTIPLY", "sword_resistance_percent": "RESIST_SWORD"
+                    "damage_multiplier": "DAM_MULTIPLY", "sword_resistance_percent": "RESIST_SWORD", "fan_resistance_percent": "RESIST_FAN"
                 }
             }))
     {
@@ -1108,7 +1110,7 @@ fn main() {
          \tpub radius_m: f64,\n\
          }\n\
          #[derive(Clone, Copy, Debug, PartialEq, Eq)]\n\
-         pub enum PhysicalWeaponClass { Sword }\n\
+         pub enum PhysicalWeaponClass { Sword, Fan }\n\
          #[derive(Clone, Copy, Debug)]\n\
          pub struct WeaponPhysicalDefinition {\n\
          \tpub item_id: &'static str,\n\
@@ -1130,7 +1132,7 @@ fn main() {
          \tpub power_min: u16,\n\
          \tpub power_max: u16,\n\
          \tpub damage_multiplier: f32,\n\
-         \tpub sword_resistance_percent: u8,\n\
+         \tpub sword_resistance_percent: u8, pub fan_resistance_percent: u8,\n\
          }\n\
          #[derive(Clone, Copy, Debug)]\n\
          pub struct SelectedPhysicalPolicyDefinition {\n\
@@ -1266,8 +1268,8 @@ fn main() {
     }
     writeln!(output, "];").unwrap();
     writeln!(output, "pub const SELECTED_PHYSICAL_POLICY: SelectedPhysicalPolicyDefinition = SelectedPhysicalPolicyDefinition {{ formula_id: {:?}, rating_policy_id: {:?}, rng_policy_id: {:?}, attack_grade_bonus: 0, party_attack_bonus: 0, attack_percent: 0, melee_magic_attack_percent: 0, defense_grade_bonus: 0, party_defender_bonus: 0, defense_percent: 0, npc_attacker_marriage_defense_bonus: 0, final_multiplier: {:?}, calc_att_bonus_percent: 0, block_percent: 0, normal_affect_damage: 0, reflect_percent: 0, critical_percent: 0, resist_critical_percent: 0, penetrate_percent: 0, resist_penetrate_percent: 0, hp_steal_percent: 0, sp_steal_percent: 0, gold_steal_percent: 0, hit_hp_recovery: 0, hit_sp_recovery: 0, mana_burn_percent: 0, normal_hit_damage_bonus_percent: 0, normal_hit_defense_bonus_percent: 0 }};", "combat.physical.normal-melee.v1", "combat.attack-rating.attacker-level-victim-term.v1", "combat.rng.accepted-action-area-per-victim.v1", selected_final_multiplier).unwrap();
-    writeln!(output, "pub const SWORD_10_PHYSICAL: WeaponPhysicalDefinition = WeaponPhysicalDefinition {{ item_id: {:?}, vnum: 10, class: PhysicalWeaponClass::Sword, power_min: {sword_power_min}, power_max: {sword_power_max}, refine_attack: {sword_refine_attack} }};", "item.weapon.sword-10").unwrap();
-    writeln!(output, "pub const WILD_DOG_101_PHYSICAL: MobPhysicalDefinition = MobPhysicalDefinition {{ actor_id: {:?}, vnum: 101, level: {dog_level}, strength: {dog_strength}, vitality: {dog_vitality}, dexterity: {dog_dexterity}, proto_defense: {dog_proto_defense}, power_min: {dog_power_min}, power_max: {dog_power_max}, damage_multiplier: {dog_damage_multiplier:?}, sword_resistance_percent: {dog_sword_resistance} }};", "actor.mob.wild-dog-101").unwrap();
+    writeln!(output, "#[cfg(test)]\npub const SWORD_10_PHYSICAL: WeaponPhysicalDefinition = WeaponPhysicalDefinition {{ item_id: {:?}, vnum: 10, class: PhysicalWeaponClass::Sword, power_min: {sword_power_min}, power_max: {sword_power_max}, refine_attack: {sword_refine_attack} }};", "item.weapon.sword-10").unwrap();
+    writeln!(output, "pub const WILD_DOG_101_PHYSICAL: MobPhysicalDefinition = MobPhysicalDefinition {{ actor_id: {:?}, vnum: 101, level: {dog_level}, strength: {dog_strength}, vitality: {dog_vitality}, dexterity: {dog_dexterity}, proto_defense: {dog_proto_defense}, power_min: {dog_power_min}, power_max: {dog_power_max}, damage_multiplier: {dog_damage_multiplier:?}, sword_resistance_percent: {dog_sword_resistance}, fan_resistance_percent: {dog_fan_resistance} }};", "actor.mob.wild-dog-101").unwrap();
     emit_attack(&mut output, "PLAYER_GENERAL_ATTACK", general);
     writeln!(
         output,
@@ -1286,7 +1288,7 @@ fn main() {
     .unwrap();
     writeln!(
         output,
-        "pub const WEAPON_VNUM: u32 = SWORD_10_PHYSICAL.vnum;"
+        "#[cfg(test)]\npub const WEAPON_VNUM: u32 = SWORD_10_PHYSICAL.vnum;"
     )
     .unwrap();
     writeln!(

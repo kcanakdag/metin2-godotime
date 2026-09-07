@@ -26,7 +26,7 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
     let mut output = String::from(
         "#[derive(Clone, Copy, Debug)]\n\
          pub struct CharacterClassDefinition {\n\
-         pub id: u8, pub strength: u8, pub vitality: u8, pub dexterity: u8, pub intelligence: u8,\n\
+         pub id: u8, pub starter_weapon_vnum: u32, pub strength: u8, pub vitality: u8, pub dexterity: u8, pub intelligence: u8,\n\
          pub base_hp: u32, pub base_sp: u32, pub hp_per_vitality: u32, pub sp_per_intelligence: u32,\n\
          pub hp_gain_min: u32, pub hp_gain_max: u32, pub sp_gain_min: u32, pub sp_gain_max: u32,\n\
          }\n\
@@ -46,7 +46,12 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
         if number(class, "class_id", 0, 3)? != index as u64 {
             return Err("Class definitions must be sorted by unique ID".into());
         }
-        write!(output, "CharacterClassDefinition {{ id: {index}, ").unwrap();
+        write!(
+            output,
+            "CharacterClassDefinition {{ id: {index}, starter_weapon_vnum: {}, ",
+            number(class, "starter_weapon_vnum", 1, u64::from(u32::MAX))?
+        )
+        .unwrap();
         for key in [
             "strength",
             "vitality",
@@ -120,7 +125,19 @@ fn basic_attacks(document: &Value) -> Result<String, String> {
             let mode_id = mode["id"].as_str().ok_or("Missing motion mode")?;
             let (actions, weapon): (&[&str], u32) = match mode_id {
                 "general" => (&["normal_attack"], 0),
-                "onehand" => (&["combo_1", "combo_2", "combo_3", "combo_4"], 10),
+                "onehand" | "fan" => {
+                    let required = mode["required_item_vnums"]
+                        .as_array()
+                        .ok_or("Missing weapon requirements")?;
+                    if required.len() != 1 {
+                        return Err("Basic weapon mode requires one selected weapon".into());
+                    }
+                    let vnum = required[0]
+                        .as_u64()
+                        .filter(|n| (1..=u64::from(u32::MAX)).contains(n))
+                        .ok_or("Invalid mode weapon")? as u32;
+                    (&["combo_1", "combo_2", "combo_3", "combo_4"], vnum)
+                }
                 _ => continue,
             };
             if weapon != 0 && mode["combo_chains"][0] != serde_json::json!(actions) {
@@ -208,11 +225,11 @@ fn basic_attacks(document: &Value) -> Result<String, String> {
             }
         }
     }
-    if records.len() != 27 {
-        return Err("Expected seven unarmed attacks and five four-step sword chains".into());
+    if records.len() != 35 {
+        return Err("Expected seven unarmed attacks and seven four-step weapon chains".into());
     }
     Ok(format!(
-        "pub const CHARACTER_BASIC_ATTACKS: [(&str, u32, AttackDefinition); 27] = [{}];\n",
+        "pub const CHARACTER_BASIC_ATTACKS: [(&str, u32, AttackDefinition); 35] = [{}];\n",
         records.join(",")
     ))
 }

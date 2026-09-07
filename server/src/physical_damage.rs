@@ -20,6 +20,7 @@ pub enum CombatantKind {
 pub enum PhysicalWeaponClass {
     Unarmed,
     Sword,
+    Fan,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -82,6 +83,7 @@ pub struct PhysicalVictimSnapshot {
     pub defense_percent: i16,
     pub npc_attacker_marriage_defense_bonus: i16,
     pub sword_resistance_percent: u8,
+    pub fan_resistance_percent: u8,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -107,8 +109,7 @@ pub enum DamageBeforeFloor {
 pub struct PreFloorCalculation {
     pub outcome: DamageBeforeFloor,
     pub diagnostics: DamageDiagnostics,
-    weapon_class: PhysicalWeaponClass,
-    sword_resistance_percent: u8,
+    weapon_resistance_percent: u8,
     final_multiplier_bits: u32,
 }
 
@@ -236,6 +237,7 @@ fn warrior_victim(level: u8, vitality: u8, dexterity: u8) -> PhysicalVictimSnaps
         defense_percent: 0,
         npc_attacker_marriage_defense_bonus: 0,
         sword_resistance_percent: 0,
+        fan_resistance_percent: 0,
     }
 }
 
@@ -252,13 +254,14 @@ fn wild_dog_victim() -> PhysicalVictimSnapshot {
         defense_percent: 0,
         npc_attacker_marriage_defense_bonus: 0,
         sword_resistance_percent: 0,
+        fan_resistance_percent: 0,
     }
 }
 
 /// Enforce the deliberately narrow policy values before using this arithmetic in gameplay.
 ///
 /// The calculation helpers admit bounded synthetic modifiers so ordering can be unit-tested.
-/// The selected integration remains limited to the Warrior, Sword+0/unarmed, and Wild Dog 101
+/// The selected integration remains limited to the classic classes, selected weapons/unarmed, and Wild Dog 101
 /// rows, with every currently excluded bonus stage at zero and both multipliers at binary32 one.
 pub fn validate_selected_policy(
     attacker: PhysicalAttackerSnapshot,
@@ -283,6 +286,7 @@ pub fn validate_selected_policy(
         || victim.defense_percent != 0
         || victim.npc_attacker_marriage_defense_bonus != 0
         || victim.sword_resistance_percent != 0
+        || victim.fan_resistance_percent != 0
         || zero_stages != SelectedZeroStages::default()
     {
         return Err(PhysicalDamageError::UnsupportedSelectedPolicy);
@@ -410,7 +414,7 @@ pub fn server_defense_grade(snapshot: PhysicalVictimSnapshot) -> Result<i32, Phy
     validate_bonus(snapshot.party_defender_bonus)?;
     validate_bonus(snapshot.npc_attacker_marriage_defense_bonus)?;
     validate_percent(snapshot.defense_percent)?;
-    if snapshot.sword_resistance_percent > 100 {
+    if snapshot.sword_resistance_percent > 100 || snapshot.fan_resistance_percent > 100 {
         return Err(PhysicalDamageError::InvalidResistance);
     }
     let vitality = match snapshot.kind {
@@ -524,8 +528,11 @@ pub fn calculate_pre_floor(
     Ok(PreFloorCalculation {
         outcome,
         diagnostics,
-        weapon_class: attacker.power.class,
-        sword_resistance_percent: victim.sword_resistance_percent,
+        weapon_resistance_percent: match attacker.power.class {
+            PhysicalWeaponClass::Unarmed => 0,
+            PhysicalWeaponClass::Sword => victim.sword_resistance_percent,
+            PhysicalWeaponClass::Fan => victim.fan_resistance_percent,
+        },
         final_multiplier_bits: attacker.final_multiplier.to_bits(),
     })
 }
@@ -546,17 +553,13 @@ pub fn finish_damage(
             return Err(PhysicalDamageError::UnexpectedLowFloorRoll);
         }
     };
-    if calculation.sword_resistance_percent > 100 {
+    if calculation.weapon_resistance_percent > 100 {
         return Err(PhysicalDamageError::InvalidResistance);
     }
-    let resisted = if calculation.weapon_class == PhysicalWeaponClass::Sword {
-        checked_mul(
-            damage,
-            i32::from(100_u8 - calculation.sword_resistance_percent),
-        )? / 100
-    } else {
-        damage
-    };
+    let resisted = checked_mul(
+        damage,
+        i32::from(100_u8 - calculation.weapon_resistance_percent),
+    )? / 100;
     let rounded = trunc_f32_i32(final_multiplier * resisted as f32 + 0.5_f32)?;
     Ok(FinalDamage {
         damage: u16::try_from(rounded).map_err(|_| PhysicalDamageError::ResultOutOfRange)?,
@@ -713,12 +716,14 @@ fn player_power(captured: CapturedPlayerAttacker) -> Result<PhysicalPowerSource,
     if captured.equipped_item_id == 0
         || captured.equipped_vnum != weapon.vnum
         || weapon.item_id != definition.id
-        || !matches!(weapon.class, definitions::PhysicalWeaponClass::Sword)
     {
         return Err("The captured physical weapon is unsupported.".into());
     }
     Ok(PhysicalPowerSource {
-        class: PhysicalWeaponClass::Sword,
+        class: match weapon.class {
+            definitions::PhysicalWeaponClass::Sword => PhysicalWeaponClass::Sword,
+            definitions::PhysicalWeaponClass::Fan => PhysicalWeaponClass::Fan,
+        },
         power_min: weapon.power_min,
         power_max: weapon.power_max,
         refine_attack: weapon.refine_attack,
@@ -802,6 +807,7 @@ fn policy_victim(
     dexterity: u8,
     proto_or_armor_defense: u16,
     sword_resistance_percent: u8,
+    fan_resistance_percent: u8,
 ) -> PhysicalVictimSnapshot {
     let policy = definitions::SELECTED_PHYSICAL_POLICY;
     PhysicalVictimSnapshot {
@@ -815,6 +821,7 @@ fn policy_victim(
         defense_percent: policy.defense_percent,
         npc_attacker_marriage_defense_bonus: policy.npc_attacker_marriage_defense_bonus,
         sword_resistance_percent,
+        fan_resistance_percent,
     }
 }
 
@@ -835,6 +842,7 @@ fn dog_victim(monster: &Monster) -> Result<PhysicalVictimSnapshot, String> {
         dog.dexterity,
         dog.proto_defense,
         dog.sword_resistance_percent,
+        dog.fan_resistance_percent,
     ))
 }
 
@@ -856,13 +864,14 @@ fn player_victim(
         row.dexterity,
         0,
         0,
+        0,
     ))
 }
 
 pub fn capture_player(
     ctx: &ReducerContext,
     character: Identity,
-    requires_sword: bool,
+    requires_weapon: bool,
 ) -> Result<CapturedPlayerAttacker, String> {
     validate_generated_policy()?;
     let row = ctx
@@ -873,10 +882,10 @@ pub fn capture_player(
         .ok_or("Character progression is missing.")?;
     let equipped = inventory::equipped_weapon_item(ctx, character);
     let (equipped_item_id, equipped_vnum) = equipped.unwrap_or((0, 0));
-    if requires_sword && !crate::item_catalog::is_weapon(equipped_vnum) {
-        return Err("The accepted physical action requires a sword.".into());
+    if requires_weapon && !crate::item_catalog::is_weapon(equipped_vnum) {
+        return Err("The accepted physical action requires an equipped weapon.".into());
     }
-    if !requires_sword && equipped.is_some() {
+    if !requires_weapon && equipped.is_some() {
         return Err("The accepted unarmed action cannot capture an equipped weapon.".into());
     }
     let captured = CapturedPlayerAttacker {
@@ -1294,6 +1303,35 @@ mod tests {
     fn npc_multiplier_is_applied_before_defense_and_clamp() {
         let (multiplied, damage) = npc_multiply_then_defend(10, 2.0, 15).unwrap();
         assert_eq!((multiplied, damage), (20, 5));
+    }
+
+    #[test]
+    fn fan_uses_its_own_resistance_and_shaman_stat_attack() {
+        let mut attacker = initial_warrior(PhysicalPowerSource {
+            class: PhysicalWeaponClass::Fan,
+            power_min: 11,
+            power_max: 15,
+            refine_attack: 0,
+        });
+        attacker.strength = 3;
+        attacker.stat_attack = crate::characters::stat_attack(3, 3, 3, 6).unwrap();
+        let mut victim = wild_dog_victim();
+        let full = calculate_damage(attacker, victim, 15, None).unwrap().damage;
+        victim.sword_resistance_percent = 100;
+        assert_eq!(
+            calculate_damage(attacker, victim, 15, None).unwrap().damage,
+            full
+        );
+        victim.fan_resistance_percent = 50;
+        assert_eq!(
+            calculate_damage(attacker, victim, 15, None).unwrap().damage,
+            full / 2
+        );
+        victim.fan_resistance_percent = 101;
+        assert_eq!(
+            calculate_damage(attacker, victim, 15, None),
+            Err(PhysicalDamageError::InvalidResistance)
+        );
     }
 
     #[test]
