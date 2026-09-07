@@ -38,6 +38,7 @@ P1_ARTIFACTS = (
 P1_WARRIOR_ACTOR_ID = "actor.player.warrior-male"
 P1_WILD_DOG_ACTOR_ID = "actor.mob.wild-dog-101"
 P1_SWORD_ITEM_ID = "item.weapon.sword-10"
+P1_COMBO4_ACTION_ID = "actor.player.warrior-male.onehand.combo_4"
 GRANNY_RUNTIME_BINARIES = {"granny.dll", "granny2.dll", "granny2.so", "granny2.dylib"}
 P1_PRESENTATION_FIELDS = {
     "schema",
@@ -52,6 +53,7 @@ P1_PRESENTATION_FIELDS = {
     "actors",
     "items",
     "unsupported",
+    "adapted_motion_events",
 }
 P1_CONVERTER_FIELDS = {"blender", "blender_import", "content_compiler", "gr2_importer_commit"}
 P1_COORDINATE_FIELDS = {
@@ -87,6 +89,7 @@ P1_ACTOR_FIELDS = {
     "skeleton_signature",
     "motion_vector_space",
     "attachment_bones",
+    "default_hair_index",
     "modes",
 }
 P1_MODEL_FIELDS = {"artifact_id", "path"}
@@ -103,6 +106,7 @@ P1_MOTION_FIELDS = {
     "fallback_mode",
     "combo",
     "events",
+    "screen_wave",
 }
 P1_COMBO_FIELDS = {"direct_input_us", "input_limit_us", "link_us", "pre_input_us"}
 P1_ATTACK_WINDOW_FIELDS = {
@@ -152,6 +156,19 @@ P1_ITEM_FIELDS = {
 }
 P1_ATTACHMENT_TRANSFORM_FIELDS = {"translation_m", "rotation_degrees", "scale"}
 P1_UNSUPPORTED_FIELDS = {"kind", "action_id", "event_type", "reason"}
+P1_ADAPTED_MOTION_EVENT_FIELDS = {"kind", "action_id", "event_type", "adapter"}
+P1_SCREEN_WAVE_FIELDS = {"activation_offset_us", "duration_us", "viewer_range_m"}
+P1_SCREEN_WAVE = {
+    "activation_offset_us": 633_334,
+    "duration_us": 200_000,
+    "viewer_range_m": 2.0,
+}
+P1_ADAPTED_MOTION_EVENT = {
+    "kind": "motion_event",
+    "action_id": P1_COMBO4_ACTION_ID,
+    "event_type": 2,
+    "adapter": "screen-wave-schema5",
+}
 
 
 def digest(path):
@@ -274,9 +291,33 @@ def validate_p1_presentation_fields(manifest):
         reject_unknown_fields(artifact, P1_ARTIFACT_FIELDS, f"$.artifacts[{index}]")
     for index, record in enumerate(manifest.get("unsupported", [])):
         reject_unknown_fields(record, P1_UNSUPPORTED_FIELDS, f"$.unsupported[{index}]")
+    adapted = manifest.get("adapted_motion_events")
+    if adapted is not None:
+        if not isinstance(adapted, list):
+            raise RuntimeError(
+                "P1 presentation manifest object is invalid at $.adapted_motion_events"
+            )
+        for index, record in enumerate(adapted):
+            reject_unknown_fields(
+                record,
+                P1_ADAPTED_MOTION_EVENT_FIELDS,
+                f"$.adapted_motion_events[{index}]",
+            )
+        if adapted != [P1_ADAPTED_MOTION_EVENT]:
+            raise RuntimeError("P1 presentation manifest has an invalid adapted motion event")
+    screen_waves = []
     for actor_index, actor in enumerate(manifest.get("actors", [])):
         actor_path = f"$.actors[{actor_index}]"
         reject_unknown_fields(actor, P1_ACTOR_FIELDS, actor_path)
+        if actor.get("id") == P1_WARRIOR_ACTOR_ID:
+            if type(actor.get("default_hair_index")) is not int or actor["default_hair_index"] != 0:
+                raise RuntimeError(
+                    f"P1 presentation manifest has an invalid default hair at {actor_path}"
+                )
+        elif "default_hair_index" in actor:
+            raise RuntimeError(
+                f"P1 presentation manifest has an invalid default hair at {actor_path}"
+            )
         if "model" in actor:
             reject_unknown_fields(actor["model"], P1_MODEL_FIELDS, actor_path + ".model")
         if "attachment_bones" in actor:
@@ -299,6 +340,20 @@ def validate_p1_presentation_fields(manifest):
                 reject_unknown_fields(motion, P1_MOTION_FIELDS, motion_path)
                 if motion.get("combo") is not None:
                     reject_unknown_fields(motion["combo"], P1_COMBO_FIELDS, motion_path + ".combo")
+                if "screen_wave" in motion:
+                    wave = motion["screen_wave"]
+                    reject_unknown_fields(wave, P1_SCREEN_WAVE_FIELDS, motion_path + ".screen_wave")
+                    if (
+                        motion.get("action_id") != P1_COMBO4_ACTION_ID
+                        or type(wave.get("activation_offset_us")) is not int
+                        or type(wave.get("duration_us")) is not int
+                        or type(wave.get("viewer_range_m")) is not float
+                        or wave != P1_SCREEN_WAVE
+                    ):
+                        raise RuntimeError(
+                            f"P1 presentation manifest has an invalid screen wave at {motion_path}"
+                        )
+                    screen_waves.append(motion_path)
                 for event_index, event in enumerate(motion.get("events", [])):
                     event_path = f"{motion_path}.events[{event_index}]"
                     if not isinstance(event, dict):
@@ -325,6 +380,8 @@ def validate_p1_presentation_fields(manifest):
                         reject_unknown_fields(
                             sphere, P1_SPHERE_FIELDS, f"{event_path}.spheres[{sphere_index}]"
                         )
+    if (adapted is not None) != bool(screen_waves) or len(screen_waves) > 1:
+        raise RuntimeError("P1 presentation manifest screen-wave adapter is inconsistent")
     for item_index, item in enumerate(manifest.get("items", [])):
         item_path = f"$.items[{item_index}]"
         reject_unknown_fields(item, P1_ITEM_FIELDS, item_path)
@@ -384,6 +441,12 @@ def validate_p1_manifest(manifest):
             value = artifact.get(key)
             if not isinstance(value, int) or isinstance(value, bool) or value < 0:
                 raise RuntimeError(f"P1 actor manifest {resource} has invalid {key}")
+        if resource == P1_ARTIFACTS[0] and (
+            artifact["mesh_count"] != 4 or artifact["textured_mesh_count"] != 4
+        ):
+            raise RuntimeError(
+                "P1 Warrior artifact does not contain the selected default hair mesh and texture"
+            )
         if resource.startswith("res://assets/imported/content/p0-warrior-dog/actors/"):
             if not isinstance(artifact.get("bones"), int) or artifact["bones"] <= 0:
                 raise RuntimeError(f"P1 actor manifest {resource} has invalid bones")
@@ -724,7 +787,7 @@ func has_no_unknown_fields(value: Variant, allowed: Array, path: String) -> bool
 
 
 func validate_presentation_fields(manifest: Dictionary) -> bool:
-    if not has_no_unknown_fields(manifest, ["schema", "schema_version", "profile_id", "content_hash", "gameplay_definition_hash", "presentation_output_hash", "converter", "coordinates", "artifacts", "actors", "items", "unsupported"], "$"):
+    if not has_no_unknown_fields(manifest, ["schema", "schema_version", "profile_id", "content_hash", "gameplay_definition_hash", "presentation_output_hash", "converter", "coordinates", "artifacts", "actors", "items", "unsupported", "adapted_motion_events"], "$"):
         return false
     if manifest.has("converter") and not has_no_unknown_fields(manifest["converter"], ["blender", "blender_import", "content_compiler", "gr2_importer_commit"], "$.converter"):
         return false
@@ -736,10 +799,30 @@ func validate_presentation_fields(manifest: Dictionary) -> bool:
     for artifact_index in manifest.get("artifacts", []).size():
         if not has_no_unknown_fields(manifest["artifacts"][artifact_index], ["id", "type", "path", "sha256", "bytes", "mesh_count", "textured_mesh_count", "vertices", "triangles", "bounds_m", "bones", "skeleton_signature"], "$.artifacts[%d]" % artifact_index):
             return false
+    if manifest.has("adapted_motion_events"):
+        var adapted = manifest["adapted_motion_events"]
+        if not adapted is Array or adapted.size() != 1:
+            push_error("P1 presentation manifest has an invalid adapted motion event")
+            return false
+        var adapted_event = adapted[0]
+        if not has_no_unknown_fields(adapted_event, ["kind", "action_id", "event_type", "adapter"], "$.adapted_motion_events[0]"):
+            return false
+        if adapted_event.get("kind") != "motion_event" or adapted_event.get("action_id") != "actor.player.warrior-male.onehand.combo_4" or adapted_event.get("event_type") != 2 or adapted_event.get("adapter") != "screen-wave-schema5":
+            push_error("P1 presentation manifest has an invalid adapted motion event")
+            return false
+    var screen_wave_count := 0
     for actor_index in manifest.get("actors", []).size():
         var actor = manifest["actors"][actor_index]
         var actor_path := "$.actors[%d]" % actor_index
-        if not has_no_unknown_fields(actor, ["id", "kind", "name", "race_id", "vnum", "forward", "model_key", "model", "skeleton_signature", "motion_vector_space", "attachment_bones", "modes"], actor_path):
+        if not has_no_unknown_fields(actor, ["id", "kind", "name", "race_id", "vnum", "forward", "model_key", "model", "skeleton_signature", "motion_vector_space", "attachment_bones", "default_hair_index", "modes"], actor_path):
+            return false
+        if actor.get("id") == "actor.player.warrior-male":
+            var hair_index = actor.get("default_hair_index")
+            if (not hair_index is int and not hair_index is float) or not is_finite(float(hair_index)) or float(hair_index) != 0.0:
+                push_error("P1 presentation manifest has an invalid default hair at " + actor_path)
+                return false
+        elif actor.has("default_hair_index"):
+            push_error("P1 presentation manifest has an invalid default hair at " + actor_path)
             return false
         if actor.has("model") and not has_no_unknown_fields(actor["model"], ["artifact_id", "path"], actor_path + ".model"):
             return false
@@ -755,10 +838,18 @@ func validate_presentation_fields(manifest: Dictionary) -> bool:
             for motion_index in mode.get("motions", []).size():
                 var motion = mode["motions"][motion_index]
                 var motion_path := mode_path + ".motions[%d]" % motion_index
-                if not has_no_unknown_fields(motion, ["action", "action_id", "variant", "weight", "godot_name", "duration_us", "loop", "accumulation_m", "fallback_mode", "combo", "events"], motion_path):
+                if not has_no_unknown_fields(motion, ["action", "action_id", "variant", "weight", "godot_name", "duration_us", "loop", "accumulation_m", "fallback_mode", "combo", "events", "screen_wave"], motion_path):
                     return false
                 if motion.get("combo") != null and not has_no_unknown_fields(motion["combo"], ["direct_input_us", "input_limit_us", "link_us", "pre_input_us"], motion_path + ".combo"):
                     return false
+                if motion.has("screen_wave"):
+                    var wave = motion["screen_wave"]
+                    if not has_no_unknown_fields(wave, ["activation_offset_us", "duration_us", "viewer_range_m"], motion_path + ".screen_wave"):
+                        return false
+                    if motion.get("action_id") != "actor.player.warrior-male.onehand.combo_4" or wave.get("activation_offset_us") != 633334 or wave.get("duration_us") != 200000 or wave.get("viewer_range_m") != 2.0:
+                        push_error("P1 presentation manifest has an invalid screen wave at " + motion_path)
+                        return false
+                    screen_wave_count += 1
                 for event_index in motion.get("events", []).size():
                     var event = motion["events"][event_index]
                     var event_path := motion_path + ".events[%d]" % event_index
@@ -775,6 +866,9 @@ func validate_presentation_fields(manifest: Dictionary) -> bool:
                     for sphere_index in event.get("spheres", []).size():
                         if not has_no_unknown_fields(event["spheres"][sphere_index], ["position_m", "radius_m"], event_path + ".spheres[%d]" % sphere_index):
                             return false
+    if manifest.has("adapted_motion_events") != (screen_wave_count == 1) or screen_wave_count > 1:
+        push_error("P1 presentation manifest screen-wave adapter is inconsistent")
+        return false
     for item_index in manifest.get("items", []).size():
         var item = manifest["items"][item_index]
         var item_path := "$.items[%d]" % item_index
@@ -849,6 +943,9 @@ func audit_p1_profile(expected_manifest_hash: String, required: bool) -> Variant
             if artifact.has(count_key) and summary.get(count_key) != artifact[count_key]:
                 push_error("Packaged P1 model has a mismatched " + count_key + ": " + resource)
                 return null
+        if resource == P1_PATHS[0] and (summary["mesh_count"] != 4 or summary["textured_mesh_count"] != 4):
+            push_error("Packaged P1 Warrior does not contain the selected default hair mesh and texture")
+            return null
         if resource.contains("/actors/") and summary["skinned_mesh_count"] <= 0:
             push_error("Packaged P1 actor has no skinned mesh: " + resource)
             return null

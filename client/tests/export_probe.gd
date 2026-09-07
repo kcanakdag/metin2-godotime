@@ -17,6 +17,10 @@ var _last_public_actions: Dictionary = {}
 var _last_own_action_fingerprint := ""
 var _monster_health_history: Array[Dictionary] = []
 var _last_monster_health: Dictionary = {}
+var _monster_action_history: Array[Dictionary] = []
+var _last_monster_actions: Dictionary = {}
+var _screen_wave_history: Array[Dictionary] = []
+var _last_screen_wave_fingerprint := ""
 
 
 func _ready() -> void:
@@ -43,6 +47,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_poll_native_command()
+	_capture_screen_wave()
 	_elapsed += delta
 	if _elapsed < 0.2:
 		return
@@ -74,6 +79,8 @@ func _process(delta: float) -> void:
 	snapshot["select_combat_target_acks"] = _select_combat_target_acks.duplicate(true)
 	snapshot["public_action_history"] = _public_action_history.duplicate(true)
 	snapshot["monster_health_history"] = _monster_health_history.duplicate(true)
+	snapshot["monster_action_history"] = _monster_action_history.duplicate(true)
+	snapshot["screen_wave_history"] = _screen_wave_history.duplicate(true)
 	snapshot["state_message"] = get_parent().connection.state_message
 	var actors: Array = []
 	for actor in get_parent().get_node("Players").get_children():
@@ -95,10 +102,24 @@ func _process(delta: float) -> void:
 	if OS.has_feature("web"):
 		JavaScriptBridge.get_interface("window").mt2Snapshot = payload
 	elif not _report.is_empty():
-		var file := FileAccess.open(_report, FileAccess.WRITE)
-		if file:
-			file.store_string(payload)
-			file.close()
+		var result := _publish_native_snapshot(payload)
+		if result != OK:
+			push_error("Export probe snapshot publication failed: %s" % error_string(result))
+
+
+func _publish_native_snapshot(payload: String) -> Error:
+	# Readers keep the previous complete snapshot until the replacement is ready.
+	var pending := _report + ".tmp"
+	var file := FileAccess.open(pending, FileAccess.WRITE)
+	if file == null:
+		return FileAccess.get_open_error()
+	file.store_string(payload)
+	var result := file.get_error()
+	file.close()
+	if result != OK:
+		DirAccess.remove_absolute(pending)
+		return result
+	return DirAccess.rename_absolute(pending, _report)
 
 
 func _poll_native_command() -> void:
@@ -122,6 +143,70 @@ func _project_rows(values: Variant, fields: Array[String]) -> Array[Dictionary]:
 			row[field] = value.get(field)
 		result.append(row)
 	return result
+
+
+func _capture_screen_wave() -> void:
+	var rig := get_parent().get_node_or_null("OrbitCamera")
+	if not is_instance_valid(rig) or not rig.has_method("screen_wave_snapshot"):
+		return
+	var value: Variant = rig.call("screen_wave_snapshot")
+	if not value is Dictionary:
+		return
+	var wave: Dictionary = value
+	var fingerprint := (
+		JSON
+		. stringify(
+			[
+				wave.get("active"),
+				wave.get("fingerprint"),
+				wave.get("sample_index"),
+				wave.get("trigger_count"),
+				wave.get("last_outcome"),
+			]
+		)
+	)
+	if fingerprint == _last_screen_wave_fingerprint:
+		return
+	_last_screen_wave_fingerprint = fingerprint
+	var camera := rig.get_node_or_null("Camera3D")
+	var camera_position: Array = []
+	var base_position: Array = []
+	if camera is Camera3D:
+		camera_position = [camera.position.x, camera.position.y, camera.position.z]
+		var yaw := float(rig.get("yaw"))
+		var pitch := float(rig.get("pitch"))
+		var distance := float(rig.get("distance"))
+		var base := Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch)) * distance
+		base_position = [base.x, base.y, base.z]
+	(
+		_screen_wave_history
+		. append(
+			{
+				"observed_at_ticks_ms": Time.get_ticks_msec(),
+				"active": bool(wave.get("active", false)),
+				"fingerprint": str(wave.get("fingerprint", "")),
+				"action_id": str(wave.get("action_id", "")),
+				"attack_sequence": int(wave.get("attack_sequence", -1)),
+				"action_started_at_us": int(wave.get("action_started_at_us", 0)),
+				"activation_us": int(wave.get("activation_us", 0)),
+				"duration_us": int(wave.get("duration_us", 0)),
+				"elapsed_us": int(wave.get("elapsed_us", 0)),
+				"sample_index": int(wave.get("sample_index", -1)),
+				"offset": wave.get("offset", []).duplicate(),
+				"trigger_count": int(wave.get("trigger_count", 0)),
+				"last_outcome": str(wave.get("last_outcome", "")),
+				"policy": str(wave.get("policy", "")),
+				"camera_local_position": camera_position,
+				"base_camera_local_position": base_position,
+			}
+		)
+	)
+	while _screen_wave_history.size() > 128:
+		_screen_wave_history.pop_front()
+	if OS.has_feature("web"):
+		JavaScriptBridge.get_interface("window").mt2ScreenWaveHistory = JSON.stringify(
+			_screen_wave_history
+		)
 
 
 func _web_command(args: Array) -> void:
@@ -334,6 +419,7 @@ func _on_monsters_changed(rows: Array) -> void:
 		if row_id <= 0:
 			continue
 		present[row_id] = true
+		_capture_monster_action(monster)
 		var fingerprint := JSON.stringify([monster.get("life_sequence"), monster.get("health")])
 		if str(_last_monster_health.get(row_id, "")) == fingerprint:
 			continue
@@ -355,14 +441,65 @@ func _on_monsters_changed(rows: Array) -> void:
 	for row_id: Variant in _last_monster_health.keys():
 		if not present.has(row_id):
 			_last_monster_health.erase(row_id)
+			_last_monster_actions.erase(row_id)
 	if changed:
 		_publish_monster_health_view()
+
+
+func _capture_monster_action(monster: Dictionary) -> void:
+	var row_id := int(monster.get("id", 0))
+	var fingerprint := (
+		JSON
+		. stringify(
+			[
+				monster.get("life_sequence"),
+				monster.get("health"),
+				monster.get("activity"),
+				monster.get("attack_action_id"),
+				monster.get("attack_sequence"),
+				monster.get("action_started_at_us"),
+				monster.get("action_ends_at_us"),
+				monster.get("x"),
+				monster.get("y"),
+				monster.get("z"),
+			]
+		)
+	)
+	if str(_last_monster_actions.get(row_id, "")) == fingerprint:
+		return
+	_last_monster_actions[row_id] = fingerprint
+	(
+		_monster_action_history
+		. append(
+			{
+				"observed_at_ticks_ms": Time.get_ticks_msec(),
+				"id": row_id,
+				"life_sequence": monster.get("life_sequence"),
+				"health": monster.get("health"),
+				"activity": monster.get("activity"),
+				"attack_action_id": monster.get("attack_action_id"),
+				"attack_sequence": monster.get("attack_sequence"),
+				"action_started_at_us": monster.get("action_started_at_us"),
+				"action_ends_at_us": monster.get("action_ends_at_us"),
+				"x": monster.get("x"),
+				"y": monster.get("y"),
+				"z": monster.get("z"),
+			}
+		)
+	)
+	while _monster_action_history.size() > 256:
+		_monster_action_history.pop_front()
+	if OS.has_feature("web"):
+		JavaScriptBridge.get_interface("window").mt2MonsterActionHistory = JSON.stringify(
+			_monster_action_history
+		)
 
 
 func _on_connection_state_changed(_state: String, _message: String) -> void:
 	_last_public_actions.clear()
 	_last_own_action_fingerprint = ""
 	_last_monster_health.clear()
+	_last_monster_actions.clear()
 	_publish_own_action_view()
 
 

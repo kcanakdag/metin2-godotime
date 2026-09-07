@@ -1,4 +1,4 @@
-use serde_json::{Map, Value};
+use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 use std::fmt::Write as _;
 use std::fs;
@@ -12,7 +12,8 @@ use build_combo::{
 const PROFILE: &str = "p0-warrior-dog";
 const DEFINITIONS: &str = "content/p0-warrior-dog/actions.v1.json";
 const COMBO_VALIDATOR: &str = "build_combo.rs";
-const TARGET_FIXTURE: &str = "fixtures/p2-target-dual-wild-dog.v1.json";
+const DUAL_TARGET_FIXTURE: &str = "fixtures/p2-target-dual-wild-dog.v1.json";
+const FINISHER_TARGET_FIXTURE: &str = "fixtures/p2-finisher-triple-wild-dog.v1.json";
 const TARGET_FIXTURE_ENV: &str = "MT2_COMBAT_TEST_FIXTURE";
 
 #[derive(Clone, Copy)]
@@ -147,11 +148,14 @@ struct Attack<'a> {
     id: &'a str,
     duration_us: i64,
     cooldown_us: i64,
+    ordinary_hit_invulnerability_us: i64,
     hit_start_us: i64,
     hit_end_us: i64,
     range_m: f32,
     combo_input: Option<ComboInput>,
     root_motion: Option<RootMotion>,
+    special_area: bool,
+    screen_wave: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -162,6 +166,8 @@ struct AttackContract<'a> {
     required_item: Option<u32>,
     combo_input: Option<ComboInput>,
     root_motion: Option<RootMotion>,
+    special_area: bool,
+    screen_wave: bool,
 }
 
 fn checked_attack<'a>(
@@ -182,6 +188,20 @@ fn checked_attack<'a>(
     }
     let duration_us = bounded_u32(row, "duration_us", "action", 60_000_000) as i64;
     let cooldown_us = bounded_u32(row, "cooldown_us", "action", 60_000_000) as i64;
+    let expected_invisible = match id {
+        PLAYER_GENERAL_ACTION_ID => 500_000,
+        value if value == PLAYER_COMBO_ACTION_IDS[0] => 100_000,
+        value if value == PLAYER_COMBO_ACTION_IDS[1] => 100_000,
+        value if value == PLAYER_COMBO_ACTION_IDS[2] => 200_000,
+        value if value == PLAYER_COMBO_ACTION_IDS[3] => 0,
+        MOB_ACTION_ID => 300_000,
+        _ => fail("unsupported action id"),
+    };
+    if u64_value(row, "ordinary_hit_invulnerability_us", "action") != expected_invisible as u64 {
+        fail(format!(
+            "action {id:?} ordinary hit invulnerability changed"
+        ));
+    }
     let required = array(
         field(row, "required_item_vnums", "action"),
         "required_item_vnums",
@@ -201,9 +221,10 @@ fn checked_attack<'a>(
         ));
     }
     let windows = array(field(row, "hit_windows", "action"), "hit_windows");
-    if windows.len() != 1 {
+    let expected_windows = usize::from(!contract.special_area);
+    if windows.len() != expected_windows {
         fail(format!(
-            "action {id:?} must have exactly one hit window in this fixture"
+            "action {id:?} has an unexpected ordinary hit-window count"
         ));
     }
     let mut checked = Vec::with_capacity(windows.len());
@@ -227,16 +248,61 @@ fn checked_attack<'a>(
         ));
     }
     checked.sort_by_key(|window| (window.0, window.1));
-    let (hit_start_us, hit_end_us, range_m) = checked[0];
+    let (hit_start_us, hit_end_us, range_m) = checked.first().copied().unwrap_or((0, 0, 0.0));
+    if contract.special_area {
+        let expected = json!({
+            "authored_start_us": 659316,
+            "legacy_dispatch_frame": 39,
+            "activation_offset_us": 666667,
+            "duration_us": 200000,
+            "local_center_x_m": 0.0,
+            "local_center_z_m": -1.2,
+            "radius_m": 1.0,
+            "max_targets": 16,
+            "hit_once_per_life": true,
+            "hit_type": 1,
+            "invulnerability_us": 300000,
+            "knockback": {
+                "source_external_force": 17.0,
+                "unobstructed_distance_m": 4.732,
+                "duration_us": 1000000
+            }
+        });
+        if row.get("special_area") != Some(&expected) {
+            fail("terminal combo_4 special area changed");
+        }
+    } else if row.contains_key("special_area") {
+        fail("only terminal combo_4 may define special_area");
+    }
+    if contract.screen_wave {
+        let expected = json!({
+            "authored_start_us": 630086,
+            "legacy_dispatch_frame": 37,
+            "activation_offset_us": 633334,
+            "duration_us": 200000,
+            "viewer_range_m": 2.0,
+            "source_power": 300,
+            "source_component_step_m": 0.001,
+            "source_component_exclusive_max_m": 0.3
+        });
+        if row.get("screen_wave") != Some(&expected) {
+            fail("terminal combo_4 screen wave changed");
+        }
+    } else if row.contains_key("screen_wave") {
+        fail("only terminal combo_4 may define screen_wave");
+    }
     Attack {
         id,
         duration_us,
         cooldown_us,
+        ordinary_hit_invulnerability_us: expected_invisible,
         hit_start_us,
         hit_end_us,
         range_m,
         combo_input: contract.combo_input,
         root_motion: contract.root_motion,
+        special_area: contract.special_area,
+        screen_wave: contract.screen_wave,
     }
 }
 
@@ -261,24 +327,30 @@ fn selected_monster_spawns(mob_vnum: u32) -> (Vec<MonsterSpawn>, &'static str) {
             "",
         );
     }
-    if selector != "dual-wild-dog-v1" {
+    if selector != "dual-wild-dog-v1" && selector != "triple-wild-dog-finisher-v1" {
         fail(format!(
-            "{TARGET_FIXTURE_ENV} must be empty or exactly dual-wild-dog-v1"
+            "{TARGET_FIXTURE_ENV} must be empty, dual-wild-dog-v1, or triple-wild-dog-finisher-v1"
         ));
     }
     if std::env::var_os("CARGO_FEATURE_YONGAN").is_some() {
-        fail(
-            "dual-wild-dog-v1 is a training-map-only test fixture and cannot be built with yongan",
-        );
+        fail("combat test fixtures are training-map-only and cannot be built with yongan");
     }
-    let bytes = fs::read(TARGET_FIXTURE)
-        .unwrap_or_else(|error| fail(format!("cannot read {TARGET_FIXTURE} ({error})")));
+    let (fixture_path, expected): (&str, &[(u32, f32, f32)]) = if selector == "dual-wild-dog-v1" {
+        (DUAL_TARGET_FIXTURE, &[(1, 3.0, 3.0), (2, 10.0, 3.0)])
+    } else {
+        (
+            FINISHER_TARGET_FIXTURE,
+            &[(1, 3.0, 3.0), (2, 3.25, 3.0), (3, 11.5, 3.0)],
+        )
+    };
+    let bytes = fs::read(fixture_path)
+        .unwrap_or_else(|error| fail(format!("cannot read {fixture_path} ({error})")));
     let payload: Value = serde_json::from_slice(&bytes)
-        .unwrap_or_else(|error| fail(format!("{TARGET_FIXTURE} is not valid JSON ({error})")));
+        .unwrap_or_else(|error| fail(format!("{fixture_path} is not valid JSON ({error})")));
     let root = object(&payload, "combat_spawn_fixture");
     if text(root, "schema", "combat_spawn_fixture") != "mt2spacetime.combat-spawn-fixture"
         || u64_value(root, "schema_version", "combat_spawn_fixture") != 1
-        || text(root, "fixture_id", "combat_spawn_fixture") != "dual-wild-dog-v1"
+        || text(root, "fixture_id", "combat_spawn_fixture") != selector
         || text(root, "map_id", "combat_spawn_fixture") != "training"
     {
         fail("combat spawn fixture schema, identity, or map does not match this server");
@@ -287,11 +359,10 @@ fn selected_monster_spawns(mob_vnum: u32) -> (Vec<MonsterSpawn>, &'static str) {
         field(root, "placements", "combat_spawn_fixture"),
         "combat_spawn_fixture.placements",
     );
-    if placements.len() != 2 {
-        fail("dual-wild-dog-v1 must contain exactly two placements");
+    if placements.len() != expected.len() {
+        fail("selected combat fixture has an unexpected placement count");
     }
-    let expected = [(1_u32, 3.0_f32, 3.0_f32), (2, 10.0, 3.0)];
-    let mut result = Vec::with_capacity(2);
+    let mut result = Vec::with_capacity(expected.len());
     for (index, (value, expected)) in placements.iter().zip(expected).enumerate() {
         let row = object(value, "combat_spawn_fixture.placement");
         let id = bounded_u32(row, "id", "combat_spawn_fixture.placement", u32::MAX);
@@ -303,14 +374,19 @@ fn selected_monster_spawns(mob_vnum: u32) -> (Vec<MonsterSpawn>, &'static str) {
         );
         let home_x = positive_f32(row, "home_x", "combat_spawn_fixture.placement");
         let home_z = positive_f32(row, "home_z", "combat_spawn_fixture.placement");
-        if (id, home_x, home_z) != expected || definition_vnum != mob_vnum {
+        if (id, home_x, home_z) != *expected || definition_vnum != mob_vnum {
             fail(format!(
                 "combat spawn fixture placement {index} does not match the reviewed dual Wild Dog fixture"
             ));
         }
         result.push(MonsterSpawn { id, home_x, home_z });
     }
-    (result, "training-v2-dual-wild-dog-v1")
+    let content_hash = if selector == "dual-wild-dog-v1" {
+        "training-v2-dual-wild-dog-v1"
+    } else {
+        "training-v3-triple-wild-dog-finisher-v1"
+    };
+    (result, content_hash)
 }
 
 fn attack_expression(attack: Attack<'_>) -> String {
@@ -328,16 +404,29 @@ fn attack_expression(attack: Attack<'_>) -> String {
         ),
         None => "None".to_owned(),
     };
+    let special_area = if attack.special_area {
+        "Some(SpecialAreaDefinition { authored_start_us: 659316, legacy_dispatch_frame: 39, activation_offset_us: 666667, duration_us: 200000, local_center_x_m: 0.0, local_center_z_m: -1.2, radius_m: 1.0, max_targets: 16, hit_once_per_life: true, hit_type: 1, invulnerability_us: 300000, knockback: KnockbackDefinition { source_external_force: 17.0, unobstructed_distance_m: 4.732, duration_us: 1000000 } })"
+    } else {
+        "None"
+    };
+    let screen_wave = if attack.screen_wave {
+        "Some(ScreenWaveDefinition { authored_start_us: 630086, legacy_dispatch_frame: 37, activation_offset_us: 633334, duration_us: 200000, viewer_range_m: 2.0, source_power: 300, source_component_step_m: 0.001, source_component_exclusive_max_m: 0.3 })"
+    } else {
+        "None"
+    };
     format!(
-        "AttackDefinition {{ id: {}, duration_us: {}, cooldown_us: {}, hit_start_us: {}, hit_end_us: {}, range_m: {:?}, combo_input: {}, root_motion: {} }}",
+        "AttackDefinition {{ id: {}, duration_us: {}, cooldown_us: {}, ordinary_hit_invulnerability_us: {}, hit_start_us: {}, hit_end_us: {}, range_m: {:?}, combo_input: {}, root_motion: {}, special_area: {}, screen_wave: {} }}",
         rust_string(attack.id),
         attack.duration_us,
         attack.cooldown_us,
+        attack.ordinary_hit_invulnerability_us,
         attack.hit_start_us,
         attack.hit_end_us,
         attack.range_m,
         combo_input,
         root_motion,
+        special_area,
+        screen_wave,
     )
 }
 
@@ -353,7 +442,8 @@ fn emit_attack(output: &mut String, name: &str, attack: Attack<'_>) {
 fn main() {
     println!("cargo:rerun-if-changed={DEFINITIONS}");
     println!("cargo:rerun-if-changed={COMBO_VALIDATOR}");
-    println!("cargo:rerun-if-changed={TARGET_FIXTURE}");
+    println!("cargo:rerun-if-changed={DUAL_TARGET_FIXTURE}");
+    println!("cargo:rerun-if-changed={FINISHER_TARGET_FIXTURE}");
     println!("cargo:rerun-if-env-changed=MT2_PROGRESSION_BOOTSTRAP_IDENTITIES");
     println!("cargo:rerun-if-env-changed={TARGET_FIXTURE_ENV}");
     let path = Path::new(DEFINITIONS);
@@ -367,7 +457,7 @@ fn main() {
         .unwrap_or_else(|error| fail(format!("{} is not valid JSON ({error})", path.display())));
     let root = object(&payload, "root");
     if text(root, "schema", "root") != "mt2spacetime.trusted-action-definitions"
-        || u64_value(root, "schema_version", "root") != 4
+        || u64_value(root, "schema_version", "root") != 5
         || text(root, "profile_id", "root") != PROFILE
         || text(root, "time_unit", "root") != "microsecond"
         || text(root, "linear_unit", "root") != "meter"
@@ -399,6 +489,33 @@ fn main() {
     let actors = array(field(root, "actors", "root"), "actors");
     let actions = array(field(root, "actions", "root"), "actions");
     let combo_actions = build_combo::validate(root).unwrap_or_else(|error| fail(error));
+    if root.get("special_area_policy")
+        != Some(&json!({
+            "id": "legacy-60hz-fixed-sphere-once-per-life-v1",
+            "dispatch_fps": 60,
+            "activation_uses_frame_floor_then_next_tick": true,
+            "sphere_space": "action-start-actor-local-to-world-at-activation",
+            "victim_filter": "live-exact-life-same-map-attackable",
+            "hit_once_scope": "area-instance-and-victim-life",
+            "force_policy": "linear-unobstructed-distance-approx-v1",
+            "legacy_physics_collision_parity": false
+        }))
+        || root.get("screen_wave_policy")
+            != Some(&json!({
+                "id": "legacy-60hz-viewer-range-metadata-v1",
+                "dispatch_fps": 60,
+                "activation_uses_frame_floor_then_next_tick": true,
+                "camera_randomization_runtime_parity": false
+            }))
+        || root.get("defending_sphere_policy")
+            != Some(&json!({
+                "id": "static-full-3d-swept-sphere-v1",
+                "source_collision_type": 3,
+                "bone": "Bip01"
+            }))
+    {
+        fail("Slice D event or defending-sphere policy changed");
+    }
     let items = array(field(root, "items", "root"), "items");
     let progression = object(field(root, "progression", "root"), "progression");
     if text(progression, "schema", "progression") != "mt2spacetime.progression-definitions"
@@ -581,6 +698,8 @@ fn main() {
             required_item: None,
             combo_input: None,
             root_motion: None,
+            special_area: false,
+            screen_wave: false,
         },
     );
     let combo_1 = checked_attack(
@@ -591,8 +710,10 @@ fn main() {
             mode: "onehand",
             action: "combo_1",
             required_item: Some(10),
-            combo_input: Some(combo_actions[0].combo_input),
+            combo_input: combo_actions[0].combo_input,
             root_motion: Some(combo_actions[0].root_motion),
+            special_area: false,
+            screen_wave: false,
         },
     );
     let combo_2 = checked_attack(
@@ -603,8 +724,10 @@ fn main() {
             mode: "onehand",
             action: "combo_2",
             required_item: Some(10),
-            combo_input: Some(combo_actions[1].combo_input),
+            combo_input: combo_actions[1].combo_input,
             root_motion: Some(combo_actions[1].root_motion),
+            special_area: false,
+            screen_wave: false,
         },
     );
     let combo_3 = checked_attack(
@@ -615,18 +738,36 @@ fn main() {
             mode: "onehand",
             action: "combo_3",
             required_item: Some(10),
-            combo_input: Some(combo_actions[2].combo_input),
+            combo_input: combo_actions[2].combo_input,
             root_motion: Some(combo_actions[2].root_motion),
+            special_area: false,
+            screen_wave: false,
+        },
+    );
+    let combo_4 = checked_attack(
+        actions,
+        PLAYER_COMBO_ACTION_IDS[3],
+        AttackContract {
+            actor_id: player_id,
+            mode: "onehand",
+            action: "combo_4",
+            required_item: Some(10),
+            combo_input: combo_actions[3].combo_input,
+            root_motion: Some(combo_actions[3].root_motion),
+            special_area: true,
+            screen_wave: true,
         },
     );
     if general.cooldown_us != player_cooldown
         || combo_1.cooldown_us != player_cooldown
         || combo_2.cooldown_us != player_cooldown
         || combo_3.cooldown_us != player_cooldown
+        || combo_4.cooldown_us != player_cooldown
         || general.range_m != player_range
         || combo_1.range_m != player_range
         || combo_2.range_m != player_range
         || combo_3.range_m != player_range
+        || combo_4.range_m != 0.0
     {
         fail("player actions disagree with the authoritative player definition");
     }
@@ -641,6 +782,25 @@ fn main() {
     if mob_action_id != MOB_ACTION_ID {
         fail("mob primary action does not match the selected fixture");
     }
+    if mob.get("defending_sphere")
+        != Some(&json!({
+            "local_center_x_m": 0.0,
+            "local_center_y_m": 0.8,
+            "local_center_z_m": 0.1,
+            "radius_m": 0.9
+        }))
+    {
+        fail("Wild Dog defending sphere changed");
+    }
+    if mob.get("great_hit_reactions")
+        != Some(&json!([
+            {"id": "actor.mob.wild-dog-101.general.front_knockdown", "duration_us": 1166667},
+            {"id": "actor.mob.wild-dog-101.general.front_standup", "duration_us": 1000000},
+            {"id": "actor.mob.wild-dog-101.general.back_knockdown", "duration_us": 1166667}
+        ]))
+    {
+        fail("Wild Dog GREAT hit reaction definitions changed");
+    }
     let mob_attack = checked_attack(
         actions,
         mob_action_id,
@@ -651,6 +811,8 @@ fn main() {
             required_item: None,
             combo_input: None,
             root_motion: None,
+            special_area: false,
+            screen_wave: false,
         },
     );
     if mob_attack.cooldown_us != bounded_u32(mob, "attack_cooldown_us", "mob", 60_000_000) as i64 {
@@ -704,15 +866,62 @@ fn main() {
          \tpub duration_us: i64,\n\
          }\n\
          #[derive(Clone, Copy, Debug)]\n\
+         pub struct KnockbackDefinition {\n\
+         \tpub source_external_force: f64,\n\
+         \tpub unobstructed_distance_m: f64,\n\
+         \tpub duration_us: i64,\n\
+         }\n\
+         #[derive(Clone, Copy, Debug)]\n\
+         pub struct SpecialAreaDefinition {\n\
+         \tpub authored_start_us: i64,\n\
+         \tpub legacy_dispatch_frame: u16,\n\
+         \tpub activation_offset_us: i64,\n\
+         \tpub duration_us: i64,\n\
+         \tpub local_center_x_m: f64,\n\
+         \tpub local_center_z_m: f64,\n\
+         \tpub radius_m: f64,\n\
+         \tpub max_targets: u8,\n\
+         \tpub hit_once_per_life: bool,\n\
+         \tpub hit_type: u8,\n\
+         \tpub invulnerability_us: i64,\n\
+         \tpub knockback: KnockbackDefinition,\n\
+         }\n\
+         #[derive(Clone, Copy, Debug)]\n\
+         pub struct ScreenWaveDefinition {\n\
+         \tpub authored_start_us: i64,\n\
+         \tpub legacy_dispatch_frame: u16,\n\
+         \tpub activation_offset_us: i64,\n\
+         \tpub duration_us: i64,\n\
+         \tpub viewer_range_m: f64,\n\
+         \tpub source_power: u16,\n\
+         \tpub source_component_step_m: f64,\n\
+         \tpub source_component_exclusive_max_m: f64,\n\
+         }\n\
+         #[derive(Clone, Copy, Debug)]\n\
+         pub struct MonsterReactionDefinition {\n\
+         \tpub id: &'static str,\n\
+         \tpub duration_us: i64,\n\
+         }\n\
+         #[derive(Clone, Copy, Debug)]\n\
+         pub struct DefendingSphereDefinition {\n\
+         \tpub local_center_x_m: f64,\n\
+         \tpub local_center_y_m: f64,\n\
+         \tpub local_center_z_m: f64,\n\
+         \tpub radius_m: f64,\n\
+         }\n\
+         #[derive(Clone, Copy, Debug)]\n\
          pub struct AttackDefinition {\n\
          \tpub id: &'static str,\n\
          \tpub duration_us: i64,\n\
          \tpub cooldown_us: i64,\n\
+         \tpub ordinary_hit_invulnerability_us: i64,\n\
          \tpub hit_start_us: i64,\n\
          \tpub hit_end_us: i64,\n\
          \tpub range_m: f32,\n\
          \tpub combo_input: Option<ComboInputDefinition>,\n\
          \tpub root_motion: Option<RootMotionDefinition>,\n\
+         \tpub special_area: Option<SpecialAreaDefinition>,\n\
+         \tpub screen_wave: Option<ScreenWaveDefinition>,\n\
          }\n",
     );
     writeln!(
@@ -849,12 +1058,13 @@ fn main() {
     emit_attack(&mut output, "PLAYER_GENERAL_ATTACK", general);
     writeln!(
         output,
-        "pub const PLAYER_ONEHAND_COMBO: [AttackDefinition; 3] = ["
+        "pub const PLAYER_ONEHAND_COMBO: [AttackDefinition; 4] = ["
     )
     .unwrap();
     writeln!(output, "\t{},", attack_expression(combo_1)).unwrap();
     writeln!(output, "\t{},", attack_expression(combo_2)).unwrap();
     writeln!(output, "\t{},", attack_expression(combo_3)).unwrap();
+    writeln!(output, "\t{},", attack_expression(combo_4)).unwrap();
     writeln!(output, "];").unwrap();
     writeln!(
         output,
@@ -874,6 +1084,10 @@ fn main() {
     )
     .unwrap();
     writeln!(output, "pub const MOB_VNUM: u32 = {mob_vnum};").unwrap();
+    writeln!(output, "pub const MOB_STATIC_DEFENDING_SPHERE: DefendingSphereDefinition = DefendingSphereDefinition {{ local_center_x_m: 0.0, local_center_y_m: 0.8, local_center_z_m: 0.1, radius_m: 0.9 }};").unwrap();
+    writeln!(output, "pub const MOB_GREAT_FRONT_KNOCKDOWN: MonsterReactionDefinition = MonsterReactionDefinition {{ id: {:?}, duration_us: 1166667 }};", "actor.mob.wild-dog-101.general.front_knockdown").unwrap();
+    writeln!(output, "pub const MOB_GREAT_FRONT_STANDUP: MonsterReactionDefinition = MonsterReactionDefinition {{ id: {:?}, duration_us: 1000000 }};", "actor.mob.wild-dog-101.general.front_standup").unwrap();
+    writeln!(output, "pub const MOB_GREAT_BACK_KNOCKDOWN: MonsterReactionDefinition = MonsterReactionDefinition {{ id: {:?}, duration_us: 1166667 }};", "actor.mob.wild-dog-101.general.back_knockdown").unwrap();
     writeln!(
         output,
         "pub const MOB_NAME: &str = {};",

@@ -471,22 +471,26 @@ cargo clippy --manifest-path server/Cargo.toml \
   --all-targets --all-features -- -D warnings
 ```
 
-After root publishes a fresh default-deny protocol-8 training database and
+The accepted Slice C report below used protocol 8. The current regression
+runner follows the same paths on protocol 9 and additionally accepts a safe
+targetless `combo_4`, checks its root endpoint, then rejects a fifth input.
+After root publishes a fresh default-deny protocol-9 training database and
 generates matching bindings, run the single-process, two-account headless smoke:
 
 ```sh
 python3 tools/test_combos.py \
   --server http://127.0.0.1:8186 \
   --game-server http://127.0.0.1:13223 \
-  --database <fresh-protocol-8-root-motion-training-database> \
-  --report .local/p2-rootmotion/combo-report-fresh.json
+  --database <fresh-protocol-9-training-database> \
+  --report .local/p2-finisher/combo-regression-fresh.json
 ```
 
 The runner stages and parses both the accepted combo base and focused root
 script before its only two registrations. It uses only normal authenticated
 movement, targeting, attack and equipment reducers. The composed phases cover
 two-way subscriptions, retained-dog restoration through ordinary combat,
-targetless and far-missed three-step chains, exact `35 + 35 + lethal 35`
+the targetless four-step chain, a far-missed three-step chain, exact
+`35 + 35 + lethal 35`
 damage, terminal target-death root continuation, the flat training stone's
 swept collision, equipment queue cancellation with the current trajectory
 preserved, and disconnect/reconnect without residual movement replay. Reducer
@@ -559,6 +563,77 @@ Slice C gameplay/deployment, normal exports without the fixed-input probe,
 Windows execution, current Godot MCP inspection, exact Granny within-cycle and
 100 ms transition-blend parity, terminal combo step 4, skills, full P2 and the
 full game remain unqualified.
+
+## Protocol 9 terminal finisher, area hit and Wild Dog reaction
+
+Slice D extends the common type-0 Sword chain through terminal `combo_4`.
+`perform_attack()` remains argument-free. The server classifies the fourth
+receipt against the generated `combo_3` window, advances the accepted action's
+root position, creates the fixed area at its canonical action-relative boundary
+and owns all damage, reaction and knockback movement. The client supplies no
+event time, victim list, displacement or action identifier.
+
+Run the server checks in an isolated target directory. An empty fixture selects
+the normal build; the reviewed finisher selector is training-only and cannot be
+combined with Yongan.
+
+```sh
+MT2_COMBAT_TEST_FIXTURE= \
+CARGO_TARGET_DIR="$PWD/.local/p2-finisher/server-target" \
+cargo test --manifest-path server/Cargo.toml --all-features
+
+MT2_COMBAT_TEST_FIXTURE=triple-wild-dog-finisher-v1 \
+CARGO_TARGET_DIR="$PWD/.local/p2-finisher/server-target" \
+cargo test --manifest-path server/Cargo.toml
+
+MT2_COMBAT_TEST_FIXTURE= \
+CARGO_TARGET_DIR="$PWD/.local/p2-finisher/server-target" \
+cargo clippy --manifest-path server/Cargo.toml \
+  --all-targets --all-features -- -D warnings
+```
+
+After root publishes a fresh default-deny protocol-9 training database with the
+matching generated bindings, run the focused two-account smoke once:
+
+```sh
+python3 tools/test_finishers.py \
+  --server http://127.0.0.1:8186 \
+  --game-server http://127.0.0.1:13223 \
+  --database <fresh-protocol-9-finisher-training-database> \
+  --report .local/p2-finisher/finisher-report-fresh.json
+```
+
+The runner checks the live schema and parses the generated bindings, accepted
+combo/root scripts, positive finisher script and composed lifecycle script
+before registering its only two accounts. Its ordinary setup retains a
+source-timed attack lock for selected dog A while keeping dog B healthy and
+within 0.5 m, makes `combo_1` miss, then
+proves `combo_2` and `combo_3` reduce A from `100 -> 65 -> 30`. The terminal
+area must defeat A, damage B exactly once, leave dog C unchanged, preserve its
+captured event through target clear and sword unequip, continue the current
+player root, and publish the second dog's front knockdown, front standup and
+collision-free 4.732 m server displacement. It uses the build-time
+`triple-wild-dog-finisher-v1` fixture at
+`server/fixtures/p2-finisher-triple-wild-dog.v1.json`; it does not reset a
+database or use an administrative reducer.
+
+Current checks pass 81 training-fixture gameplay tests, 86
+all-feature/Yongan gameplay tests, six build-boundary tests and one
+generated-definition test. All-target clippy passes with warnings denied in
+both configurations, and the new Python and GDScript sources pass Ruff,
+`py_compile`, gdformat/gdlint and the real Godot parser. The ordinary-training
+protocol-9 regression passes 95 checks in
+`.local/p2-finisher/integration-r4/headless-four-step-root.json`. The focused
+three-dog path passes 61 checks in
+`.local/p2-finisher/integration-r4/headless-terminal-clock-root.json`, with
+exact A/B/C terminal health `0/65/100`, 4.731999874 m force travel and a
+1.43-micrometre fourth-root endpoint error. The current same-account lifecycle
+extension still needs an actual run. The first exported browser attempt reached
+25 setup checks and then stopped on its original inventory-tooltip precondition,
+before combat; its browser error list was empty. That diagnostic is preserved
+at `.local/p2-finisher/integration-r4/browser-finisher-root/report.json`.
+Exported Web/Linux finisher gameplay, normal exports, Windows, public gameplay
+and Godot MCP inspection remain pending.
 
 ## Bounded P2 progression administration
 
@@ -637,12 +712,13 @@ endpoint or provision a public account.
 
 ## Working with the editor
 
-Use the configured `godot` MCP tools for live changes. Confirm `get_project_info`
-points to this checkout, inspect the edited scene, start the game, inspect its
-runtime tree, capture the rendered game, and exercise the input you changed.
-Capture another screenshot after UI/camera/material changes. Preserve unrelated
-open scenes and unsaved work. See [Godot MCP setup](godot-mcp.md) for installation
-and troubleshooting.
+When available, prefer the configured `godot` MCP tools for live changes. Confirm
+`get_project_info` points to this checkout, inspect the edited scene, start the
+game, inspect its runtime tree, capture the rendered game, and exercise the input
+you changed. Without MCP, use isolated Godot CLI fixtures, rendered exports or the
+existing Playwright checks as appropriate. Preserve unrelated open scenes and
+unsaved work, and record missing editor evidence rather than claiming it. See
+[Godot MCP setup](godot-mcp.md) for installation and troubleshooting.
 
 Do not run `tools/godot_mcp_check.py` while another MCP process owns its port. That
 standalone test launches its own server. Prefer the connected agent tools during
@@ -679,7 +755,10 @@ can be regenerated; they are not hand-maintained game source.
 
 The `p0-warrior-dog` profile compiles a selected male Warrior, starter Sword+0
 vnum 10 and Wild Dog 101 into client presentation data and matching server
-trusted action definitions. Run:
+trusted action definitions. It also selects the original male Warrior
+HairIndex 0 model and target skin declared by `warrior_m.msm`. The hair is
+linked to the main skeleton only after its positive vertex weights are checked
+against the compatible head binding. Run:
 
 ```sh
 make content-build BLENDER=/path/to/blender
@@ -697,6 +776,24 @@ Godot project. `test-actors` stages actor resources in a separate project; add
 `UI_FLAGS=--native` for rendered captures when Xvfb is available. See
 [P1 actor content import](content-import.md) for generated paths, package
 exclusions and current evidence limits.
+
+The isolated combined conversion and entry-preview evidence is recorded in
+`.local/p2-hair/verification.json`. It includes the pinned hair source hashes,
+the exact skinning audit, generated payload hashes and the actual before/after
+captures. The same profile declares Sword+0's +90-degree X attachment rotation:
+the converted mesh's +Y blade axis then follows `equip_right_hand` +Z in the
+pinned combo attack samples. Exact proprietary Granny within-cycle deformation
+and blend parity remain unverified; use the native actor capture suite when
+changing either attachment. The installed combined manifest passes the
+28-check native entry flow in
+`.local/p2-finisher/intro-camera-facing/report.json`; its create-screen capture
+shows the original hair and the Warrior facing the fixed preview camera.
+
+Open `client/scenes/character_preview.tscn` for the offline presentation
+inspector. Its motion selector and Unarmed/Sword+0 toggle read the loaded actor
+manifest; pause and timeline scrub affect only that local preview. Right-drag
+and scroll preserve the orbit camera controls. It has no server or account
+connection.
 
 Current exports require the generated P1 profile; they fail before staging with
 the content-build guidance when its manifest is absent. For isolated P1 export
@@ -1076,6 +1173,19 @@ presence, rejection, reconnect and browser refresh. Reports go under
 `.local/browser-proof/<timestamp>/`. A partial report is retained on failure;
 the presence of a report file alone does not indicate a pass. Its software
 rendering path is functional evidence, not a consumer-GPU performance benchmark.
+
+Current native probes write a complete temporary snapshot and atomically rename
+it over the published report. Readers retain bounded retries for startup and
+older exports, and must report unavailable snapshots instead of substituting an
+empty world. Screen-wave checks distinguish received event state from samples
+actually applied to the camera. Keep Yongan minimap/atlas checks separate from
+the flat finisher fixture, which has no original-map metadata.
+
+Use the [content verification matrix](rebuild/content-authoring.md#authoring-tools-and-verification-scope)
+to select checks for future content changes. Visual-only additions use import
+validation and previews; shared gameplay and release changes need the relevant
+multiplayer/export evidence. Account and token-refresh tests are not prerequisites
+for every content edit.
 
 For the original small training-ground proof, build/publish with
 `SERVER_FEATURES=` and export with `INCLUDE_MAP=` to omit Yongan. Keep its database

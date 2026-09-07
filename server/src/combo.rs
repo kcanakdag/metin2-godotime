@@ -10,11 +10,12 @@ const COMBO_NONE: u8 = 0;
 const COMBO_STEP_ONE: u8 = 1;
 const COMBO_STEP_TWO: u8 = 2;
 const COMBO_STEP_THREE: u8 = 3;
+const COMBO_STEP_FOUR: u8 = 4;
 
 const EARLY_ERROR: &str = "Combo follow-up input is too early.";
 const DUPLICATE_ERROR: &str = "A combo follow-up is already queued.";
 const LATE_ERROR: &str = "Combo follow-up input is too late.";
-const BOUNDED_ERROR: &str = "This bounded combo has no fourth step.";
+const BOUNDED_ERROR: &str = "This combo is complete.";
 const TARGET_ERROR: &str = "The combo target is no longer available.";
 const EQUIPMENT_ERROR: &str = "The combo weapon has changed.";
 
@@ -227,7 +228,7 @@ fn transition_to_next_step(
         .combo_step
         .checked_add(1)
         .ok_or("Combo step is outside the supported range.")?;
-    if next_step > COMBO_STEP_THREE {
+    if next_step > COMBO_STEP_FOUR {
         return Err(BOUNDED_ERROR.into());
     }
     let definition = definitions::PLAYER_ONEHAND_COMBO
@@ -249,13 +250,7 @@ fn transition_to_next_step(
                 .ok_or(TARGET_ERROR)?,
         )
     };
-    let damage = if target.is_some() {
-        definitions::PLAYER_BASE_DAMAGE
-            .checked_add(definitions::WEAPON_ATTACK_BONUS)
-            .ok_or("Combo damage is outside the supported range.")?
-    } else {
-        0
-    };
+    let damage = planned_damage(definition, target.is_some())?;
     combat::validate_player_action_start(ctx, control, definition, target.is_some(), now)?;
     // All state-dependent scheduled-transition rejection paths are resolved
     // before this physical sample. The remaining start checks repeat trusted
@@ -287,6 +282,18 @@ fn transition_to_next_step(
     Ok(())
 }
 
+fn planned_damage(
+    definition: &definitions::AttackDefinition,
+    has_target: bool,
+) -> Result<u16, String> {
+    if !has_target && definition.special_area.is_none() {
+        return Ok(0);
+    }
+    definitions::PLAYER_BASE_DAMAGE
+        .checked_add(definitions::WEAPON_ATTACK_BONUS)
+        .ok_or_else(|| "Combo damage is outside the supported range.".into())
+}
+
 /// Handle an active combo intent. `Ok(false)` means the expired/idle chain may
 /// proceed through the ordinary fresh-attack path.
 pub fn handle_follow_up(
@@ -296,14 +303,14 @@ pub fn handle_follow_up(
 ) -> Result<bool, String> {
     match control.combo_step {
         COMBO_NONE => return Ok(false),
-        COMBO_STEP_THREE => {
+        COMBO_STEP_FOUR => {
             if now >= control.combo_action_ends_at_us {
                 clear_chain(control);
                 return Ok(false);
             }
             return Err(BOUNDED_ERROR.into());
         }
-        COMBO_STEP_ONE | COMBO_STEP_TWO => {}
+        COMBO_STEP_ONE | COMBO_STEP_TWO | COMBO_STEP_THREE => {}
         _ => return Err("Combo chain state is invalid.".into()),
     }
     let input = definitions::PLAYER_ONEHAND_COMBO[usize::from(control.combo_step - 1)]
@@ -346,8 +353,10 @@ pub fn resolve_due_transitions(ctx: &ReducerContext, now: i64) {
             ctx.db.controller().identity().update(control);
             continue;
         }
-        if matches!(control.combo_step, COMBO_STEP_ONE | COMBO_STEP_TWO)
-            && control.combo_link_queued
+        if matches!(
+            control.combo_step,
+            COMBO_STEP_ONE | COMBO_STEP_TWO | COMBO_STEP_THREE
+        ) && control.combo_link_queued
             && transition_is_due(now, control.combo_transition_boundary_us)
         {
             events.push(DueTransition {
@@ -396,6 +405,7 @@ mod tests {
         let expected = [
             (167_094, 533_333, 602_564, 58_889),
             (100_513, 543_248, 636_581, 19_658),
+            (84_786, 418_462, 664_615, 60_171),
         ];
         for (index, expected_input) in expected.into_iter().enumerate() {
             let input = definitions::PLAYER_ONEHAND_COMBO[index]
@@ -502,6 +512,7 @@ mod tests {
             pending_attack_hit_until_us: 1_384,
             pending_attack_damage: 35,
             pending_attack_range: 4.0,
+            pending_attack_invulnerability_us: 100_000,
             pending_attack_target_revision: 8,
             pending_attack_can_select_target: false,
             pending_attack_action_revision: 9,
@@ -540,6 +551,7 @@ mod tests {
             control.pending_attack_hit_until_us,
             control.pending_attack_damage,
             control.pending_attack_range,
+            control.pending_attack_invulnerability_us,
             control.pending_attack_target_revision,
             control.pending_attack_can_select_target,
             control.pending_attack_action_revision,
@@ -584,6 +596,7 @@ mod tests {
                 control.pending_attack_hit_until_us,
                 control.pending_attack_damage,
                 control.pending_attack_range,
+                control.pending_attack_invulnerability_us,
                 control.pending_attack_target_revision,
                 control.pending_attack_can_select_target,
                 control.pending_attack_action_revision,
@@ -707,5 +720,19 @@ mod tests {
         assert!(!chain_target_relationship_is_valid(&control, true));
         control.combat_target_life_sequence = 4;
         assert!(chain_target_relationship_is_valid(&control, true));
+    }
+
+    #[test]
+    fn targetless_terminal_area_keeps_trusted_weapon_damage() {
+        let terminal = &definitions::PLAYER_ONEHAND_COMBO[3];
+        assert!(terminal.special_area.is_some());
+        assert_eq!(
+            planned_damage(terminal, false).unwrap(),
+            definitions::PLAYER_BASE_DAMAGE + definitions::WEAPON_ATTACK_BONUS
+        );
+        assert_eq!(
+            planned_damage(&definitions::PLAYER_ONEHAND_COMBO[0], false).unwrap(),
+            0
+        );
     }
 }

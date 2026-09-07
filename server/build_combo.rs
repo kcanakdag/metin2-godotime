@@ -1,11 +1,12 @@
-use serde_json::{Map, Value};
+use serde_json::{Map, Value, json};
 use std::collections::HashSet;
 
 pub const PLAYER_GENERAL_ACTION_ID: &str = "actor.player.warrior-male.general.normal_attack.v1";
-pub const PLAYER_COMBO_ACTION_IDS: [&str; 3] = [
+pub const PLAYER_COMBO_ACTION_IDS: [&str; 4] = [
     "actor.player.warrior-male.onehand.combo_1",
     "actor.player.warrior-male.onehand.combo_2",
     "actor.player.warrior-male.onehand.combo_3",
+    "actor.player.warrior-male.onehand.combo_4",
 ];
 pub const MOB_ACTION_ID: &str = "actor.mob.wild-dog-101.general.normal_attack.v1";
 
@@ -18,6 +19,7 @@ const MSA_COMPONENT_TOLERANCE_M: f64 = 0.00005;
 const MAX_ROOT_DURATION_US: u64 = 1_600_000;
 const MAX_ROOT_COMPONENT_M: f64 = 2.0;
 const MAX_SOURCE_COMPONENT_CM: f64 = 200.0;
+const MAX_INITIAL_PLACEMENT_COMPONENT_CM: f64 = 300.0;
 
 struct InputPin {
     action_id: &'static str,
@@ -29,7 +31,7 @@ struct InputPin {
     msa_bytes: u64,
 }
 
-const INPUT_PINS: [InputPin; 3] = [
+const INPUT_PINS: [InputPin; 4] = [
     InputPin {
         action_id: PLAYER_COMBO_ACTION_IDS[0],
         gr2_path: "bin/pack/PC/ymir work/pc/warrior/onehand_sword/combo_01.gr2",
@@ -57,6 +59,15 @@ const INPUT_PINS: [InputPin; 3] = [
         msa_sha256: "69f4e729aea572006b1ed2d826f1f9a35108c06cb608f8e68ec97f42cef13961",
         msa_bytes: 4_444,
     },
+    InputPin {
+        action_id: PLAYER_COMBO_ACTION_IDS[3],
+        gr2_path: "bin/pack/PC/ymir work/pc/warrior/onehand_sword/combo_04.gr2",
+        gr2_sha256: "7ff6abe943ab2f1e0066be53b89dc9b6aa97d4d773c5ef97c441d4b03bbfd4b2",
+        gr2_bytes: 35_664,
+        msa_path: "bin/pack/PC/ymir work/pc/warrior/onehand_sword/combo_04.msa",
+        msa_sha256: "df48b7b4bd06668cfb63723aa59666a999310ea3f32101dec50b0050bd837c9f",
+        msa_bytes: 1_674,
+    },
 ];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -76,7 +87,7 @@ pub struct RootMotion {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ComboAction {
-    pub combo_input: ComboInput,
+    pub combo_input: Option<ComboInput>,
     pub root_motion: RootMotion,
 }
 
@@ -232,6 +243,8 @@ fn checked_policy(root: &Map<String, Value>) -> Result<(), String> {
             "msa_component_tolerance_micrometers",
             "granny_within_cycle_parity",
             "granny_transition_blend_parity",
+            "pinned_exception_action_id",
+            "pinned_exception_reason",
         ],
         "root_motion_policy",
     )?;
@@ -240,7 +253,8 @@ fn checked_policy(root: &Map<String, Value>) -> Result<(), String> {
             != "raw-gr2-loop-translation"
         || exact_text(policy, "coordinate_conversion", "root_motion_policy")?
             != COORDINATE_CONVERSION
-        || exact_text(policy, "msa_role", "root_motion_policy")? != "rounded-corroboration-only"
+        || exact_text(policy, "msa_role", "root_motion_policy")?
+            != "rounded-corroboration-with-one-pinned-terminal-exception"
         || policy
             .get("msa_component_tolerance_micrometers")
             .and_then(Value::as_u64)
@@ -249,6 +263,10 @@ fn checked_policy(root: &Map<String, Value>) -> Result<(), String> {
             .get("granny_within_cycle_parity")
             .and_then(Value::as_bool)
             != Some(false)
+        || exact_text(policy, "pinned_exception_action_id", "root_motion_policy")?
+            != PLAYER_COMBO_ACTION_IDS[3]
+        || exact_text(policy, "pinned_exception_reason", "root_motion_policy")?
+            != "raw-gr2-endpoint-disagrees-with-serialized-msa-accumulation"
         || policy
             .get("granny_transition_blend_parity")
             .and_then(Value::as_bool)
@@ -318,6 +336,8 @@ fn checked_source(value: &Value, pin: &InputPin, root_motion: RootMotion) -> Res
             "root_motion",
             "initial_placement",
             "msa_accumulation_output_actor_local_godot_m_decimal",
+            "msa_discrepancy_output_actor_local_godot_m_decimal",
+            "msa_validation",
         ],
         "root_motion_source",
     )?;
@@ -386,9 +406,29 @@ fn checked_source(value: &Value, pin: &InputPin, root_motion: RootMotion) -> Res
         msa[1] - endpoint[1],
         msa[2] - endpoint[2],
     ];
-    if differences
-        .iter()
-        .any(|value| value.abs() > MSA_COMPONENT_TOLERANCE_M)
+    let reported_difference = decimal_vector::<3>(
+        source
+            .get("msa_discrepancy_output_actor_local_godot_m_decimal")
+            .expect("exact fields checked"),
+        MAX_ROOT_COMPONENT_M,
+        "root_motion_source.msa_discrepancy_output_actor_local_godot_m_decimal",
+    )?;
+    if reported_difference != differences {
+        return Err("MSA discrepancy evidence changed".to_owned());
+    }
+    if pin.action_id == PLAYER_COMBO_ACTION_IDS[3] {
+        if exact_text(source, "msa_validation", "root_motion_source")?
+            != "pinned-combo4-discrepancy-exception"
+            || endpoint != [0.0, 0.0, -1.196_471_252_441_406_2]
+            || msa != [0.1289, 0.0, -1.0552]
+        {
+            return Err("pinned combo_4 MSA discrepancy exception changed".to_owned());
+        }
+    } else if exact_text(source, "msa_validation", "root_motion_source")?
+        != "strict-rounded-corroboration"
+        || differences
+            .iter()
+            .any(|value| value.abs() > MSA_COMPONENT_TOLERANCE_M)
     {
         return Err("MSA accumulation does not corroborate the raw GR2 endpoint".to_owned());
     }
@@ -414,7 +454,7 @@ fn checked_source(value: &Value, pin: &InputPin, root_motion: RootMotion) -> Res
         placement
             .get("position_source_cm_decimal")
             .expect("exact fields checked"),
-        MAX_SOURCE_COMPONENT_CM,
+        MAX_INITIAL_PLACEMENT_COMPONENT_CM,
         "initial_placement.position_source_cm_decimal",
     )?;
     decimal_vector::<4>(
@@ -427,7 +467,7 @@ fn checked_source(value: &Value, pin: &InputPin, root_motion: RootMotion) -> Res
     Ok(())
 }
 
-pub fn validate(root: &Map<String, Value>) -> Result<[ComboAction; 3], String> {
+pub fn validate(root: &Map<String, Value>) -> Result<[ComboAction; 4], String> {
     checked_policy(root)?;
     let actors = root
         .get("actors")
@@ -476,23 +516,25 @@ pub fn validate(root: &Map<String, Value>) -> Result<[ComboAction; 3], String> {
         PLAYER_COMBO_ACTION_IDS[0],
         PLAYER_COMBO_ACTION_IDS[1],
         PLAYER_COMBO_ACTION_IDS[2],
+        PLAYER_COMBO_ACTION_IDS[3],
         MOB_ACTION_ID,
     ]
     .into_iter()
     .collect();
-    if ids.len() != 5 || ids != expected {
-        return Err("actions must contain exactly the five selected definitions".to_owned());
+    if ids.len() != 6 || ids != expected {
+        return Err("actions must contain exactly the six selected definitions".to_owned());
     }
     let prefix = root
         .get("base_combo_prefix")
         .and_then(Value::as_array)
         .ok_or_else(|| "root.base_combo_prefix must be an array".to_owned())?;
-    if prefix.len() != 3
+    if prefix.len() != 4
         || prefix[0].as_str() != Some(PLAYER_COMBO_ACTION_IDS[0])
         || prefix[1].as_str() != Some(PLAYER_COMBO_ACTION_IDS[1])
         || prefix[2].as_str() != Some(PLAYER_COMBO_ACTION_IDS[2])
+        || prefix[3].as_str() != Some(PLAYER_COMBO_ACTION_IDS[3])
     {
-        return Err("base_combo_prefix must be combo_1 then combo_2 then combo_3".to_owned());
+        return Err("base_combo_prefix must be combo_1 through combo_4".to_owned());
     }
     for (id, row) in &rows {
         let is_combo = PLAYER_COMBO_ACTION_IDS.contains(id);
@@ -506,6 +548,7 @@ pub fn validate(root: &Map<String, Value>) -> Result<[ComboAction; 3], String> {
             value if value == PLAYER_COMBO_ACTION_IDS[0] => "combo_1",
             value if value == PLAYER_COMBO_ACTION_IDS[1] => "combo_2",
             value if value == PLAYER_COMBO_ACTION_IDS[2] => "combo_3",
+            value if value == PLAYER_COMBO_ACTION_IDS[3] => "combo_4",
             _ => "normal_attack",
         };
         if exact_text(row, "actor_id", "action")? != expected_actor
@@ -530,20 +573,91 @@ pub fn validate(root: &Map<String, Value>) -> Result<[ComboAction; 3], String> {
                 "action {id:?} has unexpected equipment requirements"
             ));
         }
+        let expected_invisible = match *id {
+            PLAYER_GENERAL_ACTION_ID => 500_000,
+            value if value == PLAYER_COMBO_ACTION_IDS[0] => 100_000,
+            value if value == PLAYER_COMBO_ACTION_IDS[1] => 100_000,
+            value if value == PLAYER_COMBO_ACTION_IDS[2] => 200_000,
+            value if value == PLAYER_COMBO_ACTION_IDS[3] => 0,
+            MOB_ACTION_ID => 300_000,
+            _ => unreachable!("exact action set checked"),
+        };
+        if exact_u64(row, "ordinary_hit_invulnerability_us", "action")? != expected_invisible {
+            return Err(format!(
+                "action {id:?} ordinary hit invulnerability changed"
+            ));
+        }
+    }
+    let terminal = rows
+        .iter()
+        .find_map(|(id, row)| (*id == PLAYER_COMBO_ACTION_IDS[3]).then_some(*row))
+        .expect("exact action set checked");
+    if terminal.get("special_area")
+        != Some(&json!({
+            "authored_start_us": 659316, "legacy_dispatch_frame": 39,
+            "activation_offset_us": 666667, "duration_us": 200000,
+            "local_center_x_m": 0.0, "local_center_z_m": -1.2, "radius_m": 1.0,
+            "max_targets": 16, "hit_once_per_life": true, "hit_type": 1,
+            "invulnerability_us": 300000,
+            "knockback": {"source_external_force": 17.0, "unobstructed_distance_m": 4.732, "duration_us": 1000000}
+        }))
+        || terminal.get("screen_wave")
+            != Some(&json!({
+                "authored_start_us": 630086, "legacy_dispatch_frame": 37,
+                "activation_offset_us": 633334, "duration_us": 200000,
+                "viewer_range_m": 2.0, "source_power": 300,
+                "source_component_step_m": 0.001, "source_component_exclusive_max_m": 0.3
+            }))
+    {
+        return Err("terminal combo_4 event metadata changed".to_owned());
+    }
+    for (_, row) in rows
+        .iter()
+        .filter(|(id, _)| *id != PLAYER_COMBO_ACTION_IDS[3])
+    {
+        if row.contains_key("special_area") || row.contains_key("screen_wave") {
+            return Err("only terminal combo_4 may define special events".to_owned());
+        }
+    }
+    let mob = actors
+        .iter()
+        .filter_map(Value::as_object)
+        .find(|row| row.get("id").and_then(Value::as_str) == Some("actor.mob.wild-dog-101"))
+        .ok_or_else(|| "selected Wild Dog actor is missing".to_owned())?;
+    if mob.get("defending_sphere")
+        != Some(&json!({
+            "local_center_x_m": 0.0, "local_center_y_m": 0.8,
+            "local_center_z_m": 0.1, "radius_m": 0.9
+        }))
+        || mob.get("great_hit_reactions")
+            != Some(&json!([
+                {"id":"actor.mob.wild-dog-101.general.front_knockdown","duration_us":1166667},
+                {"id":"actor.mob.wild-dog-101.general.front_standup","duration_us":1000000},
+                {"id":"actor.mob.wild-dog-101.general.back_knockdown","duration_us":1166667}
+            ]))
+    {
+        return Err("selected Wild Dog collision or reaction metadata changed".to_owned());
     }
     let sources = root
         .get("root_motion_sources")
         .and_then(Value::as_array)
-        .filter(|sources| sources.len() == 3)
-        .ok_or_else(|| "root_motion_sources must contain exactly three records".to_owned())?;
-    let mut combo = Vec::with_capacity(3);
+        .filter(|sources| sources.len() == 4)
+        .ok_or_else(|| "root_motion_sources must contain exactly four records".to_owned())?;
+    let mut combo = Vec::with_capacity(4);
     for (index, id) in PLAYER_COMBO_ACTION_IDS.into_iter().enumerate() {
         let row = rows
             .iter()
             .find_map(|(candidate, row)| (*candidate == id).then_some(*row))
             .expect("exact action set was checked");
         let action = ComboAction {
-            combo_input: checked_combo_input(row)?,
+            combo_input: if index == 3 {
+                if row.contains_key("combo_input") {
+                    return Err("terminal combo_4 must omit combo_input".to_owned());
+                }
+                None
+            } else {
+                Some(checked_combo_input(row)?)
+            },
             root_motion: checked_root_motion(row)?,
         };
         checked_source(&sources[index], &INPUT_PINS[index], action.root_motion)?;
@@ -560,5 +674,5 @@ pub fn validate(root: &Map<String, Value>) -> Result<[ComboAction; 3], String> {
     }
     combo
         .try_into()
-        .map_err(|_| "base combo prefix must contain exactly three actions".to_owned())
+        .map_err(|_| "base combo prefix must contain exactly four actions".to_owned())
 }

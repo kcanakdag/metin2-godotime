@@ -7,6 +7,40 @@ var _checks := 0
 var _failed := false
 
 
+class ProbeCameraRig:
+	extends Node3D
+
+	var distance := 12.0
+	var yaw := 0.0
+	var pitch := deg_to_rad(48.0)
+	var wave := {
+		"active": true,
+		"fingerprint": "actor-a\nactor.player.warrior-male.onehand.combo_4\n9\n1000000",
+		"action_id": "actor.player.warrior-male.onehand.combo_4",
+		"attack_sequence": 9,
+		"action_started_at_us": 1_000_000,
+		"activation_us": 1_633_334,
+		"duration_us": 200_000,
+		"elapsed_us": 0,
+		"sample_index": 0,
+		"offset": [0.01, -0.02, 0.03],
+		"trigger_count": 1,
+		"last_outcome": "triggered",
+		"policy": "deterministic-zero-mean-60hz-v1",
+	}
+
+	func _init() -> void:
+		name = "OrbitCamera"
+		var camera := Camera3D.new()
+		camera.name = "Camera3D"
+		var base := Vector3(0, sin(pitch), cos(pitch)) * distance
+		camera.position = base + Vector3(0.01, -0.02, 0.03)
+		add_child(camera)
+
+	func screen_wave_snapshot() -> Dictionary:
+		return wave.duplicate(true)
+
+
 class ProbeWorld:
 	extends Node
 
@@ -16,6 +50,7 @@ class ProbeWorld:
 
 	func _init() -> void:
 		add_child(connection)
+		add_child(ProbeCameraRig.new())
 		var players := Node.new()
 		players.name = "Players"
 		add_child(players)
@@ -48,13 +83,70 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 8, "client accepts only protocol 8")
+	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 9, "client accepts only protocol 9")
+	# Use the real scene without entering the tree, so this verifies the probe's
+	# node lookup without starting account flow or a game connection.
+	var scene := load("res://scenes/main.tscn") as PackedScene
+	var actual_world := scene.instantiate()
+	var actual_probe := ExportProbe.new()
+	actual_world.add_child(actual_probe)
+	actual_probe._capture_screen_wave()
+	_check(
+		(
+			actual_probe._screen_wave_history.size() == 1
+			and actual_probe._screen_wave_history[0].camera_local_position.size() == 3
+		),
+		"probe reads the actual main scene camera without a synthetic node-name contract",
+	)
+	actual_world.free()
+	var writer := ExportProbe.new()
+	writer._report = ProjectSettings.globalize_path("user://atomic-probe.json")
+	_check(writer._publish_native_snapshot('{"revision":1}') == OK, "initial snapshot publishes")
+	var reader := FileAccess.open(writer._report, FileAccess.READ)
+	_check(
+		writer._publish_native_snapshot('{"revision":2,"monsters":[]}') == OK,
+		"complete native snapshot atomically replaces its predecessor",
+	)
+	_check(
+		(
+			JSON.parse_string(reader.get_as_text()).revision == 1
+			and JSON.parse_string(FileAccess.get_file_as_string(writer._report)).revision == 2
+			and not FileAccess.file_exists(writer._report + ".tmp")
+		),
+		"an existing reader keeps a complete old snapshot while new readers see the replacement",
+	)
+	reader.close()
+	DirAccess.remove_absolute(writer._report)
+	writer.free()
 	root.size = Vector2i(1280, 800)
 	var world := ProbeWorld.new()
 	root.add_child(world)
 	var probe := ExportProbe.new()
 	world.add_child(probe)
 	await process_frame
+	probe._capture_screen_wave()
+	_check(
+		(
+			probe._screen_wave_history.size() == 1
+			and (
+				probe._screen_wave_history[0].action_id
+				== "actor.player.warrior-male.onehand.combo_4"
+			)
+			and probe._screen_wave_history[0].sample_index == 0
+			and probe._screen_wave_history[0].camera_local_position.size() == 3
+			and probe._screen_wave_history[0].base_camera_local_position.size() == 3
+		),
+		"probe retains the transient screen wave and applied camera-layer position"
+	)
+	probe._capture_screen_wave()
+	_check(probe._screen_wave_history.size() == 1, "unchanged screen wave samples are deduplicated")
+	world.get_node("OrbitCamera").wave.sample_index = 1
+	world.get_node("OrbitCamera").wave.elapsed_us = 16_667
+	probe._capture_screen_wave()
+	_check(
+		probe._screen_wave_history.size() == 2,
+		"a subsequent 60 Hz screen-wave sample remains observable",
+	)
 
 	probe._dispatch({"action": "inventory"})
 	await process_frame
@@ -173,11 +265,46 @@ func _run() -> void:
 		),
 		"probe retains a bounded public monster-health change and schedules its native snapshot",
 	)
+	_check(
+		(
+			probe._monster_action_history.size() == 1
+			and probe._monster_action_history[0].size() == 12
+			and probe._monster_action_history[0].id == 101
+			and probe._monster_action_history[0].life_sequence == 4
+			and probe._monster_action_history[0].health == 100
+			and not probe._monster_action_history[0].has("name")
+		),
+		"probe retains a bounded public monster action-position sample",
+	)
 	probe._elapsed = 0.0
 	world.connection.monsters_changed.emit(world.connection.monsters)
 	_check(
-		probe._monster_health_history.size() == 1 and probe._elapsed == 0.0,
-		"unchanged public monster health neither duplicates history nor schedules a snapshot",
+		(
+			probe._monster_health_history.size() == 1
+			and probe._monster_action_history.size() == 1
+			and probe._elapsed == 0.0
+		),
+		"unchanged public monster state neither duplicates history nor schedules a snapshot",
+	)
+	world.connection.monsters[0].activity = 2
+	world.connection.monsters[0].attack_action_id = ("actor.mob.wild-dog-101.general.front_knockdown")
+	world.connection.monsters[0].attack_sequence = 4
+	world.connection.monsters[0].action_started_at_us = 4_000_000
+	world.connection.monsters[0].action_ends_at_us = 5_166_667
+	world.connection.monsters[0].x = 3.25
+	world.connection.monsters[0].y = 0.0
+	world.connection.monsters[0].z = 3.0
+	world.connection.monsters_changed.emit(world.connection.monsters)
+	_check(
+		(
+			probe._monster_action_history.size() == 2
+			and (
+				probe._monster_action_history[-1].attack_action_id
+				== "actor.mob.wild-dog-101.general.front_knockdown"
+			)
+			and is_equal_approx(float(probe._monster_action_history[-1].x), 3.25)
+		),
+		"reaction history binds the authoritative action start to its public coordinate",
 	)
 	for index: int in range(130):
 		world.connection.monsters[0].life_sequence = index + 5
@@ -190,6 +317,16 @@ func _run() -> void:
 			and probe._monster_health_history[-1].life_sequence == 134
 		),
 		"monster health history retains only the newest 128 public changes",
+	)
+	for index: int in range(260):
+		world.connection.monsters[0].x = 4.0 + index
+		world.connection.monsters_changed.emit(world.connection.monsters)
+	_check(
+		(
+			probe._monster_action_history.size() == 256
+			and is_equal_approx(float(probe._monster_action_history[-1].x), 263.0)
+		),
+		"monster action history retains only the newest 256 public projections",
 	)
 	for index: int in range(260):
 		world.connection.players[0].x = 2.0 + index

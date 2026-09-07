@@ -11,6 +11,7 @@ import math
 import os
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -18,12 +19,14 @@ import urllib.parse
 import urllib.request
 from pathlib import Path, PurePosixPath
 
+from actor_texture_import import write_actor_texture_import
 from content_formats import parse_item_script, parse_motion_list, parse_msa, parse_race_script
 from fetch_test_assets import METIN_COMMIT, ROOT
 from metin_archive import Archive, safe_path, virtual_path, write_json
 from metin_root_motion import (
     COORDINATE_CONVERSION,
     MAX_ENDPOINT_COMPONENT_M,
+    MAX_INITIAL_PLACEMENT_COMPONENT_CM,
     MAX_SOURCE_COMPONENT_CM,
     MSA_COMPONENT_TOLERANCE_M,
     extract_root_motion,
@@ -44,8 +47,8 @@ SCHEMA = "mt2spacetime.normalized-content-manifest"
 SERVER_SCHEMA = "mt2spacetime.trusted-action-definitions"
 CLIENT_SCHEMA = "mt2spacetime.presentation-manifest"
 SCHEMA_VERSION = 1
-SERVER_SCHEMA_VERSION = 4
-COMPILER_VERSION = "content-compiler-v1.3.0"
+SERVER_SCHEMA_VERSION = 5
+COMPILER_VERSION = "content-compiler-v1.4.0"
 DEFAULT_PROFILE = ROOT / "content/profiles/p0-warrior-dog.json"
 
 PLAYER_ACTOR_ID = "actor.player.warrior-male"
@@ -55,6 +58,7 @@ PLAYER_COMBO_ACTION_IDS = (
     f"{PLAYER_ACTOR_ID}.onehand.combo_1",
     f"{PLAYER_ACTOR_ID}.onehand.combo_2",
     f"{PLAYER_ACTOR_ID}.onehand.combo_3",
+    f"{PLAYER_ACTOR_ID}.onehand.combo_4",
 )
 MOB_ACTION_ID = f"{MOB_ACTOR_ID}.general.normal_attack.v1"
 EXPECTED_SERVER_ACTION_IDS = {
@@ -69,10 +73,51 @@ ROOT_MOTION_POLICY = {
     "id": ROOT_MOTION_POLICY_ID,
     "source_endpoint": "raw-gr2-loop-translation",
     "coordinate_conversion": COORDINATE_CONVERSION,
-    "msa_role": "rounded-corroboration-only",
+    "msa_role": "rounded-corroboration-with-one-pinned-terminal-exception",
     "msa_component_tolerance_micrometers": 50,
     "granny_within_cycle_parity": False,
     "granny_transition_blend_parity": False,
+    "pinned_exception_action_id": PLAYER_COMBO_ACTION_IDS[3],
+    "pinned_exception_reason": "raw-gr2-endpoint-disagrees-with-serialized-msa-accumulation",
+}
+SPECIAL_AREA_POLICY = {
+    "id": "legacy-60hz-fixed-sphere-once-per-life-v1",
+    "dispatch_fps": 60,
+    "activation_uses_frame_floor_then_next_tick": True,
+    "sphere_space": "action-start-actor-local-to-world-at-activation",
+    "victim_filter": "live-exact-life-same-map-attackable",
+    "hit_once_scope": "area-instance-and-victim-life",
+    "force_policy": "linear-unobstructed-distance-approx-v1",
+    "legacy_physics_collision_parity": False,
+}
+SCREEN_WAVE_POLICY = {
+    "id": "legacy-60hz-viewer-range-metadata-v1",
+    "dispatch_fps": 60,
+    "activation_uses_frame_floor_then_next_tick": True,
+    "camera_randomization_runtime_parity": False,
+}
+DEFENDING_SPHERE_POLICY = {
+    "id": "static-full-3d-swept-sphere-v1",
+    "source_collision_type": 3,
+    "bone": "Bip01",
+}
+MOB_REACTION_IDS = {
+    "front_knockdown": f"{MOB_ACTOR_ID}.general.front_knockdown",
+    "front_standup": f"{MOB_ACTOR_ID}.general.front_standup",
+    "back_knockdown": f"{MOB_ACTOR_ID}.general.back_knockdown",
+}
+MOB_REACTION_DURATIONS_US = {
+    "front_knockdown": 1_166_667,
+    "front_standup": 1_000_000,
+    "back_knockdown": 1_166_667,
+}
+ORDINARY_HIT_INVULNERABILITY_US = {
+    PLAYER_GENERAL_ACTION_ID: 500_000,
+    PLAYER_COMBO_ACTION_IDS[0]: 100_000,
+    PLAYER_COMBO_ACTION_IDS[1]: 100_000,
+    PLAYER_COMBO_ACTION_IDS[2]: 200_000,
+    PLAYER_COMBO_ACTION_IDS[3]: 0,
+    MOB_ACTION_ID: 300_000,
 }
 
 
@@ -357,6 +402,17 @@ def _validate_catalogs(profile: dict, archive: Archive) -> dict:
     race = parse_race_script(_get_text(archive, warrior["race_script"]))
     if race["base_model"] != archive_virtual(warrior["model"]):
         raise ValueError("Male Warrior race script does not select the declared model")
+    selected_hair = warrior.get("default_hair")
+    if not isinstance(selected_hair, dict):
+        raise ValueError("Male Warrior requires one declared default hair record")
+    expected_hair = {
+        "hair_index": selected_hair.get("hair_index"),
+        "model": archive_virtual(selected_hair.get("model", "")),
+        "source_skin": archive_virtual(selected_hair.get("source_skin", "")),
+        "target_skin": archive_virtual(selected_hair.get("target_skin", "")),
+    }
+    if expected_hair not in race["hair"] or expected_hair["hair_index"] != 0:
+        raise ValueError("Male Warrior race script does not select declared HairIndex 0")
     dog_race = parse_race_script(_get_text(archive, dog["race_script"]))
     if dog_race["base_model"] != archive_virtual(dog["model"]):
         raise ValueError("Wild Dog race script does not select the declared model")
@@ -486,6 +542,7 @@ def _normalise_motions(profile: dict, archive: Archive) -> tuple[list[dict], lis
                 "model_key": actor["model_key"],
                 "source_model": actor["model"],
                 "source_textures": actor["textures"],
+                **({"default_hair": actor["default_hair"]} if "default_hair" in actor else {}),
                 "output": actor["output"],
                 "orientation": actor["orientation"],
                 "motion_vector_space": "output_actor_local_godot",
@@ -541,6 +598,14 @@ def compile_normalized(profile_path: Path, *, offline: bool) -> dict:
     initial_paths = set(profile["catalog_sources"])
     for actor in profile["actors"]:
         initial_paths.update({actor["race_script"], actor["model"], *actor["textures"]})
+        if "default_hair" in actor:
+            initial_paths.update(
+                {
+                    actor["default_hair"]["model"],
+                    actor["default_hair"]["source_skin"],
+                    actor["default_hair"]["target_skin"],
+                }
+            )
         if "motion_list" in actor:
             initial_paths.add(actor["motion_list"])
         initial_paths.update(
@@ -563,6 +628,24 @@ def compile_normalized(profile_path: Path, *, offline: bool) -> dict:
         "profile": profile,
         "sources": sources,
     }
+    unsupported = sorted(
+        unsupported,
+        key=lambda entry: (entry["source"], entry["action_id"], entry["kind"]),
+    )
+    adapted_motion_events = []
+    remaining_unsupported = []
+    for entry in unsupported:
+        if entry.get("action_id") == PLAYER_COMBO_ACTION_IDS[3] and entry.get("event_type") == 2:
+            adapted_motion_events.append(
+                {
+                    **entry,
+                    "parser_classification": entry["reason"],
+                    "reason": "adapted by the bounded schema5 screen-wave projection",
+                    "adapter": "screen-wave-schema5",
+                }
+            )
+        else:
+            remaining_unsupported.append(entry)
     result = {
         "schema": SCHEMA,
         "schema_version": SCHEMA_VERSION,
@@ -578,10 +661,8 @@ def compile_normalized(profile_path: Path, *, offline: bool) -> dict:
         "actors": actors,
         "items": items,
         "known_exclusions": profile["known_exclusions"],
-        "unsupported": sorted(
-            unsupported,
-            key=lambda entry: (entry["source"], entry["action_id"], entry["kind"]),
-        ),
+        "adapted_motion_events": adapted_motion_events,
+        "unsupported": remaining_unsupported,
     }
     return result
 
@@ -589,16 +670,7 @@ def compile_normalized(profile_path: Path, *, offline: bool) -> dict:
 def _events_for_server(motion: dict, configured_range: float) -> list[dict]:
     windows = []
     for event in motion["events"]:
-        if event["kind"] == "attack_window":
-            windows.append(
-                {
-                    "start_us": event["start_us"],
-                    "end_us": event["end_us"],
-                    "range_m": configured_range,
-                    "shape": "melee_reach",
-                }
-            )
-        elif event["kind"] == "attack_area":
+        if event["kind"] == "attack_window" and event["start_us"] < event["end_us"]:
             windows.append(
                 {
                     "start_us": event["start_us"],
@@ -608,6 +680,21 @@ def _events_for_server(motion: dict, configured_range: float) -> list[dict]:
                 }
             )
     return windows
+
+
+def _ordinary_hit_invulnerability(motion: dict) -> int:
+    expected = ORDINARY_HIT_INVULNERABILITY_US[motion["action_id"]]
+    ordinary = [event for event in motion["events"] if event.get("kind") == "attack_window"]
+    if len(ordinary) != 1:
+        raise ValueError(f"{motion['action_id']} requires one authored ordinary attack record")
+    actual = ordinary[0].get("source_parameters", {}).get("invisible_us")
+    if motion["action_id"] == PLAYER_COMBO_ACTION_IDS[3]:
+        if ordinary[0].get("sample_count") != 0 or actual != 100_000:
+            raise ValueError("combo_4 empty ordinary attack source evidence changed")
+        return 0
+    if actual != expected:
+        raise ValueError(f"{motion['action_id']} ordinary hit invulnerability changed")
+    return expected
 
 
 def _primary_motion(actor: dict, mode_id: str, action: str) -> dict:
@@ -633,14 +720,16 @@ def _selected_combo_prefix(player: dict) -> tuple[dict, list[dict]]:
         raise ValueError("Selected onehand mode requires declared combo chains")
     for chain in chains:
         if not isinstance(chain, list) or len(chain) < 3:
-            raise ValueError("Every selected combo chain requires at least three actions")
+            raise ValueError("Every declared combo chain requires at least three actions")
         if any(type(name) is not str or not name for name in chain):
             raise ValueError("Selected combo chain action names must be nonempty strings")
-    prefix = chains[0][:3]
-    if prefix != ["combo_1", "combo_2", "combo_3"] or len(set(prefix)) != 3:
-        raise ValueError("Selected combo prefix must be distinct combo_1 then combo_2 then combo_3")
-    if any(chain[:3] != prefix for chain in chains):
-        raise ValueError("Selected combo chains disagree on their three-action prefix")
+    if len(chains[0]) < 4:
+        raise ValueError("Selected default combo chain requires four actions")
+    prefix = chains[0][:4]
+    if prefix != ["combo_1", "combo_2", "combo_3", "combo_4"] or len(set(prefix)) != 4:
+        raise ValueError("Selected combo prefix must be distinct combo_1 through terminal combo_4")
+    if any(chain[:3] != prefix[:3] for chain in chains):
+        raise ValueError("Declared combo chains disagree on the common three-action prefix")
     motions = []
     for name in prefix:
         matches = [motion for motion in mode["motions"] if motion["action"] == name]
@@ -677,6 +766,21 @@ def _finite_number(value: object, label: str, bound: float) -> float:
     if abs(result) > bound:
         raise ValueError(f"{label} exceeds the supported bound")
     return result
+
+
+def _strict_json_equal(value: object, expected: object) -> bool:
+    if type(value) is not type(expected):
+        return False
+    if isinstance(expected, dict):
+        return set(value) == set(expected) and all(
+            _strict_json_equal(value[key], expected[key]) for key in expected
+        )
+    if isinstance(expected, list):
+        return len(value) == len(expected) and all(
+            _strict_json_equal(actual, wanted)
+            for actual, wanted in zip(value, expected, strict=True)
+        )
+    return value == expected
 
 
 def _finite_vector(value: object, length: int, label: str, bound: float) -> list[float]:
@@ -745,6 +849,8 @@ def _checked_root_motion_source(
         "root_motion",
         "initial_placement",
         "msa_accumulation_output_actor_local_godot_m_decimal",
+        "msa_discrepancy_output_actor_local_godot_m_decimal",
+        "msa_validation",
     }
     if not isinstance(value, dict) or set(value) != fields or value.get("action_id") != action_id:
         raise ValueError(f"{action_id} root-motion source record is malformed")
@@ -817,7 +923,24 @@ def _checked_root_motion_source(
         MAX_ENDPOINT_COMPONENT_M,
     )
     differences = [msa_endpoint[index] - reported_endpoint[index] for index in range(3)]
-    if any(abs(component) > MSA_COMPONENT_TOLERANCE_M for component in differences):
+    reported_difference = _decimal_vector(
+        value["msa_discrepancy_output_actor_local_godot_m_decimal"],
+        3,
+        f"{action_id} MSA discrepancy",
+        MAX_ENDPOINT_COMPONENT_M,
+    )
+    if reported_difference != differences:
+        raise ValueError(f"{action_id} MSA discrepancy evidence changed")
+    if action_id == PLAYER_COMBO_ACTION_IDS[3]:
+        if (
+            value["msa_validation"] != "pinned-combo4-discrepancy-exception"
+            or reported_endpoint != [0.0, 0.0, -1.1964712524414062]
+            or msa_endpoint != [0.1289, 0.0, -1.0552]
+        ):
+            raise ValueError("Pinned combo_4 MSA discrepancy exception changed")
+    elif value["msa_validation"] != "strict-rounded-corroboration" or any(
+        abs(component) > MSA_COMPONENT_TOLERANCE_M for component in differences
+    ):
         raise ValueError(f"{action_id} MSA accumulation does not corroborate the raw endpoint")
     placement = value["initial_placement"]
     if not isinstance(placement, dict) or set(placement) != {
@@ -832,7 +955,7 @@ def _checked_root_motion_source(
         placement["position_source_cm_decimal"],
         3,
         f"{action_id} InitialPlacement position",
-        MAX_SOURCE_COMPONENT_CM,
+        MAX_INITIAL_PLACEMENT_COMPONENT_CM,
     )
     _decimal_vector(
         placement["orientation_xyzw_decimal"],
@@ -841,6 +964,116 @@ def _checked_root_motion_source(
         2.0,
     )
     return value
+
+
+def _selected_special_area(motion: dict) -> dict:
+    areas = [event for event in motion["events"] if event.get("kind") == "attack_area"]
+    if len(areas) != 1:
+        raise ValueError("Selected combo_4 requires exactly one special area event")
+    area = areas[0]
+    spheres = area.get("spheres")
+    if (
+        area.get("start_us") != 659_316
+        or area.get("end_us") != 859_316
+        or area.get("attack_type") != 0
+        or area.get("hitting_type") != 1
+        or area.get("stiffen_us") != 0
+        or area.get("invisible_us") != 300_000
+        or area.get("external_force") != 17.0
+        or area.get("collision_type") != 0
+        or not isinstance(spheres, list)
+        or len(spheres) != 1
+    ):
+        raise ValueError("Selected combo_4 special area source fields changed")
+    sphere = spheres[0]
+    center = _finite_vector(sphere.get("position_m"), 3, "combo_4 area center", 2.0)
+    center = [0.0 if abs(value) < 1e-12 else value for value in center]
+    if center != [0.0, 0.0, -1.2] or sphere.get("radius_m") != 1.0:
+        raise ValueError("Selected combo_4 special area sphere changed")
+    return {
+        "authored_start_us": 659_316,
+        "legacy_dispatch_frame": 39,
+        "activation_offset_us": 666_667,
+        "duration_us": 200_000,
+        "local_center_x_m": 0.0,
+        "local_center_z_m": -1.2,
+        "radius_m": 1.0,
+        "max_targets": 16,
+        "hit_once_per_life": True,
+        "hit_type": 1,
+        "invulnerability_us": 300_000,
+        "knockback": {
+            "source_external_force": 17.0,
+            "unobstructed_distance_m": 4.732,
+            "duration_us": 1_000_000,
+        },
+    }
+
+
+def _selected_screen_wave(normalized: dict, motion: dict) -> dict:
+    matches = [
+        event
+        for event in normalized.get("adapted_motion_events", [])
+        if event.get("action_id") == motion["action_id"] and event.get("event_type") == 2
+    ]
+    if len(matches) != 1:
+        raise ValueError("Selected combo_4 requires exactly one screen-wave source event")
+    event = matches[0]
+    if (
+        event.get("start_us") != 630_086
+        or event.get("end_us") != 830_086
+        or event.get("fields")
+        != {
+            "AffectingRange": ["200"],
+            "DuringTime": ["0.200000"],
+            "MotionEventType": ["2"],
+            "Power": ["300"],
+            "StartingTime": ["0.630086"],
+        }
+    ):
+        raise ValueError("Selected combo_4 screen-wave source fields changed")
+    return {
+        "authored_start_us": 630_086,
+        "legacy_dispatch_frame": 37,
+        "activation_offset_us": 633_334,
+        "duration_us": 200_000,
+        "viewer_range_m": 2.0,
+        "source_power": 300,
+        "source_component_step_m": 0.001,
+        "source_component_exclusive_max_m": 0.3,
+    }
+
+
+def _selected_defending_sphere(normalized: dict) -> dict:
+    collision = normalized.get("catalog_validation", {}).get("race_collision", {}).get(MOB_ACTOR_ID)
+    matches = [row for row in collision or [] if row.get("collision_type") == 3]
+    if len(matches) != 1 or matches[0].get("bone") != "Bip01":
+        raise ValueError("Wild Dog requires exactly one Bip01 defending collision record")
+    spheres = matches[0].get("spheres")
+    if not isinstance(spheres, list) or len(spheres) != 1:
+        raise ValueError("Wild Dog requires exactly one defending sphere")
+    sphere = spheres[0]
+    if sphere != {"position_m": [0.0, 0.8, 0.1], "radius_m": 0.9}:
+        raise ValueError("Wild Dog defending sphere changed from the pinned fixture")
+    return {
+        "local_center_x_m": 0.0,
+        "local_center_y_m": 0.8,
+        "local_center_z_m": 0.1,
+        "radius_m": 0.9,
+    }
+
+
+def _selected_reactions(mob: dict) -> list[dict]:
+    result = []
+    for action, action_id in MOB_REACTION_IDS.items():
+        motion = _primary_motion(mob, "general", action)
+        if (
+            motion["action_id"] != action_id
+            or motion["duration_us"] != MOB_REACTION_DURATIONS_US[action]
+        ):
+            raise ValueError(f"Wild Dog reaction {action} changed from the pinned fixture")
+        result.append({"id": action_id, "duration_us": motion["duration_us"]})
+    return result
 
 
 def make_server_payload(profile: dict, normalized: dict) -> dict:
@@ -915,6 +1148,7 @@ def make_server_payload(profile: dict, normalized: dict) -> dict:
                 "duration_us": motion["duration_us"],
                 "cooldown_us": gameplay["player"]["attack_cooldown_us"],
                 "hit_windows": windows,
+                "ordinary_hit_invulnerability_us": _ordinary_hit_invulnerability(motion),
                 "required_item_vnums": next(
                     mode["required_item_vnums"] for mode in player["modes"] if mode["id"] == mode_id
                 ),
@@ -932,11 +1166,22 @@ def make_server_payload(profile: dict, normalized: dict) -> dict:
                 ),
             }
         )
-    for action_name in ("combo_2", "combo_3"):
+    for action_name in ("combo_2", "combo_3", "combo_4"):
         motion = combo_by_action[action_name]
         windows = _events_for_server(motion, gameplay["player"]["attack_range_m"])
-        if not windows:
+        if action_name != "combo_4" and not windows:
             raise ValueError(f"Selected combo action has no hit window: {motion['action_id']}")
+        if action_name == "combo_4":
+            ordinary = [event for event in motion["events"] if event.get("kind") == "attack_window"]
+            if len(ordinary) != 1 or ordinary[0].get("sample_count") != 0 or windows:
+                raise ValueError("Selected combo_4 must have no ordinary hit trace")
+            if motion.get("combo") != {
+                "pre_input_us": 1_057_692,
+                "direct_input_us": 1_057_692,
+                "input_limit_us": 730_769,
+                "link_us": 0,
+            }:
+                raise ValueError("Selected terminal combo_4 timing evidence changed")
         actions.append(
             {
                 "id": motion["action_id"],
@@ -946,11 +1191,21 @@ def make_server_payload(profile: dict, normalized: dict) -> dict:
                 "duration_us": motion["duration_us"],
                 "cooldown_us": gameplay["player"]["attack_cooldown_us"],
                 "hit_windows": windows,
+                "ordinary_hit_invulnerability_us": _ordinary_hit_invulnerability(motion),
                 "required_item_vnums": onehand_mode["required_item_vnums"],
-                "combo_input": _checked_combo_input(
-                    motion.get("combo"), motion["duration_us"], motion["action_id"]
-                ),
                 "root_motion": selected_root_motion(motion),
+                **(
+                    {
+                        "special_area": _selected_special_area(motion),
+                        "screen_wave": _selected_screen_wave(normalized, motion),
+                    }
+                    if action_name == "combo_4"
+                    else {
+                        "combo_input": _checked_combo_input(
+                            motion.get("combo"), motion["duration_us"], motion["action_id"]
+                        )
+                    }
+                ),
             }
         )
     mob_motion = _primary_motion(mob, "general", "normal_attack")
@@ -966,6 +1221,7 @@ def make_server_payload(profile: dict, normalized: dict) -> dict:
             "duration_us": mob_motion["duration_us"],
             "cooldown_us": gameplay["mob"]["attack_cooldown_us"],
             "hit_windows": mob_windows,
+            "ordinary_hit_invulnerability_us": _ordinary_hit_invulnerability(mob_motion),
             "required_item_vnums": [],
         }
     )
@@ -978,6 +1234,9 @@ def make_server_payload(profile: dict, normalized: dict) -> dict:
         "linear_unit": "meter",
         "root_motion_policy": ROOT_MOTION_POLICY,
         "root_motion_sources": root_motion_sources,
+        "special_area_policy": SPECIAL_AREA_POLICY,
+        "screen_wave_policy": SCREEN_WAVE_POLICY,
+        "defending_sphere_policy": DEFENDING_SPHERE_POLICY,
         "actors": [
             {
                 "id": player["id"],
@@ -994,6 +1253,8 @@ def make_server_payload(profile: dict, normalized: dict) -> dict:
                 **{key: value for key, value in gameplay["mob"].items() if key != "source_values"},
                 "source_values": gameplay["mob"]["source_values"],
                 "primary_action_id": mob_motion["action_id"],
+                "defending_sphere": _selected_defending_sphere(normalized),
+                "great_hit_reactions": _selected_reactions(mob),
             },
         ],
         "base_combo_prefix": list(PLAYER_COMBO_ACTION_IDS),
@@ -1020,7 +1281,20 @@ def output_paths(profile_id: str) -> dict[str, Path]:
 def write_compile_outputs(profile_path: Path, normalized: dict, server: dict) -> None:
     paths = output_paths(normalized["profile_id"])
     write_json(paths["normalized"], normalized)
-    write_json(paths["runtime_server"], server)
+    # serde_json 1.0.151 rounds this exact binary64 value upward when parsing
+    # the longer Python spelling. Emit the adjacent shortest spelling that
+    # parses to the source-derived binary64 in both languages; the canonical
+    # hash remains over the decoded value and is independently recomputed.
+    encoded_server = json.dumps(server, indent=2, sort_keys=True) + "\n"
+    old = '"endpoint_z_m": -1.1964712524414063'
+    new = '"endpoint_z_m": -1.1964712524414062'
+    if encoded_server.count(old) != 1:
+        raise ValueError("Pinned combo_4 endpoint serialization contract changed")
+    target = paths["runtime_server"]
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_suffix(target.suffix + ".tmp")
+    temporary.write_text(encoded_server.replace(old, new))
+    temporary.replace(target)
     write_json(
         paths["report"],
         {
@@ -1034,9 +1308,71 @@ def write_compile_outputs(profile_path: Path, normalized: dict, server: dict) ->
                 len(mode["motions"]) for actor in normalized["actors"] for mode in actor["modes"]
             ),
             "unsupported": normalized["unsupported"],
+            "adapted_motion_events": normalized["adapted_motion_events"],
             "status": "normalized",
         },
     )
+
+
+def extract_actor_texture_pngs(output: Path, blender_report: dict) -> list[Path]:
+    """Extract selected actor PNGs from GLBs without changing their bytes."""
+    extracted = []
+    for artifact in blender_report["artifacts"]:
+        if artifact["type"] != "actor":
+            continue
+        glb_path = output / safe_path(artifact["relative_path"])
+        payload = glb_path.read_bytes()
+        if len(payload) < 20 or struct.unpack_from("<4sII", payload) != (
+            b"glTF",
+            2,
+            len(payload),
+        ):
+            raise ValueError(f"Invalid generated actor GLB: {glb_path}")
+        json_length, json_type = struct.unpack_from("<I4s", payload, 12)
+        if json_type != b"JSON" or 20 + json_length > len(payload):
+            raise ValueError(f"Invalid generated actor GLB JSON chunk: {glb_path}")
+        document = json.loads(payload[20 : 20 + json_length])
+        binary_offset = 20 + json_length
+        if binary_offset + 8 > len(payload):
+            raise ValueError(f"Missing generated actor GLB binary chunk: {glb_path}")
+        binary_length, binary_type = struct.unpack_from("<I4s", payload, binary_offset)
+        binary_start = binary_offset + 8
+        if binary_type != b"BIN\x00" or binary_start + binary_length != len(payload):
+            raise ValueError(f"Invalid generated actor GLB binary chunk: {glb_path}")
+        buffer_views = document.get("bufferViews")
+        if not isinstance(buffer_views, list):
+            raise ValueError(f"Generated actor GLB has no buffer views: {glb_path}")
+        for image in document.get("images", []):
+            if image.get("mimeType") != "image/png" or not isinstance(image.get("name"), str):
+                raise ValueError(f"Generated actor GLB has an unsupported image: {glb_path}")
+            image_name = image["name"]
+            if not re.fullmatch(r"[a-z0-9][a-z0-9._-]*", image_name):
+                raise ValueError(f"Unsafe generated actor image name: {image_name!r}")
+            index = image.get("bufferView")
+            if type(index) is not int or not 0 <= index < len(buffer_views):
+                raise ValueError(f"Generated actor GLB image buffer-view is invalid: {glb_path}")
+            buffer_view = buffer_views[index]
+            if not isinstance(buffer_view, dict):
+                raise ValueError(f"Generated actor GLB image buffer-view is invalid: {glb_path}")
+            offset = buffer_view.get("byteOffset", 0)
+            length = buffer_view.get("byteLength")
+            if type(offset) is not int or type(length) is not int or offset < 0 or length <= 0:
+                raise ValueError(f"Generated actor GLB image byte range is invalid: {glb_path}")
+            if buffer_view.get("buffer", 0) != 0:
+                raise ValueError(f"Generated actor GLB image buffer is invalid: {glb_path}")
+            start = binary_start + offset
+            end = start + length
+            if not binary_start <= start < end <= binary_start + binary_length:
+                raise ValueError(f"Generated actor GLB image range is invalid: {glb_path}")
+            target = glb_path.with_name(f"{glb_path.stem}_{image_name}.png")
+            temporary = target.with_suffix(target.suffix + ".tmp")
+            temporary.write_bytes(payload[start:end])
+            temporary.replace(target)
+            write_actor_texture_import(target)
+            extracted.append(target)
+    if not extracted:
+        raise ValueError("Generated profile has no selected actor PNG textures")
+    return extracted
 
 
 def validate_server_payload(payload: dict, profile_id: str) -> None:
@@ -1054,8 +1390,8 @@ def validate_server_payload(payload: dict, profile_id: str) -> None:
     if claimed != digest(unhashed):
         raise ValueError("Trusted action definition hash mismatch")
     actions = payload.get("actions")
-    if not isinstance(actions, list) or len(actions) != 5:
-        raise ValueError("Trusted definitions require exactly five actions")
+    if not isinstance(actions, list) or len(actions) != 6:
+        raise ValueError("Trusted definitions require exactly six actions")
     if any(not isinstance(action, dict) for action in actions):
         raise ValueError("Trusted actions must be objects")
     action_id_list = [action.get("id") for action in actions]
@@ -1071,9 +1407,16 @@ def validate_server_payload(payload: dict, profile_id: str) -> None:
         raise ValueError("Trusted base combo prefix is missing, reordered, or changed")
     if payload.get("root_motion_policy") != ROOT_MOTION_POLICY:
         raise ValueError("Trusted root-motion policy or limitation record changed")
+    for field, expected in (
+        ("special_area_policy", SPECIAL_AREA_POLICY),
+        ("screen_wave_policy", SCREEN_WAVE_POLICY),
+        ("defending_sphere_policy", DEFENDING_SPHERE_POLICY),
+    ):
+        if not _strict_json_equal(payload.get(field), expected):
+            raise ValueError(f"Trusted {field} changed")
     root_sources = payload.get("root_motion_sources")
     if not isinstance(root_sources, list) or len(root_sources) != len(PLAYER_COMBO_ACTION_IDS):
-        raise ValueError("Trusted definitions require exactly three root-motion source records")
+        raise ValueError("Trusted definitions require exactly four root-motion source records")
     if [
         source.get("action_id") if isinstance(source, dict) else None for source in root_sources
     ] != list(PLAYER_COMBO_ACTION_IDS):
@@ -1087,6 +1430,27 @@ def validate_server_payload(payload: dict, profile_id: str) -> None:
     player_primary = player_rows[0].get("primary_actions")
     if not isinstance(player_primary, dict) or player_primary.get("onehand") != prefix[0]:
         raise ValueError("Player onehand primary action must be the combo prefix head")
+    mob_rows = [actor for actor in actors if actor.get("id") == MOB_ACTOR_ID]
+    if len(mob_rows) != 1:
+        raise ValueError("Trusted definitions require exactly one fixed mob actor")
+    if not _strict_json_equal(
+        mob_rows[0].get("defending_sphere"),
+        {
+            "local_center_x_m": 0.0,
+            "local_center_y_m": 0.8,
+            "local_center_z_m": 0.1,
+            "radius_m": 0.9,
+        },
+    ):
+        raise ValueError("Wild Dog defending sphere changed")
+    if not _strict_json_equal(
+        mob_rows[0].get("great_hit_reactions"),
+        [
+            {"id": MOB_REACTION_IDS[action], "duration_us": MOB_REACTION_DURATIONS_US[action]}
+            for action in ("front_knockdown", "front_standup", "back_knockdown")
+        ],
+    ):
+        raise ValueError("Wild Dog GREAT hit reaction definitions changed")
     for actor in payload["actors"]:
         primary_actions = actor.get("primary_actions", {})
         if not isinstance(primary_actions, dict):
@@ -1104,8 +1468,14 @@ def validate_server_payload(payload: dict, profile_id: str) -> None:
         if type(cooldown_us) is not int or not 0 < cooldown_us <= MAX_COMBO_TIME_US:
             raise ValueError("Action cooldown must be integer microseconds in 1..=60000000")
         hit_windows = action.get("hit_windows")
-        if not isinstance(hit_windows, list) or len(hit_windows) != 1:
-            raise ValueError("Trusted attack action must have exactly one hit window")
+        is_terminal = action.get("id") == PLAYER_COMBO_ACTION_IDS[3]
+        if (
+            action.get("ordinary_hit_invulnerability_us")
+            != ORDINARY_HIT_INVULNERABILITY_US[action["id"]]
+        ):
+            raise ValueError("Trusted ordinary hit invulnerability changed")
+        if not isinstance(hit_windows, list) or len(hit_windows) != (0 if is_terminal else 1):
+            raise ValueError("Trusted action has an unexpected ordinary hit-window count")
         for window in hit_windows:
             if not isinstance(window, dict):
                 raise ValueError("Trusted hit window must be an object")
@@ -1137,14 +1507,56 @@ def validate_server_payload(payload: dict, profile_id: str) -> None:
             or action.get("mode") != expected_mode
             or action.get("action") != expected_name
             or action.get("required_item_vnums") != expected_items
-            or hit_windows[0]["range_m"] != expected_range
+            or (not is_terminal and hit_windows[0]["range_m"] != expected_range)
         ):
             raise ValueError("Trusted action does not match the fixed fixture")
         if action["id"] in PLAYER_COMBO_ACTION_IDS:
-            _checked_combo_input(action.get("combo_input"), duration_us, action["id"])
             root_motion = _checked_root_motion(action.get("root_motion"), duration_us, action["id"])
             source = root_sources[PLAYER_COMBO_ACTION_IDS.index(action["id"])]
             _checked_root_motion_source(source, action["id"], root_motion, duration_us)
+            if is_terminal:
+                if "combo_input" in action:
+                    raise ValueError("Terminal combo_4 must omit combo_input")
+                if not _strict_json_equal(
+                    action.get("special_area"),
+                    {
+                        "authored_start_us": 659_316,
+                        "legacy_dispatch_frame": 39,
+                        "activation_offset_us": 666_667,
+                        "duration_us": 200_000,
+                        "local_center_x_m": 0.0,
+                        "local_center_z_m": -1.2,
+                        "radius_m": 1.0,
+                        "max_targets": 16,
+                        "hit_once_per_life": True,
+                        "hit_type": 1,
+                        "invulnerability_us": 300_000,
+                        "knockback": {
+                            "source_external_force": 17.0,
+                            "unobstructed_distance_m": 4.732,
+                            "duration_us": 1_000_000,
+                        },
+                    },
+                ):
+                    raise ValueError("Terminal combo_4 special area changed")
+                if not _strict_json_equal(
+                    action.get("screen_wave"),
+                    {
+                        "authored_start_us": 630_086,
+                        "legacy_dispatch_frame": 37,
+                        "activation_offset_us": 633_334,
+                        "duration_us": 200_000,
+                        "viewer_range_m": 2.0,
+                        "source_power": 300,
+                        "source_component_step_m": 0.001,
+                        "source_component_exclusive_max_m": 0.3,
+                    },
+                ):
+                    raise ValueError("Terminal combo_4 screen wave changed")
+            else:
+                _checked_combo_input(action.get("combo_input"), duration_us, action["id"])
+                if "special_area" in action or "screen_wave" in action:
+                    raise ValueError("Only terminal combo_4 may define special events")
         elif "combo_input" in action:
             raise ValueError("Non-prefix actions must omit combo_input")
         elif "root_motion" in action:
@@ -1186,8 +1598,8 @@ def validate_server_payload(payload: dict, profile_id: str) -> None:
             raise ValueError("Trusted progression quarter table violates float32 thresholds")
 
 
-def _client_motion(motion: dict) -> dict:
-    return {
+def _client_motion(motion: dict, trusted_action: dict | None) -> dict:
+    result = {
         key: motion[key]
         for key in (
             "action_id",
@@ -1203,6 +1615,12 @@ def _client_motion(motion: dict) -> dict:
             "fallback_mode",
         )
     }
+    if trusted_action is not None and "screen_wave" in trusted_action:
+        wave = trusted_action["screen_wave"]
+        result["screen_wave"] = {
+            key: wave[key] for key in ("activation_offset_us", "duration_us", "viewer_range_m")
+        }
+    return result
 
 
 def make_client_payload(normalized: dict, server: dict, blender_report: dict) -> dict:
@@ -1213,6 +1631,7 @@ def make_client_payload(normalized: dict, server: dict, blender_report: dict) ->
     if set(report_artifacts) != expected_ids:
         raise ValueError("Blender report does not contain the exact profile artifacts")
     profile_id = normalized["profile_id"]
+    trusted_actions = {action["id"]: action for action in server["actions"]}
     artifacts = []
     for _content_id, source in sorted(report_artifacts.items()):
         entry = {
@@ -1255,6 +1674,11 @@ def make_client_payload(normalized: dict, server: dict, blender_report: dict) ->
             },
             "skeleton_signature": artifact["skeleton_signature"],
             "attachment_bones": actor["attachment_bones"],
+            **(
+                {"default_hair_index": actor["default_hair"]["hair_index"]}
+                if "default_hair" in actor
+                else {}
+            ),
             "forward": actor["orientation"]["output_forward"],
             "motion_vector_space": actor["motion_vector_space"],
             "modes": [
@@ -1262,7 +1686,10 @@ def make_client_payload(normalized: dict, server: dict, blender_report: dict) ->
                     "id": mode["id"],
                     "required_item_vnums": mode["required_item_vnums"],
                     "combo_chains": mode["combo_chains"],
-                    "motions": [_client_motion(motion) for motion in mode["motions"]],
+                    "motions": [
+                        _client_motion(motion, trusted_actions.get(motion["action_id"]))
+                        for motion in mode["motions"]
+                    ],
                 }
                 for mode in actor["modes"]
             ],
@@ -1315,6 +1742,14 @@ def make_client_payload(normalized: dict, server: dict, blender_report: dict) ->
                 if key in entry
             }
             for entry in normalized["unsupported"]
+        ],
+        "adapted_motion_events": [
+            {
+                key: entry[key]
+                for key in ("action_id", "kind", "event_type", "adapter")
+                if key in entry
+            }
+            for entry in normalized["adapted_motion_events"]
         ],
     }
     payload["presentation_output_hash"] = digest(artifacts)
@@ -1393,6 +1828,7 @@ def build_command(args: argparse.Namespace) -> None:
             temporary_target = target.with_suffix(target.suffix + ".tmp")
             shutil.copy2(source, temporary_target)
             temporary_target.replace(target)
+        extract_actor_texture_pngs(final_output, blender_report)
         write_json(paths["blender_report"], blender_report)
     client = make_client_payload(normalized, server, blender_report)
     write_json(paths["client"], client)

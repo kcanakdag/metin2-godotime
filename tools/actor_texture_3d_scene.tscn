@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/imported/content/p0-warrior-dog/actors/wild-dog-101_stray_dog.png" id="1_dog"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dog"]
+albedo_texture = ExtResource("1_dog")
+
+[sub_resource type="SphereMesh" id="SphereMesh_dog"]
+material = SubResource("StandardMaterial3D_dog")
+
+[node name="DogTexture3DUse" type="MeshInstance3D"]
+mesh = SubResource("SphereMesh_dog")

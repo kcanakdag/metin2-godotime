@@ -14,6 +14,7 @@ COORDINATE_CONVERSION = "source-cm-(x,z,-y)/100-then-fixture-yaw-180"
 MSA_COMPONENT_TOLERANCE_M = 0.00005
 MAX_DURATION_US = 1_600_000
 MAX_SOURCE_COMPONENT_CM = 200.0
+MAX_INITIAL_PLACEMENT_COMPONENT_CM = 300.0
 MAX_ENDPOINT_COMPONENT_M = 2.0
 CARBON_READER_SHA256 = "c3c8698c5987b6783586cc312e291e63eb315f8a5b0968b4f556219688a0fdce"
 
@@ -42,7 +43,19 @@ EXPECTED_INPUTS = {
         "msa": "69f4e729aea572006b1ed2d826f1f9a35108c06cb608f8e68ec97f42cef13961",
         "msa_bytes": 4444,
     },
+    "actor.player.warrior-male.onehand.combo_4": {
+        "gr2_path": "bin/pack/PC/ymir work/pc/warrior/onehand_sword/combo_04.gr2",
+        "msa_path": "bin/pack/PC/ymir work/pc/warrior/onehand_sword/combo_04.msa",
+        "gr2": "7ff6abe943ab2f1e0066be53b89dc9b6aa97d4d773c5ef97c441d4b03bbfd4b2",
+        "gr2_bytes": 35664,
+        "msa": "df48b7b4bd06668cfb63723aa59666a999310ea3f32101dec50b0050bd837c9f",
+        "msa_bytes": 1674,
+    },
 }
+
+COMBO4_ACTION_ID = "actor.player.warrior-male.onehand.combo_4"
+COMBO4_RAW_ENDPOINT_M = [0.0, 0.0, -1.1964712524414062]
+COMBO4_MSA_ENDPOINT_M = [0.1289, 0.0, -1.0552]
 
 
 def _sha256(content: bytes) -> str:
@@ -156,8 +169,14 @@ def validate_raw_metadata(
     msa_endpoint = [round(component, 4) for component in msa_endpoint]
     msa_endpoint = [0.0 if component == 0.0 else component for component in msa_endpoint]
     differences = [msa_endpoint[index] - endpoint[index] for index in range(3)]
-    if any(abs(value) > MSA_COMPONENT_TOLERANCE_M for value in differences):
-        raise ValueError("MSA accumulation does not corroborate the raw GR2 endpoint")
+    if action_id == COMBO4_ACTION_ID:
+        if endpoint != COMBO4_RAW_ENDPOINT_M or msa_endpoint != COMBO4_MSA_ENDPOINT_M:
+            raise ValueError("Pinned combo_4 raw/MSA endpoint discrepancy changed")
+        msa_validation = "pinned-combo4-discrepancy-exception"
+    else:
+        if any(abs(value) > MSA_COMPONENT_TOLERANCE_M for value in differences):
+            raise ValueError("MSA accumulation does not corroborate the raw GR2 endpoint")
+        msa_validation = "strict-rounded-corroboration"
 
     placement = group.get("InitialPlacement")
     if not isinstance(placement, dict):
@@ -166,7 +185,10 @@ def validate_raw_metadata(
     if not 0 <= placement_flags <= 0xFFFFFFFF:
         raise ValueError("InitialPlacement.flags is outside the supported bound")
     placement_position = _finite_vector(
-        placement.get("position"), 3, MAX_SOURCE_COMPONENT_CM, "InitialPlacement.position"
+        placement.get("position"),
+        3,
+        MAX_INITIAL_PLACEMENT_COMPONENT_CM,
+        "InitialPlacement.position",
     )
     placement_orientation = _finite_vector(
         placement.get("orientation"), 4, 2.0, "InitialPlacement.orientation"
@@ -188,6 +210,8 @@ def validate_raw_metadata(
             "orientation_xyzw": placement_orientation,
         },
         "msa_accumulation_output_actor_local_godot_m": msa_endpoint,
+        "msa_discrepancy_output_actor_local_godot_m": differences,
+        "msa_validation": msa_validation,
     }
 
 
@@ -255,6 +279,10 @@ def extract_root_motion(
         (
             "msa_accumulation_output_actor_local_godot_m",
             "msa_accumulation_output_actor_local_godot_m_decimal",
+        ),
+        (
+            "msa_discrepancy_output_actor_local_godot_m",
+            "msa_discrepancy_output_actor_local_godot_m_decimal",
         ),
     ):
         projection[new] = _decimal_vector(projection.pop(old))

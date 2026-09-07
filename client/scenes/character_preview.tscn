@@ -62,8 +62,8 @@ script = ExtResource("2")
 position = Vector3(0, 0.9, 0)
 
 [node name="Camera3D" type="Camera3D" parent="CameraPivot"]
-position = Vector3(2.4, 1.25, 3.6)
-rotation_degrees = Vector3(-16.1, 33.69, 0)
+position = Vector3(0, 1.25, -4.1)
+rotation_degrees = Vector3(-16.1, 0, 0)
 current = true
 fov = 38.0
 
@@ -93,30 +93,33 @@ text = "Character preview"
 layout_mode = 2
 text = "Loading warrior…"
 
-[node name="Animations" type="HBoxContainer" parent="HUD/Margin/Column"]
+[node name="MotionLabel" type="Label" parent="HUD/Margin/Column"]
 layout_mode = 2
-theme_override_constants/separation = 8
+text = "Manifest motion"
 
-[node name="Wait" type="Button" parent="HUD/Margin/Column/Animations"]
+[node name="Motion" type="OptionButton" parent="HUD/Margin/Column"]
 layout_mode = 2
-text = "1  Idle"
+size_flags_horizontal = 3
 
-[node name="Walk" type="Button" parent="HUD/Margin/Column/Animations"]
+[node name="Equipment" type="Button" parent="HUD/Margin/Column"]
 layout_mode = 2
-text = "2  Walk"
-
-[node name="Run" type="Button" parent="HUD/Margin/Column/Animations"]
-layout_mode = 2
-text = "3  Run"
-
-[node name="Attack" type="Button" parent="HUD/Margin/Column/Animations"]
-layout_mode = 2
-text = "4  Attack"
+size_flags_horizontal = 0
+text = "Presentation: Unarmed  [E]"
 
 [node name="Pause" type="Button" parent="HUD/Margin/Column"]
 layout_mode = 2
 size_flags_horizontal = 0
 text = "Pause animation  [Space]"
+
+[node name="TimelineLabel" type="Label" parent="HUD/Margin/Column"]
+layout_mode = 2
+text = "Timeline"
+
+[node name="Timeline" type="HSlider" parent="HUD/Margin/Column"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.001
 
 [node name="Reset" type="Button" parent="HUD/Margin/Column"]
 layout_mode = 2
@@ -127,4 +130,4 @@ text = "Reset view  [R]"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
 theme_override_font_sizes/font_size = 15
-text = "Right-drag to orbit · Scroll to zoom\nOffline preview · Multiplayer connection pending"
+text = "Right-drag to orbit · Scroll to zoom\nMotion and equipment use the loaded manifest · Offline only"

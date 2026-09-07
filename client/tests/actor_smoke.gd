@@ -174,6 +174,26 @@ func _test_player() -> void:
 	row.action_started_at_us = 3_000_000
 	row.action_ends_at_us = 3_000_000 + int(sword_attack.duration_us)
 	player.apply_state(row, true, appearance, 3_000_000 + hit_start_us)
+	var attack_window := _first_attack_window(sword_attack)
+	var source_samples: Array = attack_window.get("samples", [])
+	_check(source_samples.size() == 15, "combo step 1 retains its source weapon landmarks")
+	if source_samples.size() == 15:
+		var source_landmark: Dictionary = source_samples[int(source_samples.size() / 2.0)]
+		var presentation := player.get_node("Visual") as ActorPresentation
+		presentation.animation_player.play(str(sword_attack.godot_name), 0.0)
+		presentation.animation_player.seek(float(source_landmark.time_us) / 1_000_000.0, true)
+		presentation.animation_player.advance(0.0)
+		presentation.animation_player.pause()
+		await process_frame
+		var landmark := _equipment_landmark(player, source_landmark)
+		_check(
+			(
+				float(landmark.get("hand_error_m", INF)) < 0.05
+				and float(landmark.get("direction_dot", -1.0)) > 0.98
+				and float(landmark.get("endpoint_error_m", INF)) < 0.15
+			),
+			"Sword+0 grip and blade axis match the pinned source attack landmark: %s" % landmark
+		)
 	await _capture_from("warrior-swing", player.position + Vector3(2.8, 1.4, -3.6), player.position)
 	var combo_1_position := player.position
 	var combo_2 := _catalog.motion(
@@ -244,11 +264,49 @@ func _test_player() -> void:
 		),
 		"authoritative actor travel leaves presentation and imported model offsets unchanged"
 	)
+	var combo_4 := _catalog.motion(
+		ActorCatalog.WARRIOR_ID, "", "actor.player.warrior-male.onehand.combo_4"
+	)
+	var combo_4_start_us := 5_000_000
+	row.activity = 2
+	row.attack_sequence = 8
+	row.attack_action_id = str(combo_4.action_id)
+	row.action_started_at_us = combo_4_start_us
+	row.action_ends_at_us = combo_4_start_us + int(combo_4.duration_us)
+	var combo_4_position := player.position
+	player.apply_state(row, true, appearance, combo_4_start_us + 633_334)
+	state = player.presentation_snapshot()
+	_check(
+		(
+			state.action_id == combo_4.action_id
+			and state.sequence == 8
+			and state.clip == "actor_player_warrior_male_onehand_combo_4"
+			and int(combo_4.duration_us) == 1_266_667
+		),
+		"subscribed terminal combo step 4 selects the exact existing Warrior clip"
+	)
+	var screen_wave: Dictionary = combo_4.get("screen_wave", {})
+	_check(
+		(
+			int(screen_wave.get("activation_offset_us", 0)) == 633_334
+			and int(screen_wave.get("duration_us", 0)) == 200_000
+			and is_equal_approx(float(screen_wave.get("viewer_range_m", 0.0)), 2.0)
+		),
+		"terminal combo step 4 carries the trusted screen-wave presentation event"
+	)
+	await create_timer(0.08).timeout
+	_check(
+		player.position.distance_to(combo_4_position) < 0.001,
+		"combo step 4 presentation does not add local actor translation"
+	)
+	await _capture_from(
+		"warrior-combo4", player.position + Vector3(2.8, 1.4, -3.6), player.position
+	)
 	row.activity = 0
 	row.action_started_at_us = 0
 	row.action_ends_at_us = 0
 	appearance = _appearance(0)
-	player.apply_state(row, true, appearance, 5_300_000)
+	player.apply_state(row, true, appearance, 6_300_000)
 	_check(not player.presentation_snapshot().equipment_attached, "unequipped sword is removed")
 	row.health = 70
 	player.apply_state(row, true, appearance, 2_200_000)
@@ -490,7 +548,85 @@ func _test_monster() -> void:
 		absf(float(dog.presentation_snapshot().animation_position) - 0.35) < 0.08,
 		"late server clock reseeks an already subscribed monster action"
 	)
+	var front_knockdown := _catalog.motion(
+		ActorCatalog.WILD_DOG_ID, "", "actor.mob.wild-dog-101.general.front_knockdown"
+	)
+	var front_standup := _catalog.motion(
+		ActorCatalog.WILD_DOG_ID, "", "actor.mob.wild-dog-101.general.front_standup"
+	)
+	var back_knockdown := _catalog.motion(
+		ActorCatalog.WILD_DOG_ID, "", "actor.mob.wild-dog-101.general.back_knockdown"
+	)
+	_check(
+		(
+			int(front_knockdown.duration_us) == 1_166_667
+			and int(front_standup.duration_us) == 1_000_000
+			and int(back_knockdown.duration_us) == 1_166_667
+			and (
+				_catalog
+				. motion(
+					ActorCatalog.WILD_DOG_ID, "", "actor.mob.wild-dog-101.general.back_standup"
+				)
+				. is_empty()
+			)
+		),
+		"Wild Dog catalog declares only the three source-backed reaction clips"
+	)
+	row.health = 64
+	row.attack_sequence = 9
+	row.attack_action_id = str(front_knockdown.action_id)
+	row.action_started_at_us = 3_100_000
+	row.action_ends_at_us = 3_100_000 + int(front_knockdown.duration_us)
+	dog.apply_state(row, 3_400_000)
+	state = dog.presentation_snapshot()
+	_check(
+		(
+			state.action_id == front_knockdown.action_id
+			and state.clip == "actor_mob_wild_dog_101_general_front_knockdown"
+			and state.sequence == 9
+		),
+		"authoritative front knockdown wins over the simultaneous health decrease"
+	)
+	await _capture_from("dog-front-knockdown", dog.position + Vector3(2.4, 1.1, -3.0), dog.position)
+	row.attack_sequence = 10
+	row.attack_action_id = str(front_standup.action_id)
+	row.action_started_at_us = row.action_ends_at_us
+	row.action_ends_at_us = int(row.action_started_at_us) + int(front_standup.duration_us)
+	dog.apply_state(row, int(row.action_started_at_us) + 350_000)
+	state = dog.presentation_snapshot()
+	_check(
+		(
+			state.action_id == front_standup.action_id
+			and state.clip == "actor_mob_wild_dog_101_general_front_standup"
+			and state.sequence == 10
+		),
+		"the separately subscribed front stand-up replaces knockdown"
+	)
+	await _capture_from("dog-front-standup", dog.position + Vector3(2.4, 1.1, -3.0), dog.position)
+	row.health = 29
+	row.attack_sequence = 11
+	row.attack_action_id = str(back_knockdown.action_id)
+	row.action_started_at_us = 5_500_000
+	row.action_ends_at_us = 5_500_000 + int(back_knockdown.duration_us)
+	dog.apply_state(row, 5_900_000)
+	state = dog.presentation_snapshot()
+	_check(
+		(
+			state.action_id == back_knockdown.action_id
+			and state.clip == "actor_mob_wild_dog_101_general_back_knockdown"
+			and state.sequence == 11
+		),
+		"authoritative back knockdown uses its exact subscribed action"
+	)
+	await _capture_from("dog-back-knockdown", dog.position + Vector3(2.4, 1.1, -3.0), dog.position)
+	row.health = 28
+	dog.apply_state(row, int(row.action_ends_at_us) + 1)
+	_check(
+		dog.presentation_snapshot().action_id == back_knockdown.action_id,
+		"an expired authoritative reaction row never falls back to local damage presentation"
+	)
 	row.activity = 3
+	row.health = 0
 	row.life_sequence = 2
 	row.action_started_at_us = 4_000_000
 	row.action_ends_at_us = 16_000_000
@@ -675,6 +811,31 @@ func _equipment_bounds_are_sane(node: Node) -> bool:
 	)
 
 
+func _equipment_landmark(node: Node3D, source: Dictionary) -> Dictionary:
+	var attachment := node.find_child("Equipment_10", true, false) as BoneAttachment3D
+	if attachment == null or attachment.get_child_count() != 1:
+		return {}
+	var equipment_model := attachment.get_child(0) as Node3D
+	if equipment_model == null:
+		return {}
+	var node_from_attachment := node.global_transform.affine_inverse() * attachment.global_transform
+	var node_from_equipment := (
+		node.global_transform.affine_inverse() * equipment_model.global_transform
+	)
+	var observed_start := node_from_attachment.origin
+	var observed_end := node_from_equipment * Vector3(0.0, 1.3, 0.0)
+	var expected_start := _vector3(source.get("start_m", []))
+	var expected_end := _vector3(source.get("end_m", []))
+	return {
+		"hand_error_m": observed_start.distance_to(expected_start),
+		"direction_dot":
+		(observed_end - observed_start).normalized().dot(
+			(expected_end - expected_start).normalized()
+		),
+		"endpoint_error_m": observed_end.distance_to(expected_end),
+	}
+
+
 func _skeleton_pose_is_sane(node: Node) -> bool:
 	var skeleton := _find_skeleton(node)
 	if skeleton == null:
@@ -746,6 +907,17 @@ func _first_hit_time(motion: Dictionary) -> int:
 		if str(event.get("kind", "")) in ["attack_window", "attack_area"]:
 			return int((int(event.get("start_us", 0)) + int(event.get("end_us", 0))) / 2.0)
 	return 0
+
+
+func _first_attack_window(motion: Dictionary) -> Dictionary:
+	for event: Dictionary in motion.get("events", []):
+		if str(event.get("kind", "")) == "attack_window":
+			return event
+	return {}
+
+
+func _vector3(value: Array) -> Vector3:
+	return Vector3(float(value[0]), float(value[1]), float(value[2]))
 
 
 func _capture_from(name: String, camera_position: Vector3, target: Vector3) -> void:

@@ -1,0 +1,11 @@
+{
+  "schema": "mt2spacetime.combat-spawn-fixture",
+  "schema_version": 1,
+  "fixture_id": "triple-wild-dog-finisher-v1",
+  "map_id": "training",
+  "placements": [
+    {"id": 1, "definition_vnum": 101, "home_x": 3.0, "home_z": 3.0},
+    {"id": 2, "definition_vnum": 101, "home_x": 3.25, "home_z": 3.0},
+    {"id": 3, "definition_vnum": 101, "home_x": 11.5, "home_z": 3.0}
+  ]
+}

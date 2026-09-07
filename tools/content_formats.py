@@ -373,6 +373,29 @@ def parse_race_script(text: str) -> dict:
     if one(root, "ScriptType") != "RaceDataScript":
         raise ValueError("Expected ScriptType RaceDataScript")
     model = one(root, "BaseModelFileName")
+    hair = []
+    hair_data = root.group("HairData")
+    if hair_data is not None:
+        expected_hair = integer(one(hair_data, "HairDataCount") or "0")
+        hair_root = virtual_path((one(hair_data, "PathName") or "").rstrip("/\\"))
+        records = hair_data.groups_with_prefix("HairData")
+        if len(records) != expected_hair:
+            raise ValueError(f"HairDataCount says {expected_hair}, found {len(records)}")
+        for record in records:
+            hair.append(
+                {
+                    "hair_index": integer(one(record, "HairIndex") or ""),
+                    "model": virtual_path(
+                        str(PurePosixPath(hair_root) / (one(record, "Model") or ""))
+                    ),
+                    "source_skin": virtual_path(
+                        str(PurePosixPath(hair_root) / (one(record, "SourceSkin") or ""))
+                    ),
+                    "target_skin": virtual_path(
+                        str(PurePosixPath(hair_root) / (one(record, "TargetSkin") or ""))
+                    ),
+                }
+            )
     attaching = root.group("AttachingData")
     collision = []
     if attaching is not None:
@@ -401,7 +424,7 @@ def parse_race_script(text: str) -> dict:
                     "spheres": spheres,
                 }
             )
-    return {"base_model": virtual_path(model or ""), "collision": collision}
+    return {"base_model": virtual_path(model or ""), "hair": hair, "collision": collision}
 
 
 def parse_item_script(text: str) -> dict:

@@ -12,6 +12,7 @@ from content_compile import (  # noqa: E402
     MOB_ACTION_ID,
     PLAYER_COMBO_ACTION_IDS,
     PLAYER_GENERAL_ACTION_ID,
+    _client_motion,
     digest,
     load_profile,
     make_server_payload,
@@ -26,13 +27,15 @@ ROOT_FIXTURES = {
     PLAYER_COMBO_ACTION_IDS[0]: (1.0, -131.7569580078125, -1.3176, 2),
     PLAYER_COMBO_ACTION_IDS[1]: (0.9333333969116211, -85.2515640258789, -0.8525, 1),
     PLAYER_COMBO_ACTION_IDS[2]: (1.0666667222976685, -143.01394653320312, -1.4301, 3),
+    PLAYER_COMBO_ACTION_IDS[3]: (1.2666667699813843, -119.64712524414062, -1.0552, 1),
 }
 
 
 def _root_source(action_id: str, duration_us: int) -> dict:
     raw_duration, source_y, msa_z, placement_flags = ROOT_FIXTURES[action_id]
     endpoint = [0.0, 0.0, source_y / 100.0]
-    msa = [0.0, 0.0, msa_z]
+    msa = [0.1289, 0.0, msa_z] if action_id == PLAYER_COMBO_ACTION_IDS[3] else [0.0, 0.0, msa_z]
+    discrepancy = [msa[index] - endpoint[index] for index in range(3)]
 
     def decimals(values: list[float]) -> list[str]:
         return [format(value, ".17g") for value in values]
@@ -70,6 +73,12 @@ def _root_source(action_id: str, duration_us: int) -> dict:
             "orientation_xyzw_decimal": decimals([0.0, 0.0, 0.0, 1.0]),
         },
         "msa_accumulation_output_actor_local_godot_m_decimal": decimals(msa),
+        "msa_discrepancy_output_actor_local_godot_m_decimal": decimals(discrepancy),
+        "msa_validation": (
+            "pinned-combo4-discrepancy-exception"
+            if action_id == PLAYER_COMBO_ACTION_IDS[3]
+            else "strict-rounded-corroboration"
+        ),
     }
 
 
@@ -85,9 +94,47 @@ def _motion(
         "action": action,
         "action_id": action_id,
         "duration_us": duration_us,
-        "events": [{"kind": "attack_window", "start_us": 10, "end_us": 20}],
+        "events": [
+            {
+                "kind": "attack_window",
+                "start_us": 10,
+                "end_us": 20,
+                "source_parameters": {
+                    "invisible_us": {
+                        PLAYER_GENERAL_ACTION_ID: 500_000,
+                        PLAYER_COMBO_ACTION_IDS[0]: 100_000,
+                        PLAYER_COMBO_ACTION_IDS[1]: 100_000,
+                        PLAYER_COMBO_ACTION_IDS[2]: 200_000,
+                        PLAYER_COMBO_ACTION_IDS[3]: 100_000,
+                        MOB_ACTION_ID: 300_000,
+                    }.get(action_id, 0)
+                },
+            }
+        ],
         "combo": combo,
     }
+    if action == "combo_4":
+        result["events"] = [
+            {
+                "kind": "attack_window",
+                "start_us": 0,
+                "end_us": 0,
+                "sample_count": 0,
+                "source_parameters": {"invisible_us": 100_000},
+            },
+            {
+                "kind": "attack_area",
+                "start_us": 659_316,
+                "end_us": 859_316,
+                "attack_type": 0,
+                "hitting_type": 1,
+                "stiffen_us": 0,
+                "invisible_us": 300_000,
+                "external_force": 17.0,
+                "collision_type": 0,
+                "spheres": [{"position_m": [0.0, 0.0, -1.2], "radius_m": 1.0}],
+            },
+        ]
     if root_source is not None:
         result["root_motion_source"] = root_source
     return result
@@ -112,6 +159,12 @@ def _normalized_fixture() -> dict:
         "direct_input_us": 10,
         "input_limit_us": 11,
         "link_us": 12,
+    }
+    combo_4 = {
+        "pre_input_us": 1_057_692,
+        "direct_input_us": 1_057_692,
+        "input_limit_us": 730_769,
+        "link_us": 0,
     }
     return {
         "content_hash": "a" * 64,
@@ -141,7 +194,7 @@ def _normalized_fixture() -> dict:
                         "required_item_vnums": [10],
                         "combo_chains": [
                             ["combo_1", "combo_2", "combo_3", "combo_4"],
-                            ["combo_1", "combo_2", "combo_3"],
+                            ["combo_1", "combo_2", "combo_3", "combo_4"],
                         ],
                         "motions": [
                             _motion(
@@ -167,14 +220,10 @@ def _normalized_fixture() -> dict:
                             ),
                             _motion(
                                 "combo_4",
-                                "actor.player.warrior-male.onehand.combo_4",
-                                duration_us=100,
-                                combo={
-                                    "pre_input_us": 10,
-                                    "direct_input_us": 30,
-                                    "input_limit_us": 20,
-                                    "link_us": 1,
-                                },
+                                PLAYER_COMBO_ACTION_IDS[3],
+                                duration_us=1_266_667,
+                                combo=combo_4,
+                                root_source=_root_source(PLAYER_COMBO_ACTION_IDS[3], 1_266_667),
                             ),
                         ],
                     },
@@ -196,12 +245,63 @@ def _normalized_fixture() -> dict:
                                 MOB_ACTION_ID,
                                 duration_us=100,
                                 combo=None,
-                            )
+                            ),
+                            _motion(
+                                "front_knockdown",
+                                "actor.mob.wild-dog-101.general.front_knockdown",
+                                duration_us=1_166_667,
+                                combo=None,
+                            ),
+                            _motion(
+                                "front_standup",
+                                "actor.mob.wild-dog-101.general.front_standup",
+                                duration_us=1_000_000,
+                                combo=None,
+                            ),
+                            _motion(
+                                "back_knockdown",
+                                "actor.mob.wild-dog-101.general.back_knockdown",
+                                duration_us=1_166_667,
+                                combo=None,
+                            ),
                         ],
                     }
                 ],
             },
         ],
+        "catalog_validation": {
+            "race_collision": {
+                "actor.mob.wild-dog-101": [
+                    {
+                        "bone": "Bip01",
+                        "collision_type": 3,
+                        "spheres": [{"position_m": [0.0, 0.8, 0.1], "radius_m": 0.9}],
+                    }
+                ]
+            }
+        },
+        "adapted_motion_events": [
+            {
+                "actor_id": "actor.player.warrior-male",
+                "action_id": PLAYER_COMBO_ACTION_IDS[3],
+                "source": "bin/pack/PC/ymir work/pc/warrior/onehand_sword/combo_04.msa",
+                "kind": "motion_event",
+                "event_name": "Event00",
+                "event_type": 2,
+                "start_us": 630_086,
+                "end_us": 830_086,
+                "fields": {
+                    "AffectingRange": ["200"],
+                    "DuringTime": ["0.200000"],
+                    "MotionEventType": ["2"],
+                    "Power": ["300"],
+                    "StartingTime": ["0.630086"],
+                },
+                "reason": "MotionEventType has no implemented semantic adapter",
+                "adapter": "screen-wave-schema5",
+            }
+        ],
+        "unsupported": [],
     }
 
 
@@ -215,16 +315,17 @@ class ComboContentTests(unittest.TestCase):
     def setUp(self) -> None:
         self.profile = load_profile(ROOT / "content/profiles/p0-warrior-dog.json")
 
-    def test_compiler_projects_only_the_declared_three_action_prefix(self):
+    def test_compiler_projects_only_the_declared_four_action_prefix(self):
         payload = make_server_payload(self.profile, _normalized_fixture())
         validate_server_payload(payload, "p0-warrior-dog")
-        self.assertEqual(payload["schema_version"], 4)
+        self.assertEqual(payload["schema_version"], 5)
         self.assertEqual(payload["base_combo_prefix"], list(PLAYER_COMBO_ACTION_IDS))
-        self.assertEqual(len(payload["actions"]), 5)
-        self.assertNotIn(
-            "actor.player.warrior-male.onehand.combo_4",
-            {action["id"] for action in payload["actions"]},
+        self.assertEqual(len(payload["actions"]), 6)
+        terminal = next(
+            action for action in payload["actions"] if action["id"] == PLAYER_COMBO_ACTION_IDS[3]
         )
+        self.assertEqual(terminal["hit_windows"], [])
+        self.assertNotIn("combo_input", terminal)
 
     def test_compiler_rejects_malformed_declared_prefixes(self):
         cases = {
@@ -233,19 +334,23 @@ class ComboContentTests(unittest.TestCase):
             "disagree": (
                 lambda mode: mode.update(
                     combo_chains=[
-                        ["combo_1", "combo_2", "combo_3"],
-                        ["combo_1", "combo_2", "combo_4"],
+                        ["combo_1", "combo_2", "combo_3", "combo_4"],
+                        ["combo_1", "combo_2", "combo_5", "combo_4"],
                     ]
                 ),
                 "disagree",
             ),
             "duplicate": (
-                lambda mode: mode.update(combo_chains=[["combo_1", "combo_2", "combo_2"]]),
-                "distinct combo_1 then combo_2 then combo_3",
+                lambda mode: mode.update(
+                    combo_chains=[["combo_1", "combo_2", "combo_2", "combo_4"]]
+                ),
+                "distinct combo_1 through terminal combo_4",
             ),
             "reversed": (
-                lambda mode: mode.update(combo_chains=[["combo_2", "combo_1", "combo_3"]]),
-                "distinct combo_1 then combo_2 then combo_3",
+                lambda mode: mode.update(
+                    combo_chains=[["combo_2", "combo_1", "combo_3", "combo_4"]]
+                ),
+                "distinct combo_1 through terminal combo_4",
             ),
         }
         for name, (mutate, message) in cases.items():
@@ -436,7 +541,7 @@ class ComboContentTests(unittest.TestCase):
                 lambda payload: payload["root_motion_sources"][0].update(
                     msa_accumulation_output_actor_local_godot_m_decimal=["0", "0", "-1"]
                 ),
-                "corroborate",
+                "discrepancy evidence",
             ),
             "nonprefix root": (
                 lambda payload: payload["actions"][0].update(
@@ -452,6 +557,68 @@ class ComboContentTests(unittest.TestCase):
                 _rehash(payload)
                 with self.assertRaisesRegex(ValueError, message):
                     validate_server_payload(payload, "p0-warrior-dog")
+
+    def test_schema5_finisher_metadata_and_client_wave_projection_are_strict(self):
+        valid = make_server_payload(self.profile, _normalized_fixture())
+        terminal = next(
+            action for action in valid["actions"] if action["id"] == PLAYER_COMBO_ACTION_IDS[3]
+        )
+        self.assertEqual(
+            _client_motion(
+                {
+                    "action_id": terminal["id"],
+                    "action": "combo_4",
+                    "variant": 1,
+                    "weight": 100,
+                    "godot_name": "combo4",
+                    "duration_us": 1_266_667,
+                    "loop": False,
+                    "accumulation_m": [],
+                    "events": [],
+                    "combo": {},
+                    "fallback_mode": None,
+                },
+                terminal,
+            )["screen_wave"],
+            {"activation_offset_us": 633_334, "duration_us": 200_000, "viewer_range_m": 2.0},
+        )
+        cases = (
+            lambda payload: next(
+                action
+                for action in payload["actions"]
+                if action["id"] == PLAYER_COMBO_ACTION_IDS[3]
+            )["special_area"].update(activation_offset_us=659_316),
+            lambda payload: next(
+                action
+                for action in payload["actions"]
+                if action["id"] == PLAYER_COMBO_ACTION_IDS[3]
+            )["special_area"].update(max_targets=16.0),
+            lambda payload: next(
+                action
+                for action in payload["actions"]
+                if action["id"] == PLAYER_COMBO_ACTION_IDS[3]
+            )["screen_wave"].update(legacy_dispatch_frame=38),
+            lambda payload: next(
+                action
+                for action in payload["actions"]
+                if action["id"] == PLAYER_COMBO_ACTION_IDS[1]
+            ).update(ordinary_hit_invulnerability_us=300_000),
+            lambda payload: next(
+                actor for actor in payload["actors"] if actor["id"] == "actor.mob.wild-dog-101"
+            )["defending_sphere"].update(radius_m=0.8),
+            lambda payload: next(
+                actor for actor in payload["actors"] if actor["id"] == "actor.mob.wild-dog-101"
+            )["great_hit_reactions"][0].update(duration_us=1),
+            lambda payload: payload["root_motion_sources"][3].update(
+                msa_validation="strict-rounded-corroboration"
+            ),
+        )
+        for mutate in cases:
+            payload = copy.deepcopy(valid)
+            mutate(payload)
+            _rehash(payload)
+            with self.assertRaises(ValueError):
+                validate_server_payload(payload, "p0-warrior-dog")
 
 
 if __name__ == "__main__":

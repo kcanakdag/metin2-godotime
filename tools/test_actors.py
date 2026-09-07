@@ -13,6 +13,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from actor_texture_import import configure_actor_texture_imports
+
 ROOT = Path(__file__).resolve().parents[1]
 ACTOR_PROFILE = ROOT / "client/assets/imported/content/p0-warrior-dog"
 TARGET_EFFECT_PROFILE = ROOT / "client/assets/imported/content/p2-target-effects"
@@ -47,10 +49,34 @@ def run(command: list[str], environment: dict[str, str], log: Path) -> str:
     return result.stdout
 
 
+def editor_scene_use(godot: str, project: Path, environment: dict[str, str], log: Path) -> str:
+    return run(
+        [
+            "xvfb-run",
+            "-a",
+            "-s",
+            "-screen 0 1280x800x24",
+            godot,
+            "--editor",
+            "--path",
+            str(project),
+            "--quit-after",
+            "180",
+        ],
+        environment,
+        log,
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument("--native", action="store_true", help="Render under Xvfb and save a PNG.")
+    parser.add_argument(
+        "--texture-editor-check",
+        action="store_true",
+        help="Exercise the actor PNG policy through an Xvfb editor 3D-scene negative control.",
+    )
     parser.add_argument("--output", type=Path, default=ROOT / ".local/actors")
     options = parser.parse_args()
     options.output = options.output.resolve()
@@ -64,8 +90,9 @@ def main() -> None:
         raise SystemExit(
             "Missing target-effect catalog; run import_target_effects.py --install first."
         )
-    if options.native and not shutil.which("xvfb-run"):
-        raise SystemExit("Native actor rendering requires xvfb-run.")
+    texture_editor_check = options.native or options.texture_editor_check
+    if texture_editor_check and not shutil.which("xvfb-run"):
+        raise SystemExit("Actor texture editor import verification requires xvfb-run.")
     with tempfile.TemporaryDirectory(prefix="project-", dir=options.output) as scratch:
         stage = Path(scratch)
         shutil.copytree(ROOT / "client/scripts/actors", stage / "scripts/actors")
@@ -74,7 +101,54 @@ def main() -> None:
         shutil.copytree(TARGET_EFFECT_PROFILE, stage / "assets/imported/content/p2-target-effects")
         (stage / "tests").mkdir()
         shutil.copy2(ROOT / "client/tests/actor_smoke.gd", stage / "tests/actor_smoke.gd")
-        (stage / "project.godot").write_text(PROJECT)
+        shutil.copy2(
+            ROOT / "tools/actor_texture_import_probe.gd",
+            stage / "tests/actor_texture_import_probe.gd",
+        )
+        shutil.copy2(
+            ROOT / "tools/actor_texture_3d_probe.gd",
+            stage / "tests/actor_texture_3d_probe.gd",
+        )
+        shutil.copy2(
+            ROOT / "tools/actor_texture_3d_scene.tscn",
+            stage / "tests/actor_texture_3d_scene.tscn",
+        )
+        if texture_editor_check:
+            plugin = stage / "addons/actor_texture_3d_probe"
+            plugin.mkdir(parents=True)
+            shutil.copy2(ROOT / "tools/actor_texture_3d_editor_plugin.cfg", plugin / "plugin.cfg")
+            shutil.copy2(
+                ROOT / "tools/actor_texture_3d_editor_plugin.gd",
+                plugin / "actor_texture_3d_editor_plugin.gd",
+            )
+            project = PROJECT + (
+                "[editor_plugins]\n"
+                'enabled=PackedStringArray("res://addons/actor_texture_3d_probe/plugin.cfg")\n'
+            )
+        else:
+            plugin = None
+            project = PROJECT
+        (stage / "project.godot").write_text(project)
+        actor_texture_sidecars = configure_actor_texture_imports(
+            stage / "assets/imported/content/p0-warrior-dog/actors"
+        )
+        actor_texture_policy_sha256 = {path.name: sha256(path) for path in actor_texture_sidecars}
+        if texture_editor_check:
+            negative = stage / "negative-3d-compression"
+            shutil.copytree(
+                stage,
+                negative,
+                ignore=shutil.ignore_patterns(".cache", ".config", ".data", ".godot"),
+            )
+            negative_sidecars = [
+                negative / path.relative_to(stage) for path in actor_texture_sidecars
+            ]
+            for sidecar in negative_sidecars:
+                sidecar.write_text(
+                    sidecar.read_text().replace(
+                        "detect_3d/compress_to=0", "detect_3d/compress_to=1"
+                    )
+                )
         staged_target_catalog = (
             stage / "assets/imported/content/p2-target-effects/runtime-catalog.v1.json"
         )
@@ -88,6 +162,18 @@ def main() -> None:
             "target_effect_node": sha256(stage / "scripts/actors/target_effect.gd"),
             "target_effect_runtime_catalog": sha256(staged_target_catalog),
             "smoke": sha256(stage / "tests/actor_smoke.gd"),
+            "actor_texture_import_probe": sha256(stage / "tests/actor_texture_import_probe.gd"),
+            "actor_texture_3d_probe": sha256(stage / "tests/actor_texture_3d_probe.gd"),
+            "actor_texture_3d_scene": sha256(stage / "tests/actor_texture_3d_scene.tscn"),
+            **(
+                {
+                    "actor_texture_3d_editor_plugin": sha256(
+                        plugin / "actor_texture_3d_editor_plugin.gd"
+                    )
+                }
+                if plugin is not None
+                else {}
+            ),
         }
         environment = {
             **os.environ,
@@ -108,6 +194,118 @@ def main() -> None:
             environment,
             options.output / "import.log",
         )
+        first_import_sha256 = {path.name: sha256(path) for path in actor_texture_sidecars}
+        for sidecar in actor_texture_sidecars:
+            settings = sidecar.read_text()
+            for line in (
+                "compress/mode=0",
+                "mipmaps/generate=true",
+                "detect_3d/compress_to=0",
+                "process/fix_alpha_border=true",
+            ):
+                if line not in settings:
+                    raise SystemExit(
+                        f"Godot removed selected actor texture policy {line}: {sidecar}"
+                    )
+            if "compress/mode=2" in settings or '"vram_texture": true' in settings:
+                raise SystemExit(
+                    f"Godot enabled VRAM compression for selected actor texture: {sidecar}"
+                )
+        if texture_editor_check:
+            material_output = run(
+                [
+                    "xvfb-run",
+                    "-a",
+                    "-s",
+                    "-screen 0 1280x800x24",
+                    options.godot,
+                    "--path",
+                    str(stage),
+                    "--scene",
+                    "res://tests/actor_texture_3d_scene.tscn",
+                    "--quit-after",
+                    "8",
+                ],
+                environment,
+                options.output / "texture-3d.log",
+            )
+            if "SCRIPT ERROR:" in material_output:
+                raise SystemExit("Actor texture 3D material scene did not run.")
+            editor_output = editor_scene_use(
+                options.godot, stage, environment, options.output / "texture-3d-editor.log"
+            )
+            if "ACTOR_TEXTURE_EDITOR_SCENE PASS" not in editor_output:
+                raise SystemExit("Actor texture editor scene probe did not report completion.")
+            negative_environment = {
+                **environment,
+                "XDG_DATA_HOME": str(negative / ".data"),
+                "XDG_CONFIG_HOME": str(negative / ".config"),
+                "XDG_CACHE_HOME": str(negative / ".cache"),
+            }
+            negative_output = editor_scene_use(
+                options.godot,
+                negative,
+                negative_environment,
+                options.output / "texture-3d-negative.log",
+            )
+            if "ACTOR_TEXTURE_EDITOR_SCENE PASS" not in negative_output:
+                raise SystemExit(
+                    "Actor texture negative-control editor scene did not report completion."
+                )
+            for sidecar in negative_sidecars:
+                settings = sidecar.read_text()
+                if "compress/mode=2" not in settings or "detect_3d/compress_to=0" not in settings:
+                    raise SystemExit(
+                        "Old 3D auto-compression policy did not reproduce a VRAM rewrite."
+                    )
+        else:
+            run(
+                [
+                    options.godot,
+                    "--headless",
+                    "--editor",
+                    "--path",
+                    str(stage),
+                    "--import",
+                    "--quit-after",
+                    "2",
+                ],
+                environment,
+                options.output / "repeat-import.log",
+            )
+        material_output = run(
+            [
+                options.godot,
+                "--headless",
+                "--path",
+                str(stage),
+                "--script",
+                "res://tests/actor_texture_3d_probe.gd",
+            ],
+            environment,
+            options.output / "texture-3d-pixels.log",
+        )
+        if "ACTOR_TEXTURE_3D PASS" not in material_output:
+            raise SystemExit("Actor texture 3D material probe did not report completion.")
+        if first_import_sha256 != {path.name: sha256(path) for path in actor_texture_sidecars}:
+            raise SystemExit(
+                "Godot changed selected actor texture import settings after editor scene use."
+            )
+        texture_output = run(
+            [
+                options.godot,
+                "--headless",
+                "--path",
+                str(stage),
+                "--script",
+                "res://tests/actor_texture_import_probe.gd",
+            ],
+            environment,
+            options.output / "texture-import.log",
+        )
+        texture_match = re.search(r"ACTOR_TEXTURE_IMPORT PASS (\d+) textures", texture_output)
+        if not texture_match:
+            raise SystemExit("Actor texture import probe did not report completion.")
         command = [options.godot, "--path", str(stage), "--script", "res://tests/actor_smoke.gd"]
         if options.native:
             command = ["xvfb-run", "-a", "-s", "-screen 0 1280x800x24", *command]
@@ -125,6 +323,13 @@ def main() -> None:
             "target_effect_content_hash": json.loads(staged_target_catalog.read_text())[
                 "content_hash"
             ],
+            "actor_texture_import": {
+                "textures": int(texture_match.group(1)),
+                "material_3d": True,
+                "editor_3d_negative_control_vram_rewrite": texture_editor_check,
+                "requested_sidecar_sha256": actor_texture_policy_sha256,
+                "effective_sidecar_sha256": first_import_sha256,
+            },
             "tested_sha256": tested_files,
         }
         capture_directory = stage / ".data/godot/app_userdata/MT2 Actor Test"

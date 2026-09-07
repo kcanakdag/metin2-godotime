@@ -289,6 +289,17 @@ pub fn advance_for_replacement(
     advance_character(ctx, control, through_us, true)
 }
 
+/// Inject a trusted action event at its exact action-relative boundary. This
+/// is a physical sample, unlike a queue-only input, and does not replace the
+/// currently accepted action.
+pub fn advance_for_event(
+    ctx: &ReducerContext,
+    control: &mut Controller,
+    through_us: i64,
+) -> Result<(), String> {
+    advance_character(ctx, control, through_us, true)
+}
+
 pub fn advance_all(ctx: &ReducerContext, now: i64) -> Result<(), String> {
     let mut identities: Vec<Identity> = ctx
         .db
@@ -609,7 +620,7 @@ mod tests {
 
     #[test]
     fn generated_prefix_has_bounded_linear_roots() {
-        assert_eq!(definitions::PLAYER_ONEHAND_COMBO.len(), 3);
+        assert_eq!(definitions::PLAYER_ONEHAND_COMBO.len(), 4);
         for definition in definitions::PLAYER_ONEHAND_COMBO {
             let root = definition.root_motion.expect("selected root motion");
             assert!(valid_definition(root));

@@ -360,6 +360,8 @@ class P1ProfileAuditTests(unittest.TestCase):
             }
             if index < 2:
                 artifact.update({"bones": 1, "skeleton_signature": "skeleton-" + str(index)})
+            if index == 0:
+                artifact.update({"mesh_count": 4, "textured_mesh_count": 4})
             artifacts.append(artifact)
         return {
             "schema": "mt2spacetime.presentation-manifest",
@@ -373,6 +375,7 @@ class P1ProfileAuditTests(unittest.TestCase):
                 {
                     "id": export_client.P1_WARRIOR_ACTOR_ID,
                     "race_id": 0,
+                    "default_hair_index": 0,
                     "forward": "-Z",
                     "model": {
                         "artifact_id": "warrior-male",
@@ -400,6 +403,24 @@ class P1ProfileAuditTests(unittest.TestCase):
                 }
             ],
         }
+
+    @classmethod
+    def manifest_with_screen_wave(cls):
+        manifest = cls.manifest()
+        manifest["adapted_motion_events"] = [export_client.P1_ADAPTED_MOTION_EVENT.copy()]
+        manifest["actors"][0]["modes"] = [
+            {
+                "id": "onehand",
+                "motions": [
+                    {
+                        "action": "combo_4",
+                        "action_id": export_client.P1_COMBO4_ACTION_ID,
+                        "screen_wave": export_client.P1_SCREEN_WAVE.copy(),
+                    }
+                ],
+            }
+        ]
+        return manifest
 
     def test_generated_manifest_requires_exact_profile_artifacts(self):
         manifest = self.manifest()
@@ -454,6 +475,68 @@ class P1ProfileAuditTests(unittest.TestCase):
             r"unknown field at \$\.actors\[0\]\.modes\[0\]\.motions\[0\]\.events\[0\]\.private_source",
         ):
             export_client.validate_p1_manifest(manifest)
+
+    def test_generated_manifest_requires_only_selected_warrior_default_hair(self):
+        export_client.validate_p1_manifest(self.manifest())
+        for invalid in (True, 1, -1, "0", None):
+            manifest = self.manifest()
+            manifest["actors"][0]["default_hair_index"] = invalid
+            with (
+                self.subTest(invalid=invalid),
+                self.assertRaisesRegex(RuntimeError, "invalid default hair"),
+            ):
+                export_client.validate_p1_manifest(manifest)
+
+        manifest = self.manifest()
+        del manifest["actors"][0]["default_hair_index"]
+        with self.assertRaisesRegex(RuntimeError, "invalid default hair"):
+            export_client.validate_p1_manifest(manifest)
+
+        manifest = self.manifest()
+        manifest["actors"][1]["default_hair_index"] = 0
+        with self.assertRaisesRegex(RuntimeError, "invalid default hair"):
+            export_client.validate_p1_manifest(manifest)
+
+        for count_key in ("mesh_count", "textured_mesh_count"):
+            manifest = self.manifest()
+            manifest["artifacts"][0][count_key] = 3
+            with (
+                self.subTest(count_key=count_key),
+                self.assertRaisesRegex(RuntimeError, "does not contain the selected default hair"),
+            ):
+                export_client.validate_p1_manifest(manifest)
+
+    def test_generated_manifest_accepts_only_exact_screen_wave_adapter(self):
+        manifest = self.manifest_with_screen_wave()
+        export_client.validate_p1_manifest(manifest)
+
+        manifest = self.manifest_with_screen_wave()
+        manifest["adapted_motion_events"][0]["private_source"] = "combo_4.msa"
+        with self.assertRaisesRegex(
+            RuntimeError, r"unknown field at \$\.adapted_motion_events\[0\]\.private_source"
+        ):
+            export_client.validate_p1_manifest(manifest)
+
+        manifest = self.manifest_with_screen_wave()
+        manifest["actors"][0]["modes"][0]["motions"][0]["screen_wave"]["source_frame"] = 37
+        with self.assertRaisesRegex(RuntimeError, r"unknown field at .*screen_wave\.source_frame"):
+            export_client.validate_p1_manifest(manifest)
+
+        for mutation in ("missing_adapter", "wrong_action", "wrong_timing"):
+            with self.subTest(mutation=mutation):
+                manifest = self.manifest_with_screen_wave()
+                if mutation == "missing_adapter":
+                    del manifest["adapted_motion_events"]
+                elif mutation == "wrong_action":
+                    manifest["adapted_motion_events"][0]["action_id"] = "private.action"
+                else:
+                    manifest["actors"][0]["modes"][0]["motions"][0]["screen_wave"][
+                        "activation_offset_us"
+                    ] = 659_316
+                with self.assertRaisesRegex(
+                    RuntimeError, "adapted motion|screen wave|inconsistent"
+                ):
+                    export_client.validate_p1_manifest(manifest)
 
     def test_present_profile_requires_matching_trusted_action_definition(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -1379,6 +1379,14 @@
                 },
                 {
                   "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "pending_attack_invulnerability_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
                     "U64": []
                   },
                   "name": {
@@ -2162,6 +2170,14 @@
                   "name": {
                     "some": "pending_damage"
                   }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "area_invulnerable_until_us"
+                  }
                 }
               ]
             }
@@ -2237,6 +2253,157 @@
                   },
                   "name": {
                     "some": "registered_damage"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "monster_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "monster_life_sequence"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U256": []
+                          },
+                          "name": {
+                            "some": "__identity__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "source_character"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U64": []
+                  },
+                  "name": {
+                    "some": "source_action_revision"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "started_at_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "consumed_elapsed_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "direction_x"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "direction_z"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F64": []
+                  },
+                  "name": {
+                    "some": "distance_m"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "duration_us"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "monster_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "monster_life_sequence"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U8": []
+                  },
+                  "name": {
+                    "some": "phase"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "phase_started_at_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "phase_ends_at_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "completed_at_tick_us"
                   }
                 }
               ]
@@ -2738,6 +2905,216 @@
               "elements": [
                 {
                   "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U256": []
+                          },
+                          "name": {
+                            "some": "__identity__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "character_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "owner_life_sequence"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U64": []
+                  },
+                  "name": {
+                    "some": "action_revision"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "action_started_at_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "activation_at_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "expires_at_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "activated_at_tick_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "center_x"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "center_y"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "center_z"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "heading"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U16": []
+                  },
+                  "name": {
+                    "some": "damage"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U8": []
+                  },
+                  "name": {
+                    "some": "hit_count"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "U64": []
+                  },
+                  "name": {
+                    "some": "id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U256": []
+                          },
+                          "name": {
+                            "some": "__identity__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "character_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U64": []
+                  },
+                  "name": {
+                    "some": "action_revision"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "monster_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "monster_life_sequence"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "previous_center_x"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "previous_center_y"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "previous_center_z"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Bool": []
+                  },
+                  "name": {
+                    "some": "hit"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
                     "U8": []
                   },
                   "name": {
@@ -2820,9 +3197,9 @@
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "TickSchedule"
+            "source_name": "MonsterForce"
           },
-          "ty": 26
+          "ty": 21
         },
         {
           "custom_ordering": true,
@@ -2852,9 +3229,25 @@
           "custom_ordering": true,
           "source_name": {
             "scope": [],
+            "source_name": "TickSchedule"
+          },
+          "ty": 28
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
             "source_name": "MonsterDamage"
           },
           "ty": 20
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "PlayerAppearance"
+          },
+          "ty": 25
         },
         {
           "custom_ordering": true,
@@ -2871,14 +3264,6 @@
             "source_name": "AdminRequestCollision"
           },
           "ty": 6
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "PlayerAppearance"
-          },
-          "ty": 23
         },
         {
           "custom_ordering": true,
@@ -2902,7 +3287,7 @@
             "scope": [],
             "source_name": "Obstacle"
           },
-          "ty": 21
+          "ty": 23
         },
         {
           "custom_ordering": true,
@@ -2934,7 +3319,15 @@
             "scope": [],
             "source_name": "SimulationClock"
           },
-          "ty": 27
+          "ty": 29
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "SpecialAreaVictim"
+          },
+          "ty": 31
         },
         {
           "custom_ordering": true,
@@ -2942,7 +3335,15 @@
             "scope": [],
             "source_name": "Session"
           },
-          "ty": 25
+          "ty": 27
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "SpecialArea"
+          },
+          "ty": 30
         },
         {
           "custom_ordering": true,
@@ -2990,6 +3391,14 @@
             "scope": [],
             "source_name": "Player"
           },
+          "ty": 24
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "MonsterReaction"
+          },
           "ty": 22
         },
         {
@@ -3006,7 +3415,7 @@
             "scope": [],
             "source_name": "WorldInfo"
           },
-          "ty": 28
+          "ty": 32
         },
         {
           "custom_ordering": true,
@@ -3014,7 +3423,7 @@
             "scope": [],
             "source_name": "ProgressionOperator"
           },
-          "ty": 24
+          "ty": 26
         },
         {
           "custom_ordering": true,
@@ -3052,51 +3461,6 @@
     },
     {
       "Tables": [
-        {
-          "constraints": [
-            {
-              "data": {
-                "Unique": {
-                  "columns": [
-                    0
-                  ]
-                }
-              },
-              "source_name": {
-                "some": "player_appearance_character_id_key"
-              }
-            }
-          ],
-          "default_values": [],
-          "indexes": [
-            {
-              "accessor_name": {
-                "some": "character_id"
-              },
-              "algorithm": {
-                "BTree": [
-                  0
-                ]
-              },
-              "source_name": {
-                "some": "player_appearance_character_id_idx_btree"
-              }
-            }
-          ],
-          "is_event": false,
-          "primary_key": [
-            0
-          ],
-          "product_type_ref": 23,
-          "sequences": [],
-          "source_name": "player_appearance",
-          "table_access": {
-            "Public": []
-          },
-          "table_type": {
-            "User": []
-          }
-        },
         {
           "constraints": [
             {
@@ -3215,109 +3579,6 @@
                 }
               },
               "source_name": {
-                "some": "monster_id_key"
-              }
-            }
-          ],
-          "default_values": [],
-          "indexes": [
-            {
-              "accessor_name": {
-                "some": "id"
-              },
-              "algorithm": {
-                "BTree": [
-                  0
-                ]
-              },
-              "source_name": {
-                "some": "monster_id_idx_btree"
-              }
-            }
-          ],
-          "is_event": false,
-          "primary_key": [
-            0
-          ],
-          "product_type_ref": 18,
-          "sequences": [],
-          "source_name": "monster",
-          "table_access": {
-            "Public": []
-          },
-          "table_type": {
-            "User": []
-          }
-        },
-        {
-          "constraints": [
-            {
-              "data": {
-                "Unique": {
-                  "columns": [
-                    0
-                  ]
-                }
-              },
-              "source_name": {
-                "some": "inventory_access_character_id_key"
-              }
-            }
-          ],
-          "default_values": [],
-          "indexes": [
-            {
-              "accessor_name": {
-                "some": "character_id"
-              },
-              "algorithm": {
-                "BTree": [
-                  0
-                ]
-              },
-              "source_name": {
-                "some": "inventory_access_character_id_idx_btree"
-              }
-            },
-            {
-              "accessor_name": {
-                "some": "account"
-              },
-              "algorithm": {
-                "BTree": [
-                  1
-                ]
-              },
-              "source_name": {
-                "some": "inventory_access_account_idx_btree"
-              }
-            }
-          ],
-          "is_event": false,
-          "primary_key": [
-            0
-          ],
-          "product_type_ref": 13,
-          "sequences": [],
-          "source_name": "inventory_access",
-          "table_access": {
-            "Public": []
-          },
-          "table_type": {
-            "User": []
-          }
-        },
-        {
-          "constraints": [
-            {
-              "data": {
-                "Unique": {
-                  "columns": [
-                    0
-                  ]
-                }
-              },
-              "source_name": {
                 "some": "item_drop_id_key"
               }
             }
@@ -3380,126 +3641,6 @@
                 }
               },
               "source_name": {
-                "some": "admin_audit_id_key"
-              }
-            }
-          ],
-          "default_values": [],
-          "indexes": [
-            {
-              "accessor_name": {
-                "some": "actor_account"
-              },
-              "algorithm": {
-                "BTree": [
-                  5
-                ]
-              },
-              "source_name": {
-                "some": "admin_audit_actor_account_idx_btree"
-              }
-            },
-            {
-              "accessor_name": {
-                "some": "id"
-              },
-              "algorithm": {
-                "BTree": [
-                  0
-                ]
-              },
-              "source_name": {
-                "some": "admin_audit_id_idx_btree"
-              }
-            }
-          ],
-          "is_event": false,
-          "primary_key": [
-            0
-          ],
-          "product_type_ref": 3,
-          "sequences": [
-            {
-              "column": 0,
-              "increment": 1,
-              "max_value": {
-                "none": []
-              },
-              "min_value": {
-                "none": []
-              },
-              "source_name": {
-                "some": "admin_audit_id_seq"
-              },
-              "start": {
-                "none": []
-              }
-            }
-          ],
-          "source_name": "admin_audit",
-          "table_access": {
-            "Private": []
-          },
-          "table_type": {
-            "User": []
-          }
-        },
-        {
-          "constraints": [
-            {
-              "data": {
-                "Unique": {
-                  "columns": [
-                    0
-                  ]
-                }
-              },
-              "source_name": {
-                "some": "progression_operator_account_key"
-              }
-            }
-          ],
-          "default_values": [],
-          "indexes": [
-            {
-              "accessor_name": {
-                "some": "account"
-              },
-              "algorithm": {
-                "BTree": [
-                  0
-                ]
-              },
-              "source_name": {
-                "some": "progression_operator_account_idx_btree"
-              }
-            }
-          ],
-          "is_event": false,
-          "primary_key": [
-            0
-          ],
-          "product_type_ref": 24,
-          "sequences": [],
-          "source_name": "progression_operator",
-          "table_access": {
-            "Private": []
-          },
-          "table_type": {
-            "User": []
-          }
-        },
-        {
-          "constraints": [
-            {
-              "data": {
-                "Unique": {
-                  "columns": [
-                    0
-                  ]
-                }
-              },
-              "source_name": {
                 "some": "simulation_clock_id_key"
               }
             }
@@ -3524,7 +3665,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 27,
+          "product_type_ref": 29,
           "sequences": [],
           "source_name": "simulation_clock",
           "table_access": {
@@ -3545,12 +3686,25 @@
                 }
               },
               "source_name": {
-                "some": "world_info_id_key"
+                "some": "special_area_victim_id_key"
               }
             }
           ],
           "default_values": [],
           "indexes": [
+            {
+              "accessor_name": {
+                "some": "character_id"
+              },
+              "algorithm": {
+                "BTree": [
+                  1
+                ]
+              },
+              "source_name": {
+                "some": "special_area_victim_character_id_idx_btree"
+              }
+            },
             {
               "accessor_name": {
                 "some": "id"
@@ -3561,7 +3715,7 @@
                 ]
               },
               "source_name": {
-                "some": "world_info_id_idx_btree"
+                "some": "special_area_victim_id_idx_btree"
               }
             }
           ],
@@ -3569,52 +3723,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 28,
-          "sequences": [],
-          "source_name": "world_info",
-          "table_access": {
-            "Public": []
-          },
-          "table_type": {
-            "User": []
-          }
-        },
-        {
-          "constraints": [
-            {
-              "data": {
-                "Unique": {
-                  "columns": [
-                    0
-                  ]
-                }
-              },
-              "source_name": {
-                "some": "tick_schedule_scheduled_id_key"
-              }
-            }
-          ],
-          "default_values": [],
-          "indexes": [
-            {
-              "accessor_name": {
-                "some": "scheduled_id"
-              },
-              "algorithm": {
-                "BTree": [
-                  0
-                ]
-              },
-              "source_name": {
-                "some": "tick_schedule_scheduled_id_idx_btree"
-              }
-            }
-          ],
-          "is_event": false,
-          "primary_key": [
-            0
-          ],
-          "product_type_ref": 26,
+          "product_type_ref": 31,
           "sequences": [
             {
               "column": 0,
@@ -3626,14 +3735,14 @@
                 "none": []
               },
               "source_name": {
-                "some": "tick_schedule_scheduled_id_seq"
+                "some": "special_area_victim_id_seq"
               },
               "start": {
                 "none": []
               }
             }
           ],
-          "source_name": "tick_schedule",
+          "source_name": "special_area_victim",
           "table_access": {
             "Private": []
           },
@@ -3652,7 +3761,7 @@
                 }
               },
               "source_name": {
-                "some": "admin_request_collision_collision_key_key"
+                "some": "monster_force_monster_id_key"
               }
             }
           ],
@@ -3660,7 +3769,7 @@
           "indexes": [
             {
               "accessor_name": {
-                "some": "collision_key"
+                "some": "monster_id"
               },
               "algorithm": {
                 "BTree": [
@@ -3668,7 +3777,7 @@
                 ]
               },
               "source_name": {
-                "some": "admin_request_collision_collision_key_idx_btree"
+                "some": "monster_force_monster_id_idx_btree"
               }
             }
           ],
@@ -3676,9 +3785,9 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 6,
+          "product_type_ref": 21,
           "sequences": [],
-          "source_name": "admin_request_collision",
+          "source_name": "monster_force",
           "table_access": {
             "Private": []
           },
@@ -3759,94 +3868,6 @@
                 }
               },
               "source_name": {
-                "some": "command_feedback_id_key"
-              }
-            }
-          ],
-          "default_values": [],
-          "indexes": [
-            {
-              "accessor_name": {
-                "some": "id"
-              },
-              "algorithm": {
-                "BTree": [
-                  0
-                ]
-              },
-              "source_name": {
-                "some": "command_feedback_id_idx_btree"
-              }
-            },
-            {
-              "accessor_name": {
-                "some": "account"
-              },
-              "algorithm": {
-                "BTree": [
-                  1
-                ]
-              },
-              "source_name": {
-                "some": "command_feedback_account_idx_btree"
-              }
-            },
-            {
-              "accessor_name": {
-                "some": "request_id"
-              },
-              "algorithm": {
-                "BTree": [
-                  2
-                ]
-              },
-              "source_name": {
-                "some": "command_feedback_request_id_idx_btree"
-              }
-            }
-          ],
-          "is_event": false,
-          "primary_key": [
-            0
-          ],
-          "product_type_ref": 11,
-          "sequences": [
-            {
-              "column": 0,
-              "increment": 1,
-              "max_value": {
-                "none": []
-              },
-              "min_value": {
-                "none": []
-              },
-              "source_name": {
-                "some": "command_feedback_id_seq"
-              },
-              "start": {
-                "none": []
-              }
-            }
-          ],
-          "source_name": "command_feedback",
-          "table_access": {
-            "Public": []
-          },
-          "table_type": {
-            "User": []
-          }
-        },
-        {
-          "constraints": [
-            {
-              "data": {
-                "Unique": {
-                  "columns": [
-                    0
-                  ]
-                }
-              },
-              "source_name": {
                 "some": "obstacle_id_key"
               }
             }
@@ -3871,56 +3892,11 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 21,
+          "product_type_ref": 23,
           "sequences": [],
           "source_name": "obstacle",
           "table_access": {
             "Public": []
-          },
-          "table_type": {
-            "User": []
-          }
-        },
-        {
-          "constraints": [
-            {
-              "data": {
-                "Unique": {
-                  "columns": [
-                    0
-                  ]
-                }
-              },
-              "source_name": {
-                "some": "session_connection_id_key"
-              }
-            }
-          ],
-          "default_values": [],
-          "indexes": [
-            {
-              "accessor_name": {
-                "some": "connection_id"
-              },
-              "algorithm": {
-                "BTree": [
-                  0
-                ]
-              },
-              "source_name": {
-                "some": "session_connection_id_idx_btree"
-              }
-            }
-          ],
-          "is_event": false,
-          "primary_key": [
-            0
-          ],
-          "product_type_ref": 25,
-          "sequences": [],
-          "source_name": "session",
-          "table_access": {
-            "Private": []
           },
           "table_type": {
             "User": []
@@ -4070,7 +4046,7 @@
                 }
               },
               "source_name": {
-                "some": "controller_identity_key"
+                "some": "player_appearance_character_id_key"
               }
             }
           ],
@@ -4078,7 +4054,7 @@
           "indexes": [
             {
               "accessor_name": {
-                "some": "identity"
+                "some": "character_id"
               },
               "algorithm": {
                 "BTree": [
@@ -4086,7 +4062,7 @@
                 ]
               },
               "source_name": {
-                "some": "controller_identity_idx_btree"
+                "some": "player_appearance_character_id_idx_btree"
               }
             }
           ],
@@ -4094,11 +4070,11 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 12,
+          "product_type_ref": 25,
           "sequences": [],
-          "source_name": "controller",
+          "source_name": "player_appearance",
           "table_access": {
-            "Private": []
+            "Public": []
           },
           "table_type": {
             "User": []
@@ -4351,6 +4327,649 @@
                 }
               },
               "source_name": {
+                "some": "progression_operator_account_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "account"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "progression_operator_account_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 26,
+          "sequences": [],
+          "source_name": "progression_operator",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "special_area_character_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "character_id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "special_area_character_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 30,
+          "sequences": [],
+          "source_name": "special_area",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "monster_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "monster_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 18,
+          "sequences": [],
+          "source_name": "monster",
+          "table_access": {
+            "Public": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "inventory_access_character_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "character_id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "inventory_access_character_id_idx_btree"
+              }
+            },
+            {
+              "accessor_name": {
+                "some": "account"
+              },
+              "algorithm": {
+                "BTree": [
+                  1
+                ]
+              },
+              "source_name": {
+                "some": "inventory_access_account_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 13,
+          "sequences": [],
+          "source_name": "inventory_access",
+          "table_access": {
+            "Public": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "monster_reaction_monster_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "monster_id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "monster_reaction_monster_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 22,
+          "sequences": [],
+          "source_name": "monster_reaction",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "admin_audit_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "actor_account"
+              },
+              "algorithm": {
+                "BTree": [
+                  5
+                ]
+              },
+              "source_name": {
+                "some": "admin_audit_actor_account_idx_btree"
+              }
+            },
+            {
+              "accessor_name": {
+                "some": "id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "admin_audit_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 3,
+          "sequences": [
+            {
+              "column": 0,
+              "increment": 1,
+              "max_value": {
+                "none": []
+              },
+              "min_value": {
+                "none": []
+              },
+              "source_name": {
+                "some": "admin_audit_id_seq"
+              },
+              "start": {
+                "none": []
+              }
+            }
+          ],
+          "source_name": "admin_audit",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "world_info_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "world_info_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 32,
+          "sequences": [],
+          "source_name": "world_info",
+          "table_access": {
+            "Public": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "tick_schedule_scheduled_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "scheduled_id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "tick_schedule_scheduled_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 28,
+          "sequences": [
+            {
+              "column": 0,
+              "increment": 1,
+              "max_value": {
+                "none": []
+              },
+              "min_value": {
+                "none": []
+              },
+              "source_name": {
+                "some": "tick_schedule_scheduled_id_seq"
+              },
+              "start": {
+                "none": []
+              }
+            }
+          ],
+          "source_name": "tick_schedule",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "admin_request_collision_collision_key_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "collision_key"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "admin_request_collision_collision_key_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 6,
+          "sequences": [],
+          "source_name": "admin_request_collision",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "command_feedback_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "command_feedback_id_idx_btree"
+              }
+            },
+            {
+              "accessor_name": {
+                "some": "account"
+              },
+              "algorithm": {
+                "BTree": [
+                  1
+                ]
+              },
+              "source_name": {
+                "some": "command_feedback_account_idx_btree"
+              }
+            },
+            {
+              "accessor_name": {
+                "some": "request_id"
+              },
+              "algorithm": {
+                "BTree": [
+                  2
+                ]
+              },
+              "source_name": {
+                "some": "command_feedback_request_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 11,
+          "sequences": [
+            {
+              "column": 0,
+              "increment": 1,
+              "max_value": {
+                "none": []
+              },
+              "min_value": {
+                "none": []
+              },
+              "source_name": {
+                "some": "command_feedback_id_seq"
+              },
+              "start": {
+                "none": []
+              }
+            }
+          ],
+          "source_name": "command_feedback",
+          "table_access": {
+            "Public": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "session_connection_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "connection_id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "session_connection_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 27,
+          "sequences": [],
+          "source_name": "session",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "controller_identity_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "identity"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "controller_identity_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 12,
+          "sequences": [],
+          "source_name": "controller",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
                 "some": "player_identity_key"
               }
             }
@@ -4375,7 +4994,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 22,
+          "product_type_ref": 24,
           "sequences": [],
           "source_name": "player",
           "table_access": {
@@ -5255,7 +5874,7 @@
             "elements": [
               {
                 "algebraic_type": {
-                  "Ref": 26
+                  "Ref": 28
                 },
                 "name": {
                   "some": "_schedule"
@@ -5411,12 +6030,6 @@
         "entries": [
           {
             "Table": {
-              "canonical_name": "player_appearance",
-              "source_name": "player_appearance"
-            }
-          },
-          {
-            "Table": {
               "canonical_name": "inventory_state",
               "source_name": "inventory_state"
             }
@@ -5429,32 +6042,8 @@
           },
           {
             "Table": {
-              "canonical_name": "monster",
-              "source_name": "monster"
-            }
-          },
-          {
-            "Table": {
-              "canonical_name": "inventory_access",
-              "source_name": "inventory_access"
-            }
-          },
-          {
-            "Table": {
               "canonical_name": "item_drop",
               "source_name": "item_drop"
-            }
-          },
-          {
-            "Table": {
-              "canonical_name": "admin_audit",
-              "source_name": "admin_audit"
-            }
-          },
-          {
-            "Table": {
-              "canonical_name": "progression_operator",
-              "source_name": "progression_operator"
             }
           },
           {
@@ -5465,20 +6054,14 @@
           },
           {
             "Table": {
-              "canonical_name": "world_info",
-              "source_name": "world_info"
+              "canonical_name": "special_area_victim",
+              "source_name": "special_area_victim"
             }
           },
           {
             "Table": {
-              "canonical_name": "tick_schedule",
-              "source_name": "tick_schedule"
-            }
-          },
-          {
-            "Table": {
-              "canonical_name": "admin_request_collision",
-              "source_name": "admin_request_collision"
+              "canonical_name": "monster_force",
+              "source_name": "monster_force"
             }
           },
           {
@@ -5489,20 +6072,8 @@
           },
           {
             "Table": {
-              "canonical_name": "command_feedback",
-              "source_name": "command_feedback"
-            }
-          },
-          {
-            "Table": {
               "canonical_name": "obstacle",
               "source_name": "obstacle"
-            }
-          },
-          {
-            "Table": {
-              "canonical_name": "session",
-              "source_name": "session"
             }
           },
           {
@@ -5519,8 +6090,8 @@
           },
           {
             "Table": {
-              "canonical_name": "controller",
-              "source_name": "controller"
+              "canonical_name": "player_appearance",
+              "source_name": "player_appearance"
             }
           },
           {
@@ -5545,6 +6116,78 @@
             "Table": {
               "canonical_name": "monster_damage",
               "source_name": "monster_damage"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "progression_operator",
+              "source_name": "progression_operator"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "special_area",
+              "source_name": "special_area"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "monster",
+              "source_name": "monster"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "inventory_access",
+              "source_name": "inventory_access"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "monster_reaction",
+              "source_name": "monster_reaction"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "admin_audit",
+              "source_name": "admin_audit"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "world_info",
+              "source_name": "world_info"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "tick_schedule",
+              "source_name": "tick_schedule"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "admin_request_collision",
+              "source_name": "admin_request_collision"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "command_feedback",
+              "source_name": "command_feedback"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "session",
+              "source_name": "session"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "controller",
+              "source_name": "controller"
             }
           },
           {

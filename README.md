@@ -6,6 +6,20 @@ building collision, presence, combat and rewards. Blender converts selected
 original warrior and Yongan assets. The original Metin2 executable cannot
 connect to this game's new protocol.
 
+Future quests, items, mobs and classes follow the
+[data-based content authoring contract](docs/rebuild/content-authoring.md):
+versioned definitions select shared mechanics, with server-owned progress and
+rewards. General registries and quest execution remain upcoming work.
+
+The latest local combat checkpoint accepts the selected four-hit Sword+0 combo,
+area damage, knockback/standup and camera shake. Its **154-check exported
+Chrome/Linux run** also passes account/reconnect lifecycle and both real session
+refreshes, with zero position drift and no browser engine errors. Character
+facing, hair and sword-alignment corrections are verified locally. See the
+[acceptance record](.local/p2-finisher/root-acceptance-review.json) and
+[implementation status](docs/rebuild/implementation-status.md). This protocol-9
+checkpoint has not replaced the public protocol-4 build below.
+
 Repository: [kcanakdag/metin2-godotime](https://github.com/kcanakdag/metin2-godotime).
 The development browser deployment is [kcanakdag.com:8443](https://kcanakdag.com:8443/),
 on the VPS at `159.195.213.9`. It is updated during development and may restart.
@@ -245,10 +259,11 @@ commands below. A saved editor profile may override the built-in endpoint.
 Register an account, choose the supported empire, create a character and enter.
 Game data is in `.local/spacetimedb`; account data and keys are in `.local/auth`.
 Use a new database or an explicit migration for incompatible changes. The
-Makefile's retained legacy placeholder is `mt2-yongan-v2`; current protocol-8
-development should pass a fresh explicit `DB`, such as
-`DB=mt2-p2-rootmotion-yongan-local`. Public P1 exports/deployment still use
-`DB=mt2-p1-v4` until a separately qualified P2 rollout.
+Makefile's retained legacy placeholder is `mt2-yongan-v2`; current protocol-9
+Slice D development should pass a fresh explicit `DB`, such as
+`DB=mt2-p2-finisher-yongan-local`. Slice D remains pending two-client
+qualification. Public P1 exports/deployment still use `DB=mt2-p1-v4` until a
+separately qualified rollout.
 
 Two clients on one machine use different local profiles and separate accounts:
 
@@ -260,10 +275,11 @@ make client SERVER_URL=http://127.0.0.1:8184 PROFILE=bob
 
 Make enables the `yongan` Cargo feature by default, requiring the ignored
 `server/content/yongan.bin` and `.sha256` produced by `make bake-map`.
-For the smaller training world, use
-`make server-publish SERVER_FEATURES= DB=mt2-training-v2` and select that database
-in both clients. Raw Cargo without `--features yongan` also selects training.
-Both variants use application protocol 8. Earlier databases do not contain all
+For the smaller training world, use a fresh protocol-9 name such as
+`make server-publish SERVER_FEATURES= DB=mt2-p2-finisher-training-local`, then
+select that database in both clients. Raw Cargo without `--features yongan` also
+selects training.
+Both variants use application protocol 9. Earlier databases do not contain all
 private progression, command-feedback, and combat-target tables and need a new
 database or an explicit migration before using a current client. The production
 default requires an account token. Legacy guest smoke tests need a separate module
@@ -277,7 +293,7 @@ compiled with `MT2_ALLOW_GUESTS=1`; never enable that option in a public build.
 | Left click living monster | Request selection of that exact subscribed monster generation |
 | WASD / arrows | Move relative to the camera |
 | Right mouse drag; wheel | Orbit; zoom |
-| Space | Attack the selected exact monster, or the nearest valid enemy when no target is selected; Sword+0 accepts the current three-step server-timed prefix |
+| Space | Attack the selected exact monster, or the nearest valid enemy when no target is selected; Sword+0 accepts the current four-step server-timed common chain, whose Slice D qualification remains pending |
 | E / Z | Collect nearby gold/items with server distance/ownership validation |
 | I / Inventory button | Open the two-page inventory |
 | Item left click, then destination; drag/drop | Carry or move an item between valid bag/equipment/quickslot locations |
@@ -304,15 +320,16 @@ visually occlude a target proxy, while server movement blocking remains
 authoritative.
 
 With Sword+0 equipped, a second or third Space during the current action's
-source-defined input window requests the next link through `combo_3`. The server
-alone schedules and publishes each transition; both clients keep presenting the
-current action until its subscribed row changes. An accepted movement intent or
-target clear cancels a queued link, while renewing the same exact target
-preserves it. The current accepted action's authoritative root travel and hit
-continue after those queue cancellations; stored ordinary locomotion begins
-after the attack hold ends. Target death clears future links but the lethal
-action continues its root travel through clip end. A targetless or missed chain
-may animate and travel without inventing damage or a new selection.
+source-defined input window requests `combo_2` or `combo_3`; a fourth request
+inside `combo_3`'s window queues terminal `combo_4`. The server alone schedules
+and publishes each transition; both clients keep presenting the current action
+until its subscribed row changes. An accepted movement intent or target clear
+cancels a queued link, while renewing the same exact target preserves it. The
+current accepted action's authoritative root travel and hit continue after those
+queue cancellations; stored ordinary locomotion begins after the attack hold
+ends. Target death clears future links but the lethal action continues its root
+travel through clip end. A targetless or missed chain may animate and travel
+without inventing damage or a new selection.
 
 Approach the Wild Dog near the town spawn, attack it, and collect its
 gold and one red potion. It can also defeat the player. Player respawn takes 8 seconds; monster

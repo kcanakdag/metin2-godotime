@@ -26,9 +26,11 @@ renderer/rendering_method="gl_compatibility"
 """
 SMOKES = {
     "content_gate": ("main_content_gate_smoke.gd", "MAIN_CONTENT_GATE_SMOKE"),
+    "options": ("classic_system_options_smoke.gd", "CLASSIC_SYSTEM_OPTIONS_SMOKE"),
     "panel": ("classic_target_smoke.gd", "CLASSIC_TARGET_SMOKE"),
     "picker": ("world_picker_smoke.gd", "WORLD_PICKER_SMOKE"),
     "probe": ("export_probe_smoke.gd", "EXPORT_PROBE_SMOKE"),
+    "screen_wave": ("screen_wave_smoke.gd", "SCREEN_WAVE_SMOKE"),
 }
 TEST_SUPPORT = ("export_probe.gd",)
 
@@ -75,6 +77,8 @@ def main() -> None:
         shutil.copytree(CLIENT / "spacetime_bindings", stage / "spacetime_bindings")
         shutil.copytree(actor_profile, stage / "assets/imported/content/p0-warrior-dog")
         shutil.copytree(ui_profile, stage / "assets/imported/ui")
+        (stage / "scenes").mkdir()
+        shutil.copy2(CLIENT / "scenes/main.tscn", stage / "scenes/main.tscn")
         (stage / "tests").mkdir()
         for script, _marker in SMOKES.values():
             shutil.copy2(CLIENT / "tests" / script, stage / "tests" / script)
@@ -83,12 +87,16 @@ def main() -> None:
         (stage / "project.godot").write_text(PROJECT)
         tested_files = {
             "main": sha256(stage / "scripts/main.gd"),
+            "main_scene": sha256(stage / "scenes/main.tscn"),
             "actor_catalog": sha256(stage / "scripts/content/actor_catalog.gd"),
             "pve_actor": sha256(stage / "scripts/actors/pve_actor.gd"),
             "game_connection": sha256(stage / "scripts/net/game_connection.gd"),
             "dev_hud": sha256(stage / "scripts/ui/dev_hud.gd"),
             "classic_target": sha256(stage / "scripts/ui/classic_target.gd"),
+            "classic_system_options": sha256(stage / "scripts/ui/classic_system_options.gd"),
             "world_picker": sha256(stage / "scripts/world/world_picker.gd"),
+            "orbit_camera": sha256(stage / "scripts/camera/orbit_camera.gd"),
+            "screen_wave": sha256(stage / "scripts/camera/screen_wave.gd"),
             "actor_profile_manifest": sha256(
                 stage / "assets/imported/content/p0-warrior-dog/manifest.v1.json"
             ),

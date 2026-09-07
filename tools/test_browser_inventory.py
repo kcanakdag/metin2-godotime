@@ -30,7 +30,13 @@ def exercise_inventory(page, snapshot, wait, output):
     sword, potion = item(10), item(27001)
     page.keyboard.press("i")
     wait("inventory_keyboard_opens_original_window", lambda: ui()["visible"])
-    page.mouse.move(*cell_point(sword["cell"]))
+    sword_point = cell_point(sword["cell"])
+    window = ui()["window_rect"]
+    # ClassicSlot exposes its tooltip on the real mouse-enter edge. Enter from
+    # outside the newly shown inventory and retain intermediate motion events so
+    # opening the window under a previously stationary pointer cannot lose it.
+    page.mouse.move(window[0] - 8, sword_point[1])
+    page.mouse.move(*sword_point, steps=6)
     wait("original_item_tooltip_appears", lambda: ui()["tooltip_visible"])
     page.screenshot(path=str(output / "inventory-tooltip.png"))
     click(cell_point(sword["cell"]), button="right")

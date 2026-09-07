@@ -35,10 +35,10 @@ def read_fresh_json_snapshot(
 ) -> tuple[dict, int, float]:
     """Read one complete probe snapshot without substituting an empty world.
 
-    The exported probe truncates and rewrites its report in place. A reader can
-    therefore briefly observe a missing, empty, or partial JSON document. Retry
-    fresh filesystem reads for a bounded interval, then expose unavailability as
-    an error. A nonempty parsed snapshot remains authoritative even when one of
+    Current exports atomically replace complete snapshots. Older exports wrote
+    in place; startup and those older writers can briefly expose missing, empty,
+    or partial JSON. Retry fresh reads for a bounded interval, then expose
+    unavailability as an error. A nonempty parsed snapshot remains authoritative even when one of
     its subscribed tables, such as ``monsters``, is genuinely empty.
     """
     if not math.isfinite(timeout) or not math.isfinite(interval) or timeout < 0 or interval <= 0:

@@ -92,8 +92,13 @@ func _ready() -> void:
 	if not _target_effect_catalog.load_required():
 		hud.show_notice(_target_effect_catalog.error_message)
 	hud.set_connection_defaults(
-		_settings.server_url, _settings.database, _settings.player_name, _profile
+		_settings.server_url,
+		_settings.database,
+		_settings.player_name,
+		_profile,
+		bool(_settings.screen_wave_enabled)
 	)
+	camera_rig.set_screen_wave_enabled(bool(_settings.screen_wave_enabled))
 	hud.set_connection_state("disconnected", "Choose a name and enter the shared map.")
 	_create_marker()
 	var dev_capture := preload("res://scripts/dev_capture.gd").new()
@@ -255,6 +260,7 @@ func dev_snapshot() -> Dictionary:
 		"world_tick_ms": int(connection.world_info.get("tick_ms", 50)),
 		"debug_visible": hud.is_debug_visible(),
 		"camera_distance": camera_rig.distance,
+		"screen_wave": camera_rig.screen_wave_snapshot(),
 		"obstacles": connection.obstacles.size(),
 		"monsters": connection.monsters.duplicate(true),
 		"combat_target": connection.selected_combat_target().duplicate(true),
@@ -286,6 +292,11 @@ func _connect_game(server_url: String, database: String, player_name: String) ->
 	_settings.server_url = server_url.strip_edges()
 	_settings.database = database.strip_edges()
 	_settings.player_name = player_name.strip_edges()
+	_save_settings()
+	connection.connect_game(server_url, database, player_name, _profile)
+
+
+func _save_settings() -> void:
 	DirAccess.make_dir_recursive_absolute(
 		ProjectSettings.globalize_path(_settings_path.get_base_dir())
 	)
@@ -301,12 +312,12 @@ func _connect_game(server_url: String, database: String, player_name: String) ->
 							"server_url": _settings.server_url,
 							"database": _settings.database,
 							"player_name": _settings.player_name,
+							"screen_wave_enabled": bool(_settings.screen_wave_enabled),
 						}
 					)
 				)
 			)
 		)
-	connection.connect_game(server_url, database, player_name, _profile)
 
 
 func _logout() -> void:
@@ -336,6 +347,7 @@ func _on_connection_state(state: String, message: String) -> void:
 	if state != "connected":
 		_held_movement = false
 		_set_hovered_actor(null)
+		camera_rig.reset_screen_waves()
 
 
 func _on_players(rows: Array) -> void:
@@ -366,6 +378,7 @@ func _on_server_clock(server_time_us: int) -> void:
 			if not actor.loot_mode and not actor.row.is_empty():
 				actor.apply_state(actor.row, server_time_us)
 	_last_server_time_us = server_time_us
+	_observe_screen_waves(server_time_us)
 
 
 func _queue_player_sync() -> void:
@@ -412,6 +425,49 @@ func _reconcile_players() -> void:
 		hud.set_player_info({})
 		hud.set_progression({})
 	hud.set_players(_player_rows, connection.local_identity)
+	_observe_screen_waves(connection.server_time_us)
+
+
+func _observe_screen_waves(server_time_us: int) -> void:
+	if server_time_us <= 0 or connection.state != "connected":
+		return
+	var viewer_position: Variant
+	for row: Dictionary in _player_rows:
+		if (
+			bool(row.get("online", false))
+			and str(row.get("identity", "")) == connection.local_identity
+		):
+			viewer_position = _subscribed_position(row)
+			break
+	if not viewer_position is Vector3:
+		camera_rig.reset_screen_waves()
+		return
+	for row: Dictionary in _player_rows:
+		if not bool(row.get("online", false)) or int(row.get("activity", -1)) != 2:
+			continue
+		var action_id := str(row.get("attack_action_id", ""))
+		if action_id.is_empty():
+			continue
+		var motion := _actor_catalog.motion(ActorCatalogScript.WARRIOR_ID, "", action_id)
+		var event: Variant = motion.get("screen_wave", {})
+		var actor_position: Variant = _subscribed_position(row)
+		if not event is Dictionary or event.is_empty() or not actor_position is Vector3:
+			continue
+		camera_rig.observe_screen_wave(
+			str(row.get("identity", "")),
+			row,
+			event,
+			actor_position,
+			viewer_position,
+			server_time_us
+		)
+
+
+func _subscribed_position(row: Dictionary) -> Variant:
+	var position := Vector3(
+		float(row.get("x", NAN)), float(row.get("y", NAN)), float(row.get("z", NAN))
+	)
+	return position if position.is_finite() else null
 
 
 func _on_world_info(info: Dictionary) -> void:
@@ -635,6 +691,10 @@ func _on_debug_option(option: String, value: Variant) -> void:
 			$Sun.shadow_enabled = bool(value)
 		"camera_distance":
 			camera_rig.distance = float(value)
+		"screen_wave_enabled":
+			_settings.screen_wave_enabled = bool(value)
+			camera_rig.set_screen_wave_enabled(bool(value))
+			_save_settings()
 
 
 func _save_screenshot() -> void:
@@ -727,7 +787,10 @@ func _ground_pick_snapshot() -> Dictionary:
 
 func _load_settings() -> void:
 	_settings = {
-		"server_url": DEFAULT_SERVER, "database": DEFAULT_DATABASE, "player_name": "Warrior"
+		"server_url": DEFAULT_SERVER,
+		"database": DEFAULT_DATABASE,
+		"player_name": "Warrior",
+		"screen_wave_enabled": true,
 	}
 	var overrides: Dictionary = {}
 	var arguments := OS.get_cmdline_user_args()
@@ -781,6 +844,8 @@ func _merge_config(path: String) -> void:
 	for key: String in ["server_url", "database", "player_name"]:
 		if parsed.get(key) is String and not str(parsed[key]).is_empty():
 			_settings[key] = parsed[key]
+	if parsed.get("screen_wave_enabled") is bool:
+		_settings.screen_wave_enabled = parsed.screen_wave_enabled
 	if (
 		parsed.get("default_player_name") is String
 		and not str(parsed.default_player_name).is_empty()

@@ -3,6 +3,7 @@ extends SubViewportContainer
 
 const ActorCatalogScript := preload("res://scripts/content/actor_catalog.gd")
 const ActorPresentationScript := preload("res://scripts/actors/actor_presentation.gd")
+const CAMERA_FACING_YAW := PI
 
 var _viewport: SubViewport
 var _stage: Node3D
@@ -72,6 +73,9 @@ func set_characters(rows: Array, slot: int, creating: bool) -> void:
 				continue
 			_stage.add_child(model)
 			_models[key] = model
+			# Converted actors use canonical -Z forward. The fixed intro camera is
+			# on +Z, so turn this presentation toward it instead of showing its back.
+			model.rotation.y = CAMERA_FACING_YAW
 			model.set_weapon(0)
 			model.play_action("general", "", "wait", int(key))
 	_update_positions(true)
@@ -82,10 +86,16 @@ func _process(delta: float) -> void:
 
 
 func snapshot() -> Dictionary:
+	var camera_facing := true
+	for model: Node3D in _models.values():
+		camera_facing = (
+			camera_facing and absf(wrapf(model.rotation.y - CAMERA_FACING_YAW, -PI, PI)) < 0.000001
+		)
 	return {
 		"models": _models.size(),
 		"selected_slot": _selected_slot,
 		"creating": _creating,
+		"camera_facing": camera_facing,
 		"error": _error_message,
 	}
 

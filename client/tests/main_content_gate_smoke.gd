@@ -44,6 +44,7 @@ var _failed := false
 func _initialize() -> void:
 	_test_failure("Required target-effect catalog is missing.", "missing")
 	_test_failure("Required target-effect catalog is not valid JSON.", "invalid")
+	_test_screen_wave_setting_round_trip()
 	if not _failed:
 		print("MAIN_CONTENT_GATE_SMOKE PASS ", _checks, " checks")
 	quit(1 if _failed else 0)
@@ -77,6 +78,51 @@ func _test_failure(message: String, label: String) -> void:
 	main.free()
 	connection.free()
 	hud.free()
+
+
+func _test_screen_wave_setting_round_trip() -> void:
+	var path := "user://screen-wave-setting-smoke.json"
+	var writer := MainScript.new()
+	writer.set("_settings_path", path)
+	(
+		writer
+		. set(
+			"_settings",
+			{
+				"server_url": "http://127.0.0.1:3000",
+				"database": "settings-smoke",
+				"player_name": "Accessibility",
+				"screen_wave_enabled": false,
+			}
+		)
+	)
+	writer.call("_save_settings")
+	var reader := MainScript.new()
+	(
+		reader
+		. set(
+			"_settings",
+			{
+				"server_url": "default",
+				"database": "default",
+				"player_name": "default",
+				"screen_wave_enabled": true,
+			}
+		)
+	)
+	reader.call("_merge_config", path)
+	var restored: Dictionary = reader.get("_settings")
+	_check(
+		(
+			restored.server_url == "http://127.0.0.1:3000"
+			and restored.database == "settings-smoke"
+			and restored.player_name == "Accessibility"
+			and not restored.screen_wave_enabled
+		),
+		"screen-wave accessibility preference survives a settings reload",
+	)
+	writer.free()
+	reader.free()
 
 
 func _check(passed: bool, description: String) -> void:

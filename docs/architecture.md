@@ -31,6 +31,12 @@ delivery phases. Its [feature catalog](rebuild/feature-catalog.md) records the
 original-source requirements and dependencies; proposed boundaries are not
 implemented capabilities.
 
+Upcoming content generalization follows the
+[extensible authoring contract](rebuild/content-authoring.md): typed, versioned
+item/quest/mob/class definitions select shared server mechanics. Mutable item
+instances and quest progress remain server-owned. The current selected fixture
+does not yet implement general registries or a quest executor.
+
 ## Shared map content
 
 The [map pipeline](map-import.md) resolves original source records at pinned
@@ -66,7 +72,7 @@ with no multiplayer connection.
 
 Without the Cargo feature, the server uses the small flat training ground with
 five box obstacles. Make enables Yongan by default; raw Cargo has no default
-feature. Both normal builds expose the same protocol-8 schema.
+feature. Both normal builds expose the same current protocol-9 schema.
 
 ## Networking and runtime boundaries
 
@@ -79,7 +85,7 @@ The socket subprotocol is `v3.bsatn.spacetimedb`. In the pinned server,
 coalesces messages using the
 [v2 binary schema](https://github.com/clockworklabs/SpacetimeDB/blob/v2.8.3/crates/client-api-messages/src/websocket/v2.rs).
 This transport version is separate from application
-`world_info.protocol_version = 8`, checked before joining.
+`world_info.protocol_version = 9`, checked before joining.
 
 Decoding runs on the main thread, with no compression and
 `confirmed_reads = false`. Cached tables require primary keys; Brotli is
@@ -95,7 +101,7 @@ The standard engine and pure GDScript path support Web without a .NET dependency
 | `server/src/content.rs` | Trusted terrain, map bounds, building/water blocking and elevated surfaces |
 | `server/src/combat.rs` | Monster simulation, attacks, health, death/respawn and loot |
 | `server/src/targeting.rs` | Private selected-target state, owner-only projection, churn limits and cleanup |
-| `server/src/combo.rs` | Private three-step combo chain, input classification, queued transitions and cancellation |
+| `server/src/combo.rs` | Private four-step combo chain, input classification, queued transitions and cancellation |
 | `server/src/root_motion.rs` | Server-owned combo displacement, canonical stepping and collision consumption |
 | `server/src/inventory.rs` | Item ownership, grid placement, equipment, consumables and item drops |
 | `server/src/progression.rs` | Source-backed Warrior stats, experience quarters, levels and stat allocation |
@@ -505,6 +511,77 @@ the fixed-input probe, Windows execution, current Godot MCP inspection, exact
 proprietary Granny within-cycle/blend behavior, terminal combo step 4, skills,
 full P2 and the full game remain unqualified.
 
+Protocol 9 extends the same type-0 Sword chain with terminal `combo_4`. Its
+trusted schema keeps the first three strict root-motion records and records an
+explicit pinned-source exception for the fourth action: the runtime endpoint is
+the raw GR2 loop translation `(0, -1.1964712524414062)` metres, while the MSA
+placement differs by about 0.191 m. The server continues the bounded linear
+endpoint approximation and never accepts an action, time, position or force
+from the client. A fourth `perform_attack()` is accepted only through the
+generated `combo_3` input window; `combo_4` is terminal and has no follow-up
+window or ordinary trace hit.
+
+At the exact action-relative 666,667-microsecond boundary, simulation advances
+the player's collision-aware root position to that instant and captures a
+fixed world sphere from the authored local `(0, -1.2)` m center. The area lasts
+200 ms, scans only on later timestamps, excludes its exact expiry and considers
+at most 16 trusted Wild Dog lives in stable ID/life order. Each victim's static
+defending sphere is swept from its activation sample to its current sample, so
+a crossing before the first scan is retained. Selection, target death and
+equipment changes do not rewrite the accepted event. Owner death, leave,
+switch, disconnect or an invalid control lease clears it without replay.
+
+Ordinary and area hits share a private exact-monster-life invulnerability
+deadline. Each successful hit writes its own generated duration; a rejected
+area scan remains eligible for a later scan during the same event, and a
+successful life can be hit only once by that area. A surviving GREAT hit starts
+a collision-clipped 4.732 m server force over one second using a named analytic
+quadratic ease-out approximation and 50 ms samples. Force ownership can be
+replaced after the shared cooldown, while an already active reaction keeps its
+published sequence and timestamps. Front hits publish the original Wild Dog
+front knockdown then front standup actions; back hits publish the back
+knockdown then idle because the selected source has no back-standup action.
+Clients render only subscribed monster action, position and health rows. The
+screen wave is derived locally from the accepted public `combo_4` action and is
+not a mutable server table.
+
+The reviewed three-dog test selector is strictly build-time and training-only:
+`triple-wild-dog-finisher-v1` loads two nearby Wild Dogs and one outside the
+area. It is mutually exclusive with Yongan and does not alter normal builds.
+The current isolated implementation passes 81 training-fixture gameplay tests,
+86 all-feature/Yongan gameplay tests, six build-boundary tests and one
+generated-definition test; strict clippy passes both configurations. The
+protocol-9 ordinary-training regression passes 95 checks in
+`.local/p2-finisher/integration-r4/headless-four-step-root.json`, including the
+targetless fourth action on initial player life zero, all four root endpoints,
+the fifth-input rejection and the retained collision/cancellation/reconnect
+paths. The three-dog run passes 61 checks in
+`.local/p2-finisher/integration-r4/headless-terminal-clock-root.json`: its
+terminal area produces exact A/B/C health `0/65/100`, the open force travels
+4.731999874 m, the fourth root endpoint error is 1.43 micrometres, and the
+front knockdown/standup, pre-area target/equipment mutations and once-per-life
+behavior replicate to the observer. The composed disconnect and fresh-life
+lifecycle extension passes 185 checks in
+`.local/p2-finisher/integration-r4/headless-lifecycle-root.json`: it observes
+owner removal 356 ms before a pending area's activation, proves that no area is
+replayed after reconnect, and separately proves an accepted Wild Dog
+force/reaction completes after its attacker disconnects without leaking state
+into a later monster life. The first exported browser attempt stopped after 25
+setup checks on the original inventory tooltip precondition, before combat,
+with no browser errors; it is preserved at
+`.local/p2-finisher/integration-r4/browser-finisher-root/report.json` and does
+not qualify exported finisher gameplay or package acceptance.
+
+Final bounded local Slice D acceptance is the R8 154-check hardware-Chrome/Linux
+run, recorded in `.local/p2-finisher/root-acceptance-review.json`. It verifies the
+four-action chain, exact area victims, surviving force/reaction and standup,
+captured-action behavior after target clear/unequip, both renderers' root
+convergence, applied in-range camera samples and out-of-range exclusion. Account
+lifecycle and both actual token refreshes pass with zero position drift. The
+public route, Windows execution, normal exports and original-client parity are
+outside that local acceptance. The physical-damage/schema-6 implementation is
+still isolated preparation and has not changed the accepted protocol-9 runtime.
+
 The P1 compiler produces a client presentation manifest and a separate trusted
 server action artifact from the same selected profile. The manifest identifies
 Warrior race 0, Sword+0 vnum 10 and Wild Dog 101, with its gameplay-definition
@@ -514,6 +591,17 @@ not expose private inventory rows. `simulation_clock` lets a late-joining
 client seek an already accepted action without turning its local animation into
 authority. See [P1 actor content import](content-import.md) for the compiler
 and package boundary.
+
+The selected male Warrior profile follows `HairData00` from the pinned
+`warrior_m.msm`: HairIndex 0 links `hair_1_1.gr2` to the main skeleton and
+remaps its declared source skin to `warrior_hair_01.dds`. The converter rejects
+unexpected skin weights; all 427 vertices in this selected mesh are weighted
+only to the compatible `Bip01 Head` bone. The fixed entry camera turns the
+canonical -Z-forward presentation by PI so the character faces the viewer.
+Sword+0 uses a declarative +90-degree X attachment rotation because its
+converted blade extends on local +Y while the pinned combo attack samples place
+the blade along `equip_right_hand` +Z. No actor-specific runtime transform is
+introduced.
 
 A defeated Wild Dog respawns after 12 seconds and drops five gold plus one red
 potion. Gold and item drops have separate authoritative rows. Both remain

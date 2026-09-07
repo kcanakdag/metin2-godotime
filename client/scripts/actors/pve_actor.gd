@@ -94,6 +94,7 @@ func apply_state(value: Dictionary, server_time_us := 0) -> void:
 	var health := int(row.get("health", 0))
 	var sequence := int(row.get("attack_sequence", 0))
 	var life_sequence := int(row.get("life_sequence", 0))
+	var action_id := str(row.get("attack_action_id", ""))
 	var started_at_us := int(row.get("action_started_at_us", 0))
 	var ends_at_us := int(row.get("action_ends_at_us", 0))
 	var mode := "general"
@@ -120,16 +121,14 @@ func apply_state(value: Dictionary, server_time_us := 0) -> void:
 		var death_duration := int(death_motion.get("duration_us", 0))
 		if death_duration > 0 and server_time_us - started_at_us >= death_duration:
 			_presentation.freeze_at_end()
-	elif activity == 2 and ends_at_us > server_time_us:
-		_presentation.play_action(
-			mode,
-			str(row.get("attack_action_id", "")),
-			"",
-			sequence,
-			started_at_us,
-			server_time_us,
-			clock_became_ready
-		)
+	elif activity == 2 and not action_id.is_empty():
+		# Authoritative attacks and reactions own the pose. A late subscription may
+		# already be past its clip end; it must not be replaced by health-delta damage.
+		_damage_until_ticks_us = 0
+		if ends_at_us > server_time_us:
+			_presentation.play_action(
+				mode, action_id, "", sequence, started_at_us, server_time_us, clock_became_ready
+			)
 	elif Time.get_ticks_usec() < _damage_until_ticks_us:
 		pass
 	elif _last_health >= 0 and health < _last_health:

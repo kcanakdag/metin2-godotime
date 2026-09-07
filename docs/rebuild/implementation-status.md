@@ -447,6 +447,272 @@ current Godot MCP inspection, exact Granny within-cycle/transition-blend and
 original-client trajectory parity, terminal step 4, skills, full P2 and the full
 game remain incomplete.
 
+## Accepted local fourth-hit finisher Slice D
+
+The bounded local milestone is accepted after Slice C. The final R8
+hardware-Chrome/Linux run passes **154 checks**, including the complete finisher,
+inventory restoration, movement, account lifecycle and both real session
+refreshes. Root reviewed the captures and bound the source/package/module
+evidence in `.local/p2-finisher/root-acceptance-review.json`. The public route
+remains the earlier protocol-4 build.
+
+This milestone completes
+the selected male-Warrior Sword+0 common chain through terminal `combo_4`, with
+its fixed special-area event, server-owned monster knockback and the selected
+Wild Dog front-knockdown, front-standup and back-knockdown clips. A deterministic
+camera wave and a persistent player-accessible disable setting accompany the
+subscribed fourth action. Other combo types, skills, classes and the remaining
+full-game catalog retain their existing scope and are not covered by this slice.
+
+The shared implementation contract uses trusted content schema 5 and application
+protocol 9. Added action/area/force bookkeeping stays private; clients consume
+the existing public player and monster position/action fields. The fourth raw
+GR2 root endpoint has a narrow pinned MSA-discrepancy exception. Linear root
+interpolation, static defending spheres, quadratic force interpolation and the
+zero-mean camera wave are explicit approximation policies, not evidence of
+original-client motion parity.
+
+The server owner implements authority/lifecycle and authenticated scenarios;
+the content owner implements validation, generated definitions and converted
+clips; the client owner implements reaction presentation, camera/settings and
+exported scenarios. The integration owner reviews the completed contracts and
+owns service changes, publication, exports and final two-client qualification.
+Work and new evidence are staged under ignored `.local/p2-finisher/`; accepted
+Slice C inputs and artifacts remain preserved under `.local/p2-rootmotion/`.
+
+The planned finisher scenario uses exactly three ordinary Wild Dogs on Training
+Grounds: a selected victim that survives until the fourth action, a second
+victim that survives its area hit and demonstrates knockback, and an outside
+control. Staging uses ordinary movement/actions and natural respawn. Both
+authenticated clients must observe the same lives, health and motion, including
+the second hit after the selected victim dies. Existing Yongan qualification
+remains a separate check.
+
+Root integration has built and published three local default-deny protocol-9
+databases on the existing `http://127.0.0.1:13223` service:
+`mt2-p2-finisher-training-r2-20260907`,
+`mt2-p2-finisher-finisher-r2-20260907` (the three-dog fixture), and
+`mt2-p2-finisher-yongan-r2-20260907`. Publication used `--delete-data=never`,
+the existing `http://127.0.0.1:8186/auth` issuer, disabled guests and no privileged
+bootstrap. The preserved release WASM and earlier databases were not replaced.
+The current root build passes 81 training and 86 Yongan unit tests, six build tests and
+one generated-definition test per variant, plus strict all-feature Clippy.
+Build/source hashes are recorded in
+`.local/p2-finisher/integration-r4/build-manifest-root.json`. The r2 publication
+record remains in `integration-r2/publication-root.json`; the subsequent
+wording-only compatible update is recorded in
+`integration-r3/compatible-update-r2-root.json`. The subsequent targetless-area
+damage fix is recorded in `integration-r4/compatible-update-root.json`; both
+updates preserve database identities/schema with `--delete-data=never`. The r3 optional CLI row-snapshot
+preflight required game-account authentication, so direct before/after row
+equality was not verified. The isolated Godot generator has
+produced and instantiated 71 bindings from the actual new module, with schema
+SHA-256 `b3066b26ea524ac77811b467c4c91f2814586c9626a555dc2d030a6ed00c3d4a`.
+All three current modules were checked against that same generated schema.
+
+Current focused client checks pass 101 assertions, and the current generated
+actor fixture passes 85; see `.local/p2-finisher/client-components-final-inputs-2/report.json`
+and `.local/p2-finisher/actors-current/report.json`. The repeat content build and
+three reaction-clip deformation/import checks are recorded in
+`.local/p2-finisher/compiler/report.json`. The Python tooling suite passes 150
+tests. Actual Training and Yongan Web/Linux exports also passed package audits:
+844 paths in each Training pack and the Yongan Web core, 1,647 in the Yongan
+Linux pack, all 226 selected UI images and both target effects. Export input
+hashes and package identities are recorded under
+`.local/p2-finisher/integration-r2/exports-finisher/` and `exports-yongan/`;
+`integration-r3/export-review-root.json` records the integration review.
+
+The first three authenticated finisher attempts remain failed evidence under
+`integration-r1/` and `integration-r3/`. The first exposed a test's stable-state
+timer bug; its fresh-character snapshots also revealed that the finisher
+incorrectly rejected valid initial life sequence zero, now fixed in the r2
+runtime. The second and third passed 25 setup/baseline checks but exhausted their
+ordinary combat-staging attempts before any attack. The third showed that the
+player had approached too close to the dogs: its nearly three-metre retreat
+could not retain the required attack pause. The revised setup stops earlier and
+checks the retreat distance against the remaining pause.
+
+A separate live four-step regression exposed another runtime defect: targetless
+combo transitions supplied zero damage, so the fourth area's validation rejected
+the action. The r4 fix derives trusted area damage independently of selection
+while retaining ordinary-hit target validation. Its actual two-account replay
+passes **95 checks**, including the targetless fourth action, its 1.196471 m
+root endpoint (0.018 mm measured error), rejection of a fifth input, existing
+collision/cancellation coverage, and disconnect/reconnect without movement replay.
+See `integration-r4/headless-four-step-root.json` and its input-hash record.
+The subsequent live two-account, three-dog scenario passes **61 checks**. The
+fourth action kills the selected dog, hits the second exactly once and leaves
+the outside control unharmed. Clearing selection and removing the sword before
+area activation preserve the accepted action. The surviving dog moves 4.732 m
+and transitions from front knockdown to stand-up. See
+`integration-r4/headless-terminal-clock-root.json` and its input-hash record.
+The expanded scenario subsequently passes **185 checks** on the separate fresh
+default-deny `mt2-p2-finisher-finisher-lifecycle-r4-20260907` database with the
+same reviewed r4 module. Its observer confirms owner presence removal before
+area activation, no later area damage, and reconnect without action or root
+replay. Disconnecting after a hit preserves the victim's exact life, knockdown
+sequence/timing, full 4.732 m force and stand-up transition. Ordinary cleanup
+and natural respawn then establish that a new victim life has no inherited
+area, force or reaction and can take a new hit. See
+`integration-r4/headless-lifecycle-root.json` and its unchanged-source record.
+
+The first actual exported hardware-Chrome/Linux replay passes 25 checks through
+account entry, mutual visibility and opening the inventory, then fails the
+existing item-hover tooltip assertion before combat. Its browser-error list is
+empty; the report and rendered failure capture are preserved under
+`integration-r4/browser-finisher-root/`. A deterministic real pointer-entry
+change in the test helper passes the unchanged tooltip assertion and the
+remaining inventory checks on replay. That run passes 69 checks, including
+ordinary recovery of the previously injured dog, then fails the finisher's
+first-attack timing prerequisite before reaching the fourth action. Evidence
+is in `integration-r4/browser-finisher-hover-root/`; exported finisher
+qualification remains pending. The test helper now observes target acknowledgements
+and their age on the same browser clock; an independent synthetic browser check
+passes, while the full gameplay replay remains pending. The actor texture generator
+now disables automatic 3D compression. An actual editor negative control reproduces
+the old VRAM rewrite, and the corrected policy preserves all four current actor
+textures and their decoded pixels across repeat imports.
+That earlier iteration was not accepted; final R8 acceptance is recorded below.
+Slice D has not been deployed publicly.
+
+The user also reported a backwards-facing character-selection preview and
+missing hair exposing the head's interior. Root confirmed both in the actual
+exported `browser-finisher-hover-root/account-select.png` capture. The selected
+original `HairData00` mesh and skin are now converted onto the Warrior's main
+skeleton; all 427 hair vertices follow the compatible head bone. The preview
+faces its fixed camera. The reported sword angle came from a 90-degree mismatch
+between the converted blade axis and the hand attachment. The source-backed
+profile rotation corrects it; a landmark regression rejects the former transform.
+
+Root regenerated the combined content with Blender 5.2.1 and verified the new
+client manifest against the isolated conversion. Only the content identity fields
+change in the trusted server payload. The resulting Godot actor check passes
+**87 checks**, including four texture pixel/import checks and sword landmarks;
+the isolated entry screen passes **28 checks** with actual input and a front-facing
+render showing the original hair. Wider front/side renders cover equipped idle,
+run and all four combo motions. These establish the sampled poses, not continuous
+intersection-free or original Granny playback parity. Evidence is under
+`.local/p2-hair/actor-check-root/`, `.local/p2-finisher/intro-camera-facing/`, and
+`.local/p2-finisher/sword-basis/combined-report.json`.
+
+The offline actor preview also has motion selection, equipment switching, pause
+and timeline controls, verified with real viewport input. The combined tools suite
+passes 155 checks. Matching R5 modules and Web/Linux packages are being integrated
+under `.local/p2-finisher/integration-r5/`. All three matching modules and all four
+Web/Linux exports now pass their build/package checks. The actual packaged Warrior
+has four skinned, textured meshes; audits retain all 43 actor clips and 226 original
+UI images. The new training module passes 95 two-client checks with unchanged
+test inputs. Root inspected the exported browser's creation and selection captures:
+both face forward with the original hair present.
+
+The first R5 browser run passes 44 checks, then stops because its test assumes
+the selected-target subscription is already reflected inside the reducer-completion
+callback. The helper now separately checks the exact successful completion and the
+exact-life subscribed target row. That correction passes on replay; a separate
+clock-estimation issue still prevents the finisher's first-whiff timing prerequisite.
+The current helper uses a conservative clock bound from before the real target
+click. Its latest run passes 59 checks, then exhausts three ordinary staging
+attempts; it does not qualify the browser finisher. See
+`integration-r5/browser-finisher-root-causal-clock/` and its unchanged-input record.
+
+The symmetric north-approach replay passes 48 checks through exact target
+selection and subscription, then stops before combat because the test helper
+passes integer dictionary keys to Playwright's argument serializer. Evidence is
+preserved in `integration-r5/browser-finisher-root-symmetric-stage/` with unchanged
+inputs and no browser errors. A focused helper correction is in progress; this
+run does not qualify the finisher.
+
+After the serialization correction, root independently verified the helper's
+real Chromium projection and replayed the exported clients. That run passes
+65 checks but fails all three attack-lock staging attempts before combat;
+the symmetric approach does synchronize the two dogs' attack times. See
+`integration-r5/browser-finisher-root-symmetric-projection/` and its unchanged-input
+record. A tighter clock anchor at the actual canvas mousedown is under review.
+Root caught a mismatch between the proposed observer's synthetic ACK fields and
+the real exported ACK shape before another live replay; the observer must bind
+the exact next completion sequence and retain the separately verified target
+subscription.
+
+Root subsequently found the actual staging defect: the reduced Web snapshot
+omitted the subscribed player's `online` flag, so the authoritative-position
+reader rejected every candidate. The corrected projection retains the real
+identity/online row and rejects missing, offline, nonfinite and newer-life
+inputs. The replay reaches all four combo actions, fifth-input rejection,
+65-health surviving area victim and front knockdown on both exported clients.
+
+R6 fixes a game defect as well: JSON-decoded screen-wave event timings arrive
+as integral floats, which the original integer-only check rejected. The actual
+Web client now triggers the wave once; the distant native viewer reports
+`out_of_range`. The 73-check R6 replay also verifies rendered knockback progress
+on both clients. Its remaining failure exposed a probe lookup for `CameraRig`
+instead of the real scene's `OrbitCamera`, leaving the transient history empty.
+The corrected probe passes a test against an instance of the actual main scene;
+the focused Godot suite initially passes **109 checks**. R7 packages include
+this correction. These runs are preserved under
+`integration-r6/browser-finisher-root-wavefix/` and
+`integration-r6/browser-finisher-root-interpolated-force/`; neither is a complete
+Slice D acceptance run.
+
+The R7 `browser-finisher-root-applied-camera` replay passes 80 checks through
+combat, including exact 4.732 m force history, standup, root convergence and
+multiple samples applied to the actual camera. Cleanup exposed the helper's
+incorrect assumption that unequip returns to the former bag slot; it now uses
+the subscribed slot and explicitly restores the incoming page/slot via UI.
+The next replay reaches 92 checks before a native snapshot file read races the
+probe's in-place write. R8 replaces snapshots atomically. The real Godot
+old-reader/new-reader regression and relevant component suite pass **112
+checks**; the Python snapshot/motion regressions pass ten tests. Repository tool tests separately
+pass 161 checks, and the rebuild catalog remains valid at 41 systems/194 records.
+
+The final R8 `browser-finisher-root-combat-lifecycle` replay passes **154 checks**
+with unchanged tested inputs and no browser engine errors. Both clients retain
+exact 4.731999505 m force travel, the front knockdown/standup sequence and the
+fourth root endpoint after target clear/unequip. The real camera applies multiple
+wave samples; the distant viewer stays unaffected. Both real session timers
+refresh with zero XYZ drift across 54 observations and no DOM input events.
+Atomic native snapshot reads need no retries. The report SHA-256 is
+`f9585c8f8e87b8841df5dcdac7adce98b0f6f6f79c906cecf88b29f0486f81c7`.
+The only subsequent runner change rejects incompatible Yongan-panel/finisher
+flags before startup; its focused CLI check passes. The acceptance record
+documents this change, exact packages and limits. The separate Yongan panel
+evidence remains the 113-check report below; the training fixture has no map
+metadata and is not a valid minimap-zoom test.
+
+The knockback test now distinguishes moving interpolation from final placement:
+it requires actual renderer movement along the same exact-life/action force
+path, bounds lag using the client's 12/s smoothing and server's 50 ms steps,
+then requires 5 cm convergence during standup. Five Python regressions reject
+static, off-path, overshooting, stale-action and missing-renderer evidence.
+
+The separate R5 Yongan hardware-Chrome/Linux run passes **113 checks**, including
+equipped actor/attack projection, movement in both directions, inventory and panels,
+character switching, disconnect/reconnect, login and both real session-refresh
+timers. Both clients finish with nine map chunks and no content error; the browser
+error list is empty. Root reviewed the exported equipped idle/attack captures.
+See `integration-r5/browser-yongan-root/report.json` (SHA-256
+`c5294b14196b2a82657e4f1b15495ab88271a00b9fdfb9b9298fff248c15e77c`)
+and `integration-r5/visual-review-root.json`. The visual corrections are verified
+locally. Slice D browser acceptance is now complete; public publication remains
+outstanding.
+
+Next-milestone preparation is staged under `.local/p2-physical/`. Root combined
+the physical-damage runtime with the schema-6 content generator in the isolated
+`integration-server` tree: **104 Rust unit, 6 builder and 2 generated-definition
+tests pass**, along with strict Clippy for all targets/features. The compiler
+stage passes ten checks, including nonfinite/overflow inputs, exact source rows,
+and values that only round to the selected multiplier. Running the actual
+compiled Rust generator against 46 temporary input cases independently verifies
+repeat output and malformed-value/provenance/duplicate rejection. The separate classic
+Status/weapon-tooltip component stage passes eleven checks in headless and
+rendered Godot runs using synthetic inputs, and the protocol gate passes four
+checks. Root reviewed the canonical starting Attack 28–31 / Defense 5 render
+and Sword tooltip 13–15. This is not live server evidence.
+These stages do not change current gameplay balance and are not integrated into
+the active database or exported packages.
+
+Development now proceeds directly in the primary agent, following the user's
+request to stop subagent implementation. Existing staged work is retained.
+
 ## Required QA evidence
 
 | Package | Required task evidence before review | Integration gate |

@@ -159,6 +159,7 @@ def exercise_actors(
         "accepted_onehand_action_projects_to_both_clients",
         onehand_action_matches,
     )
+    page.screenshot(path=str(output / "actors-equipped-combo1.png"))
     equipment = ui()["equipment_origin"]
     drag([equipment[0] + 16, equipment[1] + 16], cell_point(original_cell))
     wait(

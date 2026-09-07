@@ -29,6 +29,7 @@ const MapPanel = preload("res://scripts/ui/classic_map_panel.gd")
 const ChatPanel = preload("res://scripts/ui/classic_chat.gd")
 const StatusPanel = preload("res://scripts/ui/classic_status.gd")
 const TargetPanel = preload("res://scripts/ui/classic_target.gd")
+const SystemOptions = preload("res://scripts/ui/classic_system_options.gd")
 
 const INK := Color(0.055, 0.065, 0.077, 0.96)
 const BRONZE := Color(0.63, 0.47, 0.28)
@@ -73,6 +74,7 @@ var _chat_panel: Control
 var _hotbar: Control
 var _debug: PanelContainer
 var _debug_values: Dictionary = {}
+var _screen_wave_toggle: CheckButton
 var _roster: Label
 var _notice: Label
 var _notice_timer: Timer
@@ -84,6 +86,7 @@ var _inventory_rows: Array = []
 var _profile_key := ""
 var _minimap: Control
 var _system: Control
+var _system_options: Control
 var _system_buttons: Dictionary = {}
 var _status: Control
 var _connected := false
@@ -115,12 +118,18 @@ func _ready() -> void:
 	set_player_info({})
 
 
-func set_connection_defaults(url: String, db: String, player_name: String, profile: String) -> void:
+func set_connection_defaults(
+	url: String, db: String, player_name: String, profile: String, screen_wave_enabled := true
+) -> void:
 	_server.text = url
 	_database.text = db
 	_player_name.text = player_name
 	_profile.text = "PROFILE  " + profile
 	_profile.tooltip_text = "Profiles keep separate local identity tokens for multiple clients."
+	if is_instance_valid(_screen_wave_toggle):
+		_screen_wave_toggle.set_pressed_no_signal(bool(screen_wave_enabled))
+	if is_instance_valid(_system_options):
+		_system_options.set_screen_wave_enabled(bool(screen_wave_enabled))
 
 
 func set_connection_state(state: String, message: String) -> void:
@@ -136,6 +145,7 @@ func set_connection_state(state: String, message: String) -> void:
 		_status.set_connected(false)
 		_minimap.close_top()
 		_system.hide()
+		_system_options.hide()
 		_cancel_carry()
 	_hotbar.visible = _connected
 	_connection_state.text = state.to_upper()
@@ -395,7 +405,7 @@ func _build_hotbar() -> void:
 	_root.add_child(_hotbar)
 	_hotbar.inventory_requested.connect(func() -> void: _inventory.toggle())
 	_hotbar.character_requested.connect(_status_toggle)
-	_hotbar.system_requested.connect(func() -> void: _system.visible = not _system.visible)
+	_hotbar.system_requested.connect(_toggle_system_menu)
 	_connect_slots(_hotbar)
 	_hotbar.settings_changed.connect(_save_profile)
 
@@ -494,13 +504,17 @@ func _build_debug() -> void:
 func _build_debug_options(column: VBoxContainer) -> void:
 	column.add_child(HSeparator.new())
 	for option in [
-		["show_collision", "Show collision shapes", false], ["shadows", "Shadows", true]
+		["show_collision", "Show collision shapes", false],
+		["shadows", "Shadows", true],
+		["screen_wave_enabled", "Screen wave", true],
 	]:
 		var toggle := CheckButton.new()
 		toggle.text = option[1]
 		toggle.button_pressed = option[2]
 		toggle.toggled.connect(_on_debug_option.bind(option[0]))
 		column.add_child(toggle)
+		if option[0] == "screen_wave_enabled":
+			_screen_wave_toggle = toggle
 	var distance_label := _label("Camera distance", 13, MUTED)
 	column.add_child(distance_label)
 	var distance := HSlider.new()
@@ -581,6 +595,8 @@ func _on_connect() -> void:
 
 
 func _on_debug_option(value: Variant, option: String) -> void:
+	if option == "screen_wave_enabled":
+		_set_screen_wave_enabled(bool(value))
 	debug_option_changed.emit(option, value)
 
 
@@ -606,6 +622,8 @@ func handle_key(event: InputEventKey) -> bool:
 			get_viewport().gui_release_focus()
 		elif not _carry.is_empty():
 			_cancel_carry()
+		elif _system_options.visible:
+			_system_options.hide()
 		elif _inventory.visible:
 			_inventory.hide()
 			_tooltip.hide()
@@ -662,6 +680,7 @@ func inventory_snapshot() -> Dictionary:
 	for key: String in _system_buttons:
 		var center: Vector2 = _system_buttons[key].get_global_rect().get_center()
 		system[key + "_center"] = [center.x, center.y]
+	system["options"] = _system_options.snapshot()
 	result["system"] = system
 	return result
 
@@ -751,7 +770,7 @@ func _build_system() -> void:
 	for entry in [
 		["Help", 17, Callable()],
 		["Item Shop", 57, Callable()],
-		["System Options", 87, Callable()],
+		["System Options", 87, _open_system_options],
 		["Game Options", 117, Callable()],
 		["Change Character", 147, func() -> void: change_character_requested.emit()],
 		["Logout", 177, func() -> void: disconnect_requested.emit()],
@@ -766,6 +785,32 @@ func _build_system() -> void:
 		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_system.hide()
+	_system_options = SystemOptions.new()
+	_root.add_child(_system_options)
+	_system_options.screen_wave_changed.connect(_on_screen_wave_changed)
+
+
+func _toggle_system_menu() -> void:
+	if _system_options.visible:
+		_system_options.hide()
+	_system.visible = not _system.visible
+
+
+func _open_system_options() -> void:
+	_system.hide()
+	_system_options.show()
+
+
+func _on_screen_wave_changed(value: bool) -> void:
+	_set_screen_wave_enabled(value)
+	debug_option_changed.emit("screen_wave_enabled", value)
+
+
+func _set_screen_wave_enabled(value: bool) -> void:
+	if is_instance_valid(_screen_wave_toggle):
+		_screen_wave_toggle.set_pressed_no_signal(value)
+	if is_instance_valid(_system_options):
+		_system_options.set_screen_wave_enabled(value)
 
 
 func set_profile(key: String) -> void:

@@ -31,6 +31,11 @@ from playwright.sync_api import sync_playwright
 from test_browser import distance
 from test_browser_actors import exercise_actors
 from test_browser_combo import exercise_combo
+from test_browser_finisher import (
+    exercise_finisher,
+    heal_finisher_browser,
+    park_finisher_clients,
+)
 from test_browser_inventory import exercise_inventory
 from test_browser_panels import exercise_panels
 from test_browser_progression import exercise_progression, exercise_progression_combat
@@ -147,12 +152,17 @@ def main() -> None:
     parser.add_argument(
         "--targeting",
         action="store_true",
-        help="Exercise protocol-8 target picking, private UI, effects, combat, and cleanup",
+        help="Exercise protocol-9 target picking, private UI, effects, combat, and cleanup",
     )
     parser.add_argument(
         "--combo",
         action="store_true",
-        help="Exercise both exported clients' server-timed three-step Sword+0 combo and root travel",
+        help="Exercise both exported clients' protocol-9 three-step Sword+0 prefix and root travel",
+    )
+    parser.add_argument(
+        "--finisher",
+        action="store_true",
+        help="Exercise the protocol-9 four-step combo in its exact three-dog Training fixture",
     )
     parser.add_argument(
         "--progression-combat",
@@ -173,6 +183,15 @@ def main() -> None:
         parser.error("--targeting cannot be combined with the five-kill --progression-combat mode")
     if args.combo and not (args.targeting and args.inventory and args.actors):
         parser.error("--combo requires --targeting --inventory --actors")
+    if args.finisher and not (args.inventory and args.actors):
+        parser.error("--finisher requires --inventory --actors")
+    if args.finisher and args.panels:
+        parser.error("--panels needs original-map metadata and cannot run in the --finisher fixture")
+    if args.finisher and (args.targeting or args.combo or args.progression_combat):
+        parser.error(
+            "--finisher uses its separate Training fixture and cannot be combined with "
+            "Yongan targeting, combo, or progression combat"
+        )
     if not args.native.is_file():
         parser.error("Missing exported Linux test client; export with --test-probe first.")
     if not shutil.which("xvfb-run"):
@@ -558,6 +577,17 @@ def main() -> None:
                 lambda: seen(web(), native_id) is not None and seen(desktop(), web_id) is not None,
                 60,
             )
+            if args.finisher:
+                samples["finisher_entry_park"] = park_finisher_clients(
+                    web,
+                    desktop,
+                    web_command,
+                    native_command,
+                    wait,
+                    web_id,
+                    native_id,
+                )
+                samples["finisher_entry_healing"] = heal_finisher_browser(page, web, wait, web_id)
             samples["initial_web"], samples["initial_native"] = web(), desktop()
             page.screenshot(path=str(output / "account-world.png"))
             native_command("capture")
@@ -574,9 +604,10 @@ def main() -> None:
                     native_id,
                     output,
                 )
-            if args.targeting and args.inventory:
-                # Inventory's full-health potion rejection must run before the
-                # targeting slice allows ordinary monster damage.
+            if (args.targeting or args.finisher) and args.inventory:
+                # Finisher clients have already escaped the aggro-adjacent
+                # Training spawn, so the full-health potion rejection remains a
+                # real prerequisite rather than racing ordinary monster damage.
                 samples["inventory"] = exercise_inventory(page, web, wait, output)
             if args.targeting:
                 samples["targeting_diagnostics"] = {}
@@ -606,11 +637,24 @@ def main() -> None:
                     output,
                     samples["combo_diagnostics"],
                 )
+            if args.finisher:
+                samples["finisher_diagnostics"] = {}
+                samples["finisher"] = exercise_finisher(
+                    page,
+                    web,
+                    desktop,
+                    web_command,
+                    native_command,
+                    wait,
+                    web_id,
+                    native_id,
+                    output,
+                    samples["finisher_diagnostics"],
+                )
             if args.actors:
-                # Targeting and optional combo leave both actors unarmed and
-                # outside dog chase range. Combo deliberately leaves its final
-                # target-clear fixture at 65 HP, but this presentation-only
-                # actor attack remains out of range and cannot alter it.
+                # Each combat helper restores an unarmed, out-of-range actor.
+                # Combo deliberately leaves its final target-clear fixture at
+                # 65 HP, but this presentation-only actor attack cannot alter it.
                 samples["actors"] = exercise_actors(
                     page,
                     web,

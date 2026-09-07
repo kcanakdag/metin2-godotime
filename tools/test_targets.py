@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise private target locking against a disposable dual-Wild-Dog module."""
+"""Exercise protocol-9 private target locking against a disposable dual-Wild-Dog module."""
 
 from __future__ import annotations
 

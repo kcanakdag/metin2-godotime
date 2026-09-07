@@ -100,6 +100,7 @@ func _run() -> void:
 		"unavailable appearances remain disabled"
 	)
 	_check(_intro.snapshot().preview.models == 1, "creation loads original warrior model")
+	_check(_intro.snapshot().preview.camera_facing, "entry Warrior faces the fixed preview camera")
 	_intro._character_name.text = "TestWarrior"
 	await _capture("create")
 	_click("create_submit")

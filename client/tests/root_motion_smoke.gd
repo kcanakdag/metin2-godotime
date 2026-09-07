@@ -1,18 +1,21 @@
 extends "res://tests/combo_smoke.gd"
-## Two authenticated clients exercise the three-step prefix and authoritative displacement.
+## Two authenticated clients exercise the four-step prefix and authoritative displacement.
 
 const ROOT_COMBO_ONE := "actor.player.warrior-male.onehand.combo_1"
 const ROOT_COMBO_TWO := "actor.player.warrior-male.onehand.combo_2"
 const ROOT_COMBO_THREE := "actor.player.warrior-male.onehand.combo_3"
+const ROOT_COMBO_FOUR := "actor.player.warrior-male.onehand.combo_4"
 const ROOT_ENDPOINT_Z := {
 	ROOT_COMBO_ONE: -1.317569580078125,
 	ROOT_COMBO_TWO: -0.852515640258789,
 	ROOT_COMBO_THREE: -1.4301394653320312,
+	ROOT_COMBO_FOUR: -1.1964712524414062,
 }
 const ROOT_DURATION_US := {
 	ROOT_COMBO_ONE: 1_000_000,
 	ROOT_COMBO_TWO: 933_333,
 	ROOT_COMBO_THREE: 1_066_667,
+	ROOT_COMBO_FOUR: 1_266_667,
 }
 const ROOT_POSITION_TOLERANCE_M := 0.001
 const ROOT_DISCONNECT_SAMPLE_TOLERANCE_M := 0.08
@@ -144,22 +147,49 @@ func _finish_targetless_terminal(
 		_position(third)
 	):
 		return false
-	await _raw_rejection(
-		actor, "perform_attack", [], [], "root_bounded_fourth_rejected", "no fourth step"
-	)
 	var third_position := _position(third)
-	if not await _wait_action_end(observer, actor_id, int(third.action_ends_at_us)):
-		return _check("root_targetless_three_finishes", false)
+	var fourth_result := await _send_terminal_follow_up(
+		actor, observer, int(third.action_started_at_us), "root_targetless_four"
+	)
+	if fourth_result.is_empty():
+		return false
+	var fourth := await _wait_action_after(
+		observer, actor_id, int(third.attack_sequence), ROOT_COMBO_FOUR
+	)
+	if fourth.is_empty():
+		return _check("root_targetless_four_replicates", false)
 	if not _check_root_segment(
 		"root_targetless_three_endpoint",
 		third_position,
 		third,
-		int(third.action_ends_at_us),
+		int(fourth.action_started_at_us),
+		_position(fourth)
+	):
+		return false
+	return await _finish_targetless_fourth(actor, observer, actor_id, health_before, fourth)
+
+
+func _finish_targetless_fourth(
+	actor: GameConnection,
+	observer: GameConnection,
+	actor_id: String,
+	health_before: int,
+	fourth: Dictionary
+) -> bool:
+	await _raw_rejection(actor, "perform_attack", [], [], "root_bounded_fifth_rejected", "complete")
+	var fourth_position := _position(fourth)
+	if not await _wait_action_end(observer, actor_id, int(fourth.action_ends_at_us)):
+		return _check("root_targetless_four_finishes", false)
+	if not _check_root_segment(
+		"root_targetless_four_endpoint",
+		fourth_position,
+		fourth,
+		int(fourth.action_ends_at_us),
 		_position(_player(observer, actor_id))
 	):
 		return false
 	return _check(
-		"root_targetless_three_deals_zero_damage",
+		"root_targetless_four_deals_zero_damage",
 		(
 			int(_monster(observer).health) == health_before
 			and actor.selected_combat_target().is_empty()
@@ -192,6 +222,29 @@ func _send_direct_follow_up(
 		(
 			int(result.timestamp) > action_start_us + direct_us
 			and int(result.timestamp) <= action_start_us + limit_us
+		)
+	):
+		return {}
+	return result
+
+
+func _send_terminal_follow_up(
+	actor: GameConnection, observer: GameConnection, action_start_us: int, label: String
+) -> Dictionary:
+	var timing_ready := await _wait_for_estimated_action_time(
+		observer, action_start_us, 380_000, 450_000, 475_000, label + "_send"
+	)
+	if not _check(label + "_send_time_reached", timing_ready):
+		return {}
+	var result := await _raw_result(actor, "perform_attack", [], [])
+	_record_raw_result(label, "perform_attack", result)
+	if not _check(label + "_accepted", bool(result.accepted)):
+		return {}
+	if not _check(
+		label + "_inside_source_window",
+		(
+			int(result.timestamp) > action_start_us + 418_462
+			and int(result.timestamp) <= action_start_us + 664_615
 		)
 	):
 		return {}

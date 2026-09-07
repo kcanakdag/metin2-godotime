@@ -95,6 +95,8 @@ func _validate_required_slice() -> bool:
 		return _fail("The P1 Warrior, Wild Dog, or Sword+0 has an incompatible numeric ID.")
 	if str(warrior.get("attachment_bones", {}).get("weapon_right", "")) != "equip_right_hand":
 		return _fail("The P1 Warrior must declare weapon_right as equip_right_hand.")
+	if int(warrior.get("default_hair_index", -1)) != 0:
+		return _fail("The selected Warrior must include original default HairIndex 0.")
 	for required: Array in [
 		[WARRIOR_ID, "general", "normal_attack"],
 		[WARRIOR_ID, "onehand", "combo_1"],

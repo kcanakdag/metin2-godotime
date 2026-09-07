@@ -21,7 +21,15 @@ normalized records, generated GLB hashes, and the compatible trusted action
 definitions. `content-probe` imports generated GLBs in a fresh headless Godot
 project. `test-actors` stages actor presentation and checks selected motion and
 attachment resources; `make test-actors UI_FLAGS=--native` also captures the
-rendered fixture when `xvfb-run` is available.
+rendered fixture when `xvfb-run` is available. The default remains fully
+headless. To run the isolated editor 3D texture-policy negative control, use
+`make test-actors UI_FLAGS=--texture-editor-check`; it requires `xvfb-run` and
+records whether it ran in the ignored actor-test report.
+
+For future items, quests, mobs and classes, follow the
+[content authoring contract](rebuild/content-authoring.md). It describes the
+generalization still needed and distinguishes focused content/preview checks
+from combat/network regressions and full release qualification.
 
 ## Artifact boundary
 
@@ -29,28 +37,30 @@ The generated player-facing manifest is
 `client/assets/imported/content/p0-warrior-dog/manifest.v1.json`. It remains
 `mt2spacetime.presentation-manifest` schema 1 and records the profile,
 source-content hash, gameplay-definition hash, presentation-output hash, exact
-GLB hashes, and structural counts. The current P2 rebuild preserved that
-presentation output hash (`2bcd691596bfb76f90359955a6469eda9a5a2d65045d00452f3b66fcc699c839`)
-and all three GLB hashes. P2 did not add a model, texture, original archive, or
-raw Granny/Blender asset to the player fixture.
+GLB hashes, and structural counts. Slice D adds three declared Wild Dog reaction
+clips. The subsequent visual correction also regenerates the Warrior GLB with
+the selected original hair mesh and texture, and corrects the sword attachment
+transform. See the current hashes and exported evidence in the
+[implementation status](rebuild/implementation-status.md). No original archive
+or raw Granny/Blender asset is shipped.
 
 The server consumes the separate, ignored
 `server/content/p0-warrior-dog/actions.v1.json`. The filename is retained for
 its stable runtime path, but its payload is now
-`mt2spacetime.trusted-action-definitions` **schema 4**. Schema 4 retains the
-source-derived Warrior progression definitions and selects the common
-`combo_1`, `combo_2`, `combo_3` Sword+0 prefix. The trusted payload contains
-exactly five attacks: the player general attack, those three combo actions, and
-the Wild Dog attack. Only the three ordered combo actions carry exact integer
+`mt2spacetime.trusted-action-definitions` **schema 5**. Schema 5 retains the
+source-derived Warrior progression definitions and selects the default type-0
+`combo_1`, `combo_2`, `combo_3`, `combo_4` Sword+0 chain. The trusted payload
+contains exactly six attacks: the player general attack, those four combo
+actions, and the Wild Dog attack. Only the first three ordered combo actions carry exact integer
 `pre_input_us`, `direct_input_us`, `input_limit_us`, and `link_us` fields.
-Later declared presentation actions, including the terminal `combo_4` record
-whose source timing fields are inverted, stay outside this bounded trusted
-prefix. The file is server input, not an exported client resource. Its
+Terminal `combo_4` deliberately retains its nonordered source timing as evidence
+and has no follow-up input. The file is server input, not an exported client resource. Its
 `gameplay_definition_hash` must exactly equal the client presentation
 manifest's value.
 
 The compiler requires every declared one-hand chain to share the distinct
-three-action prefix, resolves each selected motion exactly once, and requires
+three-action prefix, selects `combo_4` only from the declared default chain,
+resolves each selected motion exactly once, and requires
 `0 <= pre < direct < limit <= duration`. It reads the pinned raw GR2 metadata
 with the pinned Carbon reader before the higher-level animation graph drops the
 accumulation fields. Each selected file must have one animation, one `Bip01`
@@ -63,38 +73,61 @@ differ by at most 50 micrometres per component.
 The fixed policy is `linear-endpoint-approx-v1`. Source centimetres `(x,y,z)`
 map to Godot metres `(x,z,-y)/100`, followed by the fixture's 180-degree yaw
 exactly once. The resulting actor-local `(x,z)` endpoints are
-`(0,-1.317569580078125)`, `(0,-0.852515640258789)`, and
-`(0,-1.4301394653320312)` over `1,000,000`, `933,333`, and `1,066,667`
-microseconds. The compiler derives these values from the three pinned GR2
-inputs. Raw evidence is stored as bounded decimal strings so Python and Rust
+`(0,-1.317569580078125)`, `(0,-0.852515640258789)`,
+`(0,-1.4301394653320312)`, and `(0,-1.1964712524414063)` over `1,000,000`,
+`933,333`, `1,066,667`, and `1,266,667` microseconds. The compiler derives
+these values from four pinned GR2 inputs. The first three MSA accumulations
+remain strict corroboration. Combo 4 has one pinned exception: its raw GR2
+endpoint is authoritative while its original MSA accumulation
+`(0.1289,0,-1.0552)` and exact discrepancy remain evidence. Raw evidence is stored as bounded decimal strings so Python and Rust
 hash the same canonical JSON; runtime endpoint fields remain `f64`. Selected
 root durations are limited to 1,600,000 microseconds and endpoint components to
 2 metres, matching the bounded server integrator.
 
+Combo 4 also projects its single area sphere and screen wave through the fixed
+60 Hz legacy dispatch rule: wave frame 37 activates at 633,334 us, and area
+frame 39 activates at 666,667 us. The area lasts 200,000 us, hits each exact
+victim life once, applies the separately authored 300,000 us victim cooldown,
+and uses a reviewed linear 4.732 m knockback over 1,000,000 us. Ordinary hits
+retain their own source cooldowns instead of borrowing the area value. The
+player general/combo1/combo2/combo3 values are 500,000/100,000/100,000/200,000
+microseconds, and the Wild Dog attack value is 300,000 microseconds. Combo 4
+has zero ordinary-hit cooldown because it has no ordinary hit trace. The
+screen-wave power/random camera behavior and legacy collision/physics curves
+are recorded limitations; this slice does not claim original-client parity.
+
+The Wild Dog fixture adds only front knockdown (32), front standup (33), and
+back knockdown (35). Back standup is absent from the pinned race registration
+and remains unsupported. Its static collision-type-3 `Bip01` sphere becomes the
+bounded full-3D defending-sphere approximation `(0,0.8,0.1), radius 0.9 m`.
+
 The Rust build repeats the prefix, timing, policy, provenance, raw metadata,
-coordinate, duration, and bound checks before emitting `ComboInputDefinition`,
-`RootMotionDefinition`, `PLAYER_ONEHAND_COMBO: [AttackDefinition; 3]`, and the
+event, reaction, defending-sphere, coordinate, duration, and bound checks before emitting `ComboInputDefinition`,
+`RootMotionDefinition`, `PLAYER_ONEHAND_COMBO: [AttackDefinition; 4]`, and the
 existing `PLAYER_ONEHAND_ATTACK` compatibility alias. General and Wild Dog
 attacks have no root definition. `link_us` remains source evidence; it does not
 independently schedule gameplay. Original GR2/MSA files and the Carbon runtime
 remain development inputs and are not shipped in the server or client.
 
-The compiler version is `content-compiler-v1.3.0`. The verified repeat local
+The compiler version is `content-compiler-v1.4.0`. The verified repeat local
 rebuild records content hash
-`c31bf7b0bf6afbf79d54f70d5bd20e8047cd39ce3ea14783ae8df79441a61e9f` and
+`9ec8aead8c8b6bbd37f4914f1c20371a976a3c07aa5db52d3ece99dbe4e78939` and
 gameplay-definition hash
-`2f096ae82998eeecb839df391a7350f8309e477a7004ef4c2e333167bc4ada8d`.
-The presentation-output hash remains
-`2bcd691596bfb76f90359955a6469eda9a5a2d65045d00452f3b66fcc699c839`,
-and all three GLB hashes remain byte-for-byte unchanged from the accepted Slice
-A inputs. Rebuild and validate the compiler/build boundary with:
+`8f9853748efb45ac0c33dcd716ff2e7f8c58fa208ff6537c75367b8d8ee8eb3c`.
+The presentation-output hash is
+`b8edc3f0e522a74adb97a0354733635e47213ca56d445a7d31eca4c038a846ca`;
+the Wild Dog GLB SHA-256 is
+`0455f474cbced95a554af6457efe55d6da0a64d56d0b958e82cd76bb8c5aeb71`.
+The coverage records classify combo 4's type-2 event as
+`screen-wave-schema5`; combo 7 remains unsupported. Rebuild and validate the
+compiler/build boundary with:
 
 ```sh
 .local/venv-dev/bin/python tools/content_compile.py build --offline \
   --profile content/profiles/p0-warrior-dog.json --blender /path/to/blender
 .local/venv-dev/bin/python -m unittest tests.test_metin_root_motion \
   tests.test_combo_content tests.test_content_formats
-CARGO_TARGET_DIR=.local/p2-rootmotion/compiler-target \
+CARGO_TARGET_DIR=.local/p2-finisher/compiler-target \
   cargo test --manifest-path server/Cargo.toml --test build_combo \
   --test generated_definitions
 ```

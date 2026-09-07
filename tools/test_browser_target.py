@@ -1,4 +1,4 @@
-"""Exported pointer and keyboard checks for protocol-8 combat targeting."""
+"""Exported pointer and keyboard checks for protocol-9 combat targeting."""
 
 from __future__ import annotations
 

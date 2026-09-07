@@ -55,6 +55,7 @@ pub struct MonsterClock {
     pub pending_hit_at_us: i64,
     pub pending_hit_until_us: i64,
     pub pending_damage: u16,
+    pub area_invulnerable_until_us: i64,
 }
 
 #[spacetimedb::table(accessor = monster_damage)]
@@ -100,6 +101,7 @@ pub struct PendingPlayerHit {
     target_generation: u32,
     damage: u16,
     range_m: f32,
+    invulnerability_us: i64,
     target_revision: u64,
     can_select_target: bool,
 }
@@ -161,7 +163,7 @@ pub fn initialize(ctx: &ReducerContext) {
     }
 }
 
-fn trusted_spawn(id: u32) -> Option<MonsterSpawnDefinition> {
+pub(crate) fn trusted_spawn(id: u32) -> Option<MonsterSpawnDefinition> {
     definitions::MONSTER_SPAWNS
         .iter()
         .copied()
@@ -211,6 +213,7 @@ fn fresh_monster_clock(spawn: MonsterSpawnDefinition) -> MonsterClock {
         pending_hit_at_us: 0,
         pending_hit_until_us: 0,
         pending_damage: 0,
+        area_invulnerable_until_us: 0,
     }
 }
 
@@ -309,7 +312,8 @@ pub fn start_player_action(
         .attack_sequence
         .checked_add(1)
         .ok_or("Attack sequence limit reached.")?;
-    let (hit_at_us, hit_until_us) = if plan.target_id == 0 {
+    let has_ordinary_hit = plan.target_id != 0 && plan.definition.special_area.is_none();
+    let (hit_at_us, hit_until_us) = if !has_ordinary_hit {
         (0, 0)
     } else {
         (
@@ -330,15 +334,20 @@ pub fn start_player_action(
     controller.pending_attack_target_generation = plan.target_generation;
     controller.pending_attack_hit_at_us = hit_at_us;
     controller.pending_attack_hit_until_us = hit_until_us;
-    controller.pending_attack_damage = if plan.target_id == 0 { 0 } else { plan.damage };
-    controller.pending_attack_range = if plan.target_id == 0 {
+    controller.pending_attack_damage = if has_ordinary_hit { plan.damage } else { 0 };
+    controller.pending_attack_range = if !has_ordinary_hit {
         0.0
     } else {
         plan.definition.range_m
     };
+    controller.pending_attack_invulnerability_us = if has_ordinary_hit {
+        plan.definition.ordinary_hit_invulnerability_us
+    } else {
+        0
+    };
     controller.pending_attack_target_revision = controller.combat_target_revision;
     controller.pending_attack_can_select_target = plan.can_select_target;
-    controller.pending_attack_action_revision = if plan.target_id == 0 {
+    controller.pending_attack_action_revision = if !has_ordinary_hit {
         0
     } else {
         action_revision
@@ -355,6 +364,15 @@ pub fn start_player_action(
         player.heading,
         action_revision,
     )?;
+    crate::special_area::start(
+        ctx,
+        controller,
+        plan.definition,
+        player.life_sequence,
+        now,
+        player.heading,
+        plan.damage,
+    )?;
     player.attack_sequence = attack_sequence;
     player.attack_action_id = plan.definition.id.into();
     player.action_started_at_us = now;
@@ -370,6 +388,14 @@ pub fn validate_player_action_start(
     has_target: bool,
     now: i64,
 ) -> Result<(), String> {
+    let ordinary_cooldown_is_valid = if definition.special_area.is_some() {
+        definition.ordinary_hit_invulnerability_us == 0
+    } else {
+        (1..=1_000_000).contains(&definition.ordinary_hit_invulnerability_us)
+    };
+    if !ordinary_cooldown_is_valid {
+        return Err("The trusted ordinary-hit cooldown is invalid.".into());
+    }
     now.checked_add(definition.duration_us)
         .ok_or("Attack timestamp is outside the supported range.")?;
     fresh_action_not_before(now, definition)?;
@@ -392,14 +418,18 @@ pub fn validate_player_action_start(
             .and_then(|_| now.checked_add(definition.hit_end_us))
             .ok_or("Attack hit timestamp is outside the supported range.")?;
     }
-    crate::root_motion::validate_action_definition(definition)
+    crate::root_motion::validate_action_definition(definition)?;
+    crate::special_area::validate_action_definition(definition)
 }
 
 fn fresh_action_not_before(now: i64, definition: &AttackDefinition) -> Result<i64, String> {
     let cooldown = now
         .checked_add(definition.cooldown_us)
         .ok_or("Attack timestamp is outside the supported range.")?;
-    if definition.combo_input.is_none() {
+    if !definitions::PLAYER_ONEHAND_COMBO
+        .iter()
+        .any(|candidate| candidate.id == definition.id)
+    {
         return Ok(cooldown);
     }
     let action_end = now
@@ -422,6 +452,7 @@ pub fn take_due_player_hit(controller: &mut Controller, now: i64) -> Option<Pend
         target_generation: controller.pending_attack_target_generation,
         damage: controller.pending_attack_damage,
         range_m: controller.pending_attack_range,
+        invulnerability_us: controller.pending_attack_invulnerability_us,
         target_revision: controller.pending_attack_target_revision,
         can_select_target: controller.pending_attack_can_select_target,
     });
@@ -446,6 +477,7 @@ pub fn cancel_player_attack(controller: &mut Controller) {
     controller.pending_attack_hit_until_us = 0;
     controller.pending_attack_damage = 0;
     controller.pending_attack_range = 0.0;
+    controller.pending_attack_invulnerability_us = 0;
     controller.pending_attack_target_revision = 0;
     controller.pending_attack_can_select_target = false;
     controller.pending_attack_action_revision = 0;
@@ -554,6 +586,7 @@ pub fn resolve_player_hit(ctx: &ReducerContext, character: Identity, hit: Pendin
     let Some(mut monster) = ctx.db.monster().id().find(hit.target_id) else {
         return;
     };
+    let now = now_us(ctx);
     if !player.online
         || player.health == 0
         || monster.health == 0
@@ -571,6 +604,9 @@ pub fn resolve_player_hit(ctx: &ReducerContext, character: Identity, hit: Pendin
             &collision_bounds(ctx),
         )
     {
+        return;
+    }
+    if !monster_hit_cooldown_allows(ctx, monster.id, now) {
         return;
     }
     let controller = ctx
@@ -591,6 +627,8 @@ pub fn resolve_player_hit(ctx: &ReducerContext, character: Identity, hit: Pendin
         u32::from(hit.damage),
     )
     .unwrap_or_else(|error| panic!("cannot record resolved monster damage: {error}"));
+    mark_monster_hit_cooldown(ctx, monster.id, now, hit.invulnerability_us)
+        .unwrap_or_else(|error| panic!("cannot set resolved monster hit cooldown: {error}"));
     if apply_damage(&mut monster.health, hit.damage) {
         kill_monster(ctx, &mut monster, character);
     }
@@ -608,7 +646,7 @@ pub fn resolve_player_hit(ctx: &ReducerContext, character: Identity, hit: Pendin
     }
 }
 
-fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, character: Identity) {
+pub(crate) fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, character: Identity) {
     let now = now_us(ctx);
     crate::combo::clear_chains_targeting(ctx, monster.id, monster.life_sequence);
     monster.activity = 3;
@@ -622,6 +660,7 @@ fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, character: Identity
         cancel_monster_hit(&mut clock);
         ctx.db.monster_clock().id().update(clock);
     }
+    crate::knockback::clear(ctx, monster.id);
     award_monster_experience(ctx, monster);
     inventory::drop_potion(ctx, character, monster.x, monster.y, monster.z);
     ctx.db.loot().insert(Loot {
@@ -640,7 +679,7 @@ fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, character: Identity
     });
 }
 
-fn record_damage(
+pub(crate) fn record_damage(
     ctx: &ReducerContext,
     monster_id: u32,
     monster_life_sequence: u32,
@@ -835,12 +874,46 @@ fn award_monster_experience(ctx: &ReducerContext, monster: &Monster) {
     clear_monster_damage(ctx, monster.id, monster.life_sequence);
 }
 
-fn apply_damage(health: &mut u16, damage: u16) -> bool {
+pub(crate) fn apply_damage(health: &mut u16, damage: u16) -> bool {
     if *health == 0 {
         return false;
     }
     *health = health.saturating_sub(damage);
     *health == 0
+}
+
+pub(crate) fn monster_hit_cooldown_allows(ctx: &ReducerContext, monster_id: u32, now: i64) -> bool {
+    ctx.db
+        .monster_clock()
+        .id()
+        .find(monster_id)
+        .is_some_and(|clock| hit_cooldown_allows(now, clock.area_invulnerable_until_us))
+}
+
+fn hit_cooldown_allows(now: i64, invulnerable_until_us: i64) -> bool {
+    now >= invulnerable_until_us
+}
+
+pub(crate) fn mark_monster_hit_cooldown(
+    ctx: &ReducerContext,
+    monster_id: u32,
+    now: i64,
+    duration_us: i64,
+) -> Result<(), String> {
+    if duration_us <= 0 {
+        return Err("Monster hit cooldown is invalid.".into());
+    }
+    let mut clock = ctx
+        .db
+        .monster_clock()
+        .id()
+        .find(monster_id)
+        .ok_or("The trusted monster clock is missing.")?;
+    clock.area_invulnerable_until_us = now
+        .checked_add(duration_us)
+        .ok_or("Monster hit cooldown timestamp is outside the supported range.")?;
+    ctx.db.monster_clock().id().update(clock);
+    Ok(())
 }
 
 fn roll_u16(ctx: &ReducerContext, minimum: u16, maximum: u16) -> u16 {
@@ -948,6 +1021,9 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) {
                     .id()
                     .update(fresh_monster_clock(spawn));
             }
+            continue;
+        }
+        if crate::knockback::locks_ai(ctx, monster.id, monster.life_sequence) {
             continue;
         }
         let spawn = trusted_spawn(monster.id)
@@ -1108,6 +1184,7 @@ fn resolve_monster_hit(ctx: &ReducerContext, monster_id: u32, hit: PendingMonste
             cancel_player_attack(&mut controller);
             crate::combo::clear_chain(&mut controller);
             crate::root_motion::clear(&mut controller);
+            crate::special_area::clear(ctx, player.identity);
             crate::targeting::clear_character_target(ctx, &mut controller)
                 .unwrap_or_else(|error| panic!("cannot clear defeated character target: {error}"));
             ctx.db.controller().identity().update(controller);
@@ -1130,7 +1207,7 @@ fn take_due_monster_hit(clock: &mut MonsterClock, now: i64) -> Option<PendingMon
     hit
 }
 
-fn cancel_monster_hit(clock: &mut MonsterClock) {
+pub(crate) fn cancel_monster_hit(clock: &mut MonsterClock) {
     clock.pending_target = Identity::ZERO;
     clock.pending_target_generation = 0;
     clock.pending_hit_at_us = 0;
@@ -1162,6 +1239,7 @@ mod tests {
             pending_attack_hit_until_us: hit_until_us,
             pending_attack_damage: 35,
             pending_attack_range: 2.7,
+            pending_attack_invulnerability_us: 100_000,
             pending_attack_target_revision: 9,
             pending_attack_can_select_target: true,
             pending_attack_action_revision: 5,
@@ -1201,6 +1279,7 @@ mod tests {
             pending_hit_at_us: hit_at_us,
             pending_hit_until_us: hit_until_us,
             pending_damage: 20,
+            area_invulnerable_until_us: 0,
         }
     }
 
@@ -1265,11 +1344,20 @@ mod tests {
     }
 
     #[test]
+    fn global_monster_hit_cooldown_ends_at_its_exact_boundary() {
+        assert!(!hit_cooldown_allows(1_299_999, 1_300_000));
+        assert!(hit_cooldown_allows(1_300_000, 1_300_000));
+        assert!(hit_cooldown_allows(1_300_001, 1_300_000));
+    }
+
+    #[test]
     fn combo_fresh_action_deadline_includes_the_full_motion() {
         let combo_one = &definitions::PLAYER_ONEHAND_COMBO[0];
         let combo_two = &definitions::PLAYER_ONEHAND_COMBO[1];
+        let combo_four = &definitions::PLAYER_ONEHAND_COMBO[3];
         assert_eq!(fresh_action_not_before(100, combo_one).unwrap(), 1_000_100);
         assert_eq!(fresh_action_not_before(100, combo_two).unwrap(), 933_433);
+        assert_eq!(fresh_action_not_before(100, combo_four).unwrap(), 1_266_767);
         assert_eq!(
             fresh_action_not_before(100, &definitions::PLAYER_GENERAL_ATTACK).unwrap(),
             850_100
@@ -1318,11 +1406,10 @@ mod tests {
             assert_eq!((clock.home_x, clock.home_z), (spawn.home_x, spawn.home_z));
         }
         if !definitions::COMBAT_FIXTURE_CONTENT_HASH.is_empty() {
-            assert_eq!(definitions::MONSTER_SPAWNS.len(), 2);
-            assert_ne!(
-                definitions::MONSTER_SPAWNS[0].home_x,
-                definitions::MONSTER_SPAWNS[1].home_x
-            );
+            assert!(definitions::MONSTER_SPAWNS.len() >= 2);
+            assert!(definitions::MONSTER_SPAWNS.windows(2).all(|pair| {
+                pair[0].home_x != pair[1].home_x || pair[0].home_z != pair[1].home_z
+            }));
         }
     }
 

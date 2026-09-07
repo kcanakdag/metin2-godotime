@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the three-step Sword+0 combo and authoritative roots with two clients."""
+"""Exercise the four-step Sword+0 combo and authoritative roots with two clients."""
 
 from __future__ import annotations
 
@@ -69,11 +69,13 @@ def main() -> None:
             "combo_chain_revision",
             "pending_attack_action_revision",
             "root_motion_started_at_us",
+            "special_area",
+            "monster_force",
             "perform_attack",
             "combat_target_view",
         )
         if any(name not in schema for name in required_schema):
-            raise RuntimeError("The selected database does not expose the protocol 8 combo schema.")
+            raise RuntimeError("The selected database does not expose the protocol 9 combo schema.")
         definition_hash = trusted_definition_hash()
         with tempfile.TemporaryDirectory(prefix="root-motion-", dir=ROOT / ".local") as scratch:
             stage = Path(scratch)

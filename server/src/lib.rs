@@ -6,9 +6,11 @@ mod combat;
 mod combo;
 mod content;
 mod inventory;
+mod knockback;
 mod movement;
 mod progression;
 mod root_motion;
+mod special_area;
 mod targeting;
 
 mod definitions {
@@ -111,6 +113,7 @@ pub struct Controller {
     pub pending_attack_hit_until_us: i64,
     pub pending_attack_damage: u16,
     pub pending_attack_range: f32,
+    pub pending_attack_invulnerability_us: i64,
     pub pending_attack_target_revision: u64,
     pub pending_attack_can_select_target: bool,
     pub pending_attack_action_revision: u64,
@@ -118,7 +121,7 @@ pub struct Controller {
     pub combat_target_life_sequence: u32,
     pub combat_target_change_not_before_us: i64,
     pub combat_target_revision: u64,
-    /// 0: no combo; 1..=3: the bounded common one-hand prefix.
+    /// 0: no combo; 1..=4: the bounded default one-hand chain.
     pub combo_step: u8,
     pub combo_chain_revision: u64,
     pub combo_action_started_at_us: i64,
@@ -157,7 +160,7 @@ pub struct TickSchedule {
 fn compiled_world_info() -> WorldInfo {
     WorldInfo {
         id: 1,
-        protocol_version: 8,
+        protocol_version: 9,
         map_name: if content::YONGAN {
             "Yongan"
         } else {
@@ -334,6 +337,7 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
         controller.last_input_us = now_us(ctx);
         combo::clear_chain(&mut controller);
         root_motion::clear(&mut controller);
+        special_area::clear(ctx, character);
         targeting::clear_character_target(ctx, &mut controller)
             .unwrap_or_else(|error| panic!("cannot clear re-entered character target: {error}"));
         ctx.db.controller().identity().update(controller);
@@ -356,6 +360,7 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
             pending_attack_hit_until_us: 0,
             pending_attack_damage: 0,
             pending_attack_range: 0.0,
+            pending_attack_invulnerability_us: 0,
             pending_attack_target_revision: 0,
             pending_attack_can_select_target: false,
             pending_attack_action_revision: 0,
@@ -527,8 +532,11 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
     let elapsed = now.saturating_sub(previous_tick_us).max(0) as f32 / 1_000_000.0;
     clock.last_tick = ctx.timestamp;
     ctx.db.simulation_clock().id().update(clock);
+    special_area::activate_due(ctx, now)?;
     root_motion::advance_all(ctx, now)?;
     combat::resolve_due_hits(ctx, now);
+    knockback::advance_all(ctx, now)?;
+    special_area::scan(ctx, now)?;
     combo::resolve_due_transitions(ctx, now);
     let bounds = collision_bounds(ctx);
     for mut controller in ctx.db.controller().iter() {

@@ -140,6 +140,12 @@
         "bin/pack/PC/ymir work/pc/warrior/warrior_face.dds",
         "bin/pack/PC/ymir work/pc/warrior/warrior_novice_red.dds"
       ],
+      "default_hair": {
+        "hair_index": 0,
+        "model": "bin/pack/PC/ymir work/pc/warrior/hair/hair_1_1.gr2",
+        "source_skin": "bin/pack/PC/ymir work/pc/warrior/hair/hair_1_1.dds",
+        "target_skin": "bin/pack/PC/ymir work/pc/warrior/warrior_hair_01.dds"
+      },
       "attachment_bones": {
         "weapon_right": "equip_right_hand"
       },
@@ -213,7 +219,10 @@
             {"action": "normal_attack", "files": ["20.msa", "20_1.msa"], "weights": [50, 50], "loop": false},
             {"action": "front_damage", "files": ["30.msa"], "loop": false},
             {"action": "front_death", "files": ["31.msa"], "loop": false},
+            {"action": "front_knockdown", "files": ["32.msa"], "loop": false},
+            {"action": "front_standup", "files": ["33.msa"], "loop": false},
             {"action": "back_damage", "files": ["34.msa", "34_1.msa"], "weights": [50, 50], "loop": false},
+            {"action": "back_knockdown", "files": ["35.msa"], "loop": false},
             {"action": "back_death", "files": ["37.msa", "37_1.msa"], "weights": [50, 50], "loop": false}
           ]
         }
@@ -236,7 +245,7 @@
       "actor_attachment": "weapon_right",
       "attachment_transform": {
         "translation_m": [0.0, 0.0, 0.0],
-        "rotation_degrees": [0.0, 0.0, 0.0],
+        "rotation_degrees": [90.0, 0.0, 0.0],
         "scale": [1.0, 1.0, 1.0]
       }
     }
@@ -314,7 +323,7 @@
     {
       "id": "warrior-hair-and-shapes",
       "source": "bin/pack/root/warrior_m.msm",
-      "reason": "This vertical slice selects only the base novice body; hair and armour shape variants remain outside the profile."
+      "reason": "The default male Warrior HairIndex 0 is selected; other hair colours/styles and armour shape variants remain outside the profile."
     },
     {
       "id": "motion-sound-and-effects",

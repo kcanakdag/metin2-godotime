@@ -2,6 +2,7 @@
 
 import copy
 import json
+import struct
 import sys
 import tempfile
 import unittest
@@ -12,10 +13,12 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 from content_compile import (
     digest,
+    extract_actor_texture_pngs,
     load_profile,
     rotate_actor_local_vector,
     validate_server_payload,
 )
+from actor_texture_import import ACTOR_TEXTURE_IMPORT, configure_actor_texture_imports
 from content_formats import (
     parse_legacy_script,
     parse_motion_list,
@@ -54,6 +57,81 @@ Group AttackingData
 
 
 class ContentFormatTests(unittest.TestCase):
+    def test_selected_actor_texture_policy_is_lossless_and_deterministic(self):
+        with tempfile.TemporaryDirectory() as directory:
+            actors = Path(directory) / "actors"
+            actors.mkdir()
+            png = actors / "wild-dog-101_stray_dog.png"
+            png.write_bytes(b"source-png-bytes")
+            sidecars = configure_actor_texture_imports(actors)
+            self.assertEqual(sidecars, [png.with_suffix(".png.import")])
+            self.assertEqual(sidecars[0].read_text(), ACTOR_TEXTURE_IMPORT)
+            self.assertIn("compress/mode=0", ACTOR_TEXTURE_IMPORT)
+            self.assertIn("mipmaps/generate=true", ACTOR_TEXTURE_IMPORT)
+            self.assertIn("detect_3d/compress_to=0", ACTOR_TEXTURE_IMPORT)
+            self.assertEqual(configure_actor_texture_imports(actors), sidecars)
+            self.assertEqual(sidecars[0].read_text(), ACTOR_TEXTURE_IMPORT)
+
+    def test_selected_actor_pngs_are_extracted_byte_for_byte_from_glbs(self):
+        source = ROOT / "client/assets/imported/content/p0-warrior-dog/actors"
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            actors = output / "actors"
+            actors.mkdir()
+            for name in ("warrior-male.glb", "wild-dog-101.glb"):
+                (actors / name).write_bytes((source / name).read_bytes())
+            extracted = extract_actor_texture_pngs(
+                output,
+                {
+                    "artifacts": [
+                        {"type": "actor", "relative_path": "actors/warrior-male.glb"},
+                        {"type": "actor", "relative_path": "actors/wild-dog-101.glb"},
+                    ]
+                },
+            )
+            self.assertEqual(
+                [path.name for path in extracted],
+                [
+                    "warrior-male_warrior_face.png",
+                    "warrior-male_warrior_novice_red.png",
+                    "warrior-male_warrior_hair_01.png",
+                    "wild-dog-101_stray_dog.png",
+                ],
+            )
+            for path in extracted:
+                self.assertEqual(path.read_bytes(), (source / path.name).read_bytes())
+                self.assertEqual(path.with_suffix(".png.import").read_text(), ACTOR_TEXTURE_IMPORT)
+
+    def test_actor_texture_extraction_rejects_invalid_glb_buffer_views(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            actors = output / "actors"
+            actors.mkdir()
+            for image in (
+                {"mimeType": "image/png", "name": "bad-index", "bufferView": -1},
+                {"mimeType": "image/png", "name": "bad-buffer", "bufferView": 0},
+            ):
+                buffer = 1 if image["name"] == "bad-buffer" else 0
+                document = {
+                    "bufferViews": [{"buffer": buffer, "byteLength": 1}],
+                    "images": [image],
+                }
+                encoded = json.dumps(document).encode()
+                encoded += b" " * (-len(encoded) % 4)
+                payload = (
+                    struct.pack("<4sII", b"glTF", 2, 12 + 8 + len(encoded) + 8 + 1)
+                    + struct.pack("<I4s", len(encoded), b"JSON")
+                    + encoded
+                    + struct.pack("<I4s", 1, b"BIN\x00")
+                    + b"x"
+                )
+                (actors / "invalid.glb").write_bytes(payload)
+                with self.assertRaisesRegex(ValueError, "image buffer"):
+                    extract_actor_texture_pngs(
+                        output,
+                        {"artifacts": [{"type": "actor", "relative_path": "actors/invalid.glb"}]},
+                    )
+
     def test_real_wild_dog_attack_shape_is_typed_and_converted_to_godot_units(self):
         motion = parse_msa(ATTACK_MSA)
         self.assertEqual(motion["motion_file"], "ymir work/monster/stray_dog/20.gr2")

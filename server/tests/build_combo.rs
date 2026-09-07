@@ -27,21 +27,41 @@ fn combo_mut(value: &mut Value, index: usize) -> &mut Map<String, Value> {
 }
 
 #[test]
-fn accepts_the_generated_three_action_prefix_and_root_endpoints() {
+fn accepts_the_generated_four_action_prefix_and_root_endpoints() {
     let value = fixture();
     let combo = validate(root(&value)).expect("generated combo contract");
-    assert_eq!(combo[0].combo_input.pre_input_us, 167_094);
-    assert_eq!(combo[0].combo_input.direct_input_us, 533_333);
-    assert_eq!(combo[0].combo_input.input_limit_us, 602_564);
-    assert_eq!(combo[0].combo_input.link_us, 58_889);
-    assert_eq!(combo[1].combo_input.pre_input_us, 100_513);
-    assert_eq!(combo[1].combo_input.direct_input_us, 543_248);
-    assert_eq!(combo[1].combo_input.input_limit_us, 636_581);
-    assert_eq!(combo[1].combo_input.link_us, 19_658);
-    assert_eq!(combo[2].combo_input.pre_input_us, 84_786);
-    assert_eq!(combo[2].combo_input.direct_input_us, 418_462);
-    assert_eq!(combo[2].combo_input.input_limit_us, 664_615);
-    assert_eq!(combo[2].combo_input.link_us, 60_171);
+    let inputs = combo[..3]
+        .iter()
+        .map(|row| row.combo_input.expect("nonterminal input"))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        (
+            inputs[0].pre_input_us,
+            inputs[0].direct_input_us,
+            inputs[0].input_limit_us,
+            inputs[0].link_us
+        ),
+        (167_094, 533_333, 602_564, 58_889)
+    );
+    assert_eq!(
+        (
+            inputs[1].pre_input_us,
+            inputs[1].direct_input_us,
+            inputs[1].input_limit_us,
+            inputs[1].link_us
+        ),
+        (100_513, 543_248, 636_581, 19_658)
+    );
+    assert_eq!(
+        (
+            inputs[2].pre_input_us,
+            inputs[2].direct_input_us,
+            inputs[2].input_limit_us,
+            inputs[2].link_us
+        ),
+        (84_786, 418_462, 664_615, 60_171)
+    );
+    assert!(combo[3].combo_input.is_none());
     assert_eq!(combo[0].root_motion.endpoint_x_m, 0.0);
     assert_eq!(combo[0].root_motion.endpoint_z_m, -1.317569580078125);
     assert_eq!(combo[0].root_motion.duration_us, 1_000_000);
@@ -49,6 +69,8 @@ fn accepts_the_generated_three_action_prefix_and_root_endpoints() {
     assert_eq!(combo[1].root_motion.duration_us, 933_333);
     assert_eq!(combo[2].root_motion.endpoint_z_m, -1.4301394653320312);
     assert_eq!(combo[2].root_motion.duration_us, 1_066_667);
+    assert_eq!(combo[3].root_motion.endpoint_z_m, -1.1964712524414063);
+    assert_eq!(combo[3].root_motion.duration_us, 1_266_667);
 }
 
 #[test]
@@ -69,7 +91,7 @@ fn rejects_missing_duplicate_and_reordered_prefix_records() {
     assert!(
         validate(root(&missing_action))
             .unwrap_err()
-            .contains("exactly the five")
+            .contains("exactly the six")
     );
 
     let mut duplicate = fixture();
@@ -81,24 +103,26 @@ fn rejects_missing_duplicate_and_reordered_prefix_records() {
     reordered["base_combo_prefix"] = json!([
         PLAYER_COMBO_ACTION_IDS[1],
         PLAYER_COMBO_ACTION_IDS[0],
-        PLAYER_COMBO_ACTION_IDS[2]
+        PLAYER_COMBO_ACTION_IDS[2],
+        PLAYER_COMBO_ACTION_IDS[3]
     ]);
     assert!(
         validate(root(&reordered))
             .unwrap_err()
-            .contains("combo_1 then combo_2 then combo_3")
+            .contains("combo_1 through combo_4")
     );
 
     let mut duplicate_prefix = fixture();
     duplicate_prefix["base_combo_prefix"] = json!([
         PLAYER_COMBO_ACTION_IDS[0],
         PLAYER_COMBO_ACTION_IDS[0],
-        PLAYER_COMBO_ACTION_IDS[2]
+        PLAYER_COMBO_ACTION_IDS[2],
+        PLAYER_COMBO_ACTION_IDS[3]
     ]);
     assert!(
         validate(root(&duplicate_prefix))
             .unwrap_err()
-            .contains("combo_1 then combo_2 then combo_3")
+            .contains("combo_1 through combo_4")
     );
 }
 
@@ -345,4 +369,50 @@ fn rejects_wrong_action_semantics_primary_and_nonprefix_combo_data() {
             .unwrap_err()
             .contains("must omit")
     );
+}
+
+#[test]
+fn rejects_changed_finisher_events_reactions_sphere_and_hit_cooldowns() {
+    let cases: Vec<(&str, Mutation)> = vec![
+        (
+            "area dispatch",
+            Box::new(|value| {
+                combo_mut(value, 3)["special_area"]["activation_offset_us"] = json!(659316)
+            }),
+        ),
+        (
+            "wave frame",
+            Box::new(|value| {
+                combo_mut(value, 3)["screen_wave"]["legacy_dispatch_frame"] = json!(38)
+            }),
+        ),
+        (
+            "ordinary cooldown",
+            Box::new(|value| {
+                combo_mut(value, 1)["ordinary_hit_invulnerability_us"] = json!(300000)
+            }),
+        ),
+        (
+            "defending sphere",
+            Box::new(|value| value["actors"][1]["defending_sphere"]["radius_m"] = json!(0.8)),
+        ),
+        (
+            "reaction duration",
+            Box::new(|value| {
+                value["actors"][1]["great_hit_reactions"][0]["duration_us"] = json!(1)
+            }),
+        ),
+        (
+            "combo4 exception",
+            Box::new(|value| {
+                value["root_motion_sources"][3]["msa_validation"] =
+                    json!("strict-rounded-corroboration")
+            }),
+        ),
+    ];
+    for (name, mutate) in cases {
+        let mut value = fixture();
+        mutate(&mut value);
+        assert!(validate(root(&value)).is_err(), "{name} passed");
+    }
 }

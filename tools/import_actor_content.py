@@ -69,7 +69,97 @@ def texture_map(asset: dict, source_root: Path) -> dict[str, Path]:
     for source in asset["source_textures"]:
         parts = Path(source).parts
         result[virtual_path("/".join(parts[3:]))] = source_root / source
+    hair = asset.get("default_hair")
+    if hair is not None:
+        source_parts = Path(hair["source_skin"]).parts
+        result[virtual_path("/".join(source_parts[3:]))] = source_root / hair["target_skin"]
     return result
+
+
+def merge_default_hair(
+    graph: dict, actor: dict, source_root: Path
+) -> tuple[dict, list[dict], dict | None]:
+    """Merge the race script's selected skinned hair onto the base actor rig."""
+    import carbon_gr2
+    from carbon_granny import reader
+    from metin_gr2_adapter import adapt_model_placement
+
+    selected = actor.get("default_hair")
+    if selected is None:
+        return graph, [], None
+    hair_path = source_root / selected["model"]
+    hair_graph = carbon_gr2.read_gr2(hair_path)
+    adapt_model_placement(hair_path, hair_graph)
+    if (
+        len(graph.get("models", [])) != 1
+        or len(graph.get("skeletons", [])) != 1
+        or len(hair_graph.get("models", [])) != 1
+        or len(hair_graph.get("skeletons", [])) != 1
+        or len(hair_graph.get("meshes", [])) != 1
+        or hair_graph.get("animations")
+        or hair_graph["models"][0].get("meshBindings") != [0]
+    ):
+        raise ValueError("Selected default hair does not have the expected single skinned mesh")
+    actor_bones = {bone["name"] for bone in graph["skeletons"][0]["bones"]}
+    hair_bones = {bone["name"] for bone in hair_graph["skeletons"][0]["bones"]}
+    mesh = hair_graph["meshes"][0]
+    bindings = mesh.get("boneBindings", [])
+    binding_names = [binding.get("name") for binding in bindings]
+    indices = mesh.get("vertex", {}).get("blendIndice", [])
+    weights = mesh.get("vertex", {}).get("blendWeight", [])
+    positions = mesh.get("vertex", {}).get("position", [])
+    if (
+        not hair_bones
+        or not hair_bones.issubset(actor_bones)
+        or len(indices) != len(weights)
+        or len(indices) % 4 != 0
+        or len(positions) != len(indices) // 4 * 3
+    ):
+        raise ValueError("Selected default hair skeleton is incompatible with the Warrior")
+    weighted_bones = set()
+    for offset in range(0, len(indices), 4):
+        vertex_weights = weights[offset : offset + 4]
+        if (
+            any(
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or not 0.0 <= value <= 1.0
+                for value in vertex_weights
+            )
+            or abs(sum(vertex_weights) - 1.0) > 1e-6
+        ):
+            raise ValueError("Selected default hair has invalid skin weights")
+        for index, weight in zip(indices[offset : offset + 4], vertex_weights, strict=True):
+            if not isinstance(index, (int, float)) or not float(index).is_integer():
+                raise ValueError("Selected default hair has an invalid binding index")
+            binding_index = int(index)
+            if not 0 <= binding_index < len(binding_names):
+                raise ValueError("Selected default hair binding index is out of range")
+            if weight > 0.0:
+                weighted_bones.add(binding_names[binding_index])
+    # The original client links the hair model to PART_MAIN and Granny remaps
+    # mesh bindings onto that skeleton. This pinned default mesh is rigidly
+    # weighted to the shared head bone; its unused front-hair bones may differ.
+    if weighted_bones != {"Bip01 Head"}:
+        raise ValueError("Selected default hair no longer uses only the shared head binding")
+    mesh_index = len(graph["meshes"])
+    graph["meshes"].extend(hair_graph["meshes"])
+    graph["models"][0]["meshBindings"].append(mesh_index)
+    return (
+        graph,
+        reader.read_raw(hair_path.read_bytes()).file_info["Meshes"],
+        {
+            "hair_index": selected["hair_index"],
+            "source_model": selected["model"],
+            "source_skin": selected["source_skin"],
+            "target_skin": selected["target_skin"],
+            "mesh": mesh["name"],
+            "vertices": len(positions) // 3,
+            "weighted_bones": sorted(weighted_bones),
+            "linked_skeleton_part": "main",
+        },
+    )
 
 
 def assign_materials(meshes: list, raw_meshes: list[dict], textures: dict[str, Path]) -> int:
@@ -318,6 +408,7 @@ def convert_actor(actor: dict, source_root: Path, output: Path) -> dict:
     model_path = source_root / actor["source_model"]
     graph = carbon_gr2.read_gr2(model_path)
     adapt_model_placement(model_path, graph)
+    graph, hair_raw_meshes, hair_report = merge_default_hair(graph, actor, source_root)
     motions = [motion for mode in actor["modes"] for motion in mode["motions"]]
     for motion in motions:
         path = source_root / motion["source_gr2"]
@@ -352,7 +443,8 @@ def convert_actor(actor: dict, source_root: Path, output: Path) -> dict:
     if rig is None or not meshes:
         raise ValueError(f"Actor import incomplete: {actor['id']}")
     raw = reader.read_raw(model_path.read_bytes()).file_info
-    textured_meshes = assign_materials(meshes, raw["Meshes"], texture_map(actor, source_root))
+    raw_meshes = [*raw["Meshes"], *hair_raw_meshes]
+    textured_meshes = assign_materials(meshes, raw_meshes, texture_map(actor, source_root))
     samples_before_scale = vertex_samples(bpy.context.scene, rig, meshes, imported["actions"])
     apply_scale([rig, *meshes])
     scale_action_locations(imported["actions"], 0.01)
@@ -414,6 +506,7 @@ def convert_actor(actor: dict, source_root: Path, output: Path) -> dict:
         "motions": action_report,
         "root_motion": root_motion,
         "scale_bake_max_error_m": scale_bake_error,
+        **({"default_hair": hair_report} if hair_report is not None else {}),
     }
 
 

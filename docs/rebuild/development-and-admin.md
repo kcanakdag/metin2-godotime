@@ -6,6 +6,11 @@ measurable modern internals. Start from the working tools in this repository;
 generalize them through representative fixtures before importing entire catalogs.
 See the [master plan](../full-rebuild-plan.md) and [feature catalog](feature-catalog.md).
 
+The [content authoring contract](content-authoring.md) makes quests, items, mobs
+and classes definition-based, separates authoring from mutable server state,
+and scopes verification to changed behavior. This is an explicit implementation
+requirement; the current selected fixture is not yet a general content system.
+
 ## What can already be reused
 
 At project revision `d1b3bbdea24240e03e5e325549eb5c4bd01a377b`:

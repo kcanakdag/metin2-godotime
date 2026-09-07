@@ -441,6 +441,7 @@ pub fn leave_world(ctx: &ReducerContext) -> Result<(), String> {
 
 pub fn stop_character(ctx: &ReducerContext, character: Identity) {
     crate::appearance::remove(ctx, character);
+    crate::special_area::clear(ctx, character);
     if let Some(mut control) = ctx.db.controller().identity().find(character) {
         control.mode = 0;
         control.direction_x = 0.0;
