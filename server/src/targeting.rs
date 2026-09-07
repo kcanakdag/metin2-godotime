@@ -112,6 +112,9 @@ pub fn select_combat_target(
     control.combat_target_life_sequence = target_life_sequence;
     control.combat_target_change_not_before_us = deadline;
     control.combat_target_revision = revision;
+    if !same_target {
+        crate::combo::cancel_queued_link(&mut control);
+    }
     let character = control.identity;
     ctx.db.controller().identity().update(control);
     upsert_view(
@@ -128,6 +131,7 @@ pub fn select_combat_target(
 pub fn clear_combat_target(ctx: &ReducerContext) -> Result<(), String> {
     let mut control = active_controller(ctx)?;
     clear_fields(&mut control)?;
+    crate::combo::cancel_queued_link(&mut control);
     let character = control.identity;
     ctx.db.controller().identity().update(control);
     ctx.db.combat_target_view().character_id().delete(character);

@@ -280,7 +280,7 @@ func _valid_dual_fixture(client: GameConnection) -> bool:
 	var first := _monster_by_id(client, 1)
 	var second := _monster_by_id(client, 2)
 	return (
-		int(client.world_info.get("protocol_version", 0)) == 6
+		int(client.world_info.get("protocol_version", 0)) == 7
 		and str(client.world_info.get("content_hash", "")) == "training-v2-dual-wild-dog-v1"
 		and int(first.get("definition_vnum", 0)) == 101
 		and int(second.get("definition_vnum", 0)) == 101

@@ -1323,6 +1323,14 @@
                 },
                 {
                   "algebraic_type": {
+                    "U64": []
+                  },
+                  "name": {
+                    "some": "action_revision"
+                  }
+                },
+                {
+                  "algebraic_type": {
                     "U32": []
                   },
                   "name": {
@@ -1387,6 +1395,14 @@
                 },
                 {
                   "algebraic_type": {
+                    "U64": []
+                  },
+                  "name": {
+                    "some": "pending_attack_action_revision"
+                  }
+                },
+                {
+                  "algebraic_type": {
                     "U32": []
                   },
                   "name": {
@@ -1415,6 +1431,94 @@
                   },
                   "name": {
                     "some": "combat_target_revision"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U8": []
+                  },
+                  "name": {
+                    "some": "combo_step"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U64": []
+                  },
+                  "name": {
+                    "some": "combo_chain_revision"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "combo_action_started_at_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "combo_action_ends_at_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "combo_target_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "combo_target_life_sequence"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Bool": []
+                  },
+                  "name": {
+                    "some": "combo_target_can_be_selected"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U64": []
+                  },
+                  "name": {
+                    "some": "combo_equipped_item_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "combo_equipped_vnum"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Bool": []
+                  },
+                  "name": {
+                    "some": "combo_link_queued"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "combo_transition_boundary_us"
                   }
                 },
                 {

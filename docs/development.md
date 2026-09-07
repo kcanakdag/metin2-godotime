@@ -316,6 +316,138 @@ ms and opened the same account with the same still-valid JWT; the separate
 exported progression QA covers real auth-token refresh timers and full
 `AccountFlow` behavior. The local result does not qualify the public P1 route.
 
+## Protocol 7 bounded Sword combo
+
+Slice B extends the generated trusted action schema with the first two declared
+male-Warrior one-hand actions and their source-normalized combo input timings.
+Build it in its own target directory with the normal one-dog fixture and default
+deny settings:
+
+```sh
+MT2_AUTH_ISSUER=http://127.0.0.1:8186/auth \
+MT2_ALLOW_GUESTS=0 \
+MT2_PROGRESSION_BOOTSTRAP_IDENTITIES= \
+MT2_COMBAT_TEST_FIXTURE= \
+CARGO_TARGET_DIR="$PWD/.local/p2-combo/server-target" \
+cargo build --manifest-path server/Cargo.toml --locked --no-default-features \
+  --target wasm32-unknown-unknown --release
+```
+
+The client continues to send only `perform_attack()`. The server classifies its
+own receipt time against generated `combo_1` timing, publishes `combo_2` only
+after an accepted link, and keeps each pending hit immutable. Run the focused
+static checks with the same isolated target directory:
+
+```sh
+CARGO_TARGET_DIR="$PWD/.local/p2-combo/server-target" \
+cargo test --manifest-path server/Cargo.toml --all-features
+
+CARGO_TARGET_DIR="$PWD/.local/p2-combo/server-target" \
+cargo clippy --manifest-path server/Cargo.toml \
+  --all-targets --all-features -- -D warnings
+```
+
+After generating bindings that match one of the reviewed fresh protocol-7
+databases, run the authenticated two-client smoke:
+
+```sh
+python3 tools/test_combos.py \
+  --server http://127.0.0.1:8186 \
+  --game-server http://127.0.0.1:13223 \
+  --database <fresh-protocol-7-combo-database> \
+  --report .local/p2-combo/combo-report.json
+```
+
+The runner checks auth health, schema fields, trusted-definition identity, an
+isolated Godot import, generated bindings and the real script parser before its
+only two registrations. It never retries a rejected signup. The live phases use
+two authenticated subscriptions and record public action timestamps plus exact
+reducer-result timestamps. They cover targetless zero-damage chaining, selected
+far misses, duplicate queue preservation, two 35-damage hits, a real equipment
+mutation while the first hit is pending, target death/new life, two-way movement
+and queued disconnect/reconnect cleanup. Retained fixture damage is restored
+only with normal combat and the production 12-second respawn. This smoke is
+deliberately limited to the flat `training` map with exactly one dog. It parks
+the observer at `(-18, 6)` and uses `(-18, 3)` as the actor's safe waypoint,
+both inside the 32 m bounds and outside the dog's 16 m home-chase radius. Before
+far or targetless cases it requires authoritative arrival plus a dog idle at its
+trusted `(3, 3)` home for 0.5 seconds.
+
+The isolated implementation checks currently pass 60 server unit tests, four
+Rust build-boundary tests, one generated-definition test, clippy with all targets
+and features, GDScript formatting/lint and the real Godot parser. Root's
+source-verified `.local/p2-combo/build-manifest-root.json` records the gameplay
+hash and three default-deny WASM hashes. The fresh local training, dual-training
+and Yongan database identities are in
+`.local/p2-combo/publication-root.json`; publication used `delete_data=never`.
+The focused two-client run passes all 71 checks in
+`.local/p2-combo/combo-root-safe-fixture-20260907.json` (SHA-256
+`becc30159ffab215cdb3c25f7d2c8453fe338383960daba53da93136c4b6e7ad`).
+Its targetless direct input arrived at 558813 microseconds. Its equipment test
+recorded accepted queue and unequip receipts at 186291 and 186329 microseconds,
+both before the immutable first hit at 192308 microseconds, followed by exactly
+35 damage and no second step. `.local/p2-combo/root-headless-acceptance.json`
+binds this report and the frozen harness SHA to the reviewed server manifest.
+This qualifies the headless server slice. It does not establish later chain
+steps, root motion, skills, automatic chase, public deployment, exported-client
+behavior by itself or full P2 completion.
+
+The protocol-7 dual-target regression passes 51 checks in
+`.local/p2-combo/targets-root-first-20260907.json`. The instrumented Web and
+Linux packages pass their actual-PCK audit in
+`.local/p2-combo/exports-probe2-root-reviewed.json`: 832/1635 paths, 226 exact UI
+images, three actors, 40 clips, 20 Web world sections and two 11-frame target
+effects. The source freeze covers 212 unchanged files.
+
+Run the complete instrumented local export composition with:
+
+```sh
+.local/venv-dev/bin/python tools/test_browser_accounts.py \
+  --url http://127.0.0.1:8186 \
+  --database mt2-p2-combo-yongan-20260907 \
+  --native .local/p2-combo/native-probe2/MT2Spacetime.x86_64 \
+  --output .local/p2-combo/browser-combo \
+  --hardware --headless \
+  --progression --targeting --combo \
+  --actors --inventory --panels --session-refresh
+```
+
+That actual run passes all 288 checks. Browser and native queues are accepted at
+249435 and 284780 microseconds after step 1, with step 2 published at 536850 and
+540570 microseconds and health `100 -> 65 -> 30` on both clients. Same-target
+renewal preserves each queue. Held/released WASD, a real ground click and target
+clear remove three separate queues while each captured first hit still deals 35.
+The composed actor, inventory, target, progression and account lifecycle paths
+pass through both real four-minute refresh timers. The 53-row refresh trace has
+52/50 valid Web/native position rows and 1/3 transient pending rows during
+lifecycle; every valid row has zero authoritative coordinate drift and no row is
+invalid. No browser engine errors or native engine-log errors were observed; the
+intentional ownership reducer rejection remains recorded. The native snapshot
+reader recovers three torn writes in at most two attempts with zero unavailable
+reads; these file reads are not gameplay retries. The accepted report is
+`.local/p2-combo/browser-root-independent-followup-20260907/report.json`, whose
+SHA-256 is
+`5d015eb38261ed2daa25fe447c6f4bc1b9a8c48c213932160dd5451239c8cc9c`.
+`.local/p2-combo/root-acceptance-review.json` binds the final report, headless
+report, server build and instrumented PCK audit; its SHA-256 is
+`3299380864b684aea3d6ad582392753c625a3c0eb675ee252512ed28820e0628`.
+It records 65 Rust tests, 143 Python tests, 71 actor checks and 56 focused
+component checks; the configured lint suite passes.
+
+Earlier diagnostic reports remain preserved under `.local/p2-combo`. The final
+headless harness records exact reducer receipts, extrapolates from the received
+server-clock callback, keeps the strict pre-hit boundary and waits at reviewed
+training waypoints. The exported helper schedules its one follow-up from the
+first accepted ACK, independently latches rendered/public step 1, and waits for
+authoritative and rendered monster-home stability before one movement input.
+These synchronization rules are test setup, not gameplay authority.
+
+Slice B is accepted only as this bounded local instrumented Web/Linux slice.
+Normal exports exclude the fixed-input probe and were not exercised here.
+Public Slice B gameplay/deployment, Windows execution, Godot MCP and
+original-client parity remain unverified; later combo steps, root movement, full
+P2 and the full game remain incomplete.
+
 ## Bounded P2 progression administration
 
 Protocol 5 introduced three typed private command requests, retained by protocol

@@ -3,6 +3,7 @@ mod accounts;
 mod admin;
 mod appearance;
 mod combat;
+mod combo;
 mod content;
 mod inventory;
 mod movement;
@@ -102,6 +103,7 @@ pub struct Controller {
     pub last_input_us: i64,
     pub attack_until_us: i64,
     pub next_attack_us: i64,
+    pub action_revision: u64,
     pub pending_attack_target_id: u32,
     pub pending_attack_target_generation: u32,
     pub pending_attack_hit_at_us: i64,
@@ -110,10 +112,23 @@ pub struct Controller {
     pub pending_attack_range: f32,
     pub pending_attack_target_revision: u64,
     pub pending_attack_can_select_target: bool,
+    pub pending_attack_action_revision: u64,
     pub combat_target_id: u32,
     pub combat_target_life_sequence: u32,
     pub combat_target_change_not_before_us: i64,
     pub combat_target_revision: u64,
+    /// 0: no combo, 1: first one-hand step, 2: bounded second step.
+    pub combo_step: u8,
+    pub combo_chain_revision: u64,
+    pub combo_action_started_at_us: i64,
+    pub combo_action_ends_at_us: i64,
+    pub combo_target_id: u32,
+    pub combo_target_life_sequence: u32,
+    pub combo_target_can_be_selected: bool,
+    pub combo_equipped_item_id: u64,
+    pub combo_equipped_vnum: u32,
+    pub combo_link_queued: bool,
+    pub combo_transition_boundary_us: i64,
     pub next_chat_us: i64,
 }
 
@@ -135,7 +150,7 @@ pub struct TickSchedule {
 fn compiled_world_info() -> WorldInfo {
     WorldInfo {
         id: 1,
-        protocol_version: 6,
+        protocol_version: 7,
         map_name: if content::YONGAN {
             "Yongan"
         } else {
@@ -310,6 +325,7 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
         controller.direction_z = 0.0;
         controller.mode = 0;
         controller.last_input_us = now_us(ctx);
+        combo::clear_chain(&mut controller);
         targeting::clear_character_target(ctx, &mut controller)
             .unwrap_or_else(|error| panic!("cannot clear re-entered character target: {error}"));
         ctx.db.controller().identity().update(controller);
@@ -325,6 +341,7 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
             last_input_us: now_us(ctx),
             attack_until_us: 0,
             next_attack_us: 0,
+            action_revision: 0,
             pending_attack_target_id: 0,
             pending_attack_target_generation: 0,
             pending_attack_hit_at_us: 0,
@@ -333,10 +350,22 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
             pending_attack_range: 0.0,
             pending_attack_target_revision: 0,
             pending_attack_can_select_target: false,
+            pending_attack_action_revision: 0,
             combat_target_id: 0,
             combat_target_life_sequence: 0,
             combat_target_change_not_before_us: 0,
             combat_target_revision: 0,
+            combo_step: 0,
+            combo_chain_revision: 0,
+            combo_action_started_at_us: 0,
+            combo_action_ends_at_us: 0,
+            combo_target_id: 0,
+            combo_target_life_sequence: 0,
+            combo_target_can_be_selected: false,
+            combo_equipped_item_id: 0,
+            combo_equipped_vnum: 0,
+            combo_link_queued: false,
+            combo_transition_boundary_us: 0,
             next_chat_us: 0,
         });
     }
@@ -355,6 +384,7 @@ pub fn set_move_input(
     controller.direction_z = direction_z;
     controller.mode = u8::from(direction_x != 0.0 || direction_z != 0.0);
     controller.last_input_us = now_us(ctx);
+    combo::cancel_queued_link(&mut controller);
     ctx.db.controller().identity().update(controller);
     Ok(())
 }
@@ -373,6 +403,7 @@ pub fn move_to(ctx: &ReducerContext, x: f32, z: f32) -> Result<(), String> {
     controller.target_z = z;
     controller.mode = 2;
     controller.last_input_us = now_us(ctx);
+    combo::cancel_queued_link(&mut controller);
     ctx.db.controller().identity().update(controller);
     Ok(())
 }
@@ -383,6 +414,7 @@ pub fn stop_moving(ctx: &ReducerContext) -> Result<(), String> {
     controller.mode = 0;
     controller.direction_x = 0.0;
     controller.direction_z = 0.0;
+    combo::cancel_queued_link(&mut controller);
     ctx.db.controller().identity().update(controller);
     Ok(())
 }
@@ -391,52 +423,40 @@ pub fn stop_moving(ctx: &ReducerContext) -> Result<(), String> {
 pub fn perform_attack(ctx: &ReducerContext) -> Result<(), String> {
     let mut controller = active_controller(ctx)?;
     let now = now_us(ctx);
+    let character = accounts::selected_character(ctx)?;
+    if combo::handle_follow_up(ctx, &mut controller, now)? {
+        ctx.db.controller().identity().update(controller);
+        return Ok(());
+    }
     if now < controller.next_attack_us {
         return Err("Attack is cooling down.".into());
     }
-    let character = accounts::selected_character(ctx)?;
     let plan = combat::plan_player_attack(ctx, character, &controller);
-    controller.mode = 0;
-    controller.direction_x = 0.0;
-    controller.direction_z = 0.0;
-    controller.attack_until_us = now.saturating_add(plan.definition.duration_us);
-    controller.next_attack_us = now.saturating_add(plan.definition.cooldown_us);
-    controller.pending_attack_target_id = plan.target_id;
-    controller.pending_attack_target_generation = plan.target_generation;
-    controller.pending_attack_hit_at_us = if plan.target_id == 0 {
-        0
+    let is_first_combo = plan.definition.id == definitions::PLAYER_ONEHAND_COMBO[0].id;
+    let chain_target_id = plan.target_id;
+    let chain_target_life_sequence = plan.target_generation;
+    let chain_can_select_target = plan.can_select_target;
+    let equipped = inventory::equipped_weapon_item(ctx, character);
+    combat::start_player_action(ctx, &mut controller, plan, now)?;
+    if is_first_combo {
+        let (item_id, vnum) = equipped.ok_or("The equipped combo weapon is missing.")?;
+        let action_ends_at_us = controller.attack_until_us;
+        combo::begin_chain(
+            &mut controller,
+            combo::ChainStart {
+                action_started_at_us: now,
+                action_ends_at_us,
+                target_id: chain_target_id,
+                target_life_sequence: chain_target_life_sequence,
+                target_can_be_selected: chain_can_select_target,
+                equipped_item_id: item_id,
+                equipped_vnum: vnum,
+            },
+        )?;
     } else {
-        now.saturating_add(plan.definition.hit_start_us)
-    };
-    controller.pending_attack_hit_until_us = if plan.target_id == 0 {
-        0
-    } else {
-        now.saturating_add(plan.definition.hit_end_us)
-    };
-    controller.pending_attack_damage = if plan.target_id == 0 { 0 } else { plan.damage };
-    controller.pending_attack_range = if plan.target_id == 0 {
-        0.0
-    } else {
-        plan.definition.range_m
-    };
-    controller.pending_attack_target_revision = controller.combat_target_revision;
-    controller.pending_attack_can_select_target = plan.can_select_target;
-    ctx.db.controller().identity().update(controller);
-    let mut player = ctx
-        .db
-        .player()
-        .identity()
-        .find(character)
-        .ok_or("Enter the world first.")?;
-    player.activity = 2;
-    if let Some(heading) = plan.heading {
-        player.heading = heading;
+        combo::clear_chain(&mut controller);
     }
-    player.attack_sequence = player.attack_sequence.wrapping_add(1);
-    player.attack_action_id = plan.definition.id.into();
-    player.action_started_at_us = now;
-    player.action_ends_at_us = now.saturating_add(plan.definition.duration_us);
-    ctx.db.player().identity().update(player);
+    ctx.db.controller().identity().update(controller);
     Ok(())
 }
 
@@ -492,6 +512,7 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
     clock.last_tick = ctx.timestamp;
     ctx.db.simulation_clock().id().update(clock);
     combat::resolve_due_hits(ctx, now_us(ctx));
+    combo::resolve_due_transitions(ctx, now_us(ctx));
     let bounds = collision_bounds(ctx);
     for mut controller in ctx.db.controller().iter() {
         let Some(mut player) = ctx.db.player().identity().find(controller.identity) else {

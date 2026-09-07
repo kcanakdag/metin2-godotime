@@ -11,6 +11,7 @@ signal obstacles_changed(rows: Array)
 signal chat_changed(rows: Array)
 signal world_info_changed(info: Dictionary)
 signal reducer_failed(message: String)
+signal reducer_completed(name: String, succeeded: bool, server_timestamp_us: int)
 signal monsters_changed(rows: Array)
 signal loot_changed(rows: Array)
 signal inventory_changed(rows: Array)
@@ -28,7 +29,7 @@ signal command_feedback_changed(rows: Array)
 signal combat_target_changed(info: Dictionary)
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
-const EXPECTED_PROTOCOL_VERSION := 6
+const EXPECTED_PROTOCOL_VERSION := 7
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
 const TABLES := [
@@ -501,6 +502,7 @@ func _on_reducer_response(response: ReducerResultMessage, session: int) -> void:
 	var outcome := response.reducer_result
 	if outcome.value == ReducerOutcomeEnum.Options.err:
 		var message: String = outcome.get_err()
+		reducer_completed.emit(str(pending.name), false, int(response.timestamp))
 		if pending["joining"]:
 			_fail(message)
 		else:
@@ -510,8 +512,10 @@ func _on_reducer_response(response: ReducerResultMessage, session: int) -> void:
 			reducer_failed.emit(message)
 		return
 	if outcome.value == ReducerOutcomeEnum.Options.internalError:
+		reducer_completed.emit(str(pending.name), false, int(response.timestamp))
 		_fail("The server reported an internal error. Check the server logs before reconnecting.")
 		return
+	reducer_completed.emit(str(pending.name), true, int(response.timestamp))
 	if pending["joining"]:
 		_connection_deadline = 0
 		connected_at_msec = Time.get_ticks_msec()

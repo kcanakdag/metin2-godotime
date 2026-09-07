@@ -273,13 +273,80 @@ projection and matching rendered/authoritative positions for 0.5 seconds before
 sending one input.
 Godot MCP was unavailable for this checkpoint. The accepted evidence is local
 and instrumented; it does not establish an original-client pixel comparison.
-Queued combo sequencing, automatic chase, broader combat and social target
-actions, public protocol-6 deployment, Windows execution, full P2 and the full
-game remain incomplete.
+Later combo steps, automatic chase, broader combat and social target actions,
+public protocol deployment, Windows execution, full P2 and the full game remain
+incomplete.
 
 The root acceptance record
 `.local/p2-target/root-acceptance-review.json` binds the 175 unchanged client
 sources, 17 server source hashes, three module artifacts and both accepted PCKs.
+
+## Protocol 7 bounded combo Slice B
+
+The local implementation adds the first source-timed link from `combo_1` to
+`combo_2` for the male Warrior with Sword+0. The compiler's trusted schema 3
+projects exactly the reviewed two-action prefix and normalized
+pre/direct/limit/link timings; the server receives only the existing
+argument-free `perform_attack()` intent. Private checked action/chain revisions,
+captured target life and exact equipped item identity guard the queue, while the
+public player action ID/start/end/sequence remains the presentation surface.
+
+The runtime preserves the accepted pending-hit snapshot and simulation order.
+Queued transitions occur on the first tick strictly after the direct boundary;
+duplicate, early, late and bounded third-step requests are private rejections.
+Accepted movement, target change/clear and real equipment mutation cancel a
+queued link without changing the current hit, while same-target renewal and
+rejected/idempotent mutations preserve it. The existing locomotion hold lasts
+through the attack window. Targetless and missed attacks may animate both steps
+without damage, matching the reviewed original non-bow timing path, and no
+transition replans a target.
+
+The isolated Rust evidence passes 60 gameplay unit tests, four build-boundary
+tests and one generated-definition test, with all-target/all-feature clippy
+warnings denied. The new two-account runner and Godot smoke pass static Python,
+GDScript and parser checks. The source-verified root build produced separate
+default-deny training, dual-training and Yongan artifacts and published them to
+fresh local databases with no data deletion; exact hashes and identities are in
+`.local/p2-combo/build-manifest-root.json` and
+`.local/p2-combo/publication-root.json`. Matching bindings are generated. The
+focused two-client run passes all 71 checks in
+`.local/p2-combo/combo-root-safe-fixture-20260907.json`; its exact report hash is
+`becc30159ffab215cdb3c25f7d2c8453fe338383960daba53da93136c4b6e7ad`.
+Targetless and far chains, exact 35/35 damage, duplicate preservation, immutable
+pending damage across a pre-hit equipment change, death/new life, two-way
+movement and queued disconnect/reconnect all pass. The root record
+`.local/p2-combo/root-headless-acceptance.json` binds the report and frozen
+harness to the server build manifest. This accepts the bounded headless server
+slice.
+
+The retained protocol-7 target regression passes its 51 applicable checks in
+`.local/p2-combo/targets-root-first-20260907.json`. Instrumented Web/Linux PCKs
+also pass the 832/1635-path content audits recorded in
+`.local/p2-combo/exports-probe2-root-reviewed.json`, including 226 exact UI
+images, three actors, 40 clips, 20 Web world sections and both 11-frame target
+effects. The 212-file source freeze is unchanged.
+
+The actual instrumented Web/Linux run passes all 288 checks in
+`.local/p2-combo/browser-root-independent-followup-20260907/report.json`, SHA-256
+`5d015eb38261ed2daa25fe447c6f4bc1b9a8c48c213932160dd5451239c8cc9c`.
+Both positive queues, `100 -> 65 -> 30` damage, same-target renewal,
+WASD/ground-click/target-clear cancellation, actor and inventory composition,
+account lifecycle and both real refresh timers pass. The 53-row trace contains
+52/50 valid Web/native positions and 1/3 transient pending rows during
+lifecycle, with zero drift in every valid row and no invalid rows. No browser
+engine errors or native engine-log errors were observed; the intentional
+ownership reducer rejection remains recorded.
+`.local/p2-combo/root-acceptance-review.json` binds this result to the focused
+headless, server build and actual-PCK evidence. It also records 65 Rust tests,
+143 Python tests, 71 actor checks and 56 focused component checks. Bounded local
+Slice B is accepted.
+
+Earlier diagnostic reports remain preserved under `.local/p2-combo`. The final
+harnesses use received-clock extrapolation plus stable authoritative/rendered
+fixture gates and retain exact reducer receipt assertions. Normal exports omit
+the fixed-input probe and were not exercised. Public Slice B gameplay/deployment,
+Windows, Godot MCP, original-client parity, later combo steps, root motion, full
+P2 and the full game remain incomplete.
 
 ## Required QA evidence
 

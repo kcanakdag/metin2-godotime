@@ -278,7 +278,9 @@ pub fn equip_item(ctx: &ReducerContext, id: u64) -> Result<(), String> {
     item.equipped = true;
     item.cell = EQUIPPED_CELL;
     ctx.db.inventory_item().id().update(item);
-    crate::appearance::sync(ctx, crate::accounts::selected_character(ctx)?);
+    let character = crate::accounts::selected_character(ctx)?;
+    crate::combo::cancel_queued_link_for_character(ctx, character);
+    crate::appearance::sync(ctx, character);
     Ok(())
 }
 
@@ -297,7 +299,9 @@ pub fn unequip_item(ctx: &ReducerContext, id: u64, cell: u8) -> Result<(), Strin
     item.equipped = false;
     item.cell = cell;
     ctx.db.inventory_item().id().update(item);
-    crate::appearance::sync(ctx, crate::accounts::selected_character(ctx)?);
+    let character = crate::accounts::selected_character(ctx)?;
+    crate::combo::cancel_queued_link_for_character(ctx, character);
+    crate::appearance::sync(ctx, character);
     Ok(())
 }
 
@@ -361,12 +365,15 @@ pub fn weapon_bonus(ctx: &ReducerContext, owner: Identity) -> u16 {
 }
 
 pub fn equipped_weapon(ctx: &ReducerContext, owner: Identity) -> u32 {
+    equipped_weapon_item(ctx, owner).map_or(0, |(_, vnum)| vnum)
+}
+
+pub fn equipped_weapon_item(ctx: &ReducerContext, owner: Identity) -> Option<(u64, u32)> {
     ctx.db
         .inventory_item()
         .owner()
         .filter(owner)
-        .find_map(|item| (item.equipped && item.vnum == SWORD).then_some(item.vnum))
-        .unwrap_or(0)
+        .find_map(|item| (item.equipped && item.vnum == SWORD).then_some((item.id, item.vnum)))
 }
 
 pub fn drop_potion(ctx: &ReducerContext, owner: Identity, x: f32, y: f32, z: f32) {

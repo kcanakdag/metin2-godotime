@@ -66,7 +66,7 @@ with no multiplayer connection.
 
 Without the Cargo feature, the server uses the small flat training ground with
 five box obstacles. Make enables Yongan by default; raw Cargo has no default
-feature. Both normal builds expose the same protocol-6 schema.
+feature. Both normal builds expose the same protocol-7 schema.
 
 ## Networking and runtime boundaries
 
@@ -79,7 +79,7 @@ The socket subprotocol is `v3.bsatn.spacetimedb`. In the pinned server,
 coalesces messages using the
 [v2 binary schema](https://github.com/clockworklabs/SpacetimeDB/blob/v2.8.3/crates/client-api-messages/src/websocket/v2.rs).
 This transport version is separate from application
-`world_info.protocol_version = 6`, checked before joining.
+`world_info.protocol_version = 7`, checked before joining.
 
 Decoding runs on the main thread, with no compression and
 `confirmed_reads = false`. Cached tables require primary keys; Brotli is
@@ -95,6 +95,7 @@ The standard engine and pure GDScript path support Web without a .NET dependency
 | `server/src/content.rs` | Trusted terrain, map bounds, building/water blocking and elevated surfaces |
 | `server/src/combat.rs` | Monster simulation, attacks, health, death/respawn and loot |
 | `server/src/targeting.rs` | Private selected-target state, owner-only projection, churn limits and cleanup |
+| `server/src/combo.rs` | Private two-step combo chain, input classification, queued transitions and cancellation |
 | `server/src/inventory.rs` | Item ownership, grid placement, equipment, consumables and item drops |
 | `server/src/progression.rs` | Source-backed Warrior stats, experience quarters, levels and stat allocation |
 | `server/src/admin.rs` | Default-deny progression capabilities, private feedback, receipts and audit records |
@@ -198,7 +199,7 @@ Yongan bounds come from baked content rather than the legacy `half_size` field.
 | `enter_selected_character()` | Acquire the selected character controller and enter the world |
 | `leave_world()` | Stop movement, remove online presence and return to selection |
 | `set_move_input(dx, dz)`, `move_to(x, z)`, `stop_moving()` | Validate finite/ranged movement intents and trusted collision |
-| `perform_attack()` | Enforce cooldown, stop movement and damage an eligible nearby enemy |
+| `perform_attack()` | Start an eligible attack or classify the next server-timed input in the bounded Sword+0 combo |
 | `select_combat_target(target_id, target_life_sequence)`, `clear_combat_target()` | Select an exact live monster generation or clear presentation without accepting client position, health, name or level |
 | `pickup_loot(id)`, `pickup_item_drop(id)` | Validate owner/reservation, range, expiry and capacity; grant rewards atomically |
 | `move_item`, `equip_item`, `unequip_item`, `use_item` | Validate the active character's ownership, placement and consumable rules |
@@ -208,11 +209,13 @@ Yongan bounds come from baked content rather than the legacy `half_size` field.
 | `send_chat(message)` | Validate 1–160 printable characters, one message per second, retain latest 100 |
 
 Private `session` and `account_control` tables bind authenticated accounts to
-sockets. Character-keyed controllers retain attack/chat and target-change deadlines across
-switching and reconnect. A second socket cannot control the same account or
-evict its current character on disconnect. Expired account leases stop active
-presence. Scheduled simulation accepts only the database scheduler's identity;
-movement, attacks and pickups reject dead characters.
+sockets. Character-keyed controllers retain attack/chat, target-change and
+fresh-action deadlines across switching and reconnect. Combo transitions
+revalidate the exact live session, account ownership, controlling connection,
+unexpired lease and selected in-world character. A second socket cannot control
+the same account or evict its current character on disconnect. Expired account
+leases stop active presence. Scheduled simulation accepts only the database
+scheduler's identity; movement, attacks and pickups reject dead characters.
 
 Public account builds reject guest credentials. `enter_world(name)` remains
 only for disposable legacy tests with compile-time `MT2_ALLOW_GUESTS=1`.
@@ -251,8 +254,9 @@ definition hash and emits typed Rust constants. Player and dog hits resolve only
 inside the selected source-derived microsecond window. Target life generations,
 window expiry and consumed pending state prevent delayed actions from hitting a
 new respawn or applying twice. Equipment and damage are frozen when the server
-accepts the action. The 850 ms player cooldown intentionally allows another
-accepted action to replace the current one before its nominal 1 s clip ends.
+accepts the action. The general attack retains its 850 ms cooldown. A generated
+combo action keeps a durable fresh-action deadline at the later of its cooldown
+and clip end; only a valid step-1 follow-up bypasses that deadline.
 
 Each simulation tick collects due player and monster hits into one global queue
 and orders them by the authoritative source hit timestamp before applying
@@ -306,8 +310,8 @@ clear/select during a pending hit, the target deadline across a sub-850 ms
 same-JWT reconnect, natural target respawn and both target-life and owner-death
 cleanup. That focused headless run does not cover a real JWT refresh timer or
 the full `AccountFlow`; the separate exported progression run covers those
-lifecycle paths. Protocol 6 remains local and does not implement queued combos
-or replace the public P1 route.
+lifecycle paths. Protocol 6 remains local and does not replace the public P1
+route.
 
 The protocol-6 client derives its selected monster only from the owner-matching
 private projection and requires the same public monster ID and life generation
@@ -331,6 +335,85 @@ original-client visual comparison or queued combos.
 The root acceptance record in `.local/p2-target/root-acceptance-review.json`
 binds the 175 unchanged client sources, 17 server source hashes, three module
 artifacts and both accepted instrumented PCKs.
+
+Protocol 7 adds one bounded source-timed link for the male Warrior with Sword+0.
+The trusted schema contains the first two declared one-hand actions and their
+normalized input timings. `perform_attack()` still accepts no client action,
+target or timestamp. For `combo_1`, receipt through 167094 microseconds rejects
+as early; the first accepted input through 533333 queues a transition; an
+unqueued receipt through 602564 transitions immediately. A queued transition
+starts `combo_2` on the first simulation tick strictly after the direct-input
+boundary, using that actual tick as its public start. Duplicate, late and
+third-step input rejects without rewriting the action or pending hit.
+
+The private controller keeps checked 64-bit action and chain revisions, the
+exact captured target ID/life and equipped item ID/vnum, and a queue boundary.
+Pending hits remain separate snapshots. Due hits resolve before combo
+transitions, and both event types re-read their revision and timestamp keys.
+Changing target, clearing target, accepted movement or an actual equipment
+change cancels only a queued link; same-target renewal and rejected or
+idempotent mutations preserve it. Accepted movement is recorded immediately,
+while the existing simulation rule holds locomotion through the active attack
+window. Death and account/character lifecycle cleanup clear the whole chain.
+
+The original non-bow input path advances combos from motion timing rather than
+hit results. A targetless step 1 can therefore become a targetless, zero-hit
+step 2 only while selection remains empty. A captured selected or nearest
+fallback target keeps its exact life generation; neither transition replans to
+a new monster. Each pending hit independently applies the established
+health/range/height/path checks, so a far selected target may show both actions
+while both hits miss. The current slice stops after `combo_2` and does not add
+root motion, automatic chase, area attacks, skills or later chain steps.
+
+The isolated protocol-7 server suite passes 60 gameplay unit tests, four Rust
+build-boundary tests and one generated-definition test, plus all-target,
+all-feature clippy with warnings denied. Root's source-verified build manifest is
+`.local/p2-combo/build-manifest-root.json`; it records separate default-deny
+training, dual-training and Yongan modules and the gameplay definition hash
+`958671d126376e06f827d90066dec6f78b343a90b52f3fe0dd91e4a1985c34b7`.
+Those bytes were published without deleting data to three fresh local databases
+recorded in `.local/p2-combo/publication-root.json`. The two-account runner
+parses its bindings and smoke script before registration and checks
+targetless and far misses, two exact 35-damage hits, duplicate preservation,
+cancellation during the first pending hit, target death, disconnect/reconnect
+and peer replication. The retained-fixture run passes all 71 checks in
+`.local/p2-combo/combo-root-safe-fixture-20260907.json`. It records the direct
+targetless receipt at 558813 microseconds, queued transitions after the direct
+boundary, and accepted queue/unequip receipts at 186291/186329 microseconds
+before the immutable first hit at 192308 microseconds. The root acceptance file
+`.local/p2-combo/root-headless-acceptance.json` binds that report and the frozen
+harness to the server build manifest. This qualifies the focused headless
+server slice.
+
+The protocol-7 dual-fixture target regression passes all 51 applicable checks
+in `.local/p2-combo/targets-root-first-20260907.json`; the two restoration checks
+from Slice A were unnecessary because the fresh fixture was healthy. The
+instrumented protocol-7 Web/Linux PCK audit in
+`.local/p2-combo/exports-probe2-root-reviewed.json` verifies 832/1635 paths, all
+226 UI images, three actor models, 40 declared clips, 20 Web world sections and
+both 11-frame target effects. Its 212-source freeze is unchanged. The actual
+exported run in
+`.local/p2-combo/browser-root-independent-followup-20260907/report.json` passes
+all 288 checks through real browser canvas input and fixed native test-probe
+input routed through production input handling. Web/native accepted follow-ups
+at 249435/284780 microseconds, then
+published step 2 at 536850/540570 microseconds and exact public health
+`100 -> 65 -> 30`. Same-target renewal preserved each queue; accepted WASD,
+ground click and target clear each canceled a queue while preserving the
+captured 35-damage first hit. Actor, inventory, target, progression, account
+lifecycle and both real four-minute refresh paths also pass. The 53-row trace
+has 52/50 valid Web/native positions and 1/3 transient pending rows during
+lifecycle, no invalid rows, and zero authoritative drift in every valid row. The
+root acceptance record
+`.local/p2-combo/root-acceptance-review.json` binds the server, harness, package
+and exported evidence and records 65 Rust, 143 Python, 71 actor and 56 focused
+component checks.
+
+This accepts bounded local Slice B. The Web/Linux packages are instrumented;
+normal exports exclude the fixed-input probe and were not used for this input
+run. Public Slice B gameplay/deployment, native Windows execution, Godot MCP
+inspection, original-client visual/timing parity, later combo steps, root
+movement, full P2 and the full game remain outside this acceptance.
 
 The P1 compiler produces a client presentation manifest and a separate trusted
 server action artifact from the same selected profile. The manifest identifies
@@ -421,7 +504,7 @@ ordinary kills and 20 actual Space attacks, exact +15 rewards, the first
 four-minute refresh timers, and clean browser/native engine results. Privileged
 operator success and an explicit
 selection-change replay assertion also remain pending with the unpublished local
-bootstrap fixture. Protocol 6 has not replaced the public P1 route.
+bootstrap fixture. Protocol 7 has not replaced the public P1 route.
 
 ## Inventory and original UI
 

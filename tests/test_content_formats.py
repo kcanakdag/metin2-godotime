@@ -16,7 +16,6 @@ from content_compile import (
     rotate_actor_local_vector,
     validate_server_payload,
 )
-from progression_definitions import quarter_thresholds
 from content_formats import (
     parse_legacy_script,
     parse_motion_list,
@@ -181,41 +180,10 @@ Group MotionEventData
             )
 
     def test_trusted_payload_hash_and_windows_are_validated(self):
-        experience = [0, *([300] * 120)]
-        payload = {
-            "schema": "mt2spacetime.trusted-action-definitions",
-            "schema_version": 2,
-            "profile_id": "p0-warrior-dog",
-            "actors": [{"id": "actor", "primary_action_id": "attack"}],
-            "actions": [
-                {
-                    "id": "attack",
-                    "duration_us": 10,
-                    "cooldown_us": 20,
-                    "hit_windows": [{"start_us": 2, "end_us": 5, "range_m": 1.0}],
-                }
-            ],
-            "progression": {
-                "schema": "mt2spacetime.progression-definitions",
-                "schema_version": 1,
-                "compiled_max_level": 120,
-                "default_level_cap": 99,
-                "experience_to_next_level_by_current_level": experience,
-                "normal_level_delta_percent": [100] * 31,
-                "quarter_thresholds_by_current_level": [
-                    {
-                        "level": level,
-                        "next_experience": value,
-                        "thresholds": list(quarter_thresholds(value)),
-                    }
-                    for level, value in enumerate(experience)
-                ],
-            },
-        }
-        payload["gameplay_definition_hash"] = digest(payload)
+        payload = json.loads((ROOT / "server/content/p0-warrior-dog/actions.v1.json").read_text())
         validate_server_payload(payload, "p0-warrior-dog")
         bad = copy.deepcopy(payload)
-        bad["actions"][0]["hit_windows"][0]["end_us"] = 11
+        bad["actions"][0]["hit_windows"][0]["end_us"] = bad["actions"][0]["duration_us"] + 1
         bad["gameplay_definition_hash"] = digest(
             {key: value for key, value in bad.items() if key != "gameplay_definition_hash"}
         )

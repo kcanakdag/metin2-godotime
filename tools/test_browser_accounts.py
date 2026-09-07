@@ -30,6 +30,7 @@ from browser_snapshot import (
 from playwright.sync_api import sync_playwright
 from test_browser import distance
 from test_browser_actors import exercise_actors
+from test_browser_combo import exercise_combo
 from test_browser_inventory import exercise_inventory
 from test_browser_panels import exercise_panels
 from test_browser_progression import exercise_progression, exercise_progression_combat
@@ -146,7 +147,12 @@ def main() -> None:
     parser.add_argument(
         "--targeting",
         action="store_true",
-        help="Exercise protocol-6 target picking, private UI, effects, combat, and cleanup",
+        help="Exercise protocol-7 target picking, private UI, effects, combat, and cleanup",
+    )
+    parser.add_argument(
+        "--combo",
+        action="store_true",
+        help="Exercise both exported clients' server-timed two-step Sword+0 combo",
     )
     parser.add_argument(
         "--progression-combat",
@@ -165,6 +171,8 @@ def main() -> None:
         parser.error("--progression-combat requires --progression")
     if args.targeting and args.progression_combat:
         parser.error("--targeting cannot be combined with the five-kill --progression-combat mode")
+    if args.combo and not (args.targeting and args.inventory and args.actors):
+        parser.error("--combo requires --targeting --inventory --actors")
     if not args.native.is_file():
         parser.error("Missing exported Linux test client; export with --test-probe first.")
     if not shutil.which("xvfb-run"):
@@ -276,7 +284,7 @@ def main() -> None:
     def web_command(action: str, **values) -> None:
         page.evaluate("c => window.mt2Command(JSON.stringify(c))", {"action": action, **values})
 
-    def wait(name, predicate, timeout=30) -> None:
+    def wait(name, predicate, timeout=30, poll_interval=0.1) -> None:
         deadline = time.monotonic() + timeout
         last_notice = time.monotonic()
         while time.monotonic() < deadline:
@@ -289,7 +297,7 @@ def main() -> None:
             if timeout > 90 and time.monotonic() - last_notice >= 30:
                 print("WAIT " + name, flush=True)
                 last_notice = time.monotonic()
-            time.sleep(0.1)
+            time.sleep(poll_interval)
         if page is not None and not page.is_closed():
             samples["failed_web"] = web()
             page.screenshot(path=str(output / "failure.png"))
@@ -584,9 +592,25 @@ def main() -> None:
                     output,
                     samples["targeting_diagnostics"],
                 )
+            if args.combo:
+                samples["combo_diagnostics"] = {}
+                samples["combo"] = exercise_combo(
+                    page,
+                    web,
+                    desktop,
+                    web_command,
+                    native_command,
+                    wait,
+                    web_id,
+                    native_id,
+                    output,
+                    samples["combo_diagnostics"],
+                )
             if args.actors:
-                # Targeting leaves both actors unarmed and outside dog chase
-                # range, so this presentation-only attack cannot alter its fixture.
+                # Targeting and optional combo leave both actors unarmed and
+                # outside dog chase range. Combo deliberately leaves its final
+                # target-clear fixture at 65 HP, but this presentation-only
+                # actor attack remains out of range and cannot alter it.
                 samples["actors"] = exercise_actors(
                     page,
                     web,

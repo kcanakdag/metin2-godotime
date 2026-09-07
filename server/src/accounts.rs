@@ -1,6 +1,7 @@
 //! Account authentication, stable character ownership and connection leases.
 use crate::{
-    active_session, controller, inventory, now_us, player, progression, session, valid_name,
+    Controller, Session, active_session, controller, inventory, now_us, player, progression,
+    session, valid_name,
 };
 use spacetimedb::{AuthCtx, ConnectionId, Filter, Identity, ReducerContext, Table};
 
@@ -234,6 +235,60 @@ pub fn owner_account(ctx: &ReducerContext, character: Identity) -> Option<Identi
         .map(|row| row.account)
 }
 
+fn account_lease_matches(
+    now: i64,
+    character: Identity,
+    controller_connection: ConnectionId,
+    live_session: &Session,
+    ownership: &AccountCharacter,
+    lease: &AccountControl,
+    state: &AccountState,
+) -> bool {
+    ownership.character_id == character
+        && live_session.connection_id == controller_connection
+        && live_session.identity == ownership.account
+        && lease.account == ownership.account
+        && lease.connection_id == controller_connection
+        && lease.expires_at_us > now
+        && state.account == ownership.account
+        && state.in_world
+        && state.selected_character == character
+}
+
+/// Revalidate the persisted controller against the current server-owned
+/// connection/account lease. Scheduled combo transitions cannot rely on a
+/// reducer sender and therefore use this exact persisted relationship.
+pub fn controller_has_active_lease(ctx: &ReducerContext, control: &Controller) -> bool {
+    let Some(live_session) = ctx.db.session().connection_id().find(control.connection_id) else {
+        return false;
+    };
+    if let Some(ownership) = ctx
+        .db
+        .account_character()
+        .character_id()
+        .find(control.identity)
+    {
+        let Some(lease) = ctx.db.account_control().account().find(ownership.account) else {
+            return false;
+        };
+        let Some(state) = ctx.db.account_state().account().find(ownership.account) else {
+            return false;
+        };
+        return account_lease_matches(
+            now_us(ctx),
+            control.identity,
+            control.connection_id,
+            &live_session,
+            &ownership,
+            &lease,
+            &state,
+        );
+    }
+    ALLOW_GUESTS == Some("1")
+        && live_session.identity == control.identity
+        && owner_account(ctx, control.identity) == Some(control.identity)
+}
+
 pub fn unique_name(ctx: &ReducerContext, name: &str) -> Result<(), String> {
     let folded = name.to_lowercase();
     // Scanning existing names reserves legacy duplicates without rewriting them.
@@ -392,6 +447,7 @@ pub fn stop_character(ctx: &ReducerContext, character: Identity) {
         control.direction_z = 0.0;
         control.attack_until_us = 0;
         crate::combat::cancel_player_attack(&mut control);
+        crate::combo::clear_chain(&mut control);
         crate::targeting::clear_character_target(ctx, &mut control)
             .unwrap_or_else(|error| panic!("cannot clear stopped character target: {error}"));
         ctx.db.controller().identity().update(control);
@@ -502,5 +558,110 @@ mod tests {
                 assert!(ids.insert(id));
             }
         }
+    }
+
+    #[test]
+    fn combo_lease_requires_exact_live_account_character_connection() {
+        let account = Identity::from_claims(AUTH_ISSUER, "lease-account");
+        let character = character_id(account, 0);
+        let connection = ConnectionId::from_u128(7);
+        let mut live_session = Session {
+            connection_id: connection,
+            identity: account,
+        };
+        let ownership = AccountCharacter {
+            character_id: character,
+            account,
+            slot: 0,
+            name: "LeaseCheck".into(),
+            empire: 1,
+            character_class: 0,
+            sex: 0,
+        };
+        let mut lease = AccountControl {
+            account,
+            connection_id: connection,
+            expires_at_us: 20,
+        };
+        let mut state = AccountState {
+            account,
+            selected_character: character,
+            in_world: true,
+        };
+        assert!(account_lease_matches(
+            10,
+            character,
+            connection,
+            &live_session,
+            &ownership,
+            &lease,
+            &state,
+        ));
+
+        live_session.identity = Identity::ZERO;
+        assert!(!account_lease_matches(
+            10,
+            character,
+            connection,
+            &live_session,
+            &ownership,
+            &lease,
+            &state,
+        ));
+        live_session.identity = account;
+        live_session.connection_id = ConnectionId::from_u128(8);
+        assert!(!account_lease_matches(
+            10,
+            character,
+            connection,
+            &live_session,
+            &ownership,
+            &lease,
+            &state,
+        ));
+        live_session.connection_id = connection;
+        lease.connection_id = ConnectionId::from_u128(8);
+        assert!(!account_lease_matches(
+            10,
+            character,
+            connection,
+            &live_session,
+            &ownership,
+            &lease,
+            &state,
+        ));
+        lease.connection_id = connection;
+        lease.expires_at_us = 10;
+        assert!(!account_lease_matches(
+            10,
+            character,
+            connection,
+            &live_session,
+            &ownership,
+            &lease,
+            &state,
+        ));
+        lease.expires_at_us = 20;
+        state.selected_character = Identity::ZERO;
+        assert!(!account_lease_matches(
+            10,
+            character,
+            connection,
+            &live_session,
+            &ownership,
+            &lease,
+            &state,
+        ));
+        state.selected_character = character;
+        state.in_world = false;
+        assert!(!account_lease_matches(
+            10,
+            character,
+            connection,
+            &live_session,
+            &ownership,
+            &lease,
+            &state,
+        ));
     }
 }

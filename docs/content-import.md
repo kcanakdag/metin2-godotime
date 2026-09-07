@@ -37,22 +37,49 @@ raw Granny/Blender asset to the player fixture.
 The server consumes the separate, ignored
 `server/content/p0-warrior-dog/actions.v1.json`. The filename is retained for
 its stable runtime path, but its payload is now
-`mt2spacetime.trusted-action-definitions` **schema 2**. Schema 2 adds the
-selected source-derived Warrior progression definitions: levels 0 through 120,
-the default cap of 99, EXP and level-delta tables, quarter thresholds, and the
-bounded constants used by server progression. It is server input, not an
-exported client resource. Its `gameplay_definition_hash` must exactly equal the
-client presentation manifest's value.
+`mt2spacetime.trusted-action-definitions` **schema 3**. Schema 3 retains the
+source-derived Warrior progression definitions added in schema 2 and adds the
+selected two-action Sword+0 base-combo prefix. The trusted payload contains
+exactly four attacks: the player general attack, `combo_1`, `combo_2`, and the
+Wild Dog attack. Only the two ordered combo actions carry exact integer
+`pre_input_us`, `direct_input_us`, `input_limit_us`, and `link_us` fields.
+Later declared presentation actions stay outside this bounded trusted prefix.
+The file is server input, not an exported client resource. Its
+`gameplay_definition_hash` must exactly equal the client presentation
+manifest's value.
 
-The verified local rebuild records content hash
-`28ef6604c09daf6df371fdde1b09ae8b8b508302ba8bade5c38918b824d49c8f` and
+The compiler requires every declared one-hand chain to start with distinct
+`combo_1`, `combo_2` entries, resolves each selected motion exactly once, and
+requires `0 <= pre < direct < limit <= duration`. It rejects duplicate action
+IDs, missing or reordered prefix data, non-integer timing, multiple hit windows,
+and wrong actor, mode, or Sword+0 requirements. The Rust build repeats this
+validation before emitting `ComboInputDefinition`,
+`PLAYER_ONEHAND_COMBO: [AttackDefinition; 2]`, and the existing
+`PLAYER_ONEHAND_ATTACK` compatibility alias. `link_us` remains source evidence;
+it does not independently schedule gameplay.
+
+The compiler version is `content-compiler-v1.2.0`. The verified local rebuild
+records content hash
+`3ca0f6030efafd89498923b951ac31d6dde72166f7a1a45cd1b8d375bef2b129` and
 gameplay-definition hash
-`7719eec33753a367bb594e38181331dec359c5ec235db53b57d563d72bffbb35` in
-`.local/p2/content-rebuild-report.json`. `python3 tools/content_compile.py
-validate --profile content/profiles/p0-warrior-dog.json` accepted that current
-artifact. This proves the selected definitions and presentation artifacts agree;
-it does not prove a server publish, player export, or full-game progression
-parity.
+`958671d126376e06f827d90066dec6f78b343a90b52f3fe0dd91e4a1985c34b7`.
+The presentation-output hash remains
+`2bcd691596bfb76f90359955a6469eda9a5a2d65045d00452f3b66fcc699c839`,
+and all three GLB hashes remain byte-for-byte unchanged from the accepted Slice
+A inputs. Rebuild and validate the compiler/build boundary with:
+
+```sh
+.local/venv-dev/bin/python tools/content_compile.py build --offline \
+  --profile content/profiles/p0-warrior-dog.json --blender /path/to/blender
+.local/venv-dev/bin/python -m unittest tests.test_combo_content tests.test_content_formats
+CARGO_TARGET_DIR=.local/p2-combo/compiler-target \
+  cargo test --manifest-path server/Cargo.toml --test build_combo \
+  --test generated_definitions
+```
+
+These checks prove the selected normalized data, generated Rust constants, and
+presentation artifact hashes agree. They do not prove a server publish, the
+combo state machine, player export behavior, or full original-client parity.
 
 P2's Status page reuses selected converted UI textures already in the ignored
 UI import output. Missing original status-window artwork remains out of scope:

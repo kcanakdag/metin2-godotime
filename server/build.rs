@@ -1,12 +1,15 @@
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
-use std::collections::HashSet;
 use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+mod build_combo;
+use build_combo::{ComboInput, MOB_ACTION_ID, PLAYER_COMBO_ACTION_IDS, PLAYER_GENERAL_ACTION_ID};
+
 const PROFILE: &str = "p0-warrior-dog";
 const DEFINITIONS: &str = "content/p0-warrior-dog/actions.v1.json";
+const COMBO_VALIDATOR: &str = "build_combo.rs";
 const TARGET_FIXTURE: &str = "fixtures/p2-target-dual-wild-dog.v1.json";
 const TARGET_FIXTURE_ENV: &str = "MT2_COMBAT_TEST_FIXTURE";
 
@@ -145,6 +148,7 @@ struct Attack<'a> {
     hit_start_us: i64,
     hit_end_us: i64,
     range_m: f32,
+    combo_input: Option<ComboInput>,
 }
 
 fn checked_attack<'a>(
@@ -154,6 +158,7 @@ fn checked_attack<'a>(
     mode: &str,
     expected_action: &str,
     required_item: Option<u32>,
+    combo_input: Option<ComboInput>,
 ) -> Attack<'a> {
     let row = action(actions, id);
     if text(row, "actor_id", "action") != actor_id {
@@ -219,6 +224,7 @@ fn checked_attack<'a>(
         hit_start_us,
         hit_end_us,
         range_m,
+        combo_input,
     }
 }
 
@@ -295,22 +301,38 @@ fn selected_monster_spawns(mob_vnum: u32) -> (Vec<MonsterSpawn>, &'static str) {
     (result, "training-v2-dual-wild-dog-v1")
 }
 
-fn emit_attack(output: &mut String, name: &str, attack: Attack<'_>) {
-    writeln!(
-        output,
-        "pub const {name}: AttackDefinition = AttackDefinition {{ id: {}, duration_us: {}, cooldown_us: {}, hit_start_us: {}, hit_end_us: {}, range_m: {:?} }};",
+fn attack_expression(attack: Attack<'_>) -> String {
+    let combo_input = match attack.combo_input {
+        Some(combo) => format!(
+            "Some(ComboInputDefinition {{ pre_input_us: {}, direct_input_us: {}, input_limit_us: {}, link_us: {} }})",
+            combo.pre_input_us, combo.direct_input_us, combo.input_limit_us, combo.link_us
+        ),
+        None => "None".to_owned(),
+    };
+    format!(
+        "AttackDefinition {{ id: {}, duration_us: {}, cooldown_us: {}, hit_start_us: {}, hit_end_us: {}, range_m: {:?}, combo_input: {} }}",
         rust_string(attack.id),
         attack.duration_us,
         attack.cooldown_us,
         attack.hit_start_us,
         attack.hit_end_us,
-        attack.range_m
+        attack.range_m,
+        combo_input,
+    )
+}
+
+fn emit_attack(output: &mut String, name: &str, attack: Attack<'_>) {
+    writeln!(
+        output,
+        "pub const {name}: AttackDefinition = {};",
+        attack_expression(attack),
     )
     .unwrap();
 }
 
 fn main() {
     println!("cargo:rerun-if-changed={DEFINITIONS}");
+    println!("cargo:rerun-if-changed={COMBO_VALIDATOR}");
     println!("cargo:rerun-if-changed={TARGET_FIXTURE}");
     println!("cargo:rerun-if-env-changed=MT2_PROGRESSION_BOOTSTRAP_IDENTITIES");
     println!("cargo:rerun-if-env-changed={TARGET_FIXTURE_ENV}");
@@ -325,7 +347,7 @@ fn main() {
         .unwrap_or_else(|error| fail(format!("{} is not valid JSON ({error})", path.display())));
     let root = object(&payload, "root");
     if text(root, "schema", "root") != "mt2spacetime.trusted-action-definitions"
-        || u64_value(root, "schema_version", "root") != 2
+        || u64_value(root, "schema_version", "root") != 3
         || text(root, "profile_id", "root") != PROFILE
         || text(root, "time_unit", "root") != "microsecond"
         || text(root, "linear_unit", "root") != "meter"
@@ -356,6 +378,7 @@ fn main() {
     }
     let actors = array(field(root, "actors", "root"), "actors");
     let actions = array(field(root, "actions", "root"), "actions");
+    let combo_inputs = build_combo::validate(root).unwrap_or_else(|error| fail(error));
     let items = array(field(root, "items", "root"), "items");
     let progression = object(field(root, "progression", "root"), "progression");
     if text(progression, "schema", "progression") != "mt2spacetime.progression-definitions"
@@ -508,14 +531,6 @@ fn main() {
             fail("progression reward item name changed");
         }
     }
-    let mut action_ids = HashSet::new();
-    for value in actions {
-        let row = object(value, "action");
-        if !action_ids.insert(text(row, "id", "action")) {
-            fail("action ids must be unique");
-        }
-    }
-
     let player_id = "actor.player.warrior-male";
     let player = actor(actors, player_id);
     if u64_value(player, "race_id", "player") != 0 {
@@ -533,6 +548,9 @@ fn main() {
     );
     let general_id = text(primary, "general", "primary_actions");
     let onehand_id = text(primary, "onehand", "primary_actions");
+    if general_id != PLAYER_GENERAL_ACTION_ID || onehand_id != PLAYER_COMBO_ACTION_IDS[0] {
+        fail("player primary actions do not match the selected fixture");
+    }
     let general = checked_attack(
         actions,
         general_id,
@@ -540,19 +558,32 @@ fn main() {
         "general",
         "normal_attack",
         None,
+        None,
     );
-    let onehand = checked_attack(
+    let combo_1 = checked_attack(
         actions,
         onehand_id,
         player_id,
         "onehand",
         "combo_1",
         Some(10),
+        Some(combo_inputs[0]),
+    );
+    let combo_2 = checked_attack(
+        actions,
+        PLAYER_COMBO_ACTION_IDS[1],
+        player_id,
+        "onehand",
+        "combo_2",
+        Some(10),
+        Some(combo_inputs[1]),
     );
     if general.cooldown_us != player_cooldown
-        || onehand.cooldown_us != player_cooldown
+        || combo_1.cooldown_us != player_cooldown
+        || combo_2.cooldown_us != player_cooldown
         || general.range_m != player_range
-        || onehand.range_m != player_range
+        || combo_1.range_m != player_range
+        || combo_2.range_m != player_range
     {
         fail("player actions disagree with the authoritative player definition");
     }
@@ -564,12 +595,16 @@ fn main() {
         fail("selected mob must be Wild Dog vnum 101");
     }
     let mob_action_id = text(mob, "primary_action_id", "mob");
+    if mob_action_id != MOB_ACTION_ID {
+        fail("mob primary action does not match the selected fixture");
+    }
     let mob_attack = checked_attack(
         actions,
         mob_action_id,
         mob_id,
         "general",
         "normal_attack",
+        None,
         None,
     );
     if mob_attack.cooldown_us != bounded_u32(mob, "attack_cooldown_us", "mob", 60_000_000) as i64 {
@@ -610,6 +645,13 @@ fn main() {
     let mut output = String::from(
         "// Generated at build time from server/content/p0-warrior-dog/actions.v1.json.\n\
          #[derive(Clone, Copy, Debug)]\n\
+         pub struct ComboInputDefinition {\n\
+         \tpub pre_input_us: i64,\n\
+         \tpub direct_input_us: i64,\n\
+         \tpub input_limit_us: i64,\n\
+         \tpub link_us: i64,\n\
+         }\n\
+         #[derive(Clone, Copy, Debug)]\n\
          pub struct AttackDefinition {\n\
          \tpub id: &'static str,\n\
          \tpub duration_us: i64,\n\
@@ -617,6 +659,7 @@ fn main() {
          \tpub hit_start_us: i64,\n\
          \tpub hit_end_us: i64,\n\
          \tpub range_m: f32,\n\
+         \tpub combo_input: Option<ComboInputDefinition>,\n\
          }\n",
     );
     writeln!(
@@ -751,7 +794,19 @@ fn main() {
     )
     .unwrap();
     emit_attack(&mut output, "PLAYER_GENERAL_ATTACK", general);
-    emit_attack(&mut output, "PLAYER_ONEHAND_ATTACK", onehand);
+    writeln!(
+        output,
+        "pub const PLAYER_ONEHAND_COMBO: [AttackDefinition; 2] = ["
+    )
+    .unwrap();
+    writeln!(output, "\t{},", attack_expression(combo_1)).unwrap();
+    writeln!(output, "\t{},", attack_expression(combo_2)).unwrap();
+    writeln!(output, "];").unwrap();
+    writeln!(
+        output,
+        "pub const PLAYER_ONEHAND_ATTACK: AttackDefinition = PLAYER_ONEHAND_COMBO[0];"
+    )
+    .unwrap();
     writeln!(output, "pub const WEAPON_VNUM: u32 = 10;").unwrap();
     writeln!(
         output,

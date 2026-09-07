@@ -68,6 +68,22 @@ grounded with the expected orientation. The report is
 does not change the public `mt2-p1-v4` route or establish original-client pixel
 parity, current Windows execution, or full P2 behavior.
 
+The bounded local protocol-7 Sword+0 two-step combo slice is also accepted. Its
+final 288-check hardware Chrome/Linux run proves both browser-origin and
+native-origin `combo_1` to `combo_2` chains, with exact 100→65→30 Wild Dog
+health on fresh lives and both clients presenting each subscribed action. The
+exact next reducer acknowledgements place both queued follow-ups inside the
+source-defined receipt window; accepted same-life target renewal preserves the
+link, while held/released WASD, a ground click, and target clear each cancel an
+accepted queue after only the first 35-damage hit. The same run retains target,
+inventory, actor, panel and account-lifecycle coverage, both real four-minute
+token refreshes, zero authoritative-position drift and no engine errors. Root
+also reviewed both final combo captures. See the [288-check report](.local/p2-combo/browser-root-independent-followup-20260907/report.json)
+and [root acceptance review](.local/p2-combo/root-acceptance-review.json). This
+evidence uses authorized local instrumented exports; it does not qualify the
+public route, normal exports, current Windows execution, original-client parity
+or the remaining P2 scope.
+
 The preceding guest build, release `20260906T154235134255Z`, passed 45 public
 Chrome/Linux panel, inventory and multiplayer checks. Earlier Yongan tests also
 verified terrain appearance, combat, loot, both respawns and database-container
@@ -156,7 +172,7 @@ make content-probe
 
 # Exercise actor/effect attachment and target UI/picking in isolated projects.
 make test-actors
-python3 tools/test_target_client.py --godot /path/to/godot \
+.local/venv-dev/bin/python tools/test_target_client.py --godot /path/to/godot \
   --output .local/p2-target/client-smoke
 
 # Reconstruct Yongan, then bake authoritative data and playable chunk scenes.
@@ -198,9 +214,9 @@ commands below. A saved editor profile may override the built-in endpoint.
 Register an account, choose the supported empire, create a character and enter.
 Game data is in `.local/spacetimedb`; account data and keys are in `.local/auth`.
 Use a new database or an explicit migration for incompatible changes. The
-Makefile's retained legacy placeholder is `mt2-yongan-v2`; current protocol-6
+Makefile's retained legacy placeholder is `mt2-yongan-v2`; current protocol-7
 development should pass a fresh explicit `DB`, such as
-`DB=mt2-p2-target-yongan-local`. Public P1 exports/deployment still use
+`DB=mt2-p2-combo-yongan-local`. Public P1 exports/deployment still use
 `DB=mt2-p1-v4` until a separately qualified P2 rollout.
 
 Two clients on one machine use different local profiles and separate accounts:
@@ -216,7 +232,7 @@ Make enables the `yongan` Cargo feature by default, requiring the ignored
 For the smaller training world, use
 `make server-publish SERVER_FEATURES= DB=mt2-training-v2` and select that database
 in both clients. Raw Cargo without `--features yongan` also selects training.
-Both variants use application protocol 6. Earlier databases do not contain all
+Both variants use application protocol 7. Earlier databases do not contain all
 private progression, command-feedback, and combat-target tables and need a new
 database or an explicit migration before using a current client. The production
 default requires an account token. Legacy guest smoke tests need a separate module
@@ -230,7 +246,7 @@ compiled with `MT2_ALLOW_GUESTS=1`; never enable that option in a public build.
 | Left click living monster | Request selection of that exact subscribed monster generation |
 | WASD / arrows | Move relative to the camera |
 | Right mouse drag; wheel | Orbit; zoom |
-| Space | Attack the selected exact monster, or the nearest valid enemy when no target is selected |
+| Space | Attack the selected exact monster, or the nearest valid enemy when no target is selected; Sword+0 accepts one server-timed follow-up step |
 | E / Z | Collect nearby gold/items with server distance/ownership validation |
 | I / Inventory button | Open the two-page inventory |
 | Item left click, then destination; drag/drop | Carry or move an item between valid bag/equipment/quickslot locations |
@@ -255,6 +271,14 @@ Picking respects whichever terrain, authored walk surface, or other collider is
 actually nearest to the camera ray. Buildings without a client collider cannot
 visually occlude a target proxy, while server movement blocking remains
 authoritative.
+
+With Sword+0 equipped, a second Space during the source-defined input window
+requests the bounded `combo_2` link. The server alone schedules and publishes
+that transition; both clients keep presenting `combo_1` until its subscribed
+action row changes. An accepted movement intent or target clear cancels a queued
+link, while renewing the same exact target preserves it. Physical movement
+still resumes only after the current attack window. A targetless or missed
+chain may animate both accepted steps without inventing damage or a new target.
 
 Approach the Wild Dog near the town spawn, attack it, and collect its
 gold and one red potion. It can also defeat the player. Player respawn takes 8 seconds; monster
@@ -368,7 +392,7 @@ name/slot rejection, selected-character movement, session ownership and
 disconnect/reconnect. It creates persistent fixture rows; it does not erase
 the world. For rendered browser/Linux account checks, use
 `tools/test_browser_accounts.py --actors --hardware --headless --inventory
---panels --session-refresh` with matching test exports and an explicit
+--panels --targeting --combo --session-refresh` with matching test exports and an explicit
 URL/database. See
 [development](docs/development.md#browser-integration-checks).
 Legacy `test-multiplayer`, `test-combat`, `test-inventory` and `test-browser`
@@ -387,7 +411,7 @@ client/scripts/net/          SDK, identity and subscription boundary
 client/scripts/actors/       Warrior, monster and loot presentation
 client/scripts/world/        Training ground and streamed Yongan sections
 client/scripts/ui/           Original taskbar/inventory/minimap, chat and diagnostics
-client/spacetime_bindings/   Generated protocol-6 schema and provenance
+client/spacetime_bindings/   Generated protocol-7 schema and provenance
 client/addons/SpacetimeDB/   Pinned runtime SDK
 client/addons/godot_mcp/     Editor tooling, excluded from exports
 server/src/                 Identity, movement, map content and combat rules

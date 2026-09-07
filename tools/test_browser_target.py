@@ -1,4 +1,4 @@
-"""Exported pointer and keyboard checks for protocol-6 combat targeting."""
+"""Exported pointer and keyboard checks for protocol-7 combat targeting."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from browser_snapshot import POSITION_VALID, subscribed_player_position
 DOG_MAX_HEALTH = 100
 DOG_RESPAWN_US = 12_000_000
 DOG_RESPAWN_TIMEOUT_SECONDS = 16
+DOG_HOME = [675.0, 575.0]
 PEER_SAFE_POSITION = [650.0, 575.0]
 WEB_SAFE_POSITION = [657.0, 575.0]
 PLAYER_NORMAL_ATTACK_ID = "actor.player.warrior-male.general.normal_attack.v1"
@@ -302,6 +303,36 @@ def exercise_targeting(
             return None
         return [float(position[0]), float(position[2])]
 
+    def last_web_select_ack() -> dict:
+        rows = page.evaluate("() => JSON.parse(window.mt2SelectTargetAcks || '[]')")
+        assert isinstance(rows, list)
+        return rows[-1] if rows and isinstance(rows[-1], dict) else {}
+
+    def wait_web_select_ack(
+        label: str, after: int, expected_target_id: int, expected_life: int
+    ) -> dict:
+        found: dict = {}
+
+        def exact_next_ack() -> bool:
+            nonlocal found
+            ack = last_web_select_ack()
+            sequence = int(ack.get("sequence", 0))
+            if sequence <= after:
+                return False
+            if sequence != after + 1:
+                raise AssertionError("Target ACK sequence skipped the expected reducer completion")
+            found = ack.copy()
+            if not bool(ack.get("succeeded")):
+                raise AssertionError("The exact next target selection ACK was rejected")
+            if int(ack.get("reducer_timestamp_us", 0)) <= 0:
+                raise AssertionError("Accepted target ACK has no typed server timestamp")
+            if not _intent_matches(ack.get("combat_target", {}), expected_target_id, expected_life):
+                raise AssertionError("Accepted target ACK does not retain the requested exact life")
+            return True
+
+        wait(label, exact_next_ack, 3, 0.01)
+        return found
+
     def inject_pointer(
         label: str,
         side: str,
@@ -351,16 +382,86 @@ def exercise_targeting(
         )
 
     def move_near_dog(command, read, identity: str, prefix: str) -> None:
-        dog = _monster(read())
-        command("target", x=float(dog["x"]), z=float(dog["z"]))
+        approach: dict = {"home_settle_samples": [], "movement_samples": [], "waypoints": []}
+        evidence[prefix + "_approach"] = approach
+        initial = read()
+        dog = _monster(initial)
+        player = authoritative_xz(initial, identity)
+        already_near = (
+            player is not None and math.dist(player, [float(dog["x"]), float(dog["z"])]) < 2.6
+        )
+        if not already_near:
+            stable_since: float | None = None
+            stable_dog: list[float] | None = None
+
+            def dog_is_stable_at_home() -> bool:
+                nonlocal stable_since, stable_dog
+                state = read()
+                current = _monster(state)
+                position = [float(current["x"]), float(current["z"])]
+                rendered = _rendered_xz(state, "rendered_monsters", "row_id", int(current["id"]))
+                valid = (
+                    int(current["health"]) > 0
+                    and int(current["activity"]) != 1
+                    and math.dist(position, DOG_HOME) <= 0.25
+                    and rendered is not None
+                    and math.dist(position, rendered) <= 0.05
+                )
+                sample = {
+                    "elapsed_seconds": round(time.monotonic() - started, 3),
+                    "valid": valid,
+                    "authoritative_monster_xz": position,
+                    "rendered_monster_xz": rendered,
+                    "activity": int(current["activity"]),
+                }
+                approach["home_settle_samples"].append(sample)
+                del approach["home_settle_samples"][:-24]
+                now = time.monotonic()
+                if not valid or stable_dog is None or math.dist(position, stable_dog) > 0.05:
+                    stable_since = now if valid else None
+                    stable_dog = position if valid else None
+                    approach["stable_home_seconds"] = 0.0
+                    return False
+                assert stable_since is not None
+                approach["stable_home_seconds"] = round(now - stable_since, 3)
+                return now - stable_since >= 0.5
+
+            wait(prefix + "_waits_for_stable_Wild_Dog_home", dog_is_stable_at_home, 15)
+
+        state = read()
+        dog = _monster(state)
+        waypoint = [float(dog["x"]), float(dog["z"])]
+        approach["already_in_reach"] = already_near
+        if not already_near:
+            approach["waypoints"].append(
+                {
+                    "elapsed_seconds": round(time.monotonic() - started, 3),
+                    "world_xz": waypoint,
+                    "dog_activity": int(dog["activity"]),
+                }
+            )
+            command("target", x=waypoint[0], z=waypoint[1])
 
         def reached() -> bool:
             state = read()
             current = _monster(state)
             point = authoritative_xz(state, identity)
+            dog_position = [float(current["x"]), float(current["z"])]
+            approach["movement_samples"].append(
+                {
+                    "elapsed_seconds": round(time.monotonic() - started, 3),
+                    "authoritative_player_xz": point,
+                    "authoritative_monster_xz": dog_position,
+                    "distance_meters": math.dist(point, dog_position)
+                    if point is not None
+                    else None,
+                    "monster_activity": int(current["activity"]),
+                }
+            )
+            del approach["movement_samples"][:-24]
             return (
                 point is not None
-                and math.dist(point, [float(current["x"]), float(current["z"])]) < 2.6
+                and math.dist(point, dog_position) < 2.6
                 and int(current["health"]) > 0
             )
 
@@ -544,6 +645,7 @@ def exercise_targeting(
     point = _pick(pointer_state, target_id, life)
     assert point is not None
     set_phase("browser_select")
+    select_ack_sequence = int(last_web_select_ack().get("sequence", 0))
     inject_pointer(
         "browser_select",
         "web",
@@ -570,6 +672,12 @@ def exercise_targeting(
         )
 
     wait("browser_canvas_click_opens_authoritative_target_presentation", browser_target_ready)
+    evidence["browser_initial_select_ack"] = wait_web_select_ack(
+        "browser_canvas_click_has_exact_accepted_select_ACK",
+        select_ack_sequence,
+        target_id,
+        life,
+    )
     wait(
         "peer_cannot_read_browser_private_target",
         lambda: (
@@ -650,10 +758,97 @@ def exercise_targeting(
         ),
     )
 
+    def settled_browser_pick(label: str) -> tuple[dict, list[float]]:
+        stable_since: float | None = None
+        stable_pick: list[float] | None = None
+        stable_player: list[float] | None = None
+        stable_dog: list[float] | None = None
+        settled_state: dict = {}
+        settle_evidence: dict = {
+            "required_seconds": 0.5,
+            "maximum_pick_drift_pixels": 1.0,
+            "maximum_position_drift_meters": 0.05,
+            "maximum_render_error_meters": 0.05,
+            "samples": [],
+        }
+        evidence[label + "_pick_settle"] = settle_evidence
+
+        def projection_is_settled() -> bool:
+            nonlocal stable_since, stable_pick, stable_player, stable_dog, settled_state
+            state = web()
+            current_dog = _monster(state)
+            own = _player(state, web_id)
+            pick = _pick(state, target_id, life)
+            player = authoritative_xz(state, web_id)
+            rendered_player = _rendered_xz(state, "rendered_actors", "identity", web_id)
+            dog_position = [float(current_dog["x"]), float(current_dog["z"])]
+            rendered_dog = _rendered_xz(state, "rendered_monsters", "row_id", target_id)
+            now = time.monotonic()
+            valid = (
+                own.get("online") is True
+                and int(own.get("activity", -1)) == 0
+                and int(current_dog["life_sequence"]) == life
+                and int(current_dog["health"]) > 0
+                and int(current_dog["activity"]) != 1
+                and _intent_matches(state.get("combat_target", {}), target_id, life)
+                and pick is not None
+                and player is not None
+                and rendered_player is not None
+                and rendered_dog is not None
+                and math.dist(rendered_player, player) <= 0.05
+                and math.dist(rendered_dog, dog_position) <= 0.05
+            )
+            sample = {
+                "elapsed_seconds": round(now - started, 3),
+                "valid": valid,
+                "pick": pick,
+                "authoritative_player_xz": player,
+                "rendered_player_xz": rendered_player,
+                "authoritative_monster_xz": dog_position,
+                "rendered_monster_xz": rendered_dog,
+                "monster_activity": int(current_dog["activity"]),
+            }
+            settle_evidence.update(sample)
+            settle_evidence["samples"].append(sample)
+            del settle_evidence["samples"][:-24]
+            if not valid:
+                stable_since = None
+                stable_pick = None
+                stable_player = None
+                stable_dog = None
+                settle_evidence["stable_seconds"] = 0.0
+                return False
+            assert pick is not None and player is not None
+            if (
+                stable_since is None
+                or stable_pick is None
+                or stable_player is None
+                or stable_dog is None
+                or math.dist(pick, stable_pick) > 1.0
+                or math.dist(player, stable_player) > 0.05
+                or math.dist(dog_position, stable_dog) > 0.05
+            ):
+                stable_since = now
+                stable_pick = pick
+                stable_player = player
+                stable_dog = dog_position
+                settle_evidence["stable_seconds"] = 0.0
+                return False
+            settle_evidence["stable_seconds"] = round(now - stable_since, 3)
+            if now - stable_since < 0.5:
+                return False
+            settled_state = state
+            settle_evidence["settled_pick"] = pick
+            return True
+
+        wait(label + "_pick_and_authoritative_positions_settle", projection_is_settled, 15)
+        point = _pick(settled_state, target_id, life)
+        assert point is not None
+        return settled_state, point
+
     set_phase("browser_close_reject_reselect")
-    pointer_state = web()
-    point = _pick(pointer_state, target_id, life)
-    assert point is not None
+    pointer_state, point = settled_browser_pick("browser_same_target_renewal")
+    renewal_ack_sequence = int(last_web_select_ack().get("sequence", 0))
     inject_pointer(
         "browser_same_target_renewal",
         "web",
@@ -663,7 +858,14 @@ def exercise_targeting(
         _pick(pointer_state, target_id, life),
         "monster_pick",
     )
+    renewal_ack = wait_web_select_ack(
+        "same_target_canvas_click_has_exact_accepted_select_ACK",
+        renewal_ack_sequence,
+        target_id,
+        life,
+    )
     renewed_at = time.monotonic()
+    evidence["browser_same_target_renewal_ack"] = renewal_ack
     wait(
         "same_target_canvas_click_keeps_authoritative_target",
         lambda: _intent_matches(web().get("combat_target", {}), target_id, life),
@@ -672,6 +874,11 @@ def exercise_targeting(
     close = state["ui"]["target"]["close_center"]
     before_close = authoritative_xz(state, web_id)
     errors_before = len(state.get("errors", []))
+    evidence["browser_before_close"] = {
+        "position": before_close,
+        "state": summary(state),
+        "renewal_ack": renewal_ack,
+    }
     inject_pointer(
         "browser_target_close",
         "web",
@@ -686,6 +893,15 @@ def exercise_targeting(
         state = web()
         point = authoritative_xz(state, web_id)
         presentation = _presentation(state, target_id)
+        evidence["browser_close_observation"] = {
+            "position": point,
+            "position_drift_meters": (
+                math.dist(point, before_close)
+                if before_close is not None and point is not None
+                else None
+            ),
+            "state": summary(state),
+        }
         return (
             not state.get("combat_target")
             and not state.get("ui", {}).get("target", {}).get("visible")
@@ -1156,8 +1372,9 @@ def exercise_targeting(
         "timings_seconds": timings,
         "evidence": evidence,
         "limits": [
-            "local protocol-6 exported Web/Linux clients against normal one-dog Yongan",
+            "local protocol-7 exported Web/Linux clients against normal one-dog Yongan",
             "native pointer and Space use the fixed test-probe InputEvent allowlist",
+            "fixture approach waits for the server Wild Dog to settle at home before one ordinary move intent; it is not client auto-chase evidence",
             "dual-target far-lock/no-fallback remains covered by the separate 53-check server run",
             "one ordinary Wild Dog kill; this does not execute the five-kill progression branch",
         ],

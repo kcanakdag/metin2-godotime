@@ -49,7 +49,7 @@ def main() -> None:
         ) from None
     schema_text = json.dumps(schema, separators=(",", ":"))
     if "combat_target_view" not in schema_text or "select_combat_target" not in schema_text:
-        raise RuntimeError("The selected database does not expose the protocol 6 target schema.")
+        raise RuntimeError("The selected database does not expose the target-locking schema.")
     try:
         with tempfile.TemporaryDirectory(prefix="targets-", dir=ROOT / ".local") as scratch:
             stage = Path(scratch)

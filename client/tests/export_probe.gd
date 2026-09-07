@@ -8,13 +8,19 @@ var _report := ""
 var _commands := ""
 var _sequence := -1
 var _errors: Array[String] = []
+var _attack_ack_sequence := 0
+var _perform_attack_acks: Array[Dictionary] = []
+var _target_ack_sequence := 0
+var _select_combat_target_acks: Array[Dictionary] = []
 
 
 func _ready() -> void:
 	get_parent().connection.reducer_failed.connect(func(message: String): _errors.append(message))
+	get_parent().connection.reducer_completed.connect(_on_reducer_completed)
 	if OS.has_feature("web"):
 		_callback = JavaScriptBridge.create_callback(_web_command)
 		JavaScriptBridge.get_interface("window").mt2Command = _callback
+		_publish_ack_views()
 	else:
 		var args := OS.get_cmdline_user_args()
 		for i in range(args.size() - 1):
@@ -25,6 +31,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_poll_native_command()
 	_elapsed += delta
 	if _elapsed < 0.2:
 		return
@@ -52,6 +59,8 @@ func _process(delta: float) -> void:
 		["id", "request_id", "severity", "message", "created_at"]
 	)
 	snapshot["errors"] = _errors
+	snapshot["perform_attack_acks"] = _perform_attack_acks.duplicate(true)
+	snapshot["select_combat_target_acks"] = _select_combat_target_acks.duplicate(true)
 	snapshot["state_message"] = get_parent().connection.state_message
 	var actors: Array = []
 	for actor in get_parent().get_node("Players").get_children():
@@ -77,11 +86,15 @@ func _process(delta: float) -> void:
 		if file:
 			file.store_string(payload)
 			file.close()
-	if not _commands.is_empty() and FileAccess.file_exists(_commands):
-		var command: Variant = JSON.parse_string(FileAccess.get_file_as_string(_commands))
-		if command is Dictionary and int(command.get("sequence", -1)) > _sequence:
-			_sequence = int(command.sequence)
-			_dispatch(command)
+
+
+func _poll_native_command() -> void:
+	if _commands.is_empty() or not FileAccess.file_exists(_commands):
+		return
+	var command: Variant = JSON.parse_string(FileAccess.get_file_as_string(_commands))
+	if command is Dictionary and int(command.get("sequence", -1)) > _sequence:
+		_sequence = int(command.sequence)
+		_dispatch(command)
 
 
 func _project_rows(values: Variant, fields: Array[String]) -> Array[Dictionary]:
@@ -145,6 +158,10 @@ func _dispatch(command: Dictionary) -> void:
 			_inject_pointer(command, false)
 		"pointer_click":
 			_inject_pointer(command, true)
+		"pointer_right_click":
+			_inject_pointer(command, true, MOUSE_BUTTON_RIGHT)
+		"inventory":
+			_inject_inventory()
 		"space":
 			_inject_space()
 		"attack":
@@ -161,7 +178,9 @@ func _dispatch(command: Dictionary) -> void:
 				)
 
 
-func _inject_pointer(command: Dictionary, click: bool) -> void:
+func _inject_pointer(
+	command: Dictionary, click: bool, button_index: MouseButton = MOUSE_BUTTON_LEFT
+) -> void:
 	var x_value: Variant = command.get("x")
 	var y_value: Variant = command.get("y")
 	if not x_value is float and not x_value is int:
@@ -185,18 +204,85 @@ func _inject_pointer(command: Dictionary, click: bool) -> void:
 	if not click:
 		return
 	for pressed: bool in [true, false]:
-		var button := InputEventMouseButton.new()
-		button.button_index = MOUSE_BUTTON_LEFT
-		button.pressed = pressed
-		button.position = point
-		button.global_position = point
-		get_viewport().push_input(button, true)
+		var event := InputEventMouseButton.new()
+		event.button_index = button_index
+		event.pressed = pressed
+		event.position = point
+		event.global_position = point
+		get_viewport().push_input(event, true)
 
 
 func _inject_space() -> void:
+	_inject_key(KEY_SPACE)
+
+
+func _inject_inventory() -> void:
+	_inject_key(KEY_I)
+
+
+func _inject_key(keycode: Key) -> void:
 	for pressed: bool in [true, false]:
 		var event := InputEventKey.new()
-		event.keycode = KEY_SPACE
-		event.physical_keycode = KEY_SPACE
+		event.keycode = keycode
+		event.physical_keycode = keycode
 		event.pressed = pressed
 		get_viewport().push_input(event, true)
+
+
+func _on_reducer_completed(
+	reducer_name: String, succeeded: bool, reducer_timestamp_us: int
+) -> void:
+	if reducer_name not in ["perform_attack", "select_combat_target"]:
+		return
+	var world := get_parent()
+	var connection: GameConnection = world.connection
+	var record := {
+		"succeeded": succeeded,
+		"observed_at_ticks_ms": Time.get_ticks_msec(),
+		"reducer_timestamp_us": reducer_timestamp_us,
+		"server_time_us": connection.server_time_us,
+		"public_action": _own_public_action(connection),
+	}
+	if reducer_name == "perform_attack":
+		_attack_ack_sequence += 1
+		record["sequence"] = _attack_ack_sequence
+		_perform_attack_acks.append(record)
+		while _perform_attack_acks.size() > 32:
+			_perform_attack_acks.pop_front()
+	else:
+		_target_ack_sequence += 1
+		record["sequence"] = _target_ack_sequence
+		record["combat_target"] = connection.selected_combat_target()
+		_select_combat_target_acks.append(record)
+		while _select_combat_target_acks.size() > 32:
+			_select_combat_target_acks.pop_front()
+	_publish_ack_views()
+
+
+func _own_public_action(connection: GameConnection) -> Dictionary:
+	var player: Dictionary = {}
+	for row: Dictionary in connection.players:
+		if str(row.get("identity", "")) == connection.local_identity:
+			player = row
+			break
+	return {
+		"activity": player.get("activity"),
+		"attack_action_id": player.get("attack_action_id"),
+		"attack_sequence": player.get("attack_sequence"),
+		"action_started_at_us": player.get("action_started_at_us"),
+		"action_ends_at_us": player.get("action_ends_at_us"),
+	}
+
+
+func _publish_ack_views() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.get_interface("window").mt2AttackAcks = JSON.stringify(
+			_perform_attack_acks
+		)
+		JavaScriptBridge.get_interface("window").mt2SelectTargetAcks = JSON.stringify(
+			_select_combat_target_acks
+		)
+	else:
+		# The native runner reads the same full snapshot, but ACK evidence must not
+		# wait for the ordinary 200 ms reporting cadence.
+		_elapsed = 0.2

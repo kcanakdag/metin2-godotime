@@ -28,7 +28,9 @@ SMOKES = {
     "content_gate": ("main_content_gate_smoke.gd", "MAIN_CONTENT_GATE_SMOKE"),
     "panel": ("classic_target_smoke.gd", "CLASSIC_TARGET_SMOKE"),
     "picker": ("world_picker_smoke.gd", "WORLD_PICKER_SMOKE"),
+    "probe": ("export_probe_smoke.gd", "EXPORT_PROBE_SMOKE"),
 }
+TEST_SUPPORT = ("export_probe.gd",)
 
 
 def sha256(path: Path) -> str:
@@ -76,6 +78,8 @@ def main() -> None:
         (stage / "tests").mkdir()
         for script, _marker in SMOKES.values():
             shutil.copy2(CLIENT / "tests" / script, stage / "tests" / script)
+        for script in TEST_SUPPORT:
+            shutil.copy2(CLIENT / "tests" / script, stage / "tests" / script)
         (stage / "project.godot").write_text(PROJECT)
         tested_files = {
             "main": sha256(stage / "scripts/main.gd"),
@@ -92,6 +96,8 @@ def main() -> None:
         }
         for name, (script, _marker) in SMOKES.items():
             tested_files[name + "_smoke"] = sha256(stage / "tests" / script)
+        for script in TEST_SUPPORT:
+            tested_files[Path(script).stem] = sha256(stage / "tests" / script)
         environment = {
             **os.environ,
             "XDG_DATA_HOME": str(stage / ".data"),

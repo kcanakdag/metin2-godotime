@@ -121,6 +121,7 @@ enum DueHitSource {
 struct DueHitEvent {
     hit_at_us: i64,
     source: DueHitSource,
+    action_revision: u64,
 }
 
 fn compare_due_hits(left: &DueHitEvent, right: &DueHitEvent) -> Ordering {
@@ -223,8 +224,9 @@ pub fn plan_player_attack(
     } else {
         &definitions::PLAYER_GENERAL_ATTACK
     };
-    let damage =
-        definitions::PLAYER_BASE_DAMAGE.saturating_add(inventory::weapon_bonus(ctx, character));
+    let damage = definitions::PLAYER_BASE_DAMAGE
+        .checked_add(inventory::weapon_bonus(ctx, character))
+        .expect("trusted player and weapon damage must fit u16");
     let bounds = collision_bounds(ctx);
     let Some(player) = ctx.db.player().identity().find(character) else {
         return PlayerAttackPlan {
@@ -282,13 +284,99 @@ pub fn plan_player_attack(
     }
 }
 
+pub fn start_player_action(
+    ctx: &ReducerContext,
+    controller: &mut Controller,
+    plan: PlayerAttackPlan,
+    now: i64,
+) -> Result<(), String> {
+    let attack_until_us = now
+        .checked_add(plan.definition.duration_us)
+        .ok_or("Attack timestamp is outside the supported range.")?;
+    let next_attack_us = fresh_action_not_before(now, plan.definition)?;
+    let action_revision = controller
+        .action_revision
+        .checked_add(1)
+        .ok_or("Attack action revision limit reached.")?;
+    let mut player = ctx
+        .db
+        .player()
+        .identity()
+        .find(controller.identity)
+        .ok_or("Enter the world first.")?;
+    let attack_sequence = player
+        .attack_sequence
+        .checked_add(1)
+        .ok_or("Attack sequence limit reached.")?;
+    let (hit_at_us, hit_until_us) = if plan.target_id == 0 {
+        (0, 0)
+    } else {
+        (
+            now.checked_add(plan.definition.hit_start_us)
+                .ok_or("Attack hit timestamp is outside the supported range.")?,
+            now.checked_add(plan.definition.hit_end_us)
+                .ok_or("Attack hit timestamp is outside the supported range.")?,
+        )
+    };
+
+    controller.mode = 0;
+    controller.direction_x = 0.0;
+    controller.direction_z = 0.0;
+    controller.attack_until_us = attack_until_us;
+    controller.next_attack_us = next_attack_us;
+    controller.action_revision = action_revision;
+    controller.pending_attack_target_id = plan.target_id;
+    controller.pending_attack_target_generation = plan.target_generation;
+    controller.pending_attack_hit_at_us = hit_at_us;
+    controller.pending_attack_hit_until_us = hit_until_us;
+    controller.pending_attack_damage = if plan.target_id == 0 { 0 } else { plan.damage };
+    controller.pending_attack_range = if plan.target_id == 0 {
+        0.0
+    } else {
+        plan.definition.range_m
+    };
+    controller.pending_attack_target_revision = controller.combat_target_revision;
+    controller.pending_attack_can_select_target = plan.can_select_target;
+    controller.pending_attack_action_revision = if plan.target_id == 0 {
+        0
+    } else {
+        action_revision
+    };
+
+    player.activity = 2;
+    if let Some(heading) = plan.heading {
+        player.heading = heading;
+    }
+    player.attack_sequence = attack_sequence;
+    player.attack_action_id = plan.definition.id.into();
+    player.action_started_at_us = now;
+    player.action_ends_at_us = attack_until_us;
+    ctx.db.player().identity().update(player);
+    Ok(())
+}
+
+fn fresh_action_not_before(now: i64, definition: &AttackDefinition) -> Result<i64, String> {
+    let cooldown = now
+        .checked_add(definition.cooldown_us)
+        .ok_or("Attack timestamp is outside the supported range.")?;
+    if definition.combo_input.is_none() {
+        return Ok(cooldown);
+    }
+    let action_end = now
+        .checked_add(definition.duration_us)
+        .ok_or("Attack timestamp is outside the supported range.")?;
+    Ok(cooldown.max(action_end))
+}
+
 pub fn take_due_player_hit(controller: &mut Controller, now: i64) -> Option<PendingPlayerHit> {
     if controller.pending_attack_hit_at_us == 0 || now < controller.pending_attack_hit_at_us {
         return None;
     }
     let still_valid = now <= controller.pending_attack_hit_until_us
         && now <= controller.attack_until_us
-        && controller.pending_attack_target_id != 0;
+        && controller.pending_attack_target_id != 0
+        && controller.pending_attack_action_revision != 0
+        && controller.pending_attack_action_revision == controller.action_revision;
     let hit = still_valid.then_some(PendingPlayerHit {
         target_id: controller.pending_attack_target_id,
         target_generation: controller.pending_attack_target_generation,
@@ -301,6 +389,16 @@ pub fn take_due_player_hit(controller: &mut Controller, now: i64) -> Option<Pend
     hit
 }
 
+pub fn discard_expired_player_hit(controller: &mut Controller, now: i64) {
+    if controller.pending_attack_hit_at_us != 0
+        && (now > controller.pending_attack_hit_until_us
+            || now > controller.attack_until_us
+            || controller.pending_attack_action_revision != controller.action_revision)
+    {
+        cancel_player_attack(controller);
+    }
+}
+
 pub fn cancel_player_attack(controller: &mut Controller) {
     controller.pending_attack_target_id = 0;
     controller.pending_attack_target_generation = 0;
@@ -310,6 +408,7 @@ pub fn cancel_player_attack(controller: &mut Controller) {
     controller.pending_attack_range = 0.0;
     controller.pending_attack_target_revision = 0;
     controller.pending_attack_can_select_target = false;
+    controller.pending_attack_action_revision = 0;
 }
 
 pub fn cancel_attacks_targeting(ctx: &ReducerContext, character: Identity) {
@@ -338,6 +437,7 @@ pub fn resolve_due_hits(ctx: &ReducerContext, now: i64) {
         .map(|controller| DueHitEvent {
             hit_at_us: controller.pending_attack_hit_at_us,
             source: DueHitSource::Player(controller.identity),
+            action_revision: controller.pending_attack_action_revision,
         })
         .chain(
             ctx.db
@@ -347,12 +447,13 @@ pub fn resolve_due_hits(ctx: &ReducerContext, now: i64) {
                 .map(|clock| DueHitEvent {
                     hit_at_us: clock.pending_hit_at_us,
                     source: DueHitSource::Monster(clock.id),
+                    action_revision: 0,
                 }),
         )
         .collect();
     visit_due_hits(&mut events, |event| match event.source {
         DueHitSource::Player(character) => {
-            resolve_due_player_event(ctx, character, event.hit_at_us, now)
+            resolve_due_player_event(ctx, character, event.hit_at_us, event.action_revision, now)
         }
         DueHitSource::Monster(monster_id) => {
             resolve_due_monster_event(ctx, monster_id, event.hit_at_us, now)
@@ -364,12 +465,17 @@ fn resolve_due_player_event(
     ctx: &ReducerContext,
     character: Identity,
     expected_hit_at_us: i64,
+    expected_action_revision: u64,
     now: i64,
 ) {
     let Some(mut controller) = ctx.db.controller().identity().find(character) else {
         return;
     };
-    if controller.pending_attack_hit_at_us != expected_hit_at_us || now < expected_hit_at_us {
+    if controller.pending_attack_hit_at_us != expected_hit_at_us
+        || controller.pending_attack_action_revision != expected_action_revision
+        || controller.action_revision != expected_action_revision
+        || now < expected_hit_at_us
+    {
         return;
     }
     let hit = take_due_player_hit(&mut controller, now);
@@ -463,6 +569,7 @@ pub fn resolve_player_hit(ctx: &ReducerContext, character: Identity, hit: Pendin
 
 fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, character: Identity) {
     let now = now_us(ctx);
+    crate::combo::clear_chains_targeting(ctx, monster.id, monster.life_sequence);
     monster.activity = 3;
     monster.action_started_at_us = now;
     monster.respawn_at_us = now.saturating_add(definitions::MOB_RESPAWN_US);
@@ -958,6 +1065,7 @@ fn resolve_monster_hit(ctx: &ReducerContext, monster_id: u32, hit: PendingMonste
             controller.direction_z = 0.0;
             controller.attack_until_us = 0;
             cancel_player_attack(&mut controller);
+            crate::combo::clear_chain(&mut controller);
             crate::targeting::clear_character_target(ctx, &mut controller)
                 .unwrap_or_else(|error| panic!("cannot clear defeated character target: {error}"));
             ctx.db.controller().identity().update(controller);
@@ -1005,6 +1113,7 @@ mod tests {
             last_input_us: 0,
             attack_until_us: 2_000_000,
             next_attack_us: 0,
+            action_revision: 5,
             pending_attack_target_id: 7,
             pending_attack_target_generation: 11,
             pending_attack_hit_at_us: hit_at_us,
@@ -1013,10 +1122,22 @@ mod tests {
             pending_attack_range: 2.7,
             pending_attack_target_revision: 9,
             pending_attack_can_select_target: true,
+            pending_attack_action_revision: 5,
             combat_target_id: 0,
             combat_target_life_sequence: 0,
             combat_target_change_not_before_us: 0,
             combat_target_revision: 9,
+            combo_step: 0,
+            combo_chain_revision: 0,
+            combo_action_started_at_us: 0,
+            combo_action_ends_at_us: 0,
+            combo_target_id: 0,
+            combo_target_life_sequence: 0,
+            combo_target_can_be_selected: false,
+            combo_equipped_item_id: 0,
+            combo_equipped_vnum: 0,
+            combo_link_queued: false,
+            combo_transition_boundary_us: 0,
             next_chat_us: 0,
         }
     }
@@ -1042,10 +1163,12 @@ mod tests {
             DueHitEvent {
                 hit_at_us: player_hit_at_us,
                 source: DueHitSource::Player(player),
+                action_revision: 5,
             },
             DueHitEvent {
                 hit_at_us: monster_hit_at_us,
                 source: DueHitSource::Monster(1),
+                action_revision: 0,
             },
         ];
         let mut player_alive = true;
@@ -1092,6 +1215,19 @@ mod tests {
         assert_eq!(definitions::MOB_ATTACK.cooldown_us, 1_300_000);
         assert_eq!(definitions::MOB_ATTACK.hit_start_us, 320_195);
         assert_eq!(definitions::MOB_ATTACK.hit_end_us, 492_782);
+    }
+
+    #[test]
+    fn combo_fresh_action_deadline_includes_the_full_motion() {
+        let combo_one = &definitions::PLAYER_ONEHAND_COMBO[0];
+        let combo_two = &definitions::PLAYER_ONEHAND_COMBO[1];
+        assert_eq!(fresh_action_not_before(100, combo_one).unwrap(), 1_000_100);
+        assert_eq!(fresh_action_not_before(100, combo_two).unwrap(), 933_433);
+        assert_eq!(
+            fresh_action_not_before(100, &definitions::PLAYER_GENERAL_ATTACK).unwrap(),
+            850_100
+        );
+        assert!(fresh_action_not_before(i64::MAX, combo_one).is_err());
     }
 
     #[test]

@@ -27,9 +27,25 @@ SCHEMA = "mt2spacetime.normalized-content-manifest"
 SERVER_SCHEMA = "mt2spacetime.trusted-action-definitions"
 CLIENT_SCHEMA = "mt2spacetime.presentation-manifest"
 SCHEMA_VERSION = 1
-SERVER_SCHEMA_VERSION = 2
-COMPILER_VERSION = "content-compiler-v1.1.0"
+SERVER_SCHEMA_VERSION = 3
+COMPILER_VERSION = "content-compiler-v1.2.0"
 DEFAULT_PROFILE = ROOT / "content/profiles/p0-warrior-dog.json"
+
+PLAYER_ACTOR_ID = "actor.player.warrior-male"
+MOB_ACTOR_ID = "actor.mob.wild-dog-101"
+PLAYER_GENERAL_ACTION_ID = f"{PLAYER_ACTOR_ID}.general.normal_attack.v1"
+PLAYER_COMBO_ACTION_IDS = (
+    f"{PLAYER_ACTOR_ID}.onehand.combo_1",
+    f"{PLAYER_ACTOR_ID}.onehand.combo_2",
+)
+MOB_ACTION_ID = f"{MOB_ACTOR_ID}.general.normal_attack.v1"
+EXPECTED_SERVER_ACTION_IDS = {
+    PLAYER_GENERAL_ACTION_ID,
+    *PLAYER_COMBO_ACTION_IDS,
+    MOB_ACTION_ID,
+}
+COMBO_INPUT_FIELDS = {"pre_input_us", "direct_input_us", "input_limit_us", "link_us"}
+MAX_COMBO_TIME_US = 60_000_000
 
 
 def canonical_bytes(value: object) -> bytes:
@@ -550,17 +566,83 @@ def _events_for_server(motion: dict, configured_range: float) -> list[dict]:
 
 
 def _primary_motion(actor: dict, mode_id: str, action: str) -> dict:
-    mode = next(mode for mode in actor["modes"] if mode["id"] == mode_id)
+    modes = [mode for mode in actor["modes"] if mode["id"] == mode_id]
+    if len(modes) != 1:
+        raise ValueError(f"Expected exactly one mode {actor['id']}.{mode_id}")
+    mode = modes[0]
     matches = [motion for motion in mode["motions"] if motion["action"] == action]
     if not matches:
         raise ValueError(f"Missing primary action {actor['id']}.{mode_id}.{action}")
     return matches[0]
 
 
+def _selected_combo_prefix(player: dict) -> tuple[dict, list[dict]]:
+    modes = [mode for mode in player["modes"] if mode["id"] == "onehand"]
+    if len(modes) != 1:
+        raise ValueError("Expected exactly one selected onehand mode")
+    mode = modes[0]
+    if mode.get("required_item_vnums") != [10]:
+        raise ValueError("Selected onehand mode must require only Sword+0 vnum 10")
+    chains = mode.get("combo_chains")
+    if not isinstance(chains, list) or not chains:
+        raise ValueError("Selected onehand mode requires declared combo chains")
+    for chain in chains:
+        if not isinstance(chain, list) or len(chain) < 2:
+            raise ValueError("Every selected combo chain requires at least two actions")
+        if any(type(name) is not str or not name for name in chain):
+            raise ValueError("Selected combo chain action names must be nonempty strings")
+    prefix = chains[0][:2]
+    if prefix != ["combo_1", "combo_2"] or prefix[0] == prefix[1]:
+        raise ValueError("Selected combo prefix must be distinct combo_1 then combo_2")
+    if any(chain[:2] != prefix for chain in chains):
+        raise ValueError("Selected combo chains disagree on their two-action prefix")
+    motions = []
+    for name in prefix:
+        matches = [motion for motion in mode["motions"] if motion["action"] == name]
+        if len(matches) != 1:
+            raise ValueError(f"Expected exactly one selected combo motion for {name}")
+        motions.append(matches[0])
+    if [motion.get("action_id") for motion in motions] != list(PLAYER_COMBO_ACTION_IDS):
+        raise ValueError("Selected combo prefix action IDs do not match the fixed fixture")
+    return mode, motions
+
+
+def _checked_combo_input(value: object, duration_us: int, context: str) -> dict:
+    if type(duration_us) is not int or not 0 < duration_us <= MAX_COMBO_TIME_US:
+        raise ValueError(f"{context} duration must be integer microseconds in 1..=60000000")
+    if not isinstance(value, dict) or set(value) != COMBO_INPUT_FIELDS:
+        raise ValueError(f"{context} combo_input must contain exactly four timing fields")
+    if any(type(value[field]) is not int for field in COMBO_INPUT_FIELDS):
+        raise ValueError(f"{context} combo_input fields must be exact integers")
+    pre = value["pre_input_us"]
+    direct = value["direct_input_us"]
+    limit = value["input_limit_us"]
+    link = value["link_us"]
+    if not 0 <= pre < direct < limit <= duration_us:
+        raise ValueError(f"{context} combo input window is not strictly ordered")
+    if not 0 <= link <= MAX_COMBO_TIME_US:
+        raise ValueError(f"{context} combo link is outside the supported bound")
+    return {field: value[field] for field in sorted(COMBO_INPUT_FIELDS)}
+
+
 def make_server_payload(profile: dict, normalized: dict) -> dict:
     gameplay = profile["trusted_gameplay"]
-    player = next(actor for actor in normalized["actors"] if actor["kind"] == "player")
-    mob = next(actor for actor in normalized["actors"] if actor["kind"] == "mob")
+    normalized_actors = normalized.get("actors")
+    if not isinstance(normalized_actors, list) or any(
+        not isinstance(actor, dict) for actor in normalized_actors
+    ):
+        raise ValueError("Normalized actors must be objects")
+    players = [actor for actor in normalized_actors if actor.get("kind") == "player"]
+    mobs = [actor for actor in normalized_actors if actor.get("kind") == "mob"]
+    if len(players) != 1 or len(mobs) != 1:
+        raise ValueError("Trusted payload requires exactly one selected player and mob")
+    player, mob = players[0], mobs[0]
+    if player.get("id") != PLAYER_ACTOR_ID or mob.get("id") != MOB_ACTOR_ID:
+        raise ValueError("Selected trusted actors do not match the fixed profile")
+    if gameplay["player"].get("primary_actions", {}).get("onehand") != "combo_1":
+        raise ValueError("Selected onehand primary action must be combo_1")
+    onehand_mode, combo_motions = _selected_combo_prefix(player)
+    combo_by_action = {motion["action"]: motion for motion in combo_motions}
     actions = []
     player_primary = {}
     for mode_id, action_name in sorted(gameplay["player"]["primary_actions"].items()):
@@ -581,8 +663,38 @@ def make_server_payload(profile: dict, normalized: dict) -> dict:
                 "required_item_vnums": next(
                     mode["required_item_vnums"] for mode in player["modes"] if mode["id"] == mode_id
                 ),
+                **(
+                    {
+                        "combo_input": _checked_combo_input(
+                            motion.get("combo"),
+                            motion["duration_us"],
+                            motion["action_id"],
+                        )
+                    }
+                    if mode_id == "onehand"
+                    else {}
+                ),
             }
         )
+    motion = combo_by_action["combo_2"]
+    windows = _events_for_server(motion, gameplay["player"]["attack_range_m"])
+    if not windows:
+        raise ValueError(f"Selected combo action has no hit window: {motion['action_id']}")
+    actions.append(
+        {
+            "id": motion["action_id"],
+            "actor_id": player["id"],
+            "mode": "onehand",
+            "action": "combo_2",
+            "duration_us": motion["duration_us"],
+            "cooldown_us": gameplay["player"]["attack_cooldown_us"],
+            "hit_windows": windows,
+            "required_item_vnums": onehand_mode["required_item_vnums"],
+            "combo_input": _checked_combo_input(
+                motion.get("combo"), motion["duration_us"], motion["action_id"]
+            ),
+        }
+    )
     mob_motion = _primary_motion(mob, "general", "normal_attack")
     mob_windows = _events_for_server(mob_motion, gameplay["mob"]["attack_range_m"])
     if not mob_windows:
@@ -624,11 +736,13 @@ def make_server_payload(profile: dict, normalized: dict) -> dict:
                 "primary_action_id": mob_motion["action_id"],
             },
         ],
+        "base_combo_prefix": list(PLAYER_COMBO_ACTION_IDS),
         "actions": sorted(actions, key=lambda action: action["id"]),
         "items": [gameplay["item"]],
         "progression": normalized["progression"],
     }
     payload["gameplay_definition_hash"] = digest(payload)
+    validate_server_payload(payload, profile["profile_id"])
     return payload
 
 
@@ -666,6 +780,8 @@ def write_compile_outputs(profile_path: Path, normalized: dict, server: dict) ->
 
 
 def validate_server_payload(payload: dict, profile_id: str) -> None:
+    if not isinstance(payload, dict):
+        raise ValueError("Trusted action definitions must be an object")
     if (
         payload.get("schema") != SERVER_SCHEMA
         or payload.get("schema_version") != SERVER_SCHEMA_VERSION
@@ -677,25 +793,88 @@ def validate_server_payload(payload: dict, profile_id: str) -> None:
     unhashed = {key: value for key, value in payload.items() if key != "gameplay_definition_hash"}
     if claimed != digest(unhashed):
         raise ValueError("Trusted action definition hash mismatch")
-    action_ids = {action["id"] for action in payload["actions"]}
+    actions = payload.get("actions")
+    if not isinstance(actions, list) or len(actions) != 4:
+        raise ValueError("Trusted definitions require exactly four actions")
+    if any(not isinstance(action, dict) for action in actions):
+        raise ValueError("Trusted actions must be objects")
+    action_id_list = [action.get("id") for action in actions]
+    if any(type(action_id) is not str or not action_id for action_id in action_id_list):
+        raise ValueError("Trusted action IDs must be nonempty strings")
+    if len(action_id_list) != len(set(action_id_list)):
+        raise ValueError("Trusted action IDs must be unique")
+    action_ids = set(action_id_list)
+    if action_ids != EXPECTED_SERVER_ACTION_IDS:
+        raise ValueError("Trusted action IDs do not match the fixed profile")
+    prefix = payload.get("base_combo_prefix")
+    if prefix != list(PLAYER_COMBO_ACTION_IDS):
+        raise ValueError("Trusted base combo prefix is missing, reordered, or changed")
+    actors = payload.get("actors")
+    if not isinstance(actors, list) or any(not isinstance(actor, dict) for actor in actors):
+        raise ValueError("Trusted definitions require actors")
+    player_rows = [actor for actor in actors if actor.get("id") == PLAYER_ACTOR_ID]
+    if len(player_rows) != 1:
+        raise ValueError("Trusted definitions require exactly one fixed player actor")
+    player_primary = player_rows[0].get("primary_actions")
+    if not isinstance(player_primary, dict) or player_primary.get("onehand") != prefix[0]:
+        raise ValueError("Player onehand primary action must be the combo prefix head")
     for actor in payload["actors"]:
-        primary = list(actor.get("primary_actions", {}).values())
+        primary_actions = actor.get("primary_actions", {})
+        if not isinstance(primary_actions, dict):
+            raise ValueError("Actor primary_actions must be an object")
+        primary = list(primary_actions.values())
         if "primary_action_id" in actor:
             primary.append(actor["primary_action_id"])
-        if any(action_id not in action_ids for action_id in primary):
+        if any(type(action_id) is not str or action_id not in action_ids for action_id in primary):
             raise ValueError("Primary action refers to a missing action")
-    for action in payload["actions"]:
-        if not isinstance(action["duration_us"], int) or action["duration_us"] <= 0:
-            raise ValueError("Action duration must be positive integer microseconds")
-        if not isinstance(action["cooldown_us"], int) or action["cooldown_us"] <= 0:
-            raise ValueError("Action cooldown must be positive integer microseconds")
-        if not action["hit_windows"]:
-            raise ValueError("Trusted attack action has no hit window")
-        for window in action["hit_windows"]:
-            if not 0 <= window["start_us"] <= window["end_us"] <= action["duration_us"]:
+    for action in actions:
+        duration_us = action.get("duration_us")
+        cooldown_us = action.get("cooldown_us")
+        if type(duration_us) is not int or not 0 < duration_us <= MAX_COMBO_TIME_US:
+            raise ValueError("Action duration must be integer microseconds in 1..=60000000")
+        if type(cooldown_us) is not int or not 0 < cooldown_us <= MAX_COMBO_TIME_US:
+            raise ValueError("Action cooldown must be integer microseconds in 1..=60000000")
+        hit_windows = action.get("hit_windows")
+        if not isinstance(hit_windows, list) or len(hit_windows) != 1:
+            raise ValueError("Trusted attack action must have exactly one hit window")
+        for window in hit_windows:
+            if not isinstance(window, dict):
+                raise ValueError("Trusted hit window must be an object")
+            if (
+                type(window.get("start_us")) is not int
+                or type(window.get("end_us")) is not int
+                or not 0 <= window["start_us"] < window["end_us"] <= duration_us
+            ):
                 raise ValueError("Trusted hit window exceeds action duration")
-            if not math.isfinite(window["range_m"]) or window["range_m"] <= 0:
+            if (
+                type(window.get("range_m")) not in {int, float}
+                or not math.isfinite(window["range_m"])
+                or window["range_m"] <= 0
+            ):
                 raise ValueError("Trusted hit window has invalid range")
+            if window.get("shape") != "melee_reach":
+                raise ValueError("Trusted hit window has unsupported shape")
+        expected_actor = MOB_ACTOR_ID if action["id"] == MOB_ACTION_ID else PLAYER_ACTOR_ID
+        expected_mode = "onehand" if action["id"] in PLAYER_COMBO_ACTION_IDS else "general"
+        expected_name = (
+            f"combo_{PLAYER_COMBO_ACTION_IDS.index(action['id']) + 1}"
+            if action["id"] in PLAYER_COMBO_ACTION_IDS
+            else "normal_attack"
+        )
+        expected_items = [10] if action["id"] in PLAYER_COMBO_ACTION_IDS else []
+        expected_range = 1.9 if action["id"] == MOB_ACTION_ID else 2.7
+        if (
+            action.get("actor_id") != expected_actor
+            or action.get("mode") != expected_mode
+            or action.get("action") != expected_name
+            or action.get("required_item_vnums") != expected_items
+            or hit_windows[0]["range_m"] != expected_range
+        ):
+            raise ValueError("Trusted action does not match the fixed fixture")
+        if action["id"] in PLAYER_COMBO_ACTION_IDS:
+            _checked_combo_input(action.get("combo_input"), duration_us, action["id"])
+        elif "combo_input" in action:
+            raise ValueError("Non-prefix actions must omit combo_input")
     progression = payload.get("progression")
     if not isinstance(progression, dict):
         raise ValueError("Trusted definitions require progression data")

@@ -175,6 +175,28 @@ func _test_player() -> void:
 	row.action_ends_at_us = 3_000_000 + int(sword_attack.duration_us)
 	player.apply_state(row, true, appearance, 3_000_000 + hit_start_us)
 	await _capture_from("warrior-swing", player.position + Vector3(2.8, 1.4, -3.6), player.position)
+	var combo_1_position := player.position
+	var combo_2 := _catalog.motion(
+		ActorCatalog.WARRIOR_ID, "", "actor.player.warrior-male.onehand.combo_2"
+	)
+	row.attack_sequence = 6
+	row.attack_action_id = str(combo_2.action_id)
+	row.action_started_at_us = 3_600_000
+	row.action_ends_at_us = 3_600_000 + int(combo_2.duration_us)
+	player.apply_state(row, true, appearance, 3_600_000 + 275_000)
+	state = player.presentation_snapshot()
+	_check(
+		state.action_id == combo_2.action_id and state.sequence == 6 and state.attack_sequence == 6,
+		"subscribed combo step 2 action ID and sequence replace step 1"
+	)
+	_check(
+		absf(float(state.animation_position) - 0.275) < 0.08,
+		"subscribed combo step 2 seeks only from its authoritative start time"
+	)
+	_check(
+		player.position.distance_to(combo_1_position) < 0.001,
+		"combo presentation accumulation does not move the server actor root"
+	)
 	row.activity = 0
 	row.action_started_at_us = 0
 	row.action_ends_at_us = 0
