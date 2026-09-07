@@ -180,7 +180,7 @@ func _on_lobby_ready() -> void:
 	_intro.set_stage("empire" if _connection.characters.is_empty() else "select")
 	_intro.set_status(
 		"ready",
-		"Create your warrior." if _connection.characters.is_empty() else "Choose your character."
+		"Create your character." if _connection.characters.is_empty() else "Choose your character."
 	)
 	if _return_to_world and not _connection.local_identity.is_empty():
 		_connection.enter_selected()
@@ -227,10 +227,10 @@ func _reconnect() -> void:
 		_auth.resume()
 
 
-func _create_character(slot: int, name: String) -> void:
+func _create_character(slot: int, name: String, character_class: int, sex: int) -> void:
 	if _connection.state == "lobby":
 		_intro.set_status("creating", "Creating your character…")
-		_connection.create_character(slot, name)
+		_connection.create_character(slot, name, character_class, sex)
 
 
 func _select_character(character_id: String) -> void:

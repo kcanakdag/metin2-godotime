@@ -4,10 +4,15 @@ use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+mod build_classes;
 mod build_combo;
+mod build_items;
+mod build_npcs;
+mod build_population;
 use build_combo::{
     ComboInput, MOB_ACTION_ID, PLAYER_COMBO_ACTION_IDS, PLAYER_GENERAL_ACTION_ID, RootMotion,
 };
+use build_population::MonsterSpawn;
 
 const PROFILE: &str = "p0-warrior-dog";
 const DEFINITIONS: &str = "content/p0-warrior-dog/actions.v1.json";
@@ -15,13 +20,6 @@ const COMBO_VALIDATOR: &str = "build_combo.rs";
 const DUAL_TARGET_FIXTURE: &str = "fixtures/p2-target-dual-wild-dog.v1.json";
 const FINISHER_TARGET_FIXTURE: &str = "fixtures/p2-finisher-triple-wild-dog.v1.json";
 const TARGET_FIXTURE_ENV: &str = "MT2_COMBAT_TEST_FIXTURE";
-
-#[derive(Clone, Copy)]
-struct MonsterSpawn {
-    id: u32,
-    home_x: f32,
-    home_z: f32,
-}
 
 fn fail(message: impl AsRef<str>) -> ! {
     panic!(
@@ -96,6 +94,24 @@ fn exact_u32(row: &Map<String, Value>, name: &str, label: &str, expected: u32) -
         fail(format!("{label}.{name} must be {expected}"));
     }
     value
+}
+
+fn exact_zero_i16(row: &Map<String, Value>, name: &str, label: &str) -> i16 {
+    if field(row, name, label).as_i64() != Some(0) {
+        fail(format!("{label}.{name} must be integer zero"));
+    }
+    0
+}
+
+fn exact_one_f32(row: &Map<String, Value>, name: &str, label: &str) -> f32 {
+    let value = field(row, name, label)
+        .as_f64()
+        .unwrap_or_else(|| fail(format!("{label}.{name} must be a number")));
+    let converted = value as f32;
+    if converted.to_bits() != 1.0_f32.to_bits() || value != 1.0 {
+        fail(format!("{label}.{name} must be exact binary32 1.0"));
+    }
+    converted
 }
 
 fn u32_array(value: &Value, label: &str, expected_len: usize) -> Vec<u32> {
@@ -313,19 +329,25 @@ fn rust_string(value: &str) -> String {
 fn selected_monster_spawns(mob_vnum: u32) -> (Vec<MonsterSpawn>, &'static str) {
     let selector = std::env::var(TARGET_FIXTURE_ENV).unwrap_or_default();
     if selector.is_empty() {
-        let home = if std::env::var_os("CARGO_FEATURE_YONGAN").is_some() {
-            (675.0, 575.0)
+        let (map_id, default_path) = if std::env::var_os("CARGO_FEATURE_YONGAN").is_some() {
+            ("metin2_map_a1", "../content/worlds/yongan.population.json")
         } else {
-            (3.0, 3.0)
+            ("training", "../content/worlds/training.population.json")
         };
+        let path = std::env::var("MT2_POPULATION_PROFILE").unwrap_or_else(|_| default_path.into());
+        println!("cargo:rerun-if-changed={path}");
+        let value: Value = serde_json::from_slice(
+            &fs::read(&path)
+                .unwrap_or_else(|error| fail(format!("Cannot read population {path}: {error}"))),
+        )
+        .unwrap_or_else(|error| fail(format!("Invalid population JSON: {error}")));
         return (
-            vec![MonsterSpawn {
-                id: 1,
-                home_x: home.0,
-                home_z: home.1,
-            }],
+            build_population::parse(&value, map_id, mob_vnum).unwrap_or_else(|error| fail(error)),
             "",
         );
+    }
+    if std::env::var_os("MT2_POPULATION_PROFILE").is_some() {
+        fail("Population overrides cannot be combined with combat test fixtures");
     }
     if selector != "dual-wild-dog-v1" && selector != "triple-wild-dog-finisher-v1" {
         fail(format!(
@@ -442,10 +464,16 @@ fn emit_attack(output: &mut String, name: &str, attack: Attack<'_>) {
 fn main() {
     println!("cargo:rerun-if-changed={DEFINITIONS}");
     println!("cargo:rerun-if-changed={COMBO_VALIDATOR}");
+    println!("cargo:rerun-if-changed=build_items.rs");
+    println!("cargo:rerun-if-changed=build_population.rs");
+    println!("cargo:rerun-if-env-changed=MT2_POPULATION_PROFILE");
     println!("cargo:rerun-if-changed={DUAL_TARGET_FIXTURE}");
     println!("cargo:rerun-if-changed={FINISHER_TARGET_FIXTURE}");
     println!("cargo:rerun-if-env-changed=MT2_PROGRESSION_BOOTSTRAP_IDENTITIES");
     println!("cargo:rerun-if-env-changed={TARGET_FIXTURE_ENV}");
+    println!("cargo:rerun-if-env-changed=MT2_ITEM_TEST_FIXTURE");
+    println!("cargo:rerun-if-env-changed=MT2_AUTH_ISSUER");
+    println!("cargo:rerun-if-env-changed=MT2_ALLOW_GUESTS");
     let path = Path::new(DEFINITIONS);
     let bytes = fs::read(path).unwrap_or_else(|error| {
         fail(format!(
@@ -457,7 +485,7 @@ fn main() {
         .unwrap_or_else(|error| fail(format!("{} is not valid JSON ({error})", path.display())));
     let root = object(&payload, "root");
     if text(root, "schema", "root") != "mt2spacetime.trusted-action-definitions"
-        || u64_value(root, "schema_version", "root") != 5
+        || u64_value(root, "schema_version", "root") != 7
         || text(root, "profile_id", "root") != PROFILE
         || text(root, "time_unit", "root") != "microsecond"
         || text(root, "linear_unit", "root") != "meter"
@@ -518,6 +546,174 @@ fn main() {
     }
     let items = array(field(root, "items", "root"), "items");
     let progression = object(field(root, "progression", "root"), "progression");
+    let physical = object(field(root, "physical_damage", "root"), "physical_damage");
+    if physical.len() != 3 {
+        fail("physical_damage must contain exactly policy, weapons, and mobs");
+    }
+    let policy = object(
+        field(physical, "policy", "physical_damage"),
+        "physical_damage.policy",
+    );
+    if text(policy, "formula_id", "physical_damage.policy") != "combat.physical.normal-melee.v1"
+        || text(policy, "rating_policy_id", "physical_damage.policy")
+            != "combat.attack-rating.attacker-level-victim-term.v1"
+        || text(policy, "rng_policy_id", "physical_damage.policy")
+            != "combat.rng.accepted-action-area-per-victim.v1"
+    {
+        fail("selected physical policy IDs changed");
+    }
+    let zero_fields = [
+        "attack_grade_bonus",
+        "party_attack_bonus",
+        "attack_percent",
+        "melee_magic_attack_percent",
+        "defense_grade_bonus",
+        "party_defender_bonus",
+        "defense_percent",
+        "npc_attacker_marriage_defense_bonus",
+        "calc_att_bonus_percent",
+        "block_percent",
+        "normal_affect_damage",
+        "reflect_percent",
+        "critical_percent",
+        "resist_critical_percent",
+        "penetrate_percent",
+        "resist_penetrate_percent",
+        "hp_steal_percent",
+        "sp_steal_percent",
+        "gold_steal_percent",
+        "hit_hp_recovery",
+        "hit_sp_recovery",
+        "mana_burn_percent",
+        "normal_hit_damage_bonus_percent",
+        "normal_hit_defense_bonus_percent",
+    ];
+    if policy.len() != 3 + zero_fields.len() + 2 {
+        fail("selected physical policy fields changed");
+    }
+    for field_name in zero_fields {
+        exact_zero_i16(policy, field_name, "physical_damage.policy");
+    }
+    let selected_final_multiplier =
+        exact_one_f32(policy, "final_multiplier", "physical_damage.policy");
+    if policy.get("sources")
+        != Some(&json!([
+            {
+                "path": "src/game/src/battle.cpp",
+                "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+                "git_sha": "d30fd28ee37eb82d6a9fcb709cbcc9a2f01ccb05",
+                "sha256": "5b8f66250b5ed7248c870540f9ffaa44813ce3c5a77d0d4b16f62e2659ac4521"
+            },
+            {
+                "path": "src/game/src/char.cpp",
+                "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+                "git_sha": "ef6cd03e865dc66fe4c26a967ba81292c3c4b0d4",
+                "sha256": "a34bf8a855d49ae488d16dd326f4b6aa69d65dfb5c327bd42264eb39aa633cbc"
+            },
+            {
+                "path": "src/game/src/char_battle.cpp",
+                "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+                "git_sha": "799708a78195a7a30bf7ecfb0263dbb628de6f48",
+                "sha256": "5d7e5bbd4da565fbe8c4ee873044748963846a6abfc224af8370c003b3a276d4"
+            },
+            {
+                "path": "src/game/src/input_main.cpp",
+                "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+                "git_sha": "32fecde8b876ccad724efe46ddd42b478ec987ab",
+                "sha256": "981b04aa02e27e6d1788824b263eb60cd834f72238694143a79b84a03d5fc59b"
+            },
+            {
+                "path": "src/game/src/packet.h",
+                "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+                "git_sha": "46aa288727c1ad0bce11eca67b4f6a56af6d4e2b",
+                "sha256": "ecb19942ed8a0fc19a1d7db0ad698edfbce51ae307efa60919d2872ab2d99b2f"
+            }
+        ]))
+    {
+        fail("selected physical source provenance changed");
+    }
+    let physical_weapons = array(
+        field(physical, "weapons", "physical_damage"),
+        "physical_damage.weapons",
+    );
+    if physical_weapons.len() != 1 {
+        fail("physical_damage.weapons must contain exactly Sword+0");
+    }
+    let sword = object(&physical_weapons[0], "physical_damage.weapon");
+    if sword.len() != 8
+        || text(sword, "item_id", "physical_damage.weapon") != "item.weapon.sword-10"
+        || exact_u32(sword, "vnum", "physical_damage.weapon", 10) != 10
+        || text(sword, "class", "physical_damage.weapon") != "sword"
+    {
+        fail("selected Sword+0 identity or fields changed");
+    }
+    let sword_power_min = exact_u32(sword, "power_min", "physical_damage.weapon", 13) as u16;
+    let sword_power_max = exact_u32(sword, "power_max", "physical_damage.weapon", 15) as u16;
+    let sword_refine_attack = exact_u32(sword, "refine_attack", "physical_damage.weapon", 0) as u16;
+    if sword_power_min > sword_power_max
+        || sword.get("source")
+            != Some(&json!({
+                "path": "gamefiles/conf/item_proto.txt",
+                "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+                "git_sha": "f199abcc1077916c3496d84c58240cbc095ac033",
+                "sha256": "b16190baa1b37425eb372339f81eb188e37ecd0bdb06530f0a9a63f0fb045292",
+                "row_number": 4,
+                "columns": {"power_min": "VALUE3", "power_max": "VALUE4", "refine_attack": "VALUE5"}
+            }))
+    {
+        fail("selected Sword+0 range or provenance changed");
+    }
+    if sword.get("display_source")
+        != Some(&json!({
+            "path": "src/UserInterface/PythonPlayer.cpp",
+            "revision": "bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7",
+            "git_sha": "be48be6b4b8249bed84da70390b4e255b90170c1",
+            "sha256": "cc9f8397642ea33f67c132e78516a5085cf5f2c6110bf15719a430330502ae71"
+        }))
+    {
+        fail("selected Sword+0 display source provenance changed");
+    }
+    let physical_mobs = array(
+        field(physical, "mobs", "physical_damage"),
+        "physical_damage.mobs",
+    );
+    if physical_mobs.len() != 1 {
+        fail("physical_damage.mobs must contain exactly Wild Dog 101");
+    }
+    let dog = object(&physical_mobs[0], "physical_damage.mob");
+    if dog.len() != 12
+        || text(dog, "actor_id", "physical_damage.mob") != "actor.mob.wild-dog-101"
+        || exact_u32(dog, "vnum", "physical_damage.mob", 101) != 101
+    {
+        fail("selected Wild Dog identity or fields changed");
+    }
+    let dog_level = exact_u32(dog, "level", "physical_damage.mob", 1) as u8;
+    let dog_strength = exact_u32(dog, "strength", "physical_damage.mob", 3) as u8;
+    let dog_vitality = exact_u32(dog, "vitality", "physical_damage.mob", 5) as u8;
+    let dog_dexterity = exact_u32(dog, "dexterity", "physical_damage.mob", 6) as u8;
+    let dog_proto_defense = exact_u32(dog, "proto_defense", "physical_damage.mob", 4) as u16;
+    let dog_power_min = exact_u32(dog, "power_min", "physical_damage.mob", 20) as u16;
+    let dog_power_max = exact_u32(dog, "power_max", "physical_damage.mob", 24) as u16;
+    let dog_damage_multiplier = exact_one_f32(dog, "damage_multiplier", "physical_damage.mob");
+    let dog_sword_resistance =
+        exact_u32(dog, "sword_resistance_percent", "physical_damage.mob", 0) as u8;
+    if dog_power_min > dog_power_max
+        || dog.get("source")
+            != Some(&json!({
+                "path": "gamefiles/conf/mob_proto.txt",
+                "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+                "git_sha": "002c00106dec10dcde3e8e292d6f1e242bf1c4d9",
+                "sha256": "9aeb98db989ed64ec51dcd1e0df844d7cbd52004779747156017b1617c6be3fa",
+                "row_number": 2,
+                "columns": {
+                    "level": "LEVEL", "strength": "ST", "vitality": "HT", "dexterity": "DX",
+                    "proto_defense": "DEF", "power_min": "DAMAGE_MIN", "power_max": "DAMAGE_MAX",
+                    "damage_multiplier": "DAM_MULTIPLY", "sword_resistance_percent": "RESIST_SWORD"
+                }
+            }))
+    {
+        fail("selected Wild Dog range or provenance changed");
+    }
     if text(progression, "schema", "progression") != "mt2spacetime.progression-definitions"
         || u64_value(progression, "schema_version", "progression") != 1
     {
@@ -584,14 +780,14 @@ fn main() {
         field(progression, "warrior_initial", "progression"),
         "progression.warrior_initial",
     );
-    let warrior_strength = exact_u32(warrior, "strength", "warrior_initial", 6);
-    let warrior_vitality = exact_u32(warrior, "vitality", "warrior_initial", 4);
-    let warrior_dexterity = exact_u32(warrior, "dexterity", "warrior_initial", 3);
-    let warrior_intelligence = exact_u32(warrior, "intelligence", "warrior_initial", 3);
-    let base_max_hp = exact_u32(warrior, "base_max_hp", "warrior_initial", 600);
-    let base_max_sp = exact_u32(warrior, "base_max_sp", "warrior_initial", 200);
-    let hp_per_vitality = exact_u32(warrior, "hp_per_vitality", "warrior_initial", 40);
-    let sp_per_intelligence = exact_u32(warrior, "sp_per_intelligence", "warrior_initial", 20);
+    exact_u32(warrior, "strength", "warrior_initial", 6);
+    exact_u32(warrior, "vitality", "warrior_initial", 4);
+    exact_u32(warrior, "dexterity", "warrior_initial", 3);
+    exact_u32(warrior, "intelligence", "warrior_initial", 3);
+    exact_u32(warrior, "base_max_hp", "warrior_initial", 600);
+    exact_u32(warrior, "base_max_sp", "warrior_initial", 200);
+    exact_u32(warrior, "hp_per_vitality", "warrior_initial", 40);
+    exact_u32(warrior, "sp_per_intelligence", "warrior_initial", 20);
     let hp_roll = u32_array(
         field(warrior, "hp_per_level_inclusive", "warrior_initial"),
         "warrior_initial.hp_per_level_inclusive",
@@ -676,7 +872,9 @@ fn main() {
     if text(player, "model_key", "player") != "warrior_m" {
         fail("selected player model_key must be warrior_m");
     }
-    let player_base_damage = bounded_u32(player, "base_damage", "player", u16::MAX.into()) as u16;
+    if player.contains_key("base_damage") {
+        fail("legacy player.base_damage is forbidden in schema 6");
+    }
     let player_cooldown = bounded_u32(player, "attack_cooldown_us", "player", 60_000_000) as i64;
     let player_range = positive_f32(player, "attack_range_m", "player");
     let primary = object(
@@ -821,10 +1019,8 @@ fn main() {
     if mob_attack.range_m != positive_f32(mob, "attack_range_m", "mob") {
         fail("mob action range disagrees with the authoritative mob definition");
     }
-    let damage_min = bounded_u32(mob, "damage_min", "mob", u16::MAX.into()) as u16;
-    let damage_max = bounded_u32(mob, "damage_max", "mob", u16::MAX.into()) as u16;
-    if damage_min > damage_max {
-        fail("mob damage_min exceeds damage_max");
+    if mob.contains_key("damage_min") || mob.contains_key("damage_max") {
+        fail("legacy mob damage_min/damage_max are forbidden in schema 6");
     }
     let reward_gold_min = bounded_u32(mob, "reward_gold_min", "mob", u32::MAX);
     let reward_gold_max = bounded_u32(mob, "reward_gold_max", "mob", u32::MAX);
@@ -838,7 +1034,9 @@ fn main() {
         .map(|value| object(value, "item"))
         .find(|row| u64_value(row, "vnum", "item") == 10)
         .unwrap_or_else(|| fail("starter sword vnum 10 is missing"));
-    let attack_bonus = bounded_u32(item, "attack_bonus", "item", u16::MAX.into()) as u16;
+    if item.contains_key("attack_bonus") {
+        fail("legacy item attack_bonus is forbidden in schema 6");
+    }
     if text(item, "equipment_mode", "item") != "onehand" {
         fail("starter sword must select onehand actions");
     }
@@ -909,6 +1107,62 @@ fn main() {
          \tpub local_center_z_m: f64,\n\
          \tpub radius_m: f64,\n\
          }\n\
+         #[derive(Clone, Copy, Debug, PartialEq, Eq)]\n\
+         pub enum PhysicalWeaponClass { Sword }\n\
+         #[derive(Clone, Copy, Debug)]\n\
+         pub struct WeaponPhysicalDefinition {\n\
+         \tpub item_id: &'static str,\n\
+         \tpub vnum: u32,\n\
+         \tpub class: PhysicalWeaponClass,\n\
+         \tpub power_min: u16,\n\
+         \tpub power_max: u16,\n\
+         \tpub refine_attack: u16,\n\
+         }\n\
+         #[derive(Clone, Copy, Debug)]\n\
+         pub struct MobPhysicalDefinition {\n\
+         \tpub actor_id: &'static str,\n\
+         \tpub vnum: u32,\n\
+         \tpub level: u8,\n\
+         \tpub strength: u8,\n\
+         \tpub vitality: u8,\n\
+         \tpub dexterity: u8,\n\
+         \tpub proto_defense: u16,\n\
+         \tpub power_min: u16,\n\
+         \tpub power_max: u16,\n\
+         \tpub damage_multiplier: f32,\n\
+         \tpub sword_resistance_percent: u8,\n\
+         }\n\
+         #[derive(Clone, Copy, Debug)]\n\
+         pub struct SelectedPhysicalPolicyDefinition {\n\
+         \tpub formula_id: &'static str,\n\
+         \tpub rating_policy_id: &'static str,\n\
+         \tpub rng_policy_id: &'static str,\n\
+         \tpub attack_grade_bonus: i16,\n\
+         \tpub party_attack_bonus: i16,\n\
+         \tpub attack_percent: i16,\n\
+         \tpub melee_magic_attack_percent: i16,\n\
+         \tpub defense_grade_bonus: i16,\n\
+         \tpub party_defender_bonus: i16,\n\
+         \tpub defense_percent: i16,\n\
+         \tpub npc_attacker_marriage_defense_bonus: i16,\n\
+         \tpub final_multiplier: f32,\n\
+         \tpub calc_att_bonus_percent: i16,\n\
+         \tpub block_percent: i16,\n\
+         \tpub normal_affect_damage: i16,\n\
+         \tpub reflect_percent: i16,\n\
+         \tpub critical_percent: i16,\n\
+         \tpub resist_critical_percent: i16,\n\
+         \tpub penetrate_percent: i16,\n\
+         \tpub resist_penetrate_percent: i16,\n\
+         \tpub hp_steal_percent: i16,\n\
+         \tpub sp_steal_percent: i16,\n\
+         \tpub gold_steal_percent: i16,\n\
+         \tpub hit_hp_recovery: i16,\n\
+         \tpub hit_sp_recovery: i16,\n\
+         \tpub mana_burn_percent: i16,\n\
+         \tpub normal_hit_damage_bonus_percent: i16,\n\
+         \tpub normal_hit_defense_bonus_percent: i16,\n\
+         }\n\
          #[derive(Clone, Copy, Debug)]\n\
          pub struct AttackDefinition {\n\
          \tpub id: &'static str,\n\
@@ -941,44 +1195,6 @@ fn main() {
         "pub const DEFAULT_LEVEL_CAP: u8 = {default_level_cap};"
     )
     .unwrap();
-    writeln!(output, "pub const SUPPORTED_CHARACTER_CLASS: u8 = 0;").unwrap();
-    writeln!(output, "pub const SUPPORTED_SEX: u8 = 0;").unwrap();
-    writeln!(
-        output,
-        "pub const WARRIOR_STRENGTH: u8 = {warrior_strength};"
-    )
-    .unwrap();
-    writeln!(
-        output,
-        "pub const WARRIOR_VITALITY: u8 = {warrior_vitality};"
-    )
-    .unwrap();
-    writeln!(
-        output,
-        "pub const WARRIOR_DEXTERITY: u8 = {warrior_dexterity};"
-    )
-    .unwrap();
-    writeln!(
-        output,
-        "pub const WARRIOR_INTELLIGENCE: u8 = {warrior_intelligence};"
-    )
-    .unwrap();
-    writeln!(output, "pub const BASE_MAX_HP: u32 = {base_max_hp};").unwrap();
-    writeln!(output, "pub const BASE_MAX_SP: u32 = {base_max_sp};").unwrap();
-    writeln!(
-        output,
-        "pub const HP_PER_VITALITY: u32 = {hp_per_vitality};"
-    )
-    .unwrap();
-    writeln!(
-        output,
-        "pub const SP_PER_INTELLIGENCE: u32 = {sp_per_intelligence};"
-    )
-    .unwrap();
-    writeln!(output, "pub const HP_PER_LEVEL_MIN: u32 = {};", hp_roll[0]).unwrap();
-    writeln!(output, "pub const HP_PER_LEVEL_MAX: u32 = {};", hp_roll[1]).unwrap();
-    writeln!(output, "pub const SP_PER_LEVEL_MIN: u32 = {};", sp_roll[0]).unwrap();
-    writeln!(output, "pub const SP_PER_LEVEL_MAX: u32 = {};", sp_roll[1]).unwrap();
     writeln!(output, "pub const STAT_CAP: u8 = 90;").unwrap();
     writeln!(
         output,
@@ -986,7 +1202,6 @@ fn main() {
     )
     .unwrap();
     writeln!(output, "pub const QUARTER_REWARD_COUNT: u16 = 2;").unwrap();
-    writeln!(output, "pub const ITEM_STACK_LIMIT: u16 = 200;").unwrap();
     writeln!(output, "pub const SMALL_POTION_VNUM: u32 = 27001;").unwrap();
     writeln!(output, "pub const MEDIUM_POTION_VNUM: u32 = 27002;").unwrap();
     writeln!(
@@ -1050,11 +1265,9 @@ fn main() {
         writeln!(output, "\t{},", rust_string(&identity)).unwrap();
     }
     writeln!(output, "];").unwrap();
-    writeln!(
-        output,
-        "pub const PLAYER_BASE_DAMAGE: u16 = {player_base_damage};"
-    )
-    .unwrap();
+    writeln!(output, "pub const SELECTED_PHYSICAL_POLICY: SelectedPhysicalPolicyDefinition = SelectedPhysicalPolicyDefinition {{ formula_id: {:?}, rating_policy_id: {:?}, rng_policy_id: {:?}, attack_grade_bonus: 0, party_attack_bonus: 0, attack_percent: 0, melee_magic_attack_percent: 0, defense_grade_bonus: 0, party_defender_bonus: 0, defense_percent: 0, npc_attacker_marriage_defense_bonus: 0, final_multiplier: {:?}, calc_att_bonus_percent: 0, block_percent: 0, normal_affect_damage: 0, reflect_percent: 0, critical_percent: 0, resist_critical_percent: 0, penetrate_percent: 0, resist_penetrate_percent: 0, hp_steal_percent: 0, sp_steal_percent: 0, gold_steal_percent: 0, hit_hp_recovery: 0, hit_sp_recovery: 0, mana_burn_percent: 0, normal_hit_damage_bonus_percent: 0, normal_hit_defense_bonus_percent: 0 }};", "combat.physical.normal-melee.v1", "combat.attack-rating.attacker-level-victim-term.v1", "combat.rng.accepted-action-area-per-victim.v1", selected_final_multiplier).unwrap();
+    writeln!(output, "pub const SWORD_10_PHYSICAL: WeaponPhysicalDefinition = WeaponPhysicalDefinition {{ item_id: {:?}, vnum: 10, class: PhysicalWeaponClass::Sword, power_min: {sword_power_min}, power_max: {sword_power_max}, refine_attack: {sword_refine_attack} }};", "item.weapon.sword-10").unwrap();
+    writeln!(output, "pub const WILD_DOG_101_PHYSICAL: MobPhysicalDefinition = MobPhysicalDefinition {{ actor_id: {:?}, vnum: 101, level: {dog_level}, strength: {dog_strength}, vitality: {dog_vitality}, dexterity: {dog_dexterity}, proto_defense: {dog_proto_defense}, power_min: {dog_power_min}, power_max: {dog_power_max}, damage_multiplier: {dog_damage_multiplier:?}, sword_resistance_percent: {dog_sword_resistance} }};", "actor.mob.wild-dog-101").unwrap();
     emit_attack(&mut output, "PLAYER_GENERAL_ATTACK", general);
     writeln!(
         output,
@@ -1071,10 +1284,9 @@ fn main() {
         "pub const PLAYER_ONEHAND_ATTACK: AttackDefinition = PLAYER_ONEHAND_COMBO[0];"
     )
     .unwrap();
-    writeln!(output, "pub const WEAPON_VNUM: u32 = 10;").unwrap();
     writeln!(
         output,
-        "pub const WEAPON_ATTACK_BONUS: u16 = {attack_bonus};"
+        "pub const WEAPON_VNUM: u32 = SWORD_10_PHYSICAL.vnum;"
     )
     .unwrap();
     writeln!(
@@ -1130,8 +1342,6 @@ fn main() {
         positive_f32(mob, "chase_home_range_m", "mob")
     )
     .unwrap();
-    writeln!(output, "pub const MOB_DAMAGE_MIN: u16 = {damage_min};").unwrap();
-    writeln!(output, "pub const MOB_DAMAGE_MAX: u16 = {damage_max};").unwrap();
     writeln!(
         output,
         "pub const MOB_RESPAWN_US: i64 = {};",
@@ -1176,6 +1386,27 @@ fn main() {
     writeln!(output, "];").unwrap();
 
     let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("Cargo sets OUT_DIR"));
+    let item_fixture = build_items::recovery_fixture_enabled(
+        &std::env::var("MT2_ITEM_TEST_FIXTURE").unwrap_or_default(),
+        &std::env::var("MT2_AUTH_ISSUER").unwrap_or_default(),
+        std::env::var_os("CARGO_FEATURE_YONGAN").is_some(),
+        &std::env::var(TARGET_FIXTURE_ENV).unwrap_or_default(),
+        std::env::var("MT2_ALLOW_GUESTS").is_ok_and(|value| value == "1"),
+        &std::env::var("MT2_PROGRESSION_BOOTSTRAP_IDENTITIES").unwrap_or_default(),
+    )
+    .unwrap_or_else(|error| fail(error));
+    writeln!(
+        output,
+        "pub const ITEM_RECOVERY_TEST_STARTER: bool = {item_fixture};"
+    )
+    .unwrap();
+    output.push_str(
+        &build_items::generate(field(root, "item_catalog", "root"))
+            .unwrap_or_else(|error| fail(error)),
+    );
+    build_items::validate_links(&payload).unwrap_or_else(|error| fail(error));
+    output.push_str(&build_npcs::build());
+    output.push_str(&build_classes::build());
     fs::write(out_dir.join("trusted_definitions.rs"), output)
         .unwrap_or_else(|error| fail(format!("cannot write generated Rust definitions ({error})")));
 }

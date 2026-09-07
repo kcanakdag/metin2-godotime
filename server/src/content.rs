@@ -11,6 +11,7 @@ pub const HASH: &str = include_str!("../content/yongan.sha256");
 #[cfg(not(feature = "yongan"))]
 pub const HASH: &str = "training-v2";
 pub const SPAWN: (f32, f32) = if YONGAN { (660.0, 575.0) } else { (-4.0, 3.0) };
+#[cfg(test)]
 pub const MONSTER_HOME: (f32, f32) = if YONGAN { (675.0, 575.0) } else { (3.0, 3.0) };
 
 fn integer(offset: usize) -> usize {
@@ -155,6 +156,21 @@ pub fn valid_target(x: f32, z: f32) -> Result<(), String> {
     }
     if blocked(x, z, height(x, z)) {
         return Err("Destination is blocked by terrain or a building.".into());
+    }
+    Ok(())
+}
+
+/// Authoring and live initialization use the same ground and obstacle rules.
+pub fn valid_spawn(x: f32, z: f32) -> Result<(), String> {
+    valid_target(x, z)?;
+    if !YONGAN
+        && crate::movement::TRAINING_OBSTACLES
+            .iter()
+            .any(|&(ox, oz, hx, hz, _, _)| {
+                (x - ox).abs() < hx + PLAYER_RADIUS && (z - oz).abs() < hz + PLAYER_RADIUS
+            })
+    {
+        return Err("Spawn overlaps a training obstacle.".into());
     }
     Ok(())
 }

@@ -98,6 +98,9 @@ def main() -> None:
         shutil.copytree(ROOT / "client/scripts/actors", stage / "scripts/actors")
         shutil.copytree(ROOT / "client/scripts/content", stage / "scripts/content")
         shutil.copytree(ACTOR_PROFILE, stage / "assets/imported/content/p0-warrior-dog")
+        shutil.copytree(
+            ROOT / "client/assets/imported/characters", stage / "assets/imported/characters"
+        )
         shutil.copytree(TARGET_EFFECT_PROFILE, stage / "assets/imported/content/p2-target-effects")
         (stage / "tests").mkdir()
         shutil.copy2(ROOT / "client/tests/actor_smoke.gd", stage / "tests/actor_smoke.gd")

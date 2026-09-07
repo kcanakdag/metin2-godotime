@@ -20,8 +20,10 @@ import urllib.request
 from pathlib import Path, PurePosixPath
 
 from actor_texture_import import write_actor_texture_import
+from content_diff import add_parser as add_diff_parser
 from content_formats import parse_item_script, parse_motion_list, parse_msa, parse_race_script
 from fetch_test_assets import METIN_COMMIT, ROOT
+from item_definitions import compile_catalog, public_catalog, validate_catalog
 from metin_archive import Archive, safe_path, virtual_path, write_json
 from metin_root_motion import (
     COORDINATE_CONVERSION,
@@ -47,8 +49,8 @@ SCHEMA = "mt2spacetime.normalized-content-manifest"
 SERVER_SCHEMA = "mt2spacetime.trusted-action-definitions"
 CLIENT_SCHEMA = "mt2spacetime.presentation-manifest"
 SCHEMA_VERSION = 1
-SERVER_SCHEMA_VERSION = 5
-COMPILER_VERSION = "content-compiler-v1.4.0"
+SERVER_SCHEMA_VERSION = 7
+COMPILER_VERSION = "content-compiler-v1.6.0"
 DEFAULT_PROFILE = ROOT / "content/profiles/p0-warrior-dog.json"
 
 PLAYER_ACTOR_ID = "actor.player.warrior-male"
@@ -111,6 +113,74 @@ MOB_REACTION_DURATIONS_US = {
     "front_standup": 1_000_000,
     "back_knockdown": 1_166_667,
 }
+PHYSICAL_POLICY_IDS = {
+    "formula_id": "combat.physical.normal-melee.v1",
+    "rating_policy_id": "combat.attack-rating.attacker-level-victim-term.v1",
+    "rng_policy_id": "combat.rng.accepted-action-area-per-victim.v1",
+}
+PHYSICAL_ZERO_FIELDS = (
+    "attack_grade_bonus",
+    "party_attack_bonus",
+    "attack_percent",
+    "melee_magic_attack_percent",
+    "defense_grade_bonus",
+    "party_defender_bonus",
+    "defense_percent",
+    "npc_attacker_marriage_defense_bonus",
+    "calc_att_bonus_percent",
+    "block_percent",
+    "normal_affect_damage",
+    "reflect_percent",
+    "critical_percent",
+    "resist_critical_percent",
+    "penetrate_percent",
+    "resist_penetrate_percent",
+    "hp_steal_percent",
+    "sp_steal_percent",
+    "gold_steal_percent",
+    "hit_hp_recovery",
+    "hit_sp_recovery",
+    "mana_burn_percent",
+    "normal_hit_damage_bonus_percent",
+    "normal_hit_defense_bonus_percent",
+)
+PHYSICAL_SOURCE_IDENTITIES = {
+    "gamefiles/conf/item_proto.txt": (
+        "f199abcc1077916c3496d84c58240cbc095ac033",
+        "b16190baa1b37425eb372339f81eb188e37ecd0bdb06530f0a9a63f0fb045292",
+    ),
+    "gamefiles/conf/mob_proto.txt": (
+        "002c00106dec10dcde3e8e292d6f1e242bf1c4d9",
+        "9aeb98db989ed64ec51dcd1e0df844d7cbd52004779747156017b1617c6be3fa",
+    ),
+    "src/game/src/battle.cpp": (
+        "d30fd28ee37eb82d6a9fcb709cbcc9a2f01ccb05",
+        "5b8f66250b5ed7248c870540f9ffaa44813ce3c5a77d0d4b16f62e2659ac4521",
+    ),
+    "src/game/src/char.cpp": (
+        "ef6cd03e865dc66fe4c26a967ba81292c3c4b0d4",
+        "a34bf8a855d49ae488d16dd326f4b6aa69d65dfb5c327bd42264eb39aa633cbc",
+    ),
+    "src/game/src/char_battle.cpp": (
+        "799708a78195a7a30bf7ecfb0263dbb628de6f48",
+        "5d7e5bbd4da565fbe8c4ee873044748963846a6abfc224af8370c003b3a276d4",
+    ),
+    "src/game/src/input_main.cpp": (
+        "32fecde8b876ccad724efe46ddd42b478ec987ab",
+        "981b04aa02e27e6d1788824b263eb60cd834f72238694143a79b84a03d5fc59b",
+    ),
+    "src/game/src/packet.h": (
+        "46aa288727c1ad0bce11eca67b4f6a56af6d4e2b",
+        "ecb19942ed8a0fc19a1d7db0ad698edfbce51ae307efa60919d2872ab2d99b2f",
+    ),
+}
+PHYSICAL_POLICY_SOURCE_PATHS = (
+    "src/game/src/battle.cpp",
+    "src/game/src/char.cpp",
+    "src/game/src/char_battle.cpp",
+    "src/game/src/input_main.cpp",
+    "src/game/src/packet.h",
+)
 ORDINARY_HIT_INVULNERABILITY_US = {
     PLAYER_GENERAL_ACTION_ID: 500_000,
     PLAYER_COMBO_ACTION_IDS[0]: 100_000,
@@ -217,27 +287,40 @@ def load_profile(path: Path) -> dict:
                 raise ValueError(f"Invalid gameplay value {key}")
             if key.endswith("_us") and (type(value) is not int or value <= 0):
                 raise ValueError(f"Invalid gameplay duration {key}")
-    base_damage = profile["trusted_gameplay"]["player"].get("base_damage")
-    if type(base_damage) is not int or not 0 < base_damage <= 65535:
-        raise ValueError("trusted_gameplay.player.base_damage must be a positive u16")
+    gameplay = profile["trusted_gameplay"]
+    legacy = {
+        "trusted_gameplay.player.base_damage": gameplay["player"].get("base_damage"),
+        "trusted_gameplay.item.attack_bonus": gameplay["item"].get("attack_bonus"),
+        "trusted_gameplay.mob.damage_min": gameplay["mob"].get("damage_min"),
+        "trusted_gameplay.mob.damage_max": gameplay["mob"].get("damage_max"),
+    }
+    present = [name for name, value in legacy.items() if value is not None]
+    if present:
+        raise ValueError("Legacy fixed damage inputs are forbidden: " + ", ".join(present))
     return profile
 
 
 def fetch_server_references(profile: dict, *, offline: bool) -> list[dict]:
-    server = profile["source"]["server_reference"]
-    revision = server["revision"]
-    cache = ROOT / "assets/source/content/server" / revision
+    return fetch_code_references(profile["source"]["server_reference"], "server", offline=offline)
+
+
+def fetch_code_references(source: dict, repository: str, *, offline: bool) -> list[dict]:
+    """Fetch only explicitly pinned code references; verify bytes before caching."""
+    if repository not in {"client", "server"}:
+        raise ValueError("Unsupported reference repository")
+    revision = source["revision"]
+    cache = ROOT / "assets/source/content" / repository / revision
     result = []
-    for declared in server["files"]:
+    for declared in source.get("files", []):
         relative = safe_path(declared["path"])
         destination = cache / relative
         if destination.exists():
             content = destination.read_bytes()
         else:
             if offline:
-                raise FileNotFoundError(f"Not cached; retry online: server/{relative}")
+                raise FileNotFoundError(f"Not cached; retry online: {repository}/{relative}")
             url = (
-                "https://git.old-metin2.com/api/v1/repos/metin2/server/contents/"
+                f"https://git.old-metin2.com/api/v1/repos/metin2/{repository}/contents/"
                 + urllib.parse.quote(relative, safe="/")
                 + "?ref="
                 + revision
@@ -248,14 +331,15 @@ def fetch_server_references(profile: dict, *, offline: bool) -> list[dict]:
             with urllib.request.urlopen(request, timeout=60) as response:
                 entry = json.load(response)
             if entry["sha"] != declared["git_sha"]:
-                raise ValueError(f"Server archive metadata mismatch: {relative}")
+                raise ValueError(f"{repository} archive metadata mismatch: {relative}")
             content = base64.b64decode(entry["content"])
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            destination.write_bytes(content)
         git_sha = hashlib.sha1(b"blob " + str(len(content)).encode() + b"\0" + content).hexdigest()
         sha256 = hashlib.sha256(content).hexdigest()
         if git_sha != declared["git_sha"] or sha256 != declared["sha256"]:
-            raise ValueError(f"Pinned server reference hash mismatch: {relative}")
+            raise ValueError(f"Pinned {repository} reference hash mismatch: {relative}")
+        if not destination.exists():
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(content)
         result.append(
             {
                 "path": relative,
@@ -263,7 +347,7 @@ def fetch_server_references(profile: dict, *, offline: bool) -> list[dict]:
                 "sha256": sha256,
                 "bytes": len(content),
                 "revision": revision,
-                "role": "server-reference",
+                "role": repository + "-reference",
             }
         )
     return result
@@ -276,6 +360,170 @@ def _server_reference_text(profile: dict, relative: str) -> str:
         return path.read_text()
     except UnicodeDecodeError:
         return path.read_text(encoding="latin-1")
+
+
+def _source_identity(profile: dict, relative: str) -> dict:
+    declared = [
+        row for row in profile["source"]["server_reference"]["files"] if row.get("path") == relative
+    ]
+    if len(declared) != 1:
+        raise ValueError(f"Pinned source {relative} must be declared exactly once")
+    git_sha, sha256 = PHYSICAL_SOURCE_IDENTITIES.get(
+        relative, (declared[0].get("git_sha"), declared[0].get("sha256"))
+    )
+    if declared[0].get("git_sha") != git_sha or declared[0].get("sha256") != sha256:
+        raise ValueError(f"Pinned physical source identity changed: {relative}")
+    return {
+        "path": relative,
+        "revision": profile["source"]["server_reference"]["revision"],
+        "git_sha": git_sha,
+        "sha256": sha256,
+    }
+
+
+def _client_display_source_identity(profile: dict) -> dict:
+    relative = "src/UserInterface/PythonPlayer.cpp"
+    client = profile["source"]["client"]
+    declared = [row for row in client.get("files", []) if row.get("path") == relative]
+    if len(declared) != 1:
+        raise ValueError("Pinned PythonPlayer.cpp display source must be declared exactly once")
+    expected = {
+        "path": relative,
+        "revision": "bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7",
+        "git_sha": "be48be6b4b8249bed84da70390b4e255b90170c1",
+        "sha256": "cc9f8397642ea33f67c132e78516a5085cf5f2c6110bf15719a430330502ae71",
+    }
+    if client.get("revision") != expected["revision"] or any(
+        declared[0].get(key) != expected[key] for key in ("git_sha", "sha256")
+    ):
+        raise ValueError("Pinned PythonPlayer.cpp display source identity changed")
+    source = ROOT / "assets/source/content/client" / expected["revision"] / relative
+    content = source.read_bytes()
+    git_sha = hashlib.sha1(b"blob " + str(len(content)).encode() + b"\0" + content).hexdigest()
+    if git_sha != expected["git_sha"] or hashlib.sha256(content).hexdigest() != expected["sha256"]:
+        raise ValueError("Pinned PythonPlayer.cpp display source bytes changed")
+    return expected
+
+
+def _selected_physical_definitions(profile: dict) -> dict:
+    revision = profile["source"]["server_reference"]["revision"]
+    if revision != "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318":
+        raise ValueError("Physical definitions require the reviewed server revision")
+
+    item_path = "gamefiles/conf/item_proto.txt"
+    item_lines = _server_reference_text(profile, item_path).splitlines()
+    if len(item_lines) < 2:
+        raise ValueError("Pinned item_proto is empty")
+    item_rows = []
+    item_column_count = len(item_lines[0].split("\t"))
+    for row_number, line in enumerate(item_lines[1:], 2):
+        columns = line.split("\t")
+        if len(columns) != item_column_count:
+            raise ValueError(f"Malformed item_proto row {row_number}")
+        if columns[0] == "10":
+            item_rows.append((row_number, columns))
+    if len(item_rows) != 1:
+        raise ValueError("Pinned item_proto must contain exactly one Sword+0 vnum 10 row")
+    item_row_number, item = item_rows[0]
+    if item[2] != "ITEM_WEAPON" or item[3] != "WEAPON_SWORD" or item[4] != "2":
+        raise ValueError("Pinned vnum 10 category, subtype, or size changed")
+    values = [int(value) for value in item[24:30]]
+    if values != [0, 15, 19, 13, 15, 0]:
+        raise ValueError("Pinned Sword+0 VALUE0..VALUE5 columns changed")
+
+    mob_path = "gamefiles/conf/mob_proto.txt"
+    mob_lines = _server_reference_text(profile, mob_path).splitlines()
+    if len(mob_lines) < 2:
+        raise ValueError("Pinned mob_proto is empty")
+    mob_header = mob_lines[0].split("\t")
+    mob_rows = []
+    for row_number, line in enumerate(mob_lines[1:], 2):
+        columns = line.split("\t")
+        if len(columns) != len(mob_header):
+            raise ValueError(f"Malformed mob_proto row {row_number}")
+        row = dict(zip(mob_header, columns, strict=True))
+        if row["VNUM"] == "101":
+            mob_rows.append((row_number, row))
+    if len(mob_rows) != 1:
+        raise ValueError("Pinned mob_proto must contain exactly one Wild Dog vnum 101 row")
+    mob_row_number, mob = mob_rows[0]
+    selected_mob = {
+        "level": int(mob["LEVEL"]),
+        "strength": int(mob["ST"]),
+        "vitality": int(mob["HT"]),
+        "dexterity": int(mob["DX"]),
+        "proto_defense": int(mob["DEF"]),
+        "power_min": int(mob["DAMAGE_MIN"]),
+        "power_max": int(mob["DAMAGE_MAX"]),
+        "damage_multiplier": float(mob["DAM_MULTIPLY"]),
+        "sword_resistance_percent": int(mob["RESIST_SWORD"]),
+    }
+    if selected_mob != {
+        "level": 1,
+        "strength": 3,
+        "vitality": 5,
+        "dexterity": 6,
+        "proto_defense": 4,
+        "power_min": 20,
+        "power_max": 24,
+        "damage_multiplier": 1.0,
+        "sword_resistance_percent": 0,
+    }:
+        raise ValueError("Pinned Wild Dog physical columns changed")
+
+    policy = (
+        PHYSICAL_POLICY_IDS
+        | {field: 0 for field in PHYSICAL_ZERO_FIELDS}
+        | {"final_multiplier": 1.0}
+    )
+    policy["sources"] = [
+        _source_identity(profile, relative) for relative in PHYSICAL_POLICY_SOURCE_PATHS
+    ]
+    return {
+        "policy": policy,
+        "weapons": [
+            {
+                "item_id": "item.weapon.sword-10",
+                "vnum": 10,
+                "class": "sword",
+                "power_min": values[3],
+                "power_max": values[4],
+                "refine_attack": values[5],
+                "display_source": _client_display_source_identity(profile),
+                "source": _source_identity(profile, item_path)
+                | {
+                    "row_number": item_row_number,
+                    "columns": {
+                        "power_min": "VALUE3",
+                        "power_max": "VALUE4",
+                        "refine_attack": "VALUE5",
+                    },
+                },
+            }
+        ],
+        "mobs": [
+            {
+                "actor_id": MOB_ACTOR_ID,
+                "vnum": 101,
+                **selected_mob,
+                "source": _source_identity(profile, mob_path)
+                | {
+                    "row_number": mob_row_number,
+                    "columns": {
+                        "level": "LEVEL",
+                        "strength": "ST",
+                        "vitality": "HT",
+                        "dexterity": "DX",
+                        "proto_defense": "DEF",
+                        "power_min": "DAMAGE_MIN",
+                        "power_max": "DAMAGE_MAX",
+                        "damage_multiplier": "DAM_MULTIPLY",
+                        "sword_resistance_percent": "RESIST_SWORD",
+                    },
+                },
+            }
+        ],
+    }
 
 
 def _selected_progression(profile: dict) -> dict:
@@ -436,6 +684,8 @@ def _validate_catalogs(profile: dict, archive: Archive) -> dict:
 
 
 def _motion_path(actor: dict, relative: str) -> str:
+    if relative.startswith("bin/pack/"):
+        return safe_path(relative)
     return safe_path(f"{actor['motion_root'].rstrip('/')}/{relative}")
 
 
@@ -472,7 +722,14 @@ def _normalise_motions(profile: dict, archive: Archive) -> tuple[list[dict], lis
                     zip(declaration["files"], weights, strict=True)
                 ):
                     msa_path = _motion_path(actor, relative)
-                    parsed = parse_msa(_get_text(archive, msa_path))
+                    try:
+                        parsed = parse_msa(
+                            _get_text(archive, msa_path),
+                            ignore_legacy_link_time=profile.get("ignore_legacy_link_time", False),
+                            allow_post_clip_combo=profile.get("allow_post_clip_combo", False),
+                        )
+                    except ValueError as error:
+                        raise ValueError(f"{msa_path}: {error}") from error
                     _orient_motion_vectors(parsed, actor["orientation"]["yaw_correction_degrees"])
                     gr2_path = archive.resolve(parsed["motion_file"])
                     if Path(gr2_path).suffix.lower() != ".gr2":
@@ -595,6 +852,7 @@ def compile_normalized(profile_path: Path, *, offline: bool) -> dict:
     profile = load_profile(profile_path)
     archive = source_archive(offline)
     server_sources = fetch_server_references(profile, offline=offline)
+    client_sources = fetch_code_references(profile["source"]["client"], "client", offline=offline)
     initial_paths = set(profile["catalog_sources"])
     for actor in profile["actors"]:
         initial_paths.update({actor["race_script"], actor["model"], *actor["textures"]})
@@ -619,9 +877,15 @@ def compile_normalized(profile_path: Path, *, offline: bool) -> dict:
     archive.fetch_many(initial_paths)
     catalog = _validate_catalogs(profile, archive)
     progression = _selected_progression(profile)
+    item_catalog = compile_catalog(
+        profile["item_catalog"],
+        _server_reference_text(profile, "gamefiles/conf/item_proto.txt"),
+        _server_reference_text(profile, "gamefiles/conf/item_names_en.txt"),
+        _source_identity(profile, "gamefiles/conf/item_proto.txt"),
+    )
     actors, unsupported = _normalise_motions(profile, archive)
     items = _normalise_items(profile, archive)
-    sources = _source_records(archive, server_sources)
+    sources = _source_records(archive, server_sources + client_sources)
     identity_input = {
         "schema_version": SCHEMA_VERSION,
         "compiler_version": COMPILER_VERSION,
@@ -658,6 +922,7 @@ def compile_normalized(profile_path: Path, *, offline: bool) -> dict:
         "sources": sources,
         "catalog_validation": catalog,
         "progression": progression,
+        "item_catalog": item_catalog,
         "actors": actors,
         "items": items,
         "known_exclusions": profile["known_exclusions"],
@@ -1078,6 +1343,7 @@ def _selected_reactions(mob: dict) -> list[dict]:
 
 def make_server_payload(profile: dict, normalized: dict) -> dict:
     gameplay = profile["trusted_gameplay"]
+    physical_damage = _selected_physical_definitions(profile)
     normalized_actors = normalized.get("actors")
     if not isinstance(normalized_actors, list) or any(
         not isinstance(actor, dict) for actor in normalized_actors
@@ -1242,7 +1508,6 @@ def make_server_payload(profile: dict, normalized: dict) -> dict:
                 "id": player["id"],
                 "race_id": player["race_id"],
                 "model_key": player["model_key"],
-                "base_damage": gameplay["player"]["base_damage"],
                 "attack_range_m": gameplay["player"]["attack_range_m"],
                 "attack_cooldown_us": gameplay["player"]["attack_cooldown_us"],
                 "override_basis": gameplay["player"]["override_basis"],
@@ -1250,7 +1515,11 @@ def make_server_payload(profile: dict, normalized: dict) -> dict:
             },
             {
                 "id": mob["id"],
-                **{key: value for key, value in gameplay["mob"].items() if key != "source_values"},
+                **{
+                    key: value
+                    for key, value in gameplay["mob"].items()
+                    if key not in {"source_values", "damage_min", "damage_max"}
+                },
                 "source_values": gameplay["mob"]["source_values"],
                 "primary_action_id": mob_motion["action_id"],
                 "defending_sphere": _selected_defending_sphere(normalized),
@@ -1260,6 +1529,8 @@ def make_server_payload(profile: dict, normalized: dict) -> dict:
         "base_combo_prefix": list(PLAYER_COMBO_ACTION_IDS),
         "actions": sorted(actions, key=lambda action: action["id"]),
         "items": [gameplay["item"]],
+        "item_catalog": normalized["item_catalog"],
+        "physical_damage": physical_damage,
         "progression": normalized["progression"],
     }
     payload["gameplay_definition_hash"] = digest(payload)
@@ -1375,6 +1646,175 @@ def extract_actor_texture_pngs(output: Path, blender_report: dict) -> list[Path]
     return extracted
 
 
+def _validate_source_record(source: object, expected_path: str, *, row: int | None = None) -> None:
+    if not isinstance(source, dict):
+        raise ValueError(f"Physical source {expected_path} must be an object")
+    expected_git, expected_sha = PHYSICAL_SOURCE_IDENTITIES[expected_path]
+    expected = {
+        "path": expected_path,
+        "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+        "git_sha": expected_git,
+        "sha256": expected_sha,
+    }
+    for key, value in expected.items():
+        if source.get(key) != value:
+            raise ValueError(f"Physical source {expected_path} {key} changed")
+    if row is not None and (
+        type(source.get("row_number")) is not int or source["row_number"] != row
+    ):
+        raise ValueError(f"Physical source {expected_path} row changed")
+
+
+def _validate_physical_damage(payload: dict) -> None:
+    physical = payload.get("physical_damage")
+    if not isinstance(physical, dict) or set(physical) != {"policy", "weapons", "mobs"}:
+        raise ValueError("Trusted physical_damage must have exact policy/weapon/mob sections")
+    policy = physical["policy"]
+    expected_policy_keys = {
+        *PHYSICAL_POLICY_IDS,
+        *PHYSICAL_ZERO_FIELDS,
+        "final_multiplier",
+        "sources",
+    }
+    if not isinstance(policy, dict) or set(policy) != expected_policy_keys:
+        raise ValueError("Selected physical policy fields changed")
+    for key, value in PHYSICAL_POLICY_IDS.items():
+        if policy.get(key) != value:
+            raise ValueError(f"Selected physical policy {key} changed")
+    for key in PHYSICAL_ZERO_FIELDS:
+        if type(policy.get(key)) is not int or policy[key] != 0:
+            raise ValueError(f"Selected physical policy {key} must be integer zero")
+    if type(policy.get("final_multiplier")) is not float or policy["final_multiplier"] != 1.0:
+        raise ValueError("Selected physical final_multiplier must be exact binary32 1.0")
+    sources = policy["sources"]
+    if not isinstance(sources, list) or len(sources) != len(PHYSICAL_POLICY_SOURCE_PATHS):
+        raise ValueError("Selected physical policy source list changed")
+    for source, path in zip(sources, PHYSICAL_POLICY_SOURCE_PATHS, strict=True):
+        if not isinstance(source, dict) or set(source) != {"path", "revision", "git_sha", "sha256"}:
+            raise ValueError("Selected physical policy source fields changed")
+        _validate_source_record(source, path)
+
+    weapons = physical["weapons"]
+    if not isinstance(weapons, list) or len(weapons) != 1 or not isinstance(weapons[0], dict):
+        raise ValueError("Trusted physical definitions require exactly one weapon")
+    weapon = weapons[0]
+    if set(weapon) != {
+        "item_id",
+        "vnum",
+        "class",
+        "power_min",
+        "power_max",
+        "refine_attack",
+        "source",
+        "display_source",
+    }:
+        raise ValueError("Selected physical weapon fields changed")
+    expected_weapon = {
+        "item_id": "item.weapon.sword-10",
+        "vnum": 10,
+        "class": "sword",
+        "power_min": 13,
+        "power_max": 15,
+        "refine_attack": 0,
+    }
+    if any(
+        weapon.get(key) != value or type(weapon.get(key)) is not type(value)
+        for key, value in expected_weapon.items()
+    ):
+        raise ValueError("Selected Sword+0 physical definition changed")
+    if weapon["power_min"] > weapon["power_max"]:
+        raise ValueError("Selected physical weapon power range is inverted")
+    source = weapon["source"]
+    if not isinstance(source, dict) or set(source) != {
+        "path",
+        "revision",
+        "git_sha",
+        "sha256",
+        "row_number",
+        "columns",
+    }:
+        raise ValueError("Selected physical weapon provenance fields changed")
+    _validate_source_record(source, "gamefiles/conf/item_proto.txt", row=4)
+    if source["columns"] != {
+        "power_min": "VALUE3",
+        "power_max": "VALUE4",
+        "refine_attack": "VALUE5",
+    }:
+        raise ValueError("Selected Sword+0 physical columns changed")
+    if weapon["display_source"] != {
+        "path": "src/UserInterface/PythonPlayer.cpp",
+        "revision": "bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7",
+        "git_sha": "be48be6b4b8249bed84da70390b4e255b90170c1",
+        "sha256": "cc9f8397642ea33f67c132e78516a5085cf5f2c6110bf15719a430330502ae71",
+    }:
+        raise ValueError("Selected Sword+0 display source identity changed")
+
+    mobs = physical["mobs"]
+    if not isinstance(mobs, list) or len(mobs) != 1 or not isinstance(mobs[0], dict):
+        raise ValueError("Trusted physical definitions require exactly one mob")
+    mob = mobs[0]
+    if set(mob) != {
+        "actor_id",
+        "vnum",
+        "level",
+        "strength",
+        "vitality",
+        "dexterity",
+        "proto_defense",
+        "power_min",
+        "power_max",
+        "damage_multiplier",
+        "sword_resistance_percent",
+        "source",
+    }:
+        raise ValueError("Selected physical mob fields changed")
+    expected_mob = {
+        "actor_id": MOB_ACTOR_ID,
+        "vnum": 101,
+        "level": 1,
+        "strength": 3,
+        "vitality": 5,
+        "dexterity": 6,
+        "proto_defense": 4,
+        "power_min": 20,
+        "power_max": 24,
+        "damage_multiplier": 1.0,
+        "sword_resistance_percent": 0,
+    }
+    if any(
+        mob.get(key) != value or type(mob.get(key)) is not type(value)
+        for key, value in expected_mob.items()
+    ):
+        raise ValueError("Selected Wild Dog physical definition changed")
+    if mob["power_min"] > mob["power_max"] or not math.isfinite(mob["damage_multiplier"]):
+        raise ValueError("Selected Wild Dog physical range or multiplier is invalid")
+    if struct.pack(">f", mob["damage_multiplier"]) != struct.pack(">f", 1.0):
+        raise ValueError("Selected Wild Dog multiplier must be exact binary32 1.0")
+    source = mob["source"]
+    if not isinstance(source, dict) or set(source) != {
+        "path",
+        "revision",
+        "git_sha",
+        "sha256",
+        "row_number",
+        "columns",
+    }:
+        raise ValueError("Selected physical mob provenance fields changed")
+    _validate_source_record(source, "gamefiles/conf/mob_proto.txt", row=2)
+    if source["columns"] != {
+        "level": "LEVEL",
+        "strength": "ST",
+        "vitality": "HT",
+        "dexterity": "DX",
+        "proto_defense": "DEF",
+        "power_min": "DAMAGE_MIN",
+        "power_max": "DAMAGE_MAX",
+        "damage_multiplier": "DAM_MULTIPLY",
+        "sword_resistance_percent": "RESIST_SWORD",
+    }:
+        raise ValueError("Selected Wild Dog physical columns changed")
+
+
 def validate_server_payload(payload: dict, profile_id: str) -> None:
     if not isinstance(payload, dict):
         raise ValueError("Trusted action definitions must be an object")
@@ -1389,6 +1829,24 @@ def validate_server_payload(payload: dict, profile_id: str) -> None:
     unhashed = {key: value for key, value in payload.items() if key != "gameplay_definition_hash"}
     if claimed != digest(unhashed):
         raise ValueError("Trusted action definition hash mismatch")
+    _validate_physical_damage(payload)
+    validate_catalog(payload.get("item_catalog"))
+    registry = {item["id"]: item for item in payload["item_catalog"]["items"]}
+    for weapon in payload["physical_damage"]["weapons"]:
+        item = registry.get(weapon["item_id"], {})
+        expected = {
+            key: weapon[key] for key in ("class", "power_min", "power_max", "refine_attack")
+        }
+        if item.get("vnum") != weapon["vnum"] or not _strict_json_equal(
+            item.get("weapon"), expected
+        ):
+            raise ValueError("Item registry and physical weapon definitions disagree")
+    reward_items = payload.get("progression", {}).get("reward_items", [])
+    by_vnum = {item["vnum"]: item for item in registry.values()}
+    for reward in reward_items:
+        item = by_vnum.get(reward["vnum"], {})
+        if item.get("height") != reward["size"] or item.get("stack_limit") != reward["stack_limit"]:
+            raise ValueError("Progression rewards must resolve to compatible item definitions")
     actions = payload.get("actions")
     if not isinstance(actions, list) or len(actions) != 6:
         raise ValueError("Trusted definitions require exactly six actions")
@@ -1428,11 +1886,20 @@ def validate_server_payload(payload: dict, profile_id: str) -> None:
     if len(player_rows) != 1:
         raise ValueError("Trusted definitions require exactly one fixed player actor")
     player_primary = player_rows[0].get("primary_actions")
+    if "base_damage" in player_rows[0]:
+        raise ValueError("Legacy player base_damage is forbidden")
     if not isinstance(player_primary, dict) or player_primary.get("onehand") != prefix[0]:
         raise ValueError("Player onehand primary action must be the combo prefix head")
     mob_rows = [actor for actor in actors if actor.get("id") == MOB_ACTOR_ID]
     if len(mob_rows) != 1:
         raise ValueError("Trusted definitions require exactly one fixed mob actor")
+    if "damage_min" in mob_rows[0] or "damage_max" in mob_rows[0]:
+        raise ValueError("Legacy mob fixed damage range is forbidden")
+    items = payload.get("items")
+    if not isinstance(items, list) or len(items) != 1 or not isinstance(items[0], dict):
+        raise ValueError("Trusted definitions require exactly one selected item")
+    if "attack_bonus" in items[0]:
+        raise ValueError("Legacy item attack_bonus is forbidden")
     if not _strict_json_equal(
         mob_rows[0].get("defending_sphere"),
         {
@@ -1695,8 +2162,16 @@ def make_client_payload(normalized: dict, server: dict, blender_report: dict) ->
             ],
         }
         actors.append(entry)
+    physical_weapons = {
+        row["item_id"]: row
+        for row in server["physical_damage"]["weapons"]
+        if isinstance(row, dict) and isinstance(row.get("item_id"), str)
+    }
     items = []
     for item in normalized["items"]:
+        physical = physical_weapons.get(item["id"])
+        if physical is None:
+            raise ValueError(f"No trusted physical definition for item {item['id']}")
         items.append(
             {
                 key: item[key]
@@ -1716,7 +2191,12 @@ def make_client_payload(normalized: dict, server: dict, blender_report: dict) ->
                     "path": next(
                         artifact["path"] for artifact in artifacts if artifact["id"] == item["id"]
                     ),
-                }
+                },
+                "physical": {
+                    "power_min": physical["power_min"],
+                    "power_max": physical["power_max"],
+                    "refine_attack": physical["refine_attack"],
+                },
             }
         )
     payload = {
@@ -1735,6 +2215,7 @@ def make_client_payload(normalized: dict, server: dict, blender_report: dict) ->
         "artifacts": artifacts,
         "actors": actors,
         "items": items,
+        "item_catalog": public_catalog(server["item_catalog"]),
         "unsupported": [
             {
                 key: entry[key]
@@ -1856,6 +2337,17 @@ def validate_command(args: argparse.Namespace) -> None:
             raise ValueError("Invalid presentation manifest schema")
         if client.get("gameplay_definition_hash") != runtime["gameplay_definition_hash"]:
             raise ValueError("Client/server gameplay definition hashes differ")
+        if not _strict_json_equal(
+            client.get("item_catalog"), public_catalog(runtime["item_catalog"])
+        ):
+            raise ValueError("Client item capabilities differ from trusted definitions")
+        models = {item["id"]: item for item in client["items"]}
+        for item in runtime["item_catalog"]["items"]:
+            icon = ROOT / "client/assets/imported/ui" / (item["icon"] + ".png")
+            if not icon.is_file():
+                raise ValueError(f"Required item icon is missing: {icon}")
+            if item["kind"] == "weapon" and models.get(item["id"], {}).get("vnum") != item["vnum"]:
+                raise ValueError(f"Required equipped-item presentation is missing: {item['id']}")
     print(f"Validated {profile['profile_id']} ({runtime['gameplay_definition_hash']})")
 
 
@@ -1919,6 +2411,7 @@ def probe_command(args: argparse.Namespace) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
+    add_diff_parser(subparsers)
     compile_parser = subparsers.add_parser("compile", help="fetch/read and normalize the profile")
     compile_parser.add_argument("--profile", default=str(DEFAULT_PROFILE))
     compile_parser.add_argument("--offline", action="store_true")

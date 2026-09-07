@@ -7,6 +7,7 @@ python3 tools/export_client.py --wine-smoke
 import argparse
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
@@ -16,6 +17,12 @@ import zipfile
 from pathlib import Path
 from urllib.parse import urlparse
 
+from actor_texture_import import configure_actor_texture_imports
+from build_character_catalog import validate_package as validate_character_package
+from build_npc_catalog import CATALOG as NPC_CATALOG
+from build_npc_catalog import validate_package as validate_npc_package
+from item_definitions import FIELDS as ITEM_FIELDS
+from item_definitions import public_catalog as public_item_catalog
 from target_effect_export import (
     audit_target_effect_pack,
     prepare_target_effect_imports,
@@ -54,6 +61,7 @@ P1_PRESENTATION_FIELDS = {
     "items",
     "unsupported",
     "adapted_motion_events",
+    "item_catalog",
 }
 P1_CONVERTER_FIELDS = {"blender", "blender_import", "content_compiler", "gr2_importer_commit"}
 P1_COORDINATE_FIELDS = {
@@ -153,7 +161,10 @@ P1_ITEM_FIELDS = {
     "actor_attachment",
     "attachment_transform",
     "equipment_mode",
+    "physical",
 }
+P1_PHYSICAL_FIELDS = {"power_min", "power_max", "refine_attack"}
+P1_SWORD_PHYSICAL = {"power_min": 13, "power_max": 15, "refine_attack": 0}
 P1_ATTACHMENT_TRANSFORM_FIELDS = {"translation_m", "rotation_degrees", "scale"}
 P1_UNSUPPORTED_FIELDS = {"kind", "action_id", "event_type", "reason"}
 P1_ADAPTED_MOTION_EVENT_FIELDS = {"kind", "action_id", "event_type", "adapter"}
@@ -218,6 +229,13 @@ def template_directory(explicit):
 
 
 def stage_project(stage, templates, include_maps=True, p1_enabled=False):
+    character_directory = ROOT / "client/assets/imported/characters"
+    if p1_enabled:
+        validate_character_package(character_directory)
+    npc_directory = ROOT / "client/assets/imported/npcs"
+    if npc_directory.exists():
+        validate_npc_package(npc_directory)
+
     def ignored(directory, names):
         exclusions = {".godot", ".git", "tests"}
         if Path(directory).name == "addons":
@@ -229,6 +247,12 @@ def stage_project(stage, templates, include_maps=True, p1_enabled=False):
         return set(names).intersection(exclusions)
 
     shutil.copytree(ROOT / "client", stage, ignore=ignored)
+    if p1_enabled:
+        validate_character_package(stage / "assets/imported/characters")
+        configure_actor_texture_imports(stage / "assets/imported/characters/actors")
+    if npc_directory.exists():
+        validate_npc_package(stage / "assets/imported/npcs")
+        configure_actor_texture_imports(stage / "assets/imported/npcs/actors")
     project = stage / "project.godot"
     lines = []
     section = ""
@@ -281,6 +305,18 @@ def reject_unknown_fields(value, allowed, path):
 def validate_p1_presentation_fields(manifest):
     """Reject additions at every public manifest object boundary for schema version 1."""
     reject_unknown_fields(manifest, P1_PRESENTATION_FIELDS, "$")
+    if "item_catalog" in manifest:
+        catalog = manifest["item_catalog"]
+        reject_unknown_fields(catalog, {"schema_version", "items"}, "$.item_catalog")
+        for index, item in enumerate(catalog.get("items", [])):
+            path = f"$.item_catalog.items[{index}]"
+            reject_unknown_fields(item, ITEM_FIELDS - {"source"}, path)
+            for field, allowed in (
+                ("weapon", {"class", "power_min", "power_max", "refine_attack"}),
+                ("recovery", {"handler", "hp", "sp"}),
+            ):
+                if item.get(field) is not None:
+                    reject_unknown_fields(item[field], allowed, path + "." + field)
     for key, fields in (
         ("converter", P1_CONVERTER_FIELDS),
         ("coordinates", P1_COORDINATE_FIELDS),
@@ -393,6 +429,25 @@ def validate_p1_presentation_fields(manifest):
                 P1_ATTACHMENT_TRANSFORM_FIELDS,
                 item_path + ".attachment_transform",
             )
+        if "physical" in item:
+            physical_path = item_path + ".physical"
+            physical = item["physical"]
+            reject_unknown_fields(physical, P1_PHYSICAL_FIELDS, physical_path)
+            if item.get("id") != P1_SWORD_ITEM_ID:
+                raise RuntimeError(
+                    f"P1 presentation manifest permits physical only for starter Sword+0 at {physical_path}"
+                )
+            for field, expected in P1_SWORD_PHYSICAL.items():
+                value = physical.get(field)
+                if (
+                    not isinstance(value, (int, float))
+                    or isinstance(value, bool)
+                    or not math.isfinite(value)
+                    or value != expected
+                ):
+                    raise RuntimeError(
+                        f"P1 starter Sword+0 has invalid physical.{field} at {physical_path}"
+                    )
 
 
 def validate_p1_manifest(manifest):
@@ -500,6 +555,8 @@ def validate_p1_manifest(manifest):
         raise RuntimeError("P1 actor manifest is missing starter Sword+0 vnum 10")
     if sword.get("vnum") != 10:
         raise RuntimeError("P1 starter Sword+0 has an invalid vnum")
+    if sword.get("physical") != P1_SWORD_PHYSICAL:
+        raise RuntimeError("P1 starter Sword+0 has an invalid physical dictionary")
     model_reference(
         sword,
         label="starter Sword+0 item",
@@ -544,6 +601,9 @@ def p1_profile_requirements(*, allow_legacy=False):
         raise RuntimeError(
             "P1 client manifest and trusted action definitions have different hashes"
         )
+    if "item_catalog" in manifest or "item_catalog" in actions:
+        if manifest.get("item_catalog") != public_item_catalog(actions.get("item_catalog")):
+            raise RuntimeError("Client item catalog differs from trusted server definitions")
     return {
         "manifest": manifest,
         "manifest_sha256": digest(manifest_path),
@@ -608,6 +668,10 @@ def validate_pack_paths(paths, *, allow_test_probe=False):
 
 def audit_pack(godot, pck, output, env, *, allow_test_probe=False, p1_requirements=None):
     # Load the actual exported PCK, checking remapped meshes and animations too.
+    npc_path = ROOT / "client/assets/imported/npcs" / NPC_CATALOG
+    npc_hash = digest(npc_path) if npc_path.is_file() else ""
+    character_path = ROOT / "client/assets/imported/characters/catalog.v1.json"
+    character_hash = digest(character_path) if character_path.is_file() else ""
     probe = output / "audit_pack.gd"
     probe.write_text("""extends SceneTree
 
@@ -679,6 +743,16 @@ func _initialize() -> void:
         quit(1)
         return
     if p1_audit is Dictionary:
+        var npcs: Variant = audit_npcs(OS.get_cmdline_user_args()[4])
+        if npcs == null:
+            quit(1)
+            return
+        p1_audit["npcs"] = npcs
+        var characters: Variant = audit_characters(OS.get_cmdline_user_args()[5])
+        if characters == null:
+            quit(1)
+            return
+        p1_audit["characters"] = characters
         var license_file := FileAccess.open(OS.get_cmdline_user_args()[0], FileAccess.WRITE)
         if not license_file:
             push_error("Could not write engine notices")
@@ -787,8 +861,13 @@ func has_no_unknown_fields(value: Variant, allowed: Array, path: String) -> bool
 
 
 func validate_presentation_fields(manifest: Dictionary) -> bool:
-    if not has_no_unknown_fields(manifest, ["schema", "schema_version", "profile_id", "content_hash", "gameplay_definition_hash", "presentation_output_hash", "converter", "coordinates", "artifacts", "actors", "items", "unsupported", "adapted_motion_events"], "$"):
+    if not has_no_unknown_fields(manifest, ["schema", "schema_version", "profile_id", "content_hash", "gameplay_definition_hash", "presentation_output_hash", "converter", "coordinates", "artifacts", "actors", "items", "unsupported", "adapted_motion_events", "item_catalog"], "$"):
         return false
+    if manifest.has("item_catalog"):
+        var catalog = load("res://scripts/content/item_catalog.gd").new()
+        if not catalog.load_document(manifest.item_catalog):
+            push_error("Invalid packaged item catalog: " + catalog.error_message)
+            return false
     if manifest.has("converter") and not has_no_unknown_fields(manifest["converter"], ["blender", "blender_import", "content_compiler", "gr2_importer_commit"], "$.converter"):
         return false
     if manifest.has("coordinates") and not has_no_unknown_fields(manifest["coordinates"], ["source_axes", "source_linear_unit", "output_linear_unit", "godot_axes", "source_to_godot"], "$.coordinates"):
@@ -872,12 +951,26 @@ func validate_presentation_fields(manifest: Dictionary) -> bool:
     for item_index in manifest.get("items", []).size():
         var item = manifest["items"][item_index]
         var item_path := "$.items[%d]" % item_index
-        if not has_no_unknown_fields(item, ["id", "kind", "name", "vnum", "model", "actor_attachment", "attachment_transform", "equipment_mode"], item_path):
+        if not has_no_unknown_fields(item, ["id", "kind", "name", "vnum", "model", "actor_attachment", "attachment_transform", "equipment_mode", "physical"], item_path):
             return false
         if item.has("model") and not has_no_unknown_fields(item["model"], ["artifact_id", "path"], item_path + ".model"):
             return false
         if item.has("attachment_transform") and not has_no_unknown_fields(item["attachment_transform"], ["translation_m", "rotation_degrees", "scale"], item_path + ".attachment_transform"):
             return false
+        if item.has("physical"):
+            var physical = item["physical"]
+            var physical_path := item_path + ".physical"
+            if not has_no_unknown_fields(physical, ["power_min", "power_max", "refine_attack"], physical_path):
+                return false
+            if item.get("id") != "item.weapon.sword-10":
+                push_error("P1 presentation manifest permits physical only for starter Sword+0 at " + physical_path)
+                return false
+            var physical_expected := {"power_min": 13.0, "power_max": 15.0, "refine_attack": 0.0}
+            for field in physical_expected:
+                var value = physical.get(field)
+                if (not value is int and not value is float) or not is_finite(float(value)) or float(value) != physical_expected[field]:
+                    push_error("P1 starter Sword+0 has invalid physical." + str(field) + " at " + physical_path)
+                    return false
     return true
 
 
@@ -1054,6 +1147,71 @@ func verify_actor_metadata(actor: Dictionary, summary: Dictionary, resource: Str
     return true
 
 
+func audit_characters(expected_hash: String) -> Variant:
+    var path := "res://assets/imported/characters/catalog.v1.json"
+    if expected_hash.is_empty() or not FileAccess.file_exists(path) or FileAccess.get_sha256(path) != expected_hash:
+        push_error("Packaged character catalog differs from the installed catalog")
+        return null
+    var document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
+    if document.classes.size() != 4 or document.actors.size() != 8:
+        push_error("Packaged character catalog is incomplete")
+        return null
+    var result := []
+    for actor: Dictionary in document.actors:
+        var packed := load(str(actor.model.path)) as PackedScene
+        if packed == null:
+            push_error("Packaged character model is missing")
+            return null
+        var model := packed.instantiate()
+        var summary := inspect_model(model)
+        model.free()
+        if summary.mesh_count == 0 or summary.skinned_mesh_count != summary.mesh_count or summary.textured_mesh_count != summary.mesh_count:
+            push_error("Packaged character lost skinning or textures")
+            return null
+        for bone: String in actor.attachment_bones.values():
+            if bone not in summary.bone_names:
+                push_error("Packaged character lost an attachment bone")
+                return null
+        for mode: Dictionary in actor.modes:
+            for motion: Dictionary in mode.motions:
+                if motion.godot_name not in summary.clips:
+                    push_error("Packaged character animation is missing")
+                    return null
+        result.append({"id": actor.id, "model": actor.model.path, "summary": summary})
+    return {"catalog_sha256": expected_hash, "classes": document.classes.size(), "actors": result}
+
+
+func audit_npcs(expected_hash: String) -> Variant:
+    var path := "res://assets/imported/npcs/catalog.v1.json"
+    if expected_hash.is_empty():
+        if FileAccess.file_exists(path):
+            push_error("Unexpected NPC catalog in package")
+            return null
+        return []
+    if not FileAccess.file_exists(path) or FileAccess.get_sha256(path) != expected_hash:
+        push_error("Packaged NPC catalog differs from the installed catalog")
+        return null
+    var document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
+    var result := []
+    for actor: Dictionary in document.actors:
+        var packed := load(str(actor.model)) as PackedScene
+        if packed == null:
+            push_error("Packaged NPC model is missing")
+            return null
+        var model := packed.instantiate()
+        var summary := inspect_model(model)
+        model.free()
+        if summary.mesh_count == 0 or summary.skinned_mesh_count != summary.mesh_count or summary.textured_mesh_count != summary.mesh_count:
+            push_error("Packaged NPC body/weapon lost skinning or textures")
+            return null
+        for motion: Dictionary in actor.idle:
+            if motion.clip not in summary.clips:
+                push_error("Packaged NPC idle animation is missing")
+                return null
+        result.append({"id": actor.id, "model": actor.model, "summary": summary})
+    return result
+
+
 func has_required_entities(manifest: Dictionary, artifacts: Dictionary) -> bool:
     var warrior_id: String = str(artifacts[P1_PATHS[0]].get("id"))
     var dog_id: String = str(artifacts[P1_PATHS[1]].get("id"))
@@ -1070,7 +1228,7 @@ func has_required_entities(manifest: Dictionary, artifacts: Dictionary) -> bool:
     for item in manifest.get("items", []):
         if item is Dictionary:
             var model = item.get("model")
-            if model is Dictionary and item.get("id") == "item.weapon.sword-10" and item.get("vnum") == 10 and model.get("artifact_id") == sword_id:
+            if model is Dictionary and item.get("id") == "item.weapon.sword-10" and item.get("vnum") == 10 and model.get("artifact_id") == sword_id and item.get("physical") == {"power_min": 13.0, "power_max": 15.0, "refine_attack": 0.0}:
                 sword = true
     if not warrior or not dog or not sword:
         push_error("Packaged P1 actor manifest must include warrior, WildDog 101 and starter Sword+0 vnum 10")
@@ -1090,6 +1248,8 @@ func has_required_entities(manifest: Dictionary, artifacts: Dictionary) -> bool:
             output / "pack-inventory.json",
             p1_requirements["manifest_sha256"] if p1_requirements else "",
             "1" if p1_requirements else "0",
+            npc_hash,
+            character_hash,
         ],
         output / "pack-audit.log",
         env,

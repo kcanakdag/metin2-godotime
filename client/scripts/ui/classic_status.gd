@@ -1,5 +1,5 @@
 extends Control
-## Original-sized male Warrior status page backed only by subscribed server state.
+## Original-sized character status page backed only by subscribed server state.
 
 signal allocation_requested(character_id: String, stat_code: String)
 signal settings_changed
@@ -20,6 +20,7 @@ var _plus_buttons: Dictionary = {}
 var _tab_rects: Array[Control] = []
 var _bars: Array[Control] = []
 var _points_art: TextureRect
+var _portrait: TextureRect
 var _moving := false
 var _move_offset := Vector2.ZERO
 var _placed := false
@@ -53,7 +54,7 @@ func _process(_delta: float) -> void:
 
 func _build_header() -> void:
 	Art.image(self, "game/windows/box_face", Vector2(7, 7))
-	Art.image(self, "game/windows/face_warrior", Vector2(11, 11))
+	_portrait = Art.image(self, "icon/face/warrior_m", Vector2(11, 11))
 	var title_host := Control.new()
 	title_host.position = Vector2(53, 0)
 	title_host.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -151,6 +152,17 @@ func set_player(row: Dictionary) -> void:
 	_refresh()
 
 
+func set_appearance(row: Dictionary) -> void:
+	var class_id := int(row.get("character_class", -1))
+	var sex := int(row.get("sex", -1))
+	_portrait.visible = class_id in range(4) and sex in [0, 1]
+	if _portrait.visible:
+		var source_class: String = ["warrior", "assassin", "sura", "shaman"][class_id]
+		_portrait.texture = Art.texture(
+			"icon/face/%s_%s" % [source_class, "m" if sex == 0 else "w"]
+		)
+
+
 func set_progression(row: Dictionary) -> void:
 	_progression = row.duplicate(true)
 	_refresh()
@@ -216,9 +228,17 @@ func _refresh() -> void:
 	var health := int(_player.get("health", 0))
 	var max_health := int(_player.get("max_health", 0))
 	_labels.health.text = "%d/%d" % [health, max_health] if max_health > 0 else "—"
+	if _progression.is_empty():
+		_labels.attack.text = "—"
+		_labels.defense.text = "—"
+	else:
+		_labels.attack.text = _attack_value_text(
+			int(_progression.get("display_attack_min", 0)),
+			int(_progression.get("display_attack_max", 0))
+		)
+		_labels.defense.text = str(int(_progression.get("display_defense", 0)))
+	_labels.attack.tooltip_text = "Equipped-weapon Attack. Actual damage depends on the target."
 	for key in [
-		"attack",
-		"defense",
 		"move",
 		"attack_speed",
 		"cast_speed",
@@ -228,6 +248,10 @@ func _refresh() -> void:
 	]:
 		_labels[key].text = "—"
 	_refresh_buttons()
+
+
+func _attack_value_text(minimum: int, maximum: int) -> String:
+	return str(minimum) if minimum == maximum else "%d-%d" % [minimum, maximum]
 
 
 func _refresh_buttons() -> void:

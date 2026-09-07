@@ -41,12 +41,26 @@ class ProbeCameraRig:
 		return wave.duplicate(true)
 
 
+class ProbePanel:
+	extends RefCounted
+
+	func snapshot() -> Dictionary:
+		return {"visible": false}
+
+
+class ProbeHud:
+	extends RefCounted
+	var npc_panel := ProbePanel.new()
+
+
 class ProbeWorld:
 	extends Node
 
 	var connection := GameConnection.new()
 	var events: Array[InputEvent] = []
+	var hud := ProbeHud.new()
 	var _pve := {}
+	var _hovered_npc: NpcActor
 
 	func _init() -> void:
 		add_child(connection)
@@ -83,7 +97,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 9, "client accepts only protocol 9")
+	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 14, "client accepts only protocol 14")
 	# Use the real scene without entering the tree, so this verifies the probe's
 	# node lookup without starting account flow or a game connection.
 	var scene := load("res://scenes/main.tscn") as PackedScene

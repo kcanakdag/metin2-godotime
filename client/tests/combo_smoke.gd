@@ -643,6 +643,9 @@ func _raw_success(
 
 func _raw_result(client: GameConnection, reducer: String, args: Array, types: Array) -> Dictionary:
 	var observed := {"done": false, "accepted": false, "timestamp": 0, "error": ""}
+	var intent := _versioned_item_intent(client, reducer, args, types)
+	args = intent.args
+	types = intent.types
 	var call := client._client.call_reducer(reducer, args, types)
 	if call.error != OK:
 		return observed
@@ -690,6 +693,9 @@ func _track_raw_call(
 	observed: Dictionary,
 	index: int
 ) -> void:
+	var intent := _versioned_item_intent(client, reducer, args, types)
+	args = intent.args
+	types = intent.types
 	var call := client._client.call_reducer(reducer, args, types)
 	if call.error != OK:
 		observed.done += 1
@@ -720,8 +726,10 @@ func _record_action_pair(phase: String, first: Dictionary, second: Dictionary) -
 	)
 
 
-func _approach_dog(actor: GameConnection, observer: GameConnection, actor_id: String) -> bool:
-	for _attempt in range(50):
+func _approach_dog(
+	actor: GameConnection, observer: GameConnection, actor_id: String, attempts: int = 50
+) -> bool:
+	for _attempt in range(attempts):
 		var actor_position := _position(_player(observer, actor_id))
 		var dog_position := _position(_monster(observer))
 		if actor_position.distance_to(dog_position) <= 2.5:

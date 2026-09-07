@@ -67,13 +67,21 @@ def main() -> None:
         stage = Path(scratch)
         for relative in ("scripts/ui", "assets/imported/ui"):
             shutil.copytree(ROOT / "client" / relative, stage / relative)
+        shutil.copytree(ROOT / "client/scripts/content", stage / "scripts/content")
+        item_manifest = Path("assets/imported/content/p0-warrior-dog/manifest.v1.json")
+        (stage / item_manifest).parent.mkdir(parents=True)
+        shutil.copy2(ROOT / "client" / item_manifest, stage / item_manifest)
         if options.suite == "intro":
+            shutil.copytree(
+                ROOT / "client/assets/imported/characters", stage / "assets/imported/characters"
+            )
             content = ROOT / "client/assets/imported/content/p0-warrior-dog"
             if not (content / "manifest.v1.json").is_file():
                 raise SystemExit("Missing P1 actor profile; run the content import first.")
-            shutil.copytree(content, stage / "assets/imported/content/p0-warrior-dog")
+            shutil.copytree(
+                content, stage / "assets/imported/content/p0-warrior-dog", dirs_exist_ok=True
+            )
             shutil.copytree(ROOT / "client/scripts/actors", stage / "scripts/actors")
-            shutil.copytree(ROOT / "client/scripts/content", stage / "scripts/content")
         (stage / "scripts/world").mkdir(parents=True)
         (stage / "tests").mkdir()
         for relative in ("scripts/world/classic_minimap.gd", "tests/" + script):

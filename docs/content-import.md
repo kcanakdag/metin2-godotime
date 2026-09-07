@@ -1,5 +1,9 @@
 # P1 presentation fixture and P2 trusted content
 
+For the shared stationary-NPC converter, rigid accessory skinning and map
+population preview, see [world-content authoring](world-content.md). Quests are
+deferred; these tools support the current gameplay and map-population work.
+
 The `p0-warrior-dog` profile is the selected content fixture used by the P1
 presentation and bounded P2 progression slice. It contains one male Warrior
 (`race_id` 0), starter Sword+0 (`vnum` 10), and Wild Dog (`vnum` 101). It is not
@@ -31,6 +35,35 @@ For future items, quests, mobs and classes, follow the
 generalization still needed and distinguishes focused content/preview checks
 from combat/network regressions and full release qualification.
 
+## Compare a content update
+
+Save the generated server/client manifests before rebuilding, then use the
+existing compiler's `diff` command to identify the changed fields and relevant QA:
+
+```sh
+python3 tools/content_compile.py diff \
+  --before-server /path/to/baseline/actions.v1.json \
+  --before-client /path/to/baseline/manifest.v1.json \
+  --after-server server/content/p0-warrior-dog/actions.v1.json \
+  --after-client client/assets/imported/content/p0-warrior-dog/manifest.v1.json \
+  --output .local/content-change-report.json
+```
+
+The report distinguishes gameplay, presentation, combined, provenance-only and
+unchanged pairs. It compares actual fields and ordered sequences, verifies the
+declared server/artifact-record digests and matching client/server identities,
+and records input file hashes. An action-timing, physical-stat or combo-order
+change requests affected gameplay and two-client checks; a visual-only change
+requests the relevant asset/animation preview and exported-rendering checks.
+Source-hash changes remain visible even when runtime fields are identical.
+
+This supports trusted-definition schemas 5/6/7 and presentation schema 1. Unknown
+schemas, stale hashes, mixed pairs, duplicate JSON keys and non-finite numbers
+fail comparison. The report is guidance: run `content-validate` separately to
+verify the content contract and actual referenced assets. Changes to code,
+network lifecycle or map bakes need their own checks; release qualification
+still includes broader integration.
+
 ## Artifact boundary
 
 The generated player-facing manifest is
@@ -47,7 +80,8 @@ or raw Granny/Blender asset is shipped.
 The server consumes the separate, ignored
 `server/content/p0-warrior-dog/actions.v1.json`. The filename is retained for
 its stable runtime path, but its payload is now
-`mt2spacetime.trusted-action-definitions` **schema 5**. Schema 5 retains the
+`mt2spacetime.trusted-action-definitions` **schema 7**. Schema 7 adds the typed
+item registry and shared gradual-recovery policy. It retains the
 source-derived Warrior progression definitions and selects the default type-0
 `combo_1`, `combo_2`, `combo_3`, `combo_4` Sword+0 chain. The trusted payload
 contains exactly six attacks: the player general attack, those four combo
@@ -57,6 +91,22 @@ Terminal `combo_4` deliberately retains its nonordered source timing as evidence
 and has no follow-up input. The file is server input, not an exported client resource. Its
 `gameplay_definition_hash` must exactly equal the client presentation
 manifest's value.
+
+Compiler `content-compiler-v1.6.0` also derives selected physical values from
+the pinned item/mob proto columns and records the formula/display references.
+Declared client code references are fetched and hash-verified alongside server
+references, including on a fresh checkout. They remain ignored source inputs.
+
+The explicit `item_catalog` selector adds item records independently of GLB
+conversion. Its current supported mechanics are one-hand swords and gradual
+HP/SP recovery. The compiler validates references and the Rust build validates
+the same registry independently. `content-validate` additionally checks that
+the public item catalog matches the server and that required icons/equipped
+presentations exist. See [item authoring](rebuild/content-authoring.md#implemented-item-authoring).
+The public Sword dictionary contains only `power_min`, `power_max` and
+`refine_attack`; private character Attack/Defense values arrive through the
+owner-filtered server progression row. These are still selected fixture
+definitions, not a general item registry or quest runtime.
 
 The compiler requires every declared one-hand chain to share the distinct
 three-action prefix, selects `combo_4` only from the declared default chain,
@@ -109,8 +159,8 @@ attacks have no root definition. `link_us` remains source evidence; it does not
 independently schedule gameplay. Original GR2/MSA files and the Carbon runtime
 remain development inputs and are not shipped in the server or client.
 
-The compiler version is `content-compiler-v1.4.0`. The verified repeat local
-rebuild records content hash
+The preceding area-combat checkpoint used `content-compiler-v1.4.0`. Its repeat
+local rebuild recorded content hash
 `9ec8aead8c8b6bbd37f4914f1c20371a976a3c07aa5db52d3ece99dbe4e78939` and
 gameplay-definition hash
 `8f9853748efb45ac0c33dcd716ff2e7f8c58fa208ff6537c75367b8d8ee8eb3c`.
@@ -246,3 +296,12 @@ converted artifacts and source-derived action/progression metadata. It does not
 establish full server lifecycle QA, two-client acceptance, original visual
 parity, Web/Linux export behavior, Windows execution, or complete
 class/mob/equipment coverage.
+
+## Classic character import
+
+The [classic character workflow](characters.md) automates selected race-script,
+body/hair, material, attachment and weighted-animation discovery for all four
+classes and both sexes. Use `make characters-build` rather than hand-assembling
+Godot character scenes. It shares the Blender converter, preserves pinned source
+hashes and receipts, and packages converted GLB/PNG assets. Adding a motion to the
+presentation catalog does not enable unimplemented server mechanics.

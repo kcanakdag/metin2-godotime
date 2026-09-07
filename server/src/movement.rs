@@ -3,6 +3,13 @@
 pub const SPEED: f32 = 5.0;
 pub const HALF_SIZE: f32 = 32.0;
 pub const PLAYER_RADIUS: f32 = 0.45;
+pub const TRAINING_OBSTACLES: &[(f32, f32, f32, f32, f32, &str)] = &[
+    (-8.0, -5.0, 1.6, 1.3, 2.2, "stone"),
+    (8.0, -5.0, 1.3, 1.7, 2.7, "stone"),
+    (-11.0, 7.0, 3.0, 0.5, 1.2, "wall"),
+    (11.0, 7.0, 3.0, 0.5, 1.2, "wall"),
+    (0.0, -13.0, 2.0, 1.0, 3.8, "metin"),
+];
 
 pub struct Bounds {
     pub min_x: f32,

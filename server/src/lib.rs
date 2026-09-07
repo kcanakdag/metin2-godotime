@@ -2,12 +2,18 @@
 mod accounts;
 mod admin;
 mod appearance;
+mod characters;
 mod combat;
 mod combo;
 mod content;
 mod inventory;
+mod item_catalog;
+mod item_effects;
+mod item_security;
 mod knockback;
 mod movement;
+mod npcs;
+mod physical_damage;
 mod progression;
 mod root_motion;
 mod special_area;
@@ -64,6 +70,8 @@ pub struct WorldInfo {
     #[primary_key]
     pub id: u8,
     pub protocol_version: u32,
+    pub npc_catalog_hash: String,
+    pub character_catalog_hash: String,
     pub map_name: String,
     pub map_id: String,
     pub content_hash: String,
@@ -109,6 +117,7 @@ pub struct Controller {
     pub action_revision: u64,
     pub pending_attack_target_id: u32,
     pub pending_attack_target_generation: u32,
+    pub pending_attack_source_generation: u32,
     pub pending_attack_hit_at_us: i64,
     pub pending_attack_hit_until_us: i64,
     pub pending_attack_damage: u16,
@@ -160,7 +169,9 @@ pub struct TickSchedule {
 fn compiled_world_info() -> WorldInfo {
     WorldInfo {
         id: 1,
-        protocol_version: 9,
+        protocol_version: 14,
+        npc_catalog_hash: definitions::NPC_CATALOG_HASH.into(),
+        character_catalog_hash: definitions::CHARACTER_CATALOG_HASH.into(),
         map_name: if content::YONGAN {
             "Yongan"
         } else {
@@ -174,7 +185,9 @@ fn compiled_world_info() -> WorldInfo {
         }
         .into(),
         tick_ms: TICK_MS,
-        content_hash: if definitions::COMBAT_FIXTURE_CONTENT_HASH.is_empty() {
+        content_hash: if definitions::ITEM_RECOVERY_TEST_STARTER {
+            "training-item-recovery-v1"
+        } else if definitions::COMBAT_FIXTURE_CONTENT_HASH.is_empty() {
             content::HASH
         } else {
             definitions::COMBAT_FIXTURE_CONTENT_HASH
@@ -204,15 +217,8 @@ fn refresh_world_info(ctx: &ReducerContext) -> Result<(), String> {
 #[spacetimedb::reducer(init)]
 pub fn init(ctx: &ReducerContext) {
     ctx.db.world_info().insert(compiled_world_info());
-    for (index, (x, z, half_x, half_z, height, kind)) in [
-        (-8.0, -5.0, 1.6, 1.3, 2.2, "stone"),
-        (8.0, -5.0, 1.3, 1.7, 2.7, "stone"),
-        (-11.0, 7.0, 3.0, 0.5, 1.2, "wall"),
-        (11.0, 7.0, 3.0, 0.5, 1.2, "wall"),
-        (0.0, -13.0, 2.0, 1.0, 3.8, "metin"),
-    ]
-    .into_iter()
-    .enumerate()
+    for (index, (x, z, half_x, half_z, height, kind)) in
+        movement::TRAINING_OBSTACLES.iter().copied().enumerate()
     {
         if content::YONGAN {
             break;
@@ -236,6 +242,7 @@ pub fn init(ctx: &ReducerContext) {
         scheduled_at: Duration::from_millis(u64::from(TICK_MS)).into(),
     });
     combat::initialize(ctx);
+    npcs::validate_content();
     admin::initialize();
 }
 
@@ -324,6 +331,7 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
         .identity()
         .find(character)
         .ok_or("Select an existing character first.")?;
+    npcs::clear(ctx, character);
     player.online = true;
     player.activity = if player.health == 0 { 3 } else { 0 };
     ctx.db.player().identity().update(player);
@@ -356,6 +364,7 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
             action_revision: 0,
             pending_attack_target_id: 0,
             pending_attack_target_generation: 0,
+            pending_attack_source_generation: 0,
             pending_attack_hit_at_us: 0,
             pending_attack_hit_until_us: 0,
             pending_attack_damage: 0,
@@ -398,6 +407,7 @@ pub fn set_move_input(
 ) -> Result<(), String> {
     let mut controller = active_controller(ctx)?;
     valid_direction(direction_x, direction_z)?;
+    npcs::clear(ctx, controller.identity);
     controller.direction_x = direction_x;
     controller.direction_z = direction_z;
     controller.mode = u8::from(direction_x != 0.0 || direction_z != 0.0);
@@ -417,6 +427,7 @@ pub fn move_to(ctx: &ReducerContext, x: f32, z: f32) -> Result<(), String> {
     {
         return Err("Destination is inside an obstacle.".into());
     }
+    npcs::clear(ctx, controller.identity);
     controller.target_x = x;
     controller.target_z = z;
     controller.mode = 2;
@@ -440,6 +451,7 @@ pub fn stop_moving(ctx: &ReducerContext) -> Result<(), String> {
 #[spacetimedb::reducer]
 pub fn perform_attack(ctx: &ReducerContext) -> Result<(), String> {
     let mut controller = active_controller(ctx)?;
+    npcs::clear(ctx, controller.identity);
     let now = now_us(ctx);
     let character = accounts::selected_character(ctx)?;
     if combo::handle_follow_up(ctx, &mut controller, now)? {
@@ -450,8 +462,8 @@ pub fn perform_attack(ctx: &ReducerContext) -> Result<(), String> {
     if now < controller.next_attack_us {
         return Err("Attack is cooling down.".into());
     }
-    let plan = combat::plan_player_attack(ctx, character, &controller);
-    let is_first_combo = plan.definition.id == definitions::PLAYER_ONEHAND_COMBO[0].id;
+    let plan = combat::plan_player_attack(ctx, character, &controller)?;
+    let is_first_combo = characters::combo_start(plan.definition.id);
     let chain_target_id = plan.target_id;
     let chain_target_life_sequence = plan.target_generation;
     let chain_can_select_target = plan.can_select_target;
@@ -597,7 +609,9 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
         }
         ctx.db.controller().identity().update(controller);
     }
-    combat::simulate(ctx, elapsed);
+    combat::simulate(ctx, elapsed)?;
+    item_effects::simulate(ctx, now);
+    npcs::maintain(ctx, now);
     Ok(())
 }
 

@@ -81,7 +81,12 @@ func _ready() -> void:
 
 
 func _build_middle() -> void:
-	Art.button(_middle, "game/taskbar/mouse_button_move_", Vector2(-42, 3), Callable())
+	# uitaskbar.py replaces the layout's Move placeholder with the default
+	# move-and-attack visual from MouseButtonWindow.py at initialization.
+	var attack := Art.button(
+		_middle, "game/taskbar/mouse_button_attack_", Vector2(-42, 3), Callable()
+	)
+	attack.tooltip_text = "Attack (hold Space)"
 	Art.button(_middle, "game/taskbar/mouse_button_camera_", Vector2(291, 3), Callable())
 	var expand := Art.button(_middle, "game/taskbar/chat_button_", Vector2(128, 1), Callable())
 	expand.disabled = true

@@ -8,6 +8,7 @@ const table_names: Array[String] = ['character_progression']
 
 @export var character_id: PackedByteArray
 @export var account: PackedByteArray
+@export var character_class: int
 @export var level: int
 @export var experience: int
 @export var next_exp: int
@@ -21,12 +22,16 @@ const table_names: Array[String] = ['character_progression']
 @export var random_sp: int
 @export var current_sp: int
 @export var max_sp: int
+@export var display_attack_min: int
+@export var display_attack_max: int
+@export var display_defense: int
 
 #BSATN metadata
 const primary_key: StringName = &'character_id'
 const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"character_id": "__identity__",
 	"account": "__identity__",
+	"character_class": "U8",
 	"level": "U8",
 	"experience": "U32",
 	"next_exp": "U32",
@@ -39,28 +44,36 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"random_hp": "U32",
 	"random_sp": "U32",
 	"current_sp": "U32",
-	"max_sp": "U32"
+	"max_sp": "U32",
+	"display_attack_min": "U16",
+	"display_attack_max": "U16",
+	"display_defense": "U16"
 }
 
 ## 1. character_id: PackedByteArray[br]
 ## 2. account: PackedByteArray[br]
-## 3. level: int[br]
-## 4. experience: int[br]
-## 5. next_exp: int[br]
-## 6. level_step: int[br]
-## 7. unspent_stat_points: int[br]
-## 8. strength: int[br]
-## 9. vitality: int[br]
-## 10. dexterity: int[br]
-## 11. intelligence: int[br]
-## 12. random_hp: int[br]
-## 13. random_sp: int[br]
-## 14. current_sp: int[br]
-## 15. max_sp: int[br]
-static func create(p_character_id: PackedByteArray, p_account: PackedByteArray, p_level: int, p_experience: int, p_next_exp: int, p_level_step: int, p_unspent_stat_points: int, p_strength: int, p_vitality: int, p_dexterity: int, p_intelligence: int, p_random_hp: int, p_random_sp: int, p_current_sp: int, p_max_sp: int) -> GameCharacterProgression:
+## 3. character_class: int[br]
+## 4. level: int[br]
+## 5. experience: int[br]
+## 6. next_exp: int[br]
+## 7. level_step: int[br]
+## 8. unspent_stat_points: int[br]
+## 9. strength: int[br]
+## 10. vitality: int[br]
+## 11. dexterity: int[br]
+## 12. intelligence: int[br]
+## 13. random_hp: int[br]
+## 14. random_sp: int[br]
+## 15. current_sp: int[br]
+## 16. max_sp: int[br]
+## 17. display_attack_min: int[br]
+## 18. display_attack_max: int[br]
+## 19. display_defense: int[br]
+static func create(p_character_id: PackedByteArray, p_account: PackedByteArray, p_character_class: int, p_level: int, p_experience: int, p_next_exp: int, p_level_step: int, p_unspent_stat_points: int, p_strength: int, p_vitality: int, p_dexterity: int, p_intelligence: int, p_random_hp: int, p_random_sp: int, p_current_sp: int, p_max_sp: int, p_display_attack_min: int, p_display_attack_max: int, p_display_defense: int) -> GameCharacterProgression:
 	var result: GameCharacterProgression = GameCharacterProgression.new()
 	result.character_id = p_character_id
 	result.account = p_account
+	result.character_class = p_character_class
 	result.level = p_level
 	result.experience = p_experience
 	result.next_exp = p_next_exp
@@ -74,4 +87,7 @@ static func create(p_character_id: PackedByteArray, p_account: PackedByteArray, 
 	result.random_sp = p_random_sp
 	result.current_sp = p_current_sp
 	result.max_sp = p_max_sp
+	result.display_attack_min = p_display_attack_min
+	result.display_attack_max = p_display_attack_max
+	result.display_defense = p_display_defense
 	return result

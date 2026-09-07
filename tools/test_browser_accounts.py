@@ -30,6 +30,7 @@ from browser_snapshot import (
 from playwright.sync_api import sync_playwright
 from test_browser import distance
 from test_browser_actors import exercise_actors
+from test_browser_classes import exercise_class_world, exercise_previews
 from test_browser_combo import exercise_combo
 from test_browser_finisher import (
     exercise_finisher,
@@ -37,7 +38,9 @@ from test_browser_finisher import (
     park_finisher_clients,
 )
 from test_browser_inventory import exercise_inventory
+from test_browser_npcs import exercise_npcs, npc
 from test_browser_panels import exercise_panels
+from test_browser_physical import exercise_physical
 from test_browser_progression import exercise_progression, exercise_progression_combat
 from test_browser_target import exercise_targeting
 
@@ -148,7 +151,20 @@ def main() -> None:
     parser.add_argument("--inventory", action="store_true")
     parser.add_argument("--actors", action="store_true")
     parser.add_argument("--panels", action="store_true")
+    parser.add_argument(
+        "--classes",
+        action="store_true",
+        help="Check all eight previews and play Ninja/Shaman through original creation controls",
+    )
+    parser.add_argument(
+        "--world-npcs", type=Path, help="Check original NPCs using a map-bound walking route JSON"
+    )
     parser.add_argument("--progression", action="store_true")
+    parser.add_argument(
+        "--physical",
+        action="store_true",
+        help="Check protocol-10 Attack/Defense, Sword tooltips and equipment in the Training fixture",
+    )
     parser.add_argument(
         "--targeting",
         action="store_true",
@@ -177,6 +193,39 @@ def main() -> None:
     parser.add_argument("--native", type=Path, default=ROOT / "dist/linux-test/MT2Spacetime.x86_64")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+    if args.classes and any(
+        (
+            args.inventory,
+            args.actors,
+            args.physical,
+            args.finisher,
+            args.targeting,
+            args.combo,
+            args.progression,
+            args.progression_combat,
+        )
+    ):
+        parser.error(
+            "--classes exercises its own creation/equipment scenario; omit Warrior fixture flags"
+        )
+    npc_route = json.loads(args.world_npcs.read_text()) if args.world_npcs else None
+    if args.world_npcs and any(
+        (args.physical, args.finisher, args.targeting, args.combo, args.progression_combat)
+    ):
+        parser.error("--world-npcs uses the normal Yongan population; omit combat fixture flags")
+    if args.physical and any(
+        (
+            args.inventory,
+            args.actors,
+            args.panels,
+            args.progression,
+            args.targeting,
+            args.combo,
+            args.finisher,
+            args.progression_combat,
+        )
+    ):
+        parser.error("--physical uses a focused Training UI scenario; omit other feature flags")
     if args.progression_combat and not args.progression:
         parser.error("--progression-combat requires --progression")
     if args.targeting and args.progression_combat:
@@ -186,7 +235,9 @@ def main() -> None:
     if args.finisher and not (args.inventory and args.actors):
         parser.error("--finisher requires --inventory --actors")
     if args.finisher and args.panels:
-        parser.error("--panels needs original-map metadata and cannot run in the --finisher fixture")
+        parser.error(
+            "--panels needs original-map metadata and cannot run in the --finisher fixture"
+        )
     if args.finisher and (args.targeting or args.combo or args.progression_combat):
         parser.error(
             "--finisher uses its separate Training fixture and cannot be combined with "
@@ -528,6 +579,8 @@ def main() -> None:
             native_command("create", slot=0, name=names["native"])
             click("empire_confirm")
             stage("create", "supported_empire_opens_original_creation")
+            if args.classes:
+                samples["class_previews"] = exercise_previews(page, account, click, wait, output)
             fill("character_name", names["web"])
             if args.progression:
                 page.keyboard.press("c")
@@ -577,7 +630,7 @@ def main() -> None:
                 lambda: seen(web(), native_id) is not None and seen(desktop(), web_id) is not None,
                 60,
             )
-            if args.finisher:
+            if args.finisher or args.physical:
                 samples["finisher_entry_park"] = park_finisher_clients(
                     web,
                     desktop,
@@ -587,12 +640,34 @@ def main() -> None:
                     web_id,
                     native_id,
                 )
-                samples["finisher_entry_healing"] = heal_finisher_browser(page, web, wait, web_id)
+                if args.finisher:
+                    samples["finisher_entry_healing"] = heal_finisher_browser(
+                        page, web, wait, web_id
+                    )
             samples["initial_web"], samples["initial_native"] = web(), desktop()
+            if args.classes:
+                samples["ninja"] = exercise_class_world(
+                    page,
+                    web,
+                    desktop,
+                    wait,
+                    web_id,
+                    "actor.player.ninja-female",
+                    output,
+                    sword=True,
+                )
             page.screenshot(path=str(output / "account-world.png"))
             native_command("capture")
             wait("native_initial_world_capture_saved", lambda: (output / "desktop.png").is_file())
             (output / "desktop.png").replace(output / "desktop-initial.png")
+            if args.physical:
+                samples["physical"] = exercise_physical(
+                    page, web, desktop, native_command, wait, web_id, native_id, output
+                )
+            if npc_route:
+                samples["world_npcs"] = exercise_npcs(
+                    page, web, desktop, web_command, native_command, wait, npc_route, output
+                )
             if args.progression:
                 samples["progression"] = exercise_progression(
                     page,
@@ -721,6 +796,9 @@ def main() -> None:
             )
             error_count = len(desktop().get("errors", []))
             native_command("select", character_id=web_id)
+            if npc_route:
+                assert not desktop().get("rendered_npcs"), "NPCs remain after leaving the world"
+                checks.append("native_leave_clears_NPC_layer")
             wait(
                 "foreign_character_selection_is_rejected",
                 lambda: len(desktop().get("errors", [])) > error_count,
@@ -729,6 +807,11 @@ def main() -> None:
             checks.append("rejected_selection_preserves_owned_character")
             native_command("enter")
             wait("native_owned_character_returns", lambda: seen(web(), native_id) is not None)
+            if npc_route:
+                wait(
+                    "native_reentry_restores_one_NPC",
+                    lambda: bool(npc(desktop(), npc_route["spawn_id"])),
+                )
             if args.panels:
                 samples["panels"] = exercise_panels(page, web, wait, output)
             if args.inventory and "inventory" not in samples:
@@ -741,6 +824,14 @@ def main() -> None:
             wait("original_arrow_selects_empty_second_slot", lambda: account().get("slot") == 1)
             click("create_open")
             stage("create", "empty_slot_opens_creation")
+            if args.classes:
+                click("slot_next")
+                click("slot_next")
+                click("male")
+                wait(
+                    "second_creation_selects_male_shaman",
+                    lambda: account().get("character_class") == 3 and account().get("sex") == 0,
+                )
             fill("character_name", names["native"])
             error_count = len(web().get("errors", []))
             click("create_submit")
@@ -761,6 +852,10 @@ def main() -> None:
                 "second_character_enters_with_distinct_presence",
                 lambda: seen(desktop(), second_id) is not None and seen(desktop(), web_id) is None,
             )
+            if args.classes:
+                samples["shaman"] = exercise_class_world(
+                    page, web, desktop, wait, second_id, "actor.player.shaman-male", output
+                )
             system_action("change_character")
             stage("select", "second_character_leaves_for_selection")
             page.keyboard.press("1")
@@ -787,6 +882,11 @@ def main() -> None:
                 ),
                 60,
             )
+            if npc_route:
+                wait(
+                    "browser_reconnect_restores_one_NPC",
+                    lambda: bool(npc(web(), npc_route["spawn_id"])),
+                )
             page.reload(wait_until="domcontentloaded")
             stage("select", "browser_reload_restores_account_to_selection", 90)
             assert account()["account_identity"] == web_account and account()["roster_count"] == 2

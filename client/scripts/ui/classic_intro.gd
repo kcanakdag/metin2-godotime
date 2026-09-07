@@ -5,7 +5,7 @@ extends Control
 signal login_requested(username: String, password: String)
 signal register_requested(username: String, email: String, password: String)
 signal select_requested(character_id: String)
-signal create_requested(slot: int, character_name: String)
+signal create_requested(slot: int, character_name: String, character_class: int, sex: int)
 signal enter_requested
 signal logout_requested
 
@@ -37,6 +37,8 @@ var _authenticated := false
 var _rows: Array = []
 var _selected_id := ""
 var _slot := 0
+var _class_id := 0
+var _sex := 0
 var _background: TextureRect
 var _preview: Control
 var _panels: Dictionary = {}
@@ -55,6 +57,8 @@ var _character_title: TextureRect
 var _empire_title: TextureRect
 var _empire_atlas: Control
 var _create_title: TextureRect
+var _create_description: Label
+var _create_values: Dictionary = {}
 var _left: BaseButton
 var _right: BaseButton
 
@@ -205,6 +209,8 @@ func snapshot() -> Dictionary:
 		"busy": _busy,
 		"available": _available,
 		"slot": _slot,
+		"character_class": _class_id,
+		"sex": _sex,
 		"selected_id": _selected_id,
 		"roster_count": _rows.size(),
 		"controls": rectangles,
@@ -413,30 +419,33 @@ func _build_select() -> void:
 func _build_create() -> void:
 	var panel := _panel("create", Vector2(208, 329))
 	_create_title = Art.image(panel, "locale/en/ui/select/name_warrior", Vector2(-27, -149))
-	var text := Art.label(
-		panel,
-		"Warrior\n\nWarriors fight at close range\nwith strength and courage.",
-		Vector2(13, 14)
-	)
-	text.size = Vector2(180, 112)
-	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_create_description = Art.label(panel, "", Vector2(13, 14))
+	_create_description.size = Vector2(180, 112)
+	_create_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_line(panel, Rect2(8, 131, 189, 1), Color("aaa6a1"))
 	for index in 4:
 		Art.label(panel, ["VIT", "INT", "STR", "DEX"][index], Vector2(15, 138 + 19 * index))
 		_gauge(panel, Vector2(45, 142 + 19 * index), 120)
 		Art.image(panel, "public/parameter_slot_00", Vector2(165, 137 + 19 * index))
+		var value := Art.label(panel, "", Vector2(165, 138 + 19 * index))
+		value.size.x = 39
+		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_create_values[["vitality", "intelligence", "strength", "dexterity"][index]] = value
 	Art.label(panel, "Name", Vector2(43, 218))
 	Art.image(panel, "public/parameter_slot_04", Vector2(82, 216))
 	_character_name = _field(panel, "character_name", Vector2(85, 218), Vector2(90, 20))
 	_character_name.max_length = 16
 	_character_name.text_submitted.connect(func(_text: String) -> void: _submit_create())
 	Art.label(panel, "Sex", Vector2(43, 247))
-	var male := _button(panel, "male", "Male", Vector2(79, 247), Callable(), "middle")
+	var male := _button(panel, "male", "Male", Vector2(79, 247), _choose_sex.bind(0), "middle")
 	male.toggle_mode = true
 	male.button_group = ButtonGroup.new()
 	male.button_pressed = true
-	var female := _button(panel, "female", "Female", Vector2(139, 247), Callable(), "middle")
-	_unavailable.append(female)
+	var female := _button(
+		panel, "female", "Female", Vector2(139, 247), _choose_sex.bind(1), "middle"
+	)
+	female.toggle_mode = true
+	female.button_group = male.button_group
 	Art.label(panel, "Shape", Vector2(43, 270))
 	var shape := _button(panel, "shape_1", "1", Vector2(79, 268), Callable(), "middle")
 	shape.toggle_mode = true
@@ -503,9 +512,24 @@ func _refresh_character() -> void:
 	for key in _character_values:
 		_character_values[key].text = str(row.get(key, ""))
 	_character_title.visible = not row.is_empty()
+	if not row.is_empty():
+		_character_title.texture = Art.texture(
+			_preview.title_art(int(row.get("character_class", 0)))
+		)
+	var definition: Dictionary = _preview.class_definition(_class_id)
+	_create_title.texture = Art.texture(_preview.title_art(_class_id))
+	_create_description.text = (
+		str(definition.get("name", "")) + "\n\nChoose your character using the arrows."
+	)
+	for key: String in _create_values:
+		_create_values[key].text = str(int(definition.get("initial_points", {}).get(key, 0)))
+	_controls.male.set_pressed_no_signal(_sex == 0)
+	_controls.female.set_pressed_no_signal(_sex == 1)
 	_controls.enter.visible = not row.is_empty()
 	_controls.create_open.visible = row.is_empty()
-	_preview.set_characters(_rows, _slot, _stage == "create")
+	_preview.set_characters(
+		_rows, _slot, _stage == "create", {"character_class": _class_id, "sex": _sex}
+	)
 
 
 func _update_enabled() -> void:
@@ -525,8 +549,8 @@ func _update_enabled() -> void:
 		_controls.login_submit.disabled = _busy or not _available
 	var row := _row_for_slot(_slot)
 	_controls.enter.disabled = _busy or row.is_empty() or str(row.get("id", "")) != _selected_id
-	_left.disabled = _busy or _stage == "create"
-	_right.disabled = _busy or _stage == "create"
+	_left.disabled = _busy
+	_right.disabled = _busy
 	_left.modulate = Color(0.5, 0.5, 0.5) if _left.disabled else Color.WHITE
 	_right.modulate = _left.modulate
 
@@ -569,8 +593,19 @@ func _choose_slot(slot: int) -> void:
 
 
 func _cycle(direction: int) -> void:
+	if _busy:
+		return
 	if _stage == "select":
 		_choose_slot(posmod(_slot + direction, 4))
+	elif _stage == "create":
+		_class_id = posmod(_class_id + direction, 4)
+		_refresh_character()
+
+
+func _choose_sex(sex: int) -> void:
+	if not _busy and sex in [0, 1]:
+		_sex = sex
+		_refresh_character()
 
 
 func _begin_create() -> void:
@@ -613,7 +648,7 @@ func _submit_create() -> void:
 	if _character_name.text.strip_edges().is_empty():
 		set_status("error", "Choose a character name.")
 		return
-	create_requested.emit(_slot, _character_name.text.strip_edges())
+	create_requested.emit(_slot, _character_name.text.strip_edges(), _class_id, _sex)
 
 
 func _enter() -> void:

@@ -25,7 +25,8 @@ func _run() -> void:
 	_hud.set_inventory(
 		[
 			{"id": 11, "vnum": 10, "count": 1, "cell": 0, "equipped": false},
-			{"id": 12, "vnum": 27001, "count": 3, "cell": 1, "equipped": false}
+			{"id": 12, "vnum": 27001, "count": 3, "cell": 1, "equipped": false},
+			{"id": 13, "vnum": 27002, "count": 2, "cell": 2, "equipped": false}
 		]
 	)
 	_hud.equip_item_requested.connect(func(id: int) -> void: _events.append(["equip", id]))
@@ -47,6 +48,10 @@ func _run() -> void:
 	await process_frame
 	_check(_events == [["equip", 11]], "right click sword emits equip intent")
 	_check(not _hud._inventory_rows[0]["equipped"], "equip has no optimistic item grant")
+	_click(snapshot["slot_centers"][2], MOUSE_BUTTON_RIGHT)
+	await process_frame
+	_check(_events.back() == ["use", 13], "medium potion uses the shared right-click intent")
+	_check(_hud._inventory_rows[2]["count"] == 2, "medium potion waits for server consumption")
 	var potion: Array = snapshot["slot_centers"][1]
 	_click(potion, MOUSE_BUTTON_LEFT)
 	await process_frame

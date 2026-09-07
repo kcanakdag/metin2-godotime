@@ -2,12 +2,13 @@
 # FILE WILL NOT BE SAVED. MODIFY TABLES IN YOUR MODULE SOURCE CODE INSTEAD.
 class_name GameModuleDb extends RefCounted
 
-const table_names : Array[String] = ["loot", "item_drop", "simulation_clock", "chat_message", "obstacle", "inventory_item", "player_appearance", "account_character", "character_progression", "monster", "inventory_access", "world_info", "command_feedback", "player", "combat_target_view", "account_state"]
+const table_names : Array[String] = ["loot", "item_drop", "simulation_clock", "chat_message", "npc_interaction", "obstacle", "inventory_item", "player_appearance", "account_character", "character_progression", "monster", "inventory_access", "world_info", "command_feedback", "player", "combat_target_view", "account_state"]
 
 var loot: GameLootTable
 var item_drop: GameItemDropTable
 var simulation_clock: GameSimulationClockTable
 var chat_message: GameChatMessageTable
+var npc_interaction: GameNpcInteractionTable
 var obstacle: GameObstacleTable
 var inventory_item: GameInventoryItemTable
 var player_appearance: GamePlayerAppearanceTable
@@ -26,6 +27,7 @@ func _init(p_local_db: LocalDatabase) -> void:
 	item_drop = preload('res://spacetime_bindings/schema/tables/game_item_drop_table.gd').create(p_local_db)
 	simulation_clock = preload('res://spacetime_bindings/schema/tables/game_simulation_clock_table.gd').create(p_local_db)
 	chat_message = preload('res://spacetime_bindings/schema/tables/game_chat_message_table.gd').create(p_local_db)
+	npc_interaction = preload('res://spacetime_bindings/schema/tables/game_npc_interaction_table.gd').create(p_local_db)
 	obstacle = preload('res://spacetime_bindings/schema/tables/game_obstacle_table.gd').create(p_local_db)
 	inventory_item = preload('res://spacetime_bindings/schema/tables/game_inventory_item_table.gd').create(p_local_db)
 	player_appearance = preload('res://spacetime_bindings/schema/tables/game_player_appearance_table.gd').create(p_local_db)

@@ -1,6 +1,8 @@
 //! Server-owned linear root-displacement approximation for selected combo actions.
 
-use crate::definitions::{self, AttackDefinition, RootMotionDefinition};
+#[cfg(test)]
+use crate::definitions;
+use crate::definitions::{AttackDefinition, RootMotionDefinition};
 use crate::{Controller, accounts, collision_bounds, content, controller, player};
 use spacetimedb::{Identity, ReducerContext, Table};
 
@@ -43,7 +45,7 @@ fn rotated_delta(local_x: f64, local_z: f64, heading: f32) -> Option<(f32, f32)>
 
 fn definition_for_step(step: u8) -> Option<&'static AttackDefinition> {
     let index = usize::from(step.checked_sub(1)?);
-    definitions::PLAYER_ONEHAND_COMBO.get(index)
+    crate::characters::root_actions().nth(index)
 }
 
 fn simulation_target_elapsed(raw_elapsed_us: i64, duration_us: i64) -> i64 {
@@ -164,11 +166,8 @@ pub fn validate_action_definition(definition: &AttackDefinition) -> Result<(), S
     if !valid_definition(root) || root.duration_us != definition.duration_us {
         return Err("The trusted root-motion definition is invalid.".into());
     }
-    if !definitions::PLAYER_ONEHAND_COMBO
-        .iter()
-        .any(|candidate| candidate.id == definition.id)
-    {
-        return Err("Root motion is limited to the trusted combo prefix.".into());
+    if !crate::characters::root_actions().any(|candidate| candidate.id == definition.id) {
+        return Err("Root motion requires a compiled character action.".into());
     }
     Ok(())
 }
@@ -188,8 +187,7 @@ pub fn start(
     let Some(_root) = definition.root_motion else {
         return Ok(());
     };
-    let index = definitions::PLAYER_ONEHAND_COMBO
-        .iter()
+    let index = crate::characters::root_actions()
         .position(|candidate| candidate.id == definition.id)
         .expect("the root-motion definition was validated against the trusted prefix");
     control.root_motion_step = u8::try_from(index + 1)

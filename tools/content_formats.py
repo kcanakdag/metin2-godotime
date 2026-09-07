@@ -311,7 +311,9 @@ def _motion_events(group: LegacyNode, duration_us: int) -> tuple[list[dict], lis
     return events, unsupported
 
 
-def parse_msa(text: str) -> dict:
+def parse_msa(
+    text: str, *, ignore_legacy_link_time: bool = False, allow_post_clip_combo: bool = False
+) -> dict:
     root = parse_legacy_script(text)
     if one(root, "ScriptType") != "MotionData":
         raise ValueError("Expected ScriptType MotionData")
@@ -356,10 +358,20 @@ def parse_msa(text: str) -> dict:
             "pre_input_us": seconds_to_us(one(combo, "PreInputTime") or ""),
             "direct_input_us": seconds_to_us(one(combo, "DirectInputTime") or ""),
             "input_limit_us": seconds_to_us(one(combo, "InputLimitTime") or ""),
-            "link_us": seconds_to_us(link) if link is not None else None,
+            "link_us": seconds_to_us(link)
+            if link is not None and not ignore_legacy_link_time
+            else None,
         }
         if any(value is not None and value > duration_us for value in result["combo"].values()):
-            raise ValueError("Combo timing exceeds clip duration")
+            if not allow_post_clip_combo:
+                raise ValueError("Combo timing exceeds clip duration")
+            result["unsupported"].append(
+                {
+                    "kind": "post_clip_combo",
+                    "timings": result["combo"].copy(),
+                    "reason": "Original combo input bounds extend beyond this presentation clip; gameplay must define reachable input windows",
+                }
+            )
     motion_events = root.group("MotionEventData")
     if motion_events is not None:
         events, omitted = _motion_events(motion_events, duration_us)

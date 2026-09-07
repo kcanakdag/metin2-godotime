@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "profile_id": "classic-characters",
+  "source": {
+    "client_revision": "bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7",
+    "server_reference": {
+      "repository": "https://git.old-metin2.com/metin2/server",
+      "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+      "files": [
+        {
+          "path": "src/common/length.h",
+          "git_sha": "c49d348b83ac4a89e725831ca7d9236b40e688f9",
+          "sha256": "cdd6c822eb610ad21220bbdeb02912619865667d7490fee39a9b1bb9b309c4cc"
+        },
+        {
+          "path": "src/game/src/char.cpp",
+          "git_sha": "ef6cd03e865dc66fe4c26a967ba81292c3c4b0d4",
+          "sha256": "a34bf8a855d49ae488d16dd326f4b6aa69d65dfb5c327bd42264eb39aa633cbc"
+        },
+        {
+          "path": "src/game/src/constants.cpp",
+          "git_sha": "d03e04fcf009bee8ebeb11c79ae70fcd61d81fe6",
+          "sha256": "201c72ba54dd5f52462722f10c9d7bde4b0a9cd8ae7e23cb1620f33e5ad38347"
+        }
+      ]
+    }
+  },
+  "classes": [
+    {
+      "id": "warrior",
+      "class_id": 0,
+      "name": "Warrior",
+      "source_class": "Warrior",
+      "variants": [
+        {
+          "sex": 0,
+          "model_key": "warrior_m"
+        },
+        {
+          "sex": 1,
+          "model_key": "warrior_w"
+        }
+      ]
+    },
+    {
+      "id": "ninja",
+      "class_id": 1,
+      "name": "Ninja",
+      "source_class": "Assassin",
+      "variants": [
+        {
+          "sex": 0,
+          "model_key": "assassin_m"
+        },
+        {
+          "sex": 1,
+          "model_key": "assassin_w"
+        }
+      ]
+    },
+    {
+      "id": "sura",
+      "class_id": 2,
+      "name": "Sura",
+      "source_class": "Sura",
+      "variants": [
+        {
+          "sex": 0,
+          "model_key": "sura_m"
+        },
+        {
+          "sex": 1,
+          "model_key": "sura_w"
+        }
+      ]
+    },
+    {
+      "id": "shaman",
+      "class_id": 3,
+      "name": "Shaman",
+      "source_class": "Shaman",
+      "variants": [
+        {
+          "sex": 0,
+          "model_key": "shaman_m"
+        },
+        {
+          "sex": 1,
+          "model_key": "shaman_w"
+        }
+      ]
+    }
+  ],
+  "distribution": {
+    "basis": "development-only-original-fixture",
+    "evidence": "docs/third-party.md#warrior-fixture-and-conversion",
+    "release_status": "excluded-unless-rights-are-established"
+  }
+}

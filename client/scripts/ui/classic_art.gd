@@ -133,19 +133,13 @@ static func title(parent: Node, text: String, width: float, close: Callable) -> 
 
 
 static func item_icon(vnum: int) -> Texture2D:
-	return texture("icon/item/%05d" % vnum)
+	var row := ItemCatalog.item(vnum)
+	return texture(str(row.get("icon", ""))) if not row.is_empty() else null
 
 
 static func item_height(vnum: int) -> int:
-	return 2 if vnum == 10 else 1
+	return int(ItemCatalog.item(vnum).get("height", 1))
 
 
 static func item_name(vnum: int) -> String:
-	match vnum:
-		10:
-			return "Sword+0"
-		27001:
-			return "Red Potion (S)"
-		27002:
-			return "Red Potion (M)"
-	return "Unknown Item"
+	return str(ItemCatalog.item(vnum).get("name", "Unknown Item"))

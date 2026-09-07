@@ -169,6 +169,7 @@ def _normalized_fixture() -> dict:
     return {
         "content_hash": "a" * 64,
         "progression": trusted["progression"],
+        "item_catalog": trusted["item_catalog"],
         "actors": [
             {
                 "id": "actor.player.warrior-male",
@@ -318,7 +319,7 @@ class ComboContentTests(unittest.TestCase):
     def test_compiler_projects_only_the_declared_four_action_prefix(self):
         payload = make_server_payload(self.profile, _normalized_fixture())
         validate_server_payload(payload, "p0-warrior-dog")
-        self.assertEqual(payload["schema_version"], 5)
+        self.assertEqual(payload["schema_version"], 7)
         self.assertEqual(payload["base_combo_prefix"], list(PLAYER_COMBO_ACTION_IDS))
         self.assertEqual(len(payload["actions"]), 6)
         terminal = next(

@@ -1,7 +1,9 @@
 //! Server-owned common one-hand combo prefix and private queued transition state.
 
 use crate::combat::monster;
-use crate::definitions::{self, ComboInputDefinition};
+#[cfg(test)]
+use crate::definitions;
+use crate::definitions::ComboInputDefinition;
 use crate::{Controller, accounts, combat, controller, inventory, player};
 use spacetimedb::{Identity, ReducerContext, Table};
 use std::cmp::Ordering;
@@ -110,6 +112,11 @@ pub fn clear_chain(control: &mut Controller) {
 pub fn cancel_queued_link(control: &mut Controller) {
     control.combo_link_queued = false;
     control.combo_transition_boundary_us = 0;
+}
+
+fn store_queued_link(control: &mut Controller, boundary_us: i64) {
+    control.combo_link_queued = true;
+    control.combo_transition_boundary_us = boundary_us;
 }
 
 pub fn cancel_queued_link_for_character(ctx: &ReducerContext, character: Identity) {
@@ -231,9 +238,7 @@ fn transition_to_next_step(
     if next_step > COMBO_STEP_FOUR {
         return Err(BOUNDED_ERROR.into());
     }
-    let definition = definitions::PLAYER_ONEHAND_COMBO
-        .get(usize::from(next_step - 1))
-        .ok_or("The trusted combo prefix is incomplete.")?;
+    let definition = crate::characters::combo_step(ctx, control.identity, next_step)?;
     transition_is_valid(ctx, control)?;
     combat::discard_expired_player_hit(control, now);
     if control.pending_attack_hit_at_us != 0 {
@@ -250,7 +255,6 @@ fn transition_to_next_step(
                 .ok_or(TARGET_ERROR)?,
         )
     };
-    let damage = planned_damage(definition, target.is_some())?;
     combat::validate_player_action_start(ctx, control, definition, target.is_some(), now)?;
     // All state-dependent scheduled-transition rejection paths are resolved
     // before this physical sample. The remaining start checks repeat trusted
@@ -270,7 +274,6 @@ fn transition_to_next_step(
         definition,
         target_id: control.combo_target_id,
         target_generation: control.combo_target_life_sequence,
-        damage,
         heading: target.map(|target| (player.x - target.x).atan2(player.z - target.z)),
         can_select_target,
     };
@@ -280,18 +283,6 @@ fn transition_to_next_step(
     control.combo_action_ends_at_us = control.attack_until_us;
     cancel_queued_link(control);
     Ok(())
-}
-
-fn planned_damage(
-    definition: &definitions::AttackDefinition,
-    has_target: bool,
-) -> Result<u16, String> {
-    if !has_target && definition.special_area.is_none() {
-        return Ok(0);
-    }
-    definitions::PLAYER_BASE_DAMAGE
-        .checked_add(definitions::WEAPON_ATTACK_BONUS)
-        .ok_or_else(|| "Combo damage is outside the supported range.".into())
 }
 
 /// Handle an active combo intent. `Ok(false)` means the expired/idle chain may
@@ -313,7 +304,7 @@ pub fn handle_follow_up(
         COMBO_STEP_ONE | COMBO_STEP_TWO | COMBO_STEP_THREE => {}
         _ => return Err("Combo chain state is invalid.".into()),
     }
-    let input = definitions::PLAYER_ONEHAND_COMBO[usize::from(control.combo_step - 1)]
+    let input = crate::characters::combo_step(ctx, control.identity, control.combo_step)?
         .combo_input
         .ok_or("The trusted combo step has no input timing.")?;
     match classify_follow_up(
@@ -334,8 +325,7 @@ pub fn handle_follow_up(
             if !chain_target_is_valid(ctx, control) {
                 return Err(TARGET_ERROR.into());
             }
-            control.combo_link_queued = true;
-            control.combo_transition_boundary_us = boundary_us;
+            store_queued_link(control, boundary_us);
             Ok(true)
         }
         FollowUp::Transition => {
@@ -508,6 +498,7 @@ mod tests {
             action_revision: 9,
             pending_attack_target_id: 3,
             pending_attack_target_generation: 4,
+            pending_attack_source_generation: 2,
             pending_attack_hit_at_us: 1_192,
             pending_attack_hit_until_us: 1_384,
             pending_attack_damage: 35,
@@ -547,6 +538,7 @@ mod tests {
             control.action_revision,
             control.pending_attack_target_id,
             control.pending_attack_target_generation,
+            control.pending_attack_source_generation,
             control.pending_attack_hit_at_us,
             control.pending_attack_hit_until_us,
             control.pending_attack_damage,
@@ -592,6 +584,7 @@ mod tests {
                 control.action_revision,
                 control.pending_attack_target_id,
                 control.pending_attack_target_generation,
+                control.pending_attack_source_generation,
                 control.pending_attack_hit_at_us,
                 control.pending_attack_hit_until_us,
                 control.pending_attack_damage,
@@ -634,6 +627,33 @@ mod tests {
                 control.root_motion_started_at_us,
                 control.root_motion_consumed_elapsed_us,
                 control.root_motion_heading,
+            )
+        );
+    }
+
+    #[test]
+    fn queue_receipt_only_records_boundary_and_preserves_captured_formula_outcome() {
+        let mut control = active_combo_controller();
+        control.combo_link_queued = false;
+        control.combo_transition_boundary_us = 0;
+        let captured = (
+            control.pending_attack_source_generation,
+            control.pending_attack_target_id,
+            control.pending_attack_target_generation,
+            control.pending_attack_damage,
+            control.pending_attack_action_revision,
+        );
+        store_queued_link(&mut control, 9_999);
+        assert!(control.combo_link_queued);
+        assert_eq!(control.combo_transition_boundary_us, 9_999);
+        assert_eq!(
+            captured,
+            (
+                control.pending_attack_source_generation,
+                control.pending_attack_target_id,
+                control.pending_attack_target_generation,
+                control.pending_attack_damage,
+                control.pending_attack_action_revision,
             )
         );
     }
@@ -723,16 +743,15 @@ mod tests {
     }
 
     #[test]
-    fn targetless_terminal_area_keeps_trusted_weapon_damage() {
+    fn targetless_terminal_area_is_the_only_step_without_an_ordinary_trace_hit() {
         let terminal = &definitions::PLAYER_ONEHAND_COMBO[3];
         assert!(terminal.special_area.is_some());
-        assert_eq!(
-            planned_damage(terminal, false).unwrap(),
-            definitions::PLAYER_BASE_DAMAGE + definitions::WEAPON_ATTACK_BONUS
-        );
-        assert_eq!(
-            planned_damage(&definitions::PLAYER_ONEHAND_COMBO[0], false).unwrap(),
-            0
+        assert!(terminal.ordinary_hit_invulnerability_us == 0);
+        assert!(
+            definitions::PLAYER_ONEHAND_COMBO[..3]
+                .iter()
+                .all(|definition| definition.special_area.is_none()
+                    && definition.ordinary_hit_invulnerability_us > 0)
         );
     }
 }

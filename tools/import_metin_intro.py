@@ -22,6 +22,9 @@ def selected_intro_assets():
         "select.sub",
         "login/loginwindow.sub",
         "select/name_warrior.sub",
+        "select/name_assassin.sub",
+        "select/name_sura.sub",
+        "select/name_shaman.sub",
         "empire/title.sub",
     }
     names = {

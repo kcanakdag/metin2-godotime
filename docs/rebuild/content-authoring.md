@@ -1,13 +1,46 @@
 # Extensible content authoring
 
-This is an architecture requirement for the upcoming generalization work.
-The current compiler and runtime still select the Warrior/Sword/Wild Dog
-fixture; general item, quest, class and content-pack authoring is not implemented.
+The first typed item registry is implemented for the selected Sword and two
+red potions. Quest execution, general class/mob registries and content packs
+remain upcoming work. These requirements continue to govern that expansion.
 
 Adding content that uses supported mechanics must require definitions and assets,
 without adding item-ID, quest-ID or class-ID branches throughout gameplay code.
 Adding a new mechanic introduces one reusable, validated handler. Definitions
 select handlers; they cannot execute arbitrary client or server scripts.
+
+## Implemented population authoring
+
+Map population authoring is also available through the
+[shared server validator and Godot dev preview](../world-content.md). Spawn
+placements are definitions; combat and respawn remain server-owned. This is the
+first placement registry, not yet a general mob/stat/AI registry. Quests are
+deferred by the current implementation priorities.
+
+## Implemented item authoring
+
+The profile's `item_catalog` has schema version 1 and explicit selectors with
+`id`, `revision`, `vnum` and `icon`. `tools/item_definitions.py` resolves each
+selector against the pinned proto and English name catalogs. It derives height,
+stack limits, class/sex/level requirements, sword power and HP/SP recovery
+parameters. `server/build_items.rs` independently validates numeric bounds,
+handlers, uniqueness and links to combat/reward definitions before generating
+typed Rust records. The client receives public capabilities without source
+archives, provenance records or mutable effect pools.
+
+The selected small/medium potions use `item.recovery.pool.v1` with 300/800 HP.
+Compiler and builder tests add a large-potion record using the same handler;
+that test does not expand the shipped icon fixture. Runtime item branches use
+capabilities, while the starter loadout and selected content fixture still name
+their intended items. The live two-account recovery scenario verifies private
+consumption, timed recovery, rejection and disconnect without replay.
+
+New weapon definitions still need compatible imported presentation/motion data.
+New item mechanics need a handler and explicit validation. Other equipment
+slots, applies/attributes, prices, upgrades, general loadout authoring and
+item-instance migration tooling remain pending. Current instances resolve by
+stable vnum under the published definitions; incompatible identity/type/grid/stack
+changes require an explicit migration or fresh database.
 
 ## Definitions and state
 
@@ -74,6 +107,11 @@ the matching public artifacts; they cannot enable gameplay rules themselves.
 ## Authoring tools and verification scope
 
 Extend the existing compiler and previews before building a separate editor.
+The implemented `content_compile.py diff` command compares generated server/client
+pairs, reports changed field paths, and suggests gameplay or presentation checks;
+see [the content workflow](../content-import.md#compare-a-content-update).
+It includes generated item-catalog fields; general quest registries and map bakes
+are not yet implemented inputs.
 Validation must cover duplicate IDs, missing references, unsupported handlers,
 numeric bounds, item placement rules, unreachable quest states, invalid reward
 definitions, asset/skeleton compatibility and content-version compatibility.
@@ -93,8 +131,8 @@ that changes hit timing or authoritative root travel is a gameplay change.
 Routine content work must not depend on rerunning account creation, inventory
 dragging and four-minute token refresh unless those contracts are affected.
 
-The first generalization milestone should add a second representative definition
-through shared registry lookups, then prove adding another needs no new ID
-branches. Preserve the selected original-source fixture as a regression case.
+The first item milestone now uses the second recovery definition through shared
+registry lookups and proves a third can compile without a new ID branch. Preserve
+the selected original-source fixture as a regression case.
 General item effects precede quest reward integration; persisted quest execution
 and exact-once reward handling precede bulk quest import and authoring UI.

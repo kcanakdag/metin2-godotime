@@ -3,13 +3,73 @@
 A Metin2-inspired game with a **standard Godot/GDScript client and Rust
 SpacetimeDB server in one monorepo**. The server owns movement, terrain height,
 building collision, presence, combat and rewards. Blender converts selected
-original warrior and Yongan assets. The original Metin2 executable cannot
+original character and Yongan assets. The original Metin2 executable cannot
 connect to this game's new protocol.
 
-Future quests, items, mobs and classes follow the
+Items, future quests, mobs and classes follow the
 [data-based content authoring contract](docs/rebuild/content-authoring.md):
 versioned definitions select shared mechanics, with server-owned progress and
-rewards. General registries and quest execution remain upcoming work.
+rewards. The first item registry now drives grid/stack rules, equipment
+requirements, weapon power, names/icons and shared recovery effects. General
+quest/mob registries and quest execution remain upcoming work. A selected
+[classic character catalog and automated importer](docs/characters.md) now drive
+the four classes, both sexes, starting stats and model/animation selection.
+
+Quests are deferred while development prioritizes gameplay, mobs, map NPCs,
+scenery, classes and abilities. The new [world-content workflow](docs/world-content.md)
+adds validated population profiles and an isolated Godot development preview.
+Yongan's six authored Wild Dog homes pass **107 two-client checks** on a fresh
+local database. The original City Guard is installed in the playable map layer,
+with original placement, weighted idle animations and its attached weapon.
+Its main-scene lifecycle and picking pass 38 native checks; the connection in that focused
+fixture is simulated. A separate **103-check authenticated Web/Linux run**
+qualifies approach, dialogue, Close/Escape, WASD and account lifecycle. Another
+59 live checks cover private sessions, rejection, expiry and reconnect.
+The updated development build is served at **http://127.0.0.1:8186** against
+`mt2-p2-class-combos-r1-20260908`. Click the City Guard to approach and talk;
+Close or Escape dismisses the dialogue, and movement resumes normally.
+Character creation shows Warrior, Ninja, Sura and Shaman together, with the
+selected class in front, original intro idle animations, hair, titles and
+portraits. Both sexes are available. Native creation UI passes 61 checks.
+Holding Space repeats attacks and links the common four-step Sword+0 chain for
+Warrior, Ninja and Sura. The left hotbar button uses the original attack icon.
+The updated slice passes 282 live two-client checks and 100 Chrome/Linux checks,
+including held sword/unarmed input. See the
+[status ledger](docs/rebuild/implementation-status.md) for evidence. Trees,
+new mob types, Shaman weapons, additional
+weapon modes and abilities remain pending. The public endpoint
+remains unchanged.
+
+The current worktree is protocol 14 / trusted content schema 7. Item actions
+carry the server item's revision, rejecting stale/replayed mutations. Quantity
+changes have a private transactional audit history and an offline reconciliation
+tool. See the [item security contract](docs/architecture.md#item-integrity-and-replay-protection).
+Its two-client security scenario passes 110 checks; another 10 Godot checks verify
+revision payloads without optimistic item mutation. These changes are local and
+are not deployed publicly.
+
+The preceding protocol-11 isolated
+two-client item scenario passes 50 checks: small/medium potions restore 300/800
+HP gradually, reject invalid/repeated uses and consume exactly once; disconnect
+clears pending recovery without refund or replay. The Godot component suite
+passes 130 checks, and the rendered inventory test passes 21 checks. A further
+94 live melee checks and 14 rendered tooltip checks passed. This is
+historical local test evidence; the public endpoint remains protocol 4.
+
+The preceding physical-damage slice integrates generated
+weapon/mob values, server-owned Attack/Defense projections, and matching
+protocol-10 bindings from fresh local test databases. Focused two-client runs
+pass 101 melee and 65 area-finisher checks. The twenty-kill progression run
+passes all 1,063 checks, including level two, private STR/VIT/DEX allocations,
+damage changes and queued-action stat capture. A further 49 checks verify
+pending-area cancellation and reconnect without replay. Web/Linux pass 94
+functional checks, but the run's clean-engine-log gate fails on a separately
+reproduced Godot embedded-tooltip issue. That older build is retained as test
+evidence; the public endpoint remains unchanged.
+
+`tools/content_compile.py diff` now compares saved/current generated content
+pairs and reports changed fields plus the affected QA scope. See the
+[content comparison workflow](docs/content-import.md#compare-a-content-update).
 
 The latest local combat checkpoint accepts the selected four-hit Sword+0 combo,
 area damage, knockback/standup and camera shake. Its **154-check exported
@@ -224,6 +284,12 @@ make test-actors
 make import-map BLENDER=/path/to/blender
 make bake-map BLENDER=/path/to/blender
 make test-map
+
+# Convert the selected stationary NPC, then install its public map-bound catalog.
+python3 tools/import_npc_content.py --profile content/profiles/yongan-city-guard.json \
+  --blender /path/to/blender --output .local/npcs/city-guard
+make npc-install
+make test-npcs GODOT=/path/to/godot
 
 # Leave the database running in this terminal.
 make server-start
@@ -462,7 +528,7 @@ client/scripts/net/          SDK, identity and subscription boundary
 client/scripts/actors/       Warrior, monster and loot presentation
 client/scripts/world/        Training ground and streamed Yongan sections
 client/scripts/ui/           Original taskbar/inventory/minimap, chat and diagnostics
-client/spacetime_bindings/   Generated protocol-8 schema and provenance
+client/spacetime_bindings/   Generated current-protocol schema and provenance
 client/addons/SpacetimeDB/   Pinned runtime SDK
 client/addons/godot_mcp/     Editor tooling, excluded from exports
 server/src/                 Identity, movement, map content and combat rules

@@ -5,7 +5,7 @@ original game asset rights remain separate.
 
 | Source | Pinned revision/version | Use and license |
 | --- | --- | --- |
-| [Metin2 client archive](https://git.old-metin2.com/metin2/client) | `bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7` | Warrior, selected Yongan dependencies, original UI fixture/minimap tiles and two target-selection effect fixtures; originals and derivatives are ignored |
+| [Metin2 client archive](https://git.old-metin2.com/metin2/client) | `bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7` | Selected original bodies/default hair and general/intro/one-hand-or-fan motions for eight classic appearances, Yongan dependencies, UI/portraits/minimap tiles and two target-selection effects; originals and derivatives are ignored |
 | [Pillow](https://github.com/python-pillow/Pillow/tree/12.1.0) | `12.1.0` in `tools/requirements-assets.txt` | Build-time decoding/cropping of selected original raster UI and target-effect texture assets; Pillow's own license applies independently of source art rights |
 | [Carbon Blender tools](https://github.com/carbonenginejs/tools-blender/tree/8cba23114bf1d30c9da597c1ecf49271e00b939d) | `8cba23114bf1d30c9da597c1ecf49271e00b939d` | MIT importer/reader, downloaded with its license into `.cache` |
 | [Native Godot SpacetimeDB SDK](https://github.com/flametime/Godot-SpacetimeDB-SDK/tree/f6c59d7068e5dacbde0559906746d0a6c5933ffb) | `f6c59d7068e5dacbde0559906746d0a6c5933ffb` | MIT; plugin version 0.3.2, vendored in `client/addons/SpacetimeDB` |
@@ -104,6 +104,13 @@ uses its C# SDK with Godot .NET. That SDK was considered but is not a runtime
 dependency of this standard-Godot client.
 
 ## Warrior fixture and conversion
+
+The selected stationary-NPC extension imports City Guard 20354 (`guard_leader`),
+its two model-referenced textures and five motion clips from the same pinned
+client. It uses pinned server NPC/name/placement metadata as reference data.
+The shared rigid skinning adapter follows the source renderer's composite bone
+operation without copying its implementation. See [world-content](world-content.md)
+for pins, commands and current limits. These assets and derivatives remain ignored.
 
 The asset fetcher verifies each downloaded file against the archive's Git blob
 hash and records SHA-256 values in `assets/source/warrior/manifest.json`.

@@ -1,4 +1,4 @@
-//! Source-backed male Warrior level, EXP and stat progression.
+//! Source-backed class, level, EXP and stat progression.
 
 use crate::accounts::{account_character, authenticated_controlled_account};
 use crate::definitions;
@@ -14,6 +14,7 @@ pub struct CharacterProgression {
     pub character_id: Identity,
     #[index(btree)]
     pub account: Identity,
+    pub character_class: u8,
     pub level: u8,
     pub experience: u32,
     pub next_exp: u32,
@@ -27,6 +28,9 @@ pub struct CharacterProgression {
     pub random_sp: u32,
     pub current_sp: u32,
     pub max_sp: u32,
+    pub display_attack_min: u16,
+    pub display_attack_max: u16,
+    pub display_defense: u16,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -96,18 +100,22 @@ fn next_exp(level: u8) -> Result<u32, String> {
 }
 
 fn max_health(row: &CharacterProgression) -> Result<u16, String> {
-    let value = definitions::BASE_MAX_HP
+    let class = crate::characters::class(row.character_class)?;
+    let value = class
+        .base_hp
         .checked_add(row.random_hp)
-        .and_then(|value| value.checked_add(u32::from(row.vitality) * definitions::HP_PER_VITALITY))
+        .and_then(|value| value.checked_add(u32::from(row.vitality) * class.hp_per_vitality))
         .ok_or("Maximum HP overflowed.")?;
     u16::try_from(value).map_err(|_| "Maximum HP exceeds the public combat field.".into())
 }
 
 fn max_sp(row: &CharacterProgression) -> Result<u32, String> {
-    definitions::BASE_MAX_SP
+    let class = crate::characters::class(row.character_class)?;
+    class
+        .base_sp
         .checked_add(row.random_sp)
         .and_then(|value| {
-            value.checked_add(u32::from(row.intelligence) * definitions::SP_PER_INTELLIGENCE)
+            value.checked_add(u32::from(row.intelligence) * class.sp_per_intelligence)
         })
         .ok_or("Maximum SP overflowed.".into())
 }
@@ -175,31 +183,33 @@ pub fn create_character(
         .character_id()
         .find(character_id)
         .ok_or("Character ownership is missing.")?;
-    if character.account != account
-        || character.character_class != definitions::SUPPORTED_CHARACTER_CLASS
-        || character.sex != definitions::SUPPORTED_SEX
-    {
-        return Err("Only the selected male Warrior progression is supported.".into());
+    if character.account != account {
+        return Err("Character progression ownership does not match.".into());
     }
-    let row = CharacterProgression {
+    crate::characters::appearance(character.character_class, character.sex)?;
+    let class = crate::characters::class(character.character_class)?;
+    let mut row = CharacterProgression {
         character_id,
         account,
+        character_class: character.character_class,
         level: 1,
         experience: 0,
         next_exp: next_exp(1)?,
         level_step: 0,
         unspent_stat_points: 0,
-        strength: definitions::WARRIOR_STRENGTH,
-        vitality: definitions::WARRIOR_VITALITY,
-        dexterity: definitions::WARRIOR_DEXTERITY,
-        intelligence: definitions::WARRIOR_INTELLIGENCE,
+        strength: class.strength,
+        vitality: class.vitality,
+        dexterity: class.dexterity,
+        intelligence: class.intelligence,
         random_hp: 0,
         random_sp: 0,
-        current_sp: definitions::BASE_MAX_SP
-            + u32::from(definitions::WARRIOR_INTELLIGENCE) * definitions::SP_PER_INTELLIGENCE,
-        max_sp: definitions::BASE_MAX_SP
-            + u32::from(definitions::WARRIOR_INTELLIGENCE) * definitions::SP_PER_INTELLIGENCE,
+        current_sp: class.base_sp + u32::from(class.intelligence) * class.sp_per_intelligence,
+        max_sp: class.base_sp + u32::from(class.intelligence) * class.sp_per_intelligence,
+        display_attack_min: 0,
+        display_attack_max: 0,
+        display_defense: 0,
     };
+    refresh_display_values(ctx, character_id, &mut row)?;
     validate_row(&row)?;
     ctx.db.character_progression().insert(row);
     let mut player = ctx
@@ -235,6 +245,7 @@ pub fn rebuild_projection(ctx: &ReducerContext, character_id: Identity) -> Resul
     row.next_exp = next_exp(row.level)?;
     row.max_sp = max_sp(&row)?;
     row.current_sp = row.current_sp.min(row.max_sp);
+    refresh_display_values(ctx, character_id, &mut row)?;
     validate_row(&row)?;
     let mut player = ctx
         .db
@@ -263,11 +274,7 @@ pub fn selected_supported_progression(
         .find(state.selected_character)
         .filter(|character| character.account == ctx.sender())
         .ok_or("That character does not belong to your account.")?;
-    if character.character_class != definitions::SUPPORTED_CHARACTER_CLASS
-        || character.sex != definitions::SUPPORTED_SEX
-    {
-        return Err("Only the selected male Warrior progression is supported.".into());
-    }
+    crate::characters::appearance(character.character_class, character.sex)?;
     ctx.db
         .controller()
         .identity()
@@ -283,6 +290,34 @@ pub fn selected_supported_progression(
         .ok_or("Character progression is missing.")?;
     validate_row(&row)?;
     Ok((state.selected_character, row))
+}
+
+fn refresh_display_values(
+    ctx: &ReducerContext,
+    character_id: Identity,
+    row: &mut CharacterProgression,
+) -> Result<(), String> {
+    let display = crate::physical_damage::display_values(ctx, character_id, row)?;
+    row.display_attack_min = display.attack_min;
+    row.display_attack_max = display.attack_max;
+    row.display_defense = display.defense;
+    Ok(())
+}
+
+pub fn rebuild_display_projection(
+    ctx: &ReducerContext,
+    character_id: Identity,
+) -> Result<(), String> {
+    let mut row = ctx
+        .db
+        .character_progression()
+        .character_id()
+        .find(character_id)
+        .ok_or("Character progression is missing.")?;
+    refresh_display_values(ctx, character_id, &mut row)?;
+    validate_row(&row)?;
+    ctx.db.character_progression().character_id().update(row);
+    Ok(())
 }
 
 pub fn remaining_experience_capacity(row: &CharacterProgression) -> Result<u64, String> {
@@ -349,11 +384,11 @@ fn plan_exact_experience(
                         .ok_or("Unspent stat points overflowed.")?;
                 }
             } else {
-                let hp = roll(definitions::HP_PER_LEVEL_MIN, definitions::HP_PER_LEVEL_MAX);
-                let sp = roll(definitions::SP_PER_LEVEL_MIN, definitions::SP_PER_LEVEL_MAX);
-                if !(definitions::HP_PER_LEVEL_MIN..=definitions::HP_PER_LEVEL_MAX).contains(&hp)
-                    || !(definitions::SP_PER_LEVEL_MIN..=definitions::SP_PER_LEVEL_MAX)
-                        .contains(&sp)
+                let class = crate::characters::class(row.character_class)?;
+                let hp = roll(class.hp_gain_min, class.hp_gain_max);
+                let sp = roll(class.sp_gain_min, class.sp_gain_max);
+                if !(class.hp_gain_min..=class.hp_gain_max).contains(&hp)
+                    || !(class.sp_gain_min..=class.sp_gain_max).contains(&sp)
                 {
                     return Err("Progression random growth is outside the selected ranges.".into());
                 }
@@ -465,9 +500,11 @@ pub fn apply_exact_experience(
         .find(character)
         .ok_or("Character player row is missing.")?;
     let before = snapshot(&row, player.health, player.max_health);
-    let planned = plan_exact_experience(&row, amount, player.health > 0, |minimum, maximum| {
-        ctx.rng().gen_range(minimum..=maximum)
-    })?;
+    let mut planned =
+        plan_exact_experience(&row, amount, player.health > 0, |minimum, maximum| {
+            ctx.rng().gen_range(minimum..=maximum)
+        })?;
+    refresh_display_values(ctx, character, &mut planned.row)?;
     let new_max_health = max_health(&planned.row)?;
     let refill = !planned.quarter_effects.is_empty() && player.health > 0;
     player.max_health = new_max_health;
@@ -488,7 +525,7 @@ pub fn apply_exact_experience(
             character,
             effect.potion_vnum,
             definitions::QUARTER_REWARD_COUNT,
-        );
+        )?;
         add_grant(&mut automatic_items, effect.potion_vnum, grant)?;
     }
     let player = ctx
@@ -588,7 +625,8 @@ pub fn allocate_stat(
     if selected != character_id {
         return Err("Only the currently selected character can allocate stats.".into());
     }
-    let row = plan_stat_allocation(&row, &stat_code)?;
+    let mut row = plan_stat_allocation(&row, &stat_code)?;
+    refresh_display_values(ctx, character_id, &mut row)?;
     let mut player = ctx
         .db
         .player()
@@ -610,6 +648,7 @@ mod tests {
         CharacterProgression {
             character_id: Identity::ZERO,
             account: Identity::ZERO,
+            character_class: 0,
             level: 1,
             experience: 0,
             next_exp: 300,
@@ -623,6 +662,9 @@ mod tests {
             random_sp: 0,
             current_sp: 260,
             max_sp: 260,
+            display_attack_min: 10,
+            display_attack_max: 10,
+            display_defense: 5,
         }
     }
 

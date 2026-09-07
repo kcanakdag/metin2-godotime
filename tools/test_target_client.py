@@ -31,6 +31,9 @@ SMOKES = {
     "picker": ("world_picker_smoke.gd", "WORLD_PICKER_SMOKE"),
     "probe": ("export_probe_smoke.gd", "EXPORT_PROBE_SMOKE"),
     "screen_wave": ("screen_wave_smoke.gd", "SCREEN_WAVE_SMOKE"),
+    "physical_ui": ("physical_ui_smoke.gd", "PHYSICAL_UI_SMOKE"),
+    "physical_protocol": ("physical_protocol_smoke.gd", "PHYSICAL_PROTOCOL_SMOKE"),
+    "item_intent": ("item_intent_smoke.gd", "ITEM_INTENT_SMOKE"),
 }
 TEST_SUPPORT = ("export_probe.gd",)
 
@@ -59,7 +62,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument("--output", type=Path, default=ROOT / ".local/p2-target/client-smoke")
+    parser.add_argument(
+        "--suite", choices=SMOKES, action="append", help="Run only selected components."
+    )
+    parser.add_argument(
+        "--native", action="store_true", help="Capture the physical_ui component under Xvfb."
+    )
     options = parser.parse_args()
+    selected = options.suite or list(SMOKES)
+    if options.native and (selected != ["physical_ui"] or not shutil.which("xvfb-run")):
+        parser.error("--native requires --suite physical_ui and xvfb-run")
     options.output = options.output.resolve()
     options.output.mkdir(parents=True, exist_ok=True)
     report_path = options.output / "report.json"
@@ -89,6 +101,9 @@ def main() -> None:
             "main": sha256(stage / "scripts/main.gd"),
             "main_scene": sha256(stage / "scenes/main.tscn"),
             "actor_catalog": sha256(stage / "scripts/content/actor_catalog.gd"),
+            "item_catalog": sha256(stage / "scripts/content/item_catalog.gd"),
+            "classic_art": sha256(stage / "scripts/ui/classic_art.gd"),
+            "classic_tooltip": sha256(stage / "scripts/ui/classic_tooltip.gd"),
             "pve_actor": sha256(stage / "scripts/actors/pve_actor.gd"),
             "game_connection": sha256(stage / "scripts/net/game_connection.gd"),
             "dev_hud": sha256(stage / "scripts/ui/dev_hud.gd"),
@@ -119,15 +134,15 @@ def main() -> None:
         )
         checks: dict[str, int] = {}
         for name, (script, marker) in SMOKES.items():
+            if name not in selected:
+                continue
+            command = [options.godot, "--path", str(stage), "--script", "res://tests/" + script]
+            if options.native:
+                command = ["xvfb-run", "-a", "-s", "-screen 0 1280x800x24", *command]
+            else:
+                command.insert(1, "--headless")
             output = run(
-                [
-                    options.godot,
-                    "--headless",
-                    "--path",
-                    str(stage),
-                    "--script",
-                    "res://tests/" + script,
-                ],
+                command,
                 environment,
                 options.output / f"{name}.log",
             )
@@ -135,8 +150,20 @@ def main() -> None:
             if not match:
                 raise SystemExit(f"Godot {name} smoke did not report completion.")
             checks[name] = int(match.group(1))
+        if options.native:
+            shutil.copy2(
+                stage / "physical-ui-component.png", options.output / "physical-ui-component.png"
+            )
         report_path.write_text(
-            json.dumps({"passed": True, "checks": checks, "tested_sha256": tested_files}, indent=2)
+            json.dumps(
+                {
+                    "passed": True,
+                    "checks": checks,
+                    "tested_sha256": tested_files,
+                    "native": options.native,
+                },
+                indent=2,
+            )
             + "\n"
         )
         print(f"Verified isolated target client checks {checks}; evidence: {options.output}")

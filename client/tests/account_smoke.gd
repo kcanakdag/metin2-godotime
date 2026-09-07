@@ -55,29 +55,34 @@ func _run() -> void:
 	_check("initial_warrior_progression_is_exact", first.progression.all(_initial_progression))
 	_check("warrior_male_empire_one", first.characters.all(_valid_warrior))
 	await _raw_rejection(
-		first, "create_character", [4, "Outside"], [&"U8", &"String"], "fifth_slot_rejected", "slot"
+		first,
+		"create_character",
+		[4, "Outside", 0, 0],
+		[&"U8", &"String", &"U8", &"U8"],
+		"fifth_slot_rejected",
+		"slot"
 	)
 	await _raw_rejection(
 		first,
 		"create_character",
-		[0, "Occupied"],
-		[&"U8", &"String"],
+		[0, "Occupied", 0, 0],
+		[&"U8", &"String", &"U8", &"U8"],
 		"occupied_slot_rejected",
 		"occupied"
 	)
 	await _raw_rejection(
 		second,
 		"create_character",
-		[1, "ac0_%s" % _name_suffix],
-		[&"U8", &"String"],
+		[1, "ac0_%s" % _name_suffix, 0, 0],
+		[&"U8", &"String", &"U8", &"U8"],
 		"case_insensitive_name_rejected",
 		"taken"
 	)
 	await _raw_rejection(
 		second,
 		"create_character",
-		[1, "bad name"],
-		[&"U8", &"String"],
+		[1, "bad name", 0, 0],
+		[&"U8", &"String", &"U8", &"U8"],
 		"invalid_name_rejected",
 		"letters"
 	)
@@ -419,6 +424,9 @@ func _raw_rejection(
 	reason: String
 ) -> void:
 	var observed := {"done": false, "rejected": false}
+	var intent := _versioned_item_intent(client, reducer, args, types)
+	args = intent.args
+	types = intent.types
 	var call := client._client.call_reducer(reducer, args, types)
 	if call.error != OK:
 		_check(label, false)
@@ -432,6 +440,23 @@ func _raw_rejection(
 			)
 	)
 	_check(label, await _wait_until(func(): return observed.done) and observed.rejected)
+
+
+func _versioned_item_intent(
+	client: GameConnection, reducer: String, args: Array, types: Array
+) -> Dictionary:
+	var old_count := 2 if reducer in ["move_item", "unequip_item"] else 1
+	if (
+		reducer in ["move_item", "equip_item", "unequip_item", "use_item"]
+		and args.size() == old_count
+	):
+		var revision := 0
+		for item: Dictionary in client.inventory:
+			if int(item.id) == int(args[0]):
+				revision = int(item.revision)
+				break
+		return {"args": args + [revision], "types": types + [&"U32"]}
+	return {"args": args, "types": types}
 
 
 func _movement(

@@ -19,6 +19,7 @@ signal equip_item_requested(item_id: int)
 signal unequip_item_requested(item_id: int, cell: int)
 signal use_item_requested(item_id: int)
 signal stat_allocation_requested(character_id: String, stat_code: String)
+signal npc_close_requested(session_id: int)
 signal combat_target_clear_requested
 
 const Art = preload("res://scripts/ui/classic_art.gd")
@@ -54,6 +55,7 @@ const DIAGNOSTIC_FIELDS := {
 	"world_tick_ms": "World tick (ms)",
 }
 
+var npc_panel: Control
 var target_panel: Control
 
 var _root: Control
@@ -106,6 +108,9 @@ func _ready() -> void:
 	_build_chat()
 	_build_hotbar()
 	_build_target()
+	npc_panel = preload("res://scripts/ui/classic_npc_dialogue.gd").new()
+	_root.add_child(npc_panel)
+	npc_panel.close_requested.connect(func(id: int): npc_close_requested.emit(id))
 	_build_status()
 	_build_inventory()
 	_build_minimap()
@@ -142,6 +147,7 @@ func set_connection_state(state: String, message: String) -> void:
 	if not _connected:
 		_inventory.hide()
 		target_panel.clear_view()
+		npc_panel.set_interaction({})
 		_status.set_connected(false)
 		_minimap.close_top()
 		_system.hide()
@@ -173,9 +179,10 @@ func set_world_info(info: Dictionary) -> void:
 	)
 
 
-func set_player_info(row: Dictionary) -> void:
+func set_player_info(row: Dictionary, appearance: Dictionary = {}) -> void:
 	_hotbar.set_player(row)
 	_status.set_player(row)
+	_status.set_appearance(appearance)
 	_inventory.set_gold(int(row.get("gold", 0)))
 	_minimap.set_player_info(row)
 
@@ -620,6 +627,8 @@ func handle_key(event: InputEventKey) -> bool:
 		if wants_keyboard():
 			_chat_panel.close_input()
 			get_viewport().gui_release_focus()
+		elif npc_panel.visible:
+			npc_panel.request_close()
 		elif not _carry.is_empty():
 			_cancel_carry()
 		elif _system_options.visible:
@@ -730,9 +739,11 @@ func _activate_item(row: Dictionary) -> void:
 	if current.is_empty():
 		return
 	var item_id := int(current["id"])
-	if int(current["vnum"]) == 10:
+	var vnum := int(current["vnum"])
+	var definition := ItemCatalog.item(vnum)
+	if definition.get("kind") == "weapon":
 		if bool(current.get("equipped", false)):
-			var cell: int = _inventory.first_free_cell(10)
+			var cell: int = _inventory.first_free_cell(vnum)
 			if cell >= 0:
 				unequip_item_requested.emit(item_id, cell)
 			else:

@@ -1,5 +1,13 @@
 # Architecture
 
+Classic class presentation and combat share the installed character catalog
+(see [characters](characters.md)). The common Sword+0 chain resolves each step
+from the server-owned character appearance. All six Warrior/Ninja/Sura sword
+appearances use the existing queue, target, equipment and action-revision checks.
+Held Space is a client intent scheduler; it cannot choose damage or bypass those
+checks. The original common-chain registrations and bounded action timings are
+compiled into the server, while intro-only preview models use `intro.wait`.
+
 The game uses **standard Godot 4.7.2/GDScript** and a **Rust SpacetimeDB 2.8.3
 module**. The database owns identity, presence, positions, terrain height,
 collision, attacks, health, respawn, gold and item instances. Clients send intents and render
@@ -31,11 +39,12 @@ delivery phases. Its [feature catalog](rebuild/feature-catalog.md) records the
 original-source requirements and dependencies; proposed boundaries are not
 implemented capabilities.
 
-Upcoming content generalization follows the
+Content generalization follows the
 [extensible authoring contract](rebuild/content-authoring.md): typed, versioned
-item/quest/mob/class definitions select shared server mechanics. Mutable item
-instances and quest progress remain server-owned. The current selected fixture
-does not yet implement general registries or a quest executor.
+item/quest/mob/class definitions select shared server mechanics. The first item
+registry now drives inventory placement, stacking, equipment requirements,
+weapon power and gradual recovery. Mutable item instances remain server-owned;
+general quest, mob and class registries and quest execution remain pending.
 
 ## Shared map content
 
@@ -72,7 +81,64 @@ with no multiplayer connection.
 
 Without the Cargo feature, the server uses the small flat training ground with
 five box obstacles. Make enables Yongan by default; raw Cargo has no default
-feature. Both normal builds expose the same current protocol-9 schema.
+feature. Both normal builds expose the same current protocol-14 schema.
+
+## Authored population boundary
+
+`content/worlds/*.population.json` separates spawn placement from combat logic.
+`server/build_population.rs` validates references and stable spawn IDs, producing
+the typed home records consumed by combat, targeting, AI and respawn. The offline
+Rust inspector calls the server's terrain and collision code; initialization
+repeats home validation. Yongan's six development Wild Dogs use the existing
+combat handler. This adds no wire fields or client-granted positions.
+
+Population changes require a fresh database until an explicit migration tool is
+implemented. General mob definitions and authorized live spawn controls remain pending. The separate Godot world preview renders actors at
+validated coordinates and has no server connection. See
+[world-content authoring](world-content.md).
+
+Stationary NPC presentation uses a separate public catalog of stable actor/spawn
+IDs, model references, weighted idle variants and per-map placements. The compiler
+verifies conversion receipts, resolves positions with the same Rust terrain code,
+and binds each layout to the map content hash. `WorldNpcs` runs in the normal Main
+scene: it loads only the selected map's models, instantiates NPCs over available
+chunks, removes them as chunks unload, and clears on leave/disconnect/reconfigure.
+Repeated entry cannot duplicate an actor. Training intentionally has no original
+NPC layout. A missing or mismatched Yongan catalog prevents world entry.
+
+NPC presentation remains immutable. A picking-only body uses layer 2 with mask
+zero; it is excluded from movement collision. The client reserves a click and
+sends ordinary movement until its subscribed position is within 4.5 meters,
+then requests `interact_npc(spawn_id, catalog_hash)`. WASD, another click,
+Escape, attack, content unload, rejection or a 20-second timeout cancels the
+reservation. There is no new pathfinder: a blocked approach can time out.
+
+The game build joins `content/worlds/yongan.interactions.json` to the installed
+offline NPC catalog. Names and positions come from the same immutable content;
+interaction kinds/text come from the tracked profile. `world_info.npc_catalog_hash`
+binds the client to the exact catalog bytes before entry. The server embeds the
+resolved definitions; it never reads a catalog supplied by a connected client.
+Static spawn IDs identify those compiled instances, so no mutable NPC table is
+needed for this slice. The selected handler is `dialogue`; unknown kinds fail
+compilation. Shops and quests are not implemented by this handler.
+
+`interact_npc` validates the active controlling connection, living character,
+compiled NPC existence/catalog, five-meter horizontal distance, three-meter
+height tolerance, and the existing server path-blocking test. It rejects an
+unfinished attack and stops movement on acceptance. The five-meter NPC click
+rule follows pinned client `InstanceBaseBattle.cpp`; server validation and the
+4.5-meter approach margin are our implementation choices. The greeting is
+newly authored development text, not an original quest script.
+
+`npc_interaction` is filtered by server-enforced account ownership and contains
+the active character, unique auto-incremented session ID, NPC ID, title/body and
+60-second deadline. Duplicate opens preserve the existing session and expiry.
+Closing requires the current character's exact session ID, so an old or foreign
+close cannot dismiss a newer conversation. Accepted movement/attack, leave,
+disconnect, death, expired accounts, out-of-range movement or session expiry
+remove it. Reentry starts without a conversation. Future commerce actions must
+validate their own session and transaction rules; this dialogue grants no items,
+currency, permissions or rewards.
 
 ## Networking and runtime boundaries
 
@@ -85,7 +151,7 @@ The socket subprotocol is `v3.bsatn.spacetimedb`. In the pinned server,
 coalesces messages using the
 [v2 binary schema](https://github.com/clockworklabs/SpacetimeDB/blob/v2.8.3/crates/client-api-messages/src/websocket/v2.rs).
 This transport version is separate from application
-`world_info.protocol_version = 9`, checked before joining.
+`world_info.protocol_version = 12`, checked before joining.
 
 Decoding runs on the main thread, with no compression and
 `confirmed_reads = false`. Cached tables require primary keys; Brotli is
@@ -153,7 +219,8 @@ names confer no ownership. `GameConnection.account_identity` and
 | `monster` | Numeric ID; Wild Dog definition identity/model/motion/action and authoritative level, position, heading, health, activity, action and life sequences, respawn and current-action timestamps |
 | `loot` | Numeric ID; position, gold, owner character, reservation and expiry |
 | `inventory_access` | Character-to-account mapping; public with a strict account-only read filter |
-| `inventory_item` | Numeric ID; owner character, server-assigned account, vnum, count, bag cell, equipped flag; account-owned rows only through RLS |
+| `inventory_item` | Numeric instance/stack ID; owner character, server-assigned account, vnum, count, revision, bag cell, equipped flag; account-owned rows only through RLS |
+| `item_audit` | Private append-only quantity events, linked inventory/drop IDs, character/account, before/after counts, item revision and server cause/time |
 | `item_drop` | Numeric ID; position, vnum/count, owner character, reservation and expiry |
 | `character_progression` | Character Identity primary key; owner account, level/current and next experience, quarter step, unspent points, base stats, random HP/SP growth and SP totals; owner-only RLS |
 | `combat_target_view` | Character Identity primary key; owner account and selected monster ID/life sequence only; owner-only RLS |
@@ -209,7 +276,7 @@ Yongan bounds come from baked content rather than the legacy `half_size` field.
 | `perform_attack()` | Start an eligible attack or classify the next server-timed input in the bounded Sword+0 combo |
 | `select_combat_target(target_id, target_life_sequence)`, `clear_combat_target()` | Select an exact live monster generation or clear presentation without accepting client position, health, name or level |
 | `pickup_loot(id)`, `pickup_item_drop(id)` | Validate owner/reservation, range, expiry and capacity; grant rewards atomically |
-| `move_item`, `equip_item`, `unequip_item`, `use_item` | Validate the active character's ownership, placement and consumable rules |
+| `move_item`, `equip_item`, `unequip_item`, `use_item` | Require active character/account ownership and exact expected item revision; validate placement and consumable rules |
 | `allocate_stat(character_id, stat_code)` | Require the currently selected in-world character, ownership, live controller and an unspent point; accept only `st`, `ht`, `dx` or `iq` |
 | `request_command_help(request_id)` | Return bounded owner-private help without writing synthetic public chat |
 | `admin_grant_progression_xp(request_id, amount_text)`, `admin_raise_progression_level(request_id, target_text)` | Require a fixed server-side capability and active selected character; validate bounded decimal text, rate limits and replay-safe request identity before applying the normal progression kernel |
@@ -248,12 +315,15 @@ or general layered navigation. Local and remote visuals interpolate toward
 replicated three-dimensional positions.
 
 The selected fixture is original Wild Dog vnum 101 with trusted actor, model,
-motion-set and action IDs. A player hit deals 25 base damage plus 10 for the
-equipped starter sword, within 2.7 m and a 2 m height difference, with a clear
-path and an 850 ms cooldown. The Wild Dog has 100 health, chases eligible nearby
-players around its home, and deals 20 damage within 1.9 m every 1.3 seconds.
-Those balance values are explicit prototype overrides rather than a claim of
-full original-game balance.
+motion-set and action IDs. Protocol 10 calculates physical damage from canonical
+stats and generated weapon/mob definitions. The initial Warrior deals 17, 18 or
+20 damage with Sword+0, or 1 through 5 unarmed, against this dog. The dog deals
+29, 30, 32, 33 or 35 against the initial Warrior. The source-ordered calculation
+retains binary32 rounding, the selected attack-rating policy and the low-damage
+floor. Critical hits, penetration, skills and general bonus systems remain outside
+this selected fixture. Wild Dog health remains the explicit 100-HP test override.
+Player reach remains 2.7 m with a 2 m height difference and clear path; the general
+cooldown is 850 ms. Dog reach and cooldown remain 1.9 m and 1.3 seconds.
 
 The build requires the generated, ignored
 `server/content/p0-warrior-dog/actions.v1.json`, verifies its canonical SHA-256
@@ -579,8 +649,10 @@ captured-action behavior after target clear/unequip, both renderers' root
 convergence, applied in-range camera samples and out-of-range exclusion. Account
 lifecycle and both actual token refreshes pass with zero position drift. The
 public route, Windows execution, normal exports and original-client parity are
-outside that local acceptance. The physical-damage/schema-6 implementation is
-still isolated preparation and has not changed the accepted protocol-9 runtime.
+outside that local acceptance. The subsequent physical-damage implementation is
+integrated as protocol 10/trusted schema 6 and published to fresh local physical
+test databases. It has separate qualification; the accepted protocol-9 databases
+and exports remain preserved.
 
 The P1 compiler produces a client presentation manifest and a separate trusted
 server action artifact from the same selected profile. The manifest identifies
@@ -613,10 +685,26 @@ gold. Reconnecting does not bypass death or attack deadlines.
 
 ## Character progression and operator controls
 
-The bounded P2 progression slice implements catalog item `SRV-007` for the one
-currently supported male Warrior. The generated trusted definition contains the
+Protocol 14 extends the shared progression slice to all four classic classes and
+both sexes. The [character catalog](characters.md) owns the class/appearance join,
+original starting points and basic attack registrations. Its exact byte hash is
+published as `world_info.character_catalog_hash` and checked by the client.
+Creation accepts only a compiled class/sex pair; subsequent appearance and item
+requirements derive from the server-owned character. The private progression
+row stores its class ID. No client reducer changes the class or sex of an
+existing character.
+
+Physical attacks capture the class-derived stat contribution with the other
+attacker stats. Warrior and Sura use twice STR; Ninja uses `(4*STR + 2*DEX)/3`,
+and Shaman uses `(4*STR + 2*INT)/3`, with source integer truncation. Display and
+damage use the same class contribution. Class basic attack timings and horizontal
+root displacement enter the existing server validation/simulation; imported
+combo clips do not automatically enable additional combo chains.
+
+The generated trusted baseline definition contains the
 original level table through compiled level 120, the normal monster/player level
-delta percentages and the Warrior's initial constants. Runtime progression is
+delta percentages, and the selected Warrior content. Class starting/growth
+constants now come from the shared character catalog. Runtime progression is
 capped at level 99. At the cap, `experience`, `next_exp` and `level_step` are all
 zero, which gives clients a defined cap state without shipping the experience
 table. A new Warrior starts at level 1 with ST 6, HT 4, DX 3, IQ 3, 760 maximum
@@ -630,7 +718,7 @@ levels through 10 use small red potions (`vnum=27001`); later levels use medium
 red potions (`vnum=27002`). Grants fill existing stacks, then free bag cells,
 then create an owner-reserved ground drop that expires after 300 seconds. Only
 items actually stacked, inserted or dropped count as delivered. Consumption of
-the medium potion remains outside this slice.
+the medium potion is now handled by the shared recovery effect described below.
 
 The first three quarters grant one stat point while the pre-level is below 91.
 The fourth rolls and stores 36–44 HP and 18–22 SP growth, advances the level and
@@ -647,8 +735,9 @@ the old connection. For a non-party kill, 20% of the level-adjusted reward goes
 to the highest contributor and 80% is split by damage proportion using the
 source's single-precision truncation. Stable character Identity order replaces
 the original process-local VID for deterministic ties. Party grouping is deferred.
-The current Wild Dog level 1 reward is 15 experience; its attack/damage values
-remain the explicit prototype balance described above.
+The current Wild Dog level 1 reward is 15 experience. Physical damage uses the
+selected source formula described above; nominal resolved damage still enters
+the contribution ledger before health is clamped on a lethal hit.
 
 Operator commands use dedicated typed reducers and never pass through public
 chat. `/help` is available to an authenticated controlled account. `/xp` and
@@ -693,7 +782,7 @@ the matching module before running the client; older schemas cannot satisfy
 its subscriptions. This milestone creates a separate public account database;
 guest inventories remain in the retained old database and are not migrated.
 
-`inventory_state` marks once-only initialization and stores potion cooldowns.
+`inventory_state` marks once-only initialization.
 Each newly created character receives one sword (`vnum=10`) and five red potions
 (`vnum=27001`). Switching, entering and reconnecting never grants another set.
 
@@ -702,17 +791,44 @@ Items occupy one column: the sword is two cells tall and a potion one. A sword
 cannot wrap across a page boundary; the server checks every occupied cell.
 Potions stack to 200, swords to one. The equipment slot uses cell 255 as a
 server sentinel; its original artwork is 32 × 96 pixels, while the sword's
-32 × 64 icon still occupies only two bag cells. Equipping grants the server
-damage bonus and projects the equipped vnum through public appearance state to
+32 × 64 icon still occupies only two bag cells. Equipping selects the generated
+weapon power for server damage and projects the equipped vnum through public appearance state to
 the generated 3D sword attachment on the Warrior.
 
-A red potion heals up to 40 HP with a one-second cooldown. Full-health use,
-dead-player use, wrong ownership and unsupported item types fail without
-consumption. Item pickups respect the same 10-second reservation, 60-second
+The versioned `item_catalog` selection in the content profile resolves exact
+pinned proto/name rows into typed server records and a separate public client
+catalog. Size, stack limit, class/sex/level requirements, physical weapon values,
+names, icons and supported effect parameters use registry lookups. Unknown
+types, flags, limits and effect handlers fail compilation. The selected Sword
+still uses the existing bounded combat/motion profile; this does not implement
+all weapon applies, item categories or equipment slots.
+
+Small and medium red potions queue 300 and 800 HP respectively. The private
+`item_recovery` table applies at most floor(maximum HP × 7 / 100) per second,
+clamps health, and consumes that tick's full allotment from the pool. A full
+resource clears its remaining pool on the next tick. Using a potion while current
+health plus pending recovery already covers maximum health rejects without
+consumption. There is no arbitrary one-second use cooldown. Source potion bonuses,
+arena/dungeon restrictions, recovery visuals and other affect handlers remain
+unimplemented; the selected profile has no such modifiers or locations.
+
+Recovery and item consumption share one reducer transaction. Leaving, switching,
+disconnecting or an expired account lease discards pending recovery. Dead and
+changed-life rows are cleared before recovery; reconnect never refunds the item
+or replays its effect. A late simulation callback performs one recovery step and
+schedules the next from its actual timestamp, with no offline catch-up. The same
+handler supports SP pools, but the selected live fixture contains HP potions;
+SP use has only component coverage so far. Current item instances resolve by
+stable vnum; changing/removing identities, kinds, footprints or stack rules for an
+existing world requires a reviewed migration or a new database. Immutable quest
+revision retention and general item-instance migration tooling remain pending.
+
+Full-health use, dead-player use, wrong ownership and unsupported item types fail
+without consumption. Item pickups respect the same 10-second reservation, 60-second
 expiry, 2.5 m reach and compatible height/clear-path rules as the gold loop.
 Stack filling and new-cell allocation occur in the same reducer transaction as
 drop deletion, so a full bag cannot partially consume a reward. Inventory,
-equipment and cooldown state survive death/reconnect; there is no player-driven
+equipment and once-only initialization survive death/reconnect; there is no player-driven
 item deletion, trading or arbitrary item/currency grant endpoint.
 
 The UI uses selected original raster artwork converted by
@@ -736,6 +852,54 @@ not been compared with a running original client. `C` and the character button
 open the status panel for the subscribed owner row and normal stat allocation.
 The inventory and status panel introduce bounded equipment and progression
 loops, not complete original equipment, skill or class progression systems.
+
+## Item integrity and replay protection
+
+Protocol 12 adds a `revision: u32` to each persistent inventory stack. Its existing
+server-assigned `id: u64` identifies that instance; `vnum` identifies its content
+definition. IDs are database/table scoped, persist through moves, equipment and
+reconnects, and are never supplied by clients when granting items. An inventory
+stack and a ground drop have distinct ID namespaces; pickup audit records link
+them, including when a drop merges into an existing stack. Individual units in
+a consumable stack do not each have a separate ID.
+
+`move_item(id, cell, expected_revision)`, `equip_item(id, expected_revision)`,
+`unequip_item(id, cell, expected_revision)` and `use_item(id, expected_revision)`
+require the currently selected live controller, exact character and account
+ownership, valid quantity and the current revision. Revisions start at one,
+advance on changes (including server-side stacking and displaced equipment),
+and reject exhaustion instead of wrapping. Already-equipped no-ops preserve
+the revision. A consumed/deleted item cannot be addressed again. Godot sends
+the observed revision, waits for replicated state and does not retry rejected
+mutations automatically. Two requests against the same prior state cannot both
+consume or move the stack, including across reconnects. A caller who receives
+the new revision may submit a new valid action; revisions are concurrency guards,
+not secrets or a substitute for gameplay limits.
+
+Pickups require reservation, expiry, reach and capacity checks. Crediting stacks,
+retiring the ground drop and recording history happen in one reducer transaction.
+A second request for that drop fails after the first commits. Any later placement,
+revision or integrity failure rolls back earlier stack changes and audit writes.
+Automatic progression grants now propagate integrity failures instead of logging
+and continuing with partial rewards; normal full-bag ground fallback remains.
+
+The private `item_audit` table records creation, progression grants, monster drops,
+pickup transfers, consumption and expiry. Bag movement/equipment changes do not
+append quantity events. No player reducer writes arbitrary audit causes or
+quantities, and players cannot subscribe to the history. The offline
+`tools/audit_items.py` checker reconciles a complete consistent snapshot against
+this history, including quantity conservation, repeated IDs, transfer balance,
+ownership, grid occupancy and equipment uniqueness. It reports discrepancies;
+it does not silently repair inventories. Durable history retention/archive and
+an authenticated operator snapshot-export path still need implementation. A
+normal CLI identity was rejected by this module's account gate during a local
+SQL export attempt; no authentication exception was added to make it readable.
+
+This is the current inventory boundary. Trading, shops, mail, storage and quest
+rewards must use explicit atomic transfer/reward contracts as those features are
+built; this slice does not claim they are protected before they exist. Incompatible
+older inventory schemas require a fresh database or a reviewed migration. No
+migration, release export or public deployment is included in this local slice.
 
 ## Original map and chat panels
 

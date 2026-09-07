@@ -351,8 +351,15 @@ pub fn open_account(ctx: &ReducerContext) -> Result<(), String> {
 }
 
 #[spacetimedb::reducer]
-pub fn create_character(ctx: &ReducerContext, slot: u8, name: String) -> Result<(), String> {
+pub fn create_character(
+    ctx: &ReducerContext,
+    slot: u8,
+    name: String,
+    character_class: u8,
+    sex: u8,
+) -> Result<(), String> {
     let mut state = controlled_account(ctx)?;
+    crate::characters::appearance(character_class, sex)?;
     if slot >= 4 {
         return Err("Character slot must be between 0 and 3.".into());
     }
@@ -381,8 +388,8 @@ pub fn create_character(ctx: &ReducerContext, slot: u8, name: String) -> Result<
         slot,
         name: name.into(),
         empire: 1,
-        character_class: 0,
-        sex: 0,
+        character_class,
+        sex,
     });
     ctx.db.inventory_access().insert(InventoryAccess {
         character_id: character,
@@ -440,6 +447,8 @@ pub fn leave_world(ctx: &ReducerContext) -> Result<(), String> {
 }
 
 pub fn stop_character(ctx: &ReducerContext, character: Identity) {
+    crate::npcs::clear(ctx, character);
+    crate::item_effects::clear(ctx, character);
     crate::appearance::remove(ctx, character);
     crate::special_area::clear(ctx, character);
     if let Some(mut control) = ctx.db.controller().identity().find(character) {

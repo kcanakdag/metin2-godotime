@@ -35,6 +35,16 @@ from this file. Inspect current manifests, configuration, running processes and
 the status ledger. Ignored evidence may exist only on the development workstation;
 missing reports or assets on a fresh checkout are not proof that checks passed.
 
+## Current implementation priorities
+
+Quests are deferred at the user's request. The latest requested milestone is
+classic character creation, the other classes and reusable asset import scripts.
+Continue playable mobs/combat, map NPCs, missing scenery, abilities and additional
+maps alongside those priorities as directed by the user.
+Extend reusable definitions and importers alongside each gameplay slice. Use
+the offline [world-content tools](docs/world-content.md) for population drafts
+and visual inspection; live admin actions still require server authorization.
+
 ## Repository map
 
 | Path | Responsibility |
@@ -129,6 +139,7 @@ be rebuilt from pinned inputs; do not fabricate fixtures or disable their checks
 | Formatting owned code | `python3 tools/dev.py format --only python` or another affected group |
 | Server/tool/auth tests | `make server-test`, `make test-tools`, `make test-auth` |
 | Content and actors | `make content-build`, `make content-validate`, `make content-probe`, `make test-actors` |
+| Classic classes | `make characters-build`, `make test-classes`; see `docs/characters.md` |
 | Map and UI pipeline | `make import-map`, `make bake-map`, `make test-map`, `make import-ui`, `make test-ui` |
 | Authenticated multiplayer | `tools/test_accounts.py`, `tools/test_targets.py`, `tools/test_combos.py` |
 | Authenticated exported QA | `tools/test_browser_accounts.py` with the relevant feature flags and an actual native export |

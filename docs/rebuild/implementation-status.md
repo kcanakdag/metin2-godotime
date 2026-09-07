@@ -13,13 +13,13 @@ see and move with each other, use the selected original Warrior, Sword+0, Wild
 Dog, Yongan and classic-UI assets, manage the connected inventory/equipment
 subset, fight and respawn through server-owned PvE, gain and allocate the
 implemented progression, select an exact private target, and play the common
-three-step one-hand combo with authoritative root displacement. These are
+four-step one-hand combo with authoritative root displacement. These are
 integrated slices of their catalog systems; they are not complete versions of
 the original game.
 
 Current P2 work is qualified on isolated local default-deny databases. The
-protocol-8 combo/root-motion Slice C has accepted server, headless and package
-evidence plus a 297-check instrumented Web/Linux gameplay run. The public route
+protocol-9 finisher Slice D has accepted server, headless and package evidence
+plus a 154-check instrumented Web/Linux gameplay run. The public route
 remains the older protocol-4 `mt2-p1-v4` checkpoint; its HTTP availability was
 verified, but it does not expose or qualify the local P2 progression, targeting,
 combo or root-motion work.
@@ -29,6 +29,450 @@ incomplete. The broader P3 through P10 systems are still pending. The 194
 feature records across 41 systems are a scope inventory with different sizes,
 dependencies and acceptance criteria, so their record counts do not support a
 meaningful percentage-complete claim.
+
+## Protocol 14 creation lineup and held common combos
+
+The local endpoint **http://127.0.0.1:8186** serves
+`exports/web-r4` from `.local/p4-classes/`, using the new database
+`mt2-p2-class-combos-r1-20260908`. The previous databases and exports remain intact.
+The public endpoint remains on the older protocol-4 release.
+
+Creation now presents all four classes around the selected foreground model,
+including both gender pages. Every preview uses its original `intro.wait` clip.
+The male Warrior's extra intro model is confined to the preview; its accepted
+world model is retained. Gender switches detach retired nodes before creating
+their replacements. The taskbar now uses the original attack image instead of
+the initial layout's movement placeholder, as the pinned `uitaskbar.py` and
+`mousebuttonwindow.py` specify.
+
+Held Space schedules ordinary intents against source input windows. All six
+Warrior/Ninja/Sura sword appearances resolve their common four-step chains
+through shared server queue/target/equipment validation. The newly compiled
+Warrior/Ninja fourth actions use their original area timing; disabled ordinary
+windows cannot create extra hits. Shaman remains unarmed. Advanced chains, Sura's
+force-15 fourth-hit knockback, other weapons and skills remain pending.
+
+Current evidence in `.local/p4-classes/`:
+
+- `intro-lineup-r3`: 61 native Godot preview checks; all eight captures rendered.
+- `taskbar-r2`: 21 native HUD interaction checks and the corrected icon capture.
+- `combo-server-tests-r4.log`: 129 Rust unit/integration checks pass.
+- `tool-tests-r3.log`: 210 Python tooling checks pass.
+- `automated-r2`: the full pinned importer converted eight appearances and 234
+  clips, verified receipts and installed into an isolated QA destination. It
+  leaves the current game package and open Blender scene untouched.
+- `exports/web-r4` and `exports/linux-r3`: actual export/package audits inspect
+  990 and 1,793 resource paths and load all eight character packages.
+- `browser-combos-r2/report.json`: 100 Chrome/Linux checks pass with no browser
+  engine errors. Original mouse/keyboard controls select all eight four-model
+  previews, hold Space through Ninja's four sword steps and repeat Shaman's
+  unarmed attack. Both subscriptions/renderers observe the actions, then return
+  to idle after release. Movement, rejection and account lifecycle also pass.
+- `lint-final.log`: all owned Python/GDScript/Rust/TypeScript checks pass.
+- `combo-two-client-r5.json`: 282 live two-identity checks pass on the separate
+  QA database using the exact playable WASM. All eight appearances, private
+  creation/stats/inventory, rejected appearance IDs, six four-step sword chains
+  with queued/direct inputs and duplicate rejection, real mob damage, movement,
+  character switching, disconnect and reconnect are covered.
+
+The local module SHA-256 is
+`793477d2a987d885666b94e523a738f688d97e55b40398b4ec9b001247eabc90`;
+the shared catalog SHA-256 is
+`fdac0c3b96b433b2aa8c413229ece827e8f530e9dcf068faf58ed035d2c84226`.
+Superseded failed reports remain available. Fixture corrections replaced old
+Warrior-only duration expectations, moved targetless checks outside dog aggro,
+and allowed 24 seconds for each approach/return across the actual map. The full
+eight-appearance scenario has a six-minute bound. Browser registration initially
+hit the existing signup limit and passed after normal expiry; limits remain
+enabled. No connected Godot editor MCP is available in this session. Native
+rendered fixtures and exported clients provide evidence; Windows execution,
+public deployment and original-client parity are not qualified by this run.
+
+## Earlier protocol 14 classic character creation and basic actions
+
+The latest requested milestone adds Warrior, Ninja, Sura and Shaman in both sexes
+to character creation. Original class titles, default hair, body models and
+class/sex status portraits are installed. Class starting HP/SP and stats are
+server-owned; original basic action IDs and class physical stat contributions
+use the shared combat, movement and inventory rules. The selected male Warrior
+keeps its accepted combo implementation. Shaman currently begins unarmed;
+its fan item/combat, other weapon modes, skills and the additional classes' full
+combos remain pending. Quests remain deferred.
+
+`make characters-build` now discovers the selected pinned inputs and performs
+Blender conversion, artifact verification and installation. `--replace` preserves
+the previous installation alongside the new output. Eight bodies/default-hair
+sets and 234 motion clips converted successfully; seven additional actor packages
+extend the accepted Warrior baseline. See [the workflow](../characters.md).
+
+Current evidence in `.local/p4-classes/`:
+
+- `classic-r3/`: successful Blender conversion and source/artifact receipts.
+- `intro-ui-r4/`: 53 native Godot UI checks, including eight front-facing previews.
+- `two-client-r3.json`: 196 live checks against two ordinary accounts on one
+  actual server, covering all eight creations, exact initial stats, invalid IDs,
+  private subscriptions, mutual appearance/movement, actual mob hits, switching,
+  disconnect and reconnect without duplicated starter items.
+- `exports/web-r1/` and `exports/linux-r1/`: actual exports and package audits;
+  980 Web and 1,783 Linux resource paths inspected. Every added actor is loaded
+  to verify its textures, skinning, attachment bones and registered animation clips.
+- `browser-r1/report.json`: 96 passing exported Chrome/Linux checks. Browser
+  controls exercise all eight previews, female Ninja creation/equipment/keyboard
+  attack, male Shaman creation/unarmed keyboard attack, bidirectional movement,
+  character switching, rejection, disconnect/reconnect and login/logout.
+  Browser engine errors are empty. Native uses an isolated Xvfb display; this
+  is not Windows execution or inspection through the user's open Godot editor.
+
+The earlier local playable build served the Web export
+against `mt2-p2-classes-r1-20260907`. Its protocol-14 module uses the matching local
+auth issuer and disables guest access. The previous protocol-13 database/export
+are preserved; `proxy-before.json` records the old routing. The public endpoint
+remains the older protocol-4 release.
+
+The local module SHA-256 is
+`70164499c8fb008959c24fbb4a7d32013094bdd12e52cd94fd199867fa2a646d`;
+the shared character catalog SHA-256 is
+`2cd7fa42f55837417363c373de1ecef2b1740f5f4c6bf2f38741109e3083a880`.
+Creation and basic actions are the qualified slice; full class gameplay, broader
+content factories and retail parity remain separate work.
+
+## Protocol 13 NPC interaction slice
+
+The City Guard now supports click-to-approach and a private server-owned dialogue.
+The implementation joins authored interaction records to the converted catalog,
+checks its advertised hash, validates active character/range/path/attack state,
+and uses exact unique session IDs for closing. Duplicate opens cannot renew the
+60-second deadline. Movement, attack, leave, disconnect, death and expiry clear
+the session. Quests and shops remain deferred; the greeting is new development
+text. Picking uses a separate body with no movement collision.
+
+The fresh local database `mt2-p2-npc-interaction-r1-20260907` preserves all older
+databases. `.local/p3-interactions/two-client-r3.json` passes 59 ordinary-account
+checks, including raw owner-only subscriptions, forged/distant/stale/foreign
+rejections, real expiry, two-way route movement and reconnect without replay.
+R1 caught a test parser error before creating accounts; R2 exercised the gameplay
+but failed an assertion expecting the wrong inactive-character error wording.
+These failures remain recorded; R3 is the accepted network result.
+
+The isolated native Main fixture passes 38 checks and its original-asset panel
+capture was reviewed. The final focused client preflight passes content gate 9,
+picker 9, export probe 35 and protocol gate 4. The full tooling suite passes 203
+checks; owned lint, strict Clippy and TypeScript checks pass. Current Rust tests
+pass 127 checks. Godot MCP was unavailable; the user's open editor was preserved.
+
+The local 8186 proxy now targets the matching protocol-13 Web/Linux test exports
+under `.local/p3-interactions/exports/`. Actual-PCK audits check 877 Web core files,
+all 20 streamed map packs and 1,680 Linux files. The actual Web/Linux run passes
+103 checks on its first attempt, with clean browser/native engine logs. Both
+clients click and approach the guard, receive independent conversations, close
+with the original-asset button, and retain normal input; browser Escape and WASD
+are explicitly exercised. Both dialogue captures were reviewed. The source
+freeze remained unchanged throughout qualification. Evidence is
+`.local/p3-interactions/acceptance-r1.json` and `browser-two-client-r1/report.json`.
+
+The missing-catalog bootstrap fixture proves that the offline terrain example
+builds successfully while the game library fails closed. It uses an isolated
+copy, preserving installed content and the editor. Its report is
+`.local/p3-interactions/bootstrap-r1/report.json`. Current-source WASM is checked
+against the preserved published artifact in `server-build.json`.
+
+These are authorized local instrumented exports. Public protocol 4 remains
+unchanged; Windows execution and current editor-MCP inspection are not claimed.
+Full map pathfinding, shops, quests, live admin placement, trees and additional
+classes/abilities/maps remain beyond this slice.
+
+## Gameplay population and offline development mode
+
+Current user priorities defer quests and move gameplay, mobs, map NPCs, scenery,
+classes, abilities and additional maps ahead of quest execution. The catalog
+remains the complete scope; this changes implementation order.
+
+Population profiles now select six authored Wild Dog homes for Yongan and one
+for training. The build and offline tool share validation; position checks use
+the server's actual terrain/collision code. Add/move/remove commands produce
+reviewable drafts without modifying source profiles or live databases. Changed
+populations require a fresh development database until migration is implemented.
+
+The new local `mt2-p2-yongan-population-r1-20260907` database uses protocol 12,
+ordinary accounts and no privileged bootstrap identities. Its module SHA-256 is
+`dfbb9cb596dc98e2a689061817f7c737ab2b9aee47a629bf4eabb93145073fa0`.
+`.local/world-content/population-server-r1/two-client-r1.json` passes **107
+checks** with unchanged staged sources: exact subscribed homes/heights, mutual
+movement, invalid target rejection, ordinary combat and one reward, independent
+other mob lives, natural respawn, disconnect and reconnect without extra rewards.
+Rust passes 109 unit plus 14 integration tests and strict all-targets Clippy.
+The Python suite passes 198 tests. The authoring CLI also rejects an actual
+Yongan building intersection without writing a draft, and a valid move preserves
+the input and unrelated IDs. The final NPC receipt passes 22 headless checks.
+
+Original City Guard 20354 converts with two textures and five clips. The shared
+rigid-binding adapter fixes its weapon's missing skin weights; yaw normalization
+fixes facing. The native gallery passes **22 checks**; its attachment was visually
+reviewed in `.local/p3-npcs/city-guard-qa-r2/`. Final conversion inputs/artifacts
+are in `.local/p3-npcs/city-guard-r7/` using converter 1.1.0; its GLB is byte-identical
+to the rendered R6 artifact. The first gallery exposed a floating weapon despite
+passing pose checks; explicit mesh skin checks now cover that omission.
+
+The isolated Yongan dev preview passes **15 checks**, including actual ItemList
+selection/focus and idle animation for six mobs and the guard. Its reviewed
+`.local/world-content/yongan-preview-r2/population-preview.png` shows the guard at
+source X/Z 605/663 and server height 198.515. R1 caught a JSON numeric-key error
+at runtime and remains recorded as failed. The corrected launcher owns and cleans
+up its preview process group. See [the runnable workflow](../world-content.md).
+
+Godot MCP is unavailable; these checks use isolated native projects, not the
+user's live editor. This population/preview checkpoint preceded the Main-scene
+NPC integration below. Live admin placement, trees, further mob types/classes/maps
+and abilities remain pending.
+At this population-only checkpoint, public deployment and the served protocol-10
+local Web export were unchanged; the newer local rollout is recorded below.
+
+## Stationary NPCs integrated in Main locally
+
+The City Guard is now installed through a reusable public NPC catalog and the
+normal Main-scene `WorldNpcs` layer. It uses original point X/Z 605/663, baked
+height 198.515, deterministic source-random heading, original green name color,
+both weighted idle variants and the corrected rigid weapon attachment. There
+are no new NPC collisions or interaction/reward intents. Protocol 12 is unchanged.
+
+The catalog compiler validates completed conversion receipts, stable IDs,
+terrain/collision placement, map hashes and an exact public payload. It reuses
+the existing actor PNG extraction/import policy; pixel checks accept Godot PNG
+re-encoding but reject changed imagery. Prior installed assets are retained when
+installing an update. Main creates/removes actors with terrain availability and
+clears the layer on leave, disconnect and reconfiguration.
+
+`.local/p3-npcs/runtime-qa-r1/` passes 36 real-Godot Main-scene checks, including
+original positioning, both idle variants, both skinned meshes, no added collision,
+stable instance refresh, real chunk reload, five connection-state cleanup/reentry
+pairs, map-hash rejection and training-map cleanup. Its native screenshot was
+reviewed. This is an explicit offline connection spy, not new multiplayer proof.
+The preceding 107-check live population result remains the server evidence.
+
+The normal Linux export first rejected the earlier item registry's newly added
+public field. The exporter now validates its exact public boundaries, checks it
+against trusted server item definitions, and exercises the packaged runtime
+reader. NPC package checks inspect actual remapped skins/materials/idle clips.
+The final native project `.local/p3-npcs/runtime-qa-r2/` also passes all 36 checks
+with unchanged staged source and reviewed rendering. The final normal Linux export
+at `.local/p3-npcs/exports/linux-r3/` passes the actual-PCK audit of 1,666 files,
+including two textured/skinned NPC meshes and five imported clips; no test probe
+is packaged. Its PCK SHA-256 is
+`1373e9af32606423c077330c64cdccbe0c77ef0b0529d3dc9745a0acb9f3b918`.
+Final catalog/conversion provenance is `.local/p3-npcs/runtime-r3/`; the public
+catalog remains byte-identical across R1–R3. Four NPC tooling regressions,
+40 export-tooling tests, and owned Python/GDScript lint pass. The export is staged
+for the population database; its intended gateway has not been switched and no
+new authenticated exported-client/browser gameplay run is claimed.
+
+The final production PCK also passes the same 36 lifecycle/render checks under
+the installed Godot engine in `.local/p3-npcs/pack-runtime-r1/`; its captured
+render was reviewed. The preceding direct release-executable attempt at
+`.local/p3-npcs/export-runtime-r1/` did not execute the external probe to completion
+and timed out at 90 seconds; its process group was terminated. That attempt
+is recorded as failed, not exported-client gameplay evidence.
+
+No new quests, NPC interactions, shops, live placement controls, trees, classes,
+abilities or maps are claimed. Godot MCP was unavailable; the user's editor was
+preserved. The local browser rollout below supersedes the older served build.
+
+## NPC browser rollout qualified on the local endpoint
+
+The actual instrumented Web/Linux exports now pass **94 checks** on
+`http://127.0.0.1:8186` and `mt2-p2-yongan-population-r1-20260907`. Two ordinary
+accounts create their own characters, subscribe to each other and all six mobs,
+walk a collision-checked 149-meter route to the guard, and render the same idle
+NPC at its original position. Actual pointer input does not turn this stationary
+NPC into a monster target. Native leave/reentry and browser reconnect restore
+one NPC without duplicates. Mutual movement, invalid-input rejection, foreign
+character rejection, character switching, disconnect/reload, logout and login
+also pass. The optional four-minute refresh scenario was not repeated.
+
+`.local/p3-npcs/browser-two-client-r1/report.json` has no browser or native engine
+errors. Its browser/native NPC screenshots were reviewed: consistent terrain
+colors, grounded actors, original hair, and the guard's attached weapon. Chrome
+used hardware WebGL 2 on AMD Radeon 860M. The read-only export probe preflight
+passed 35 probe and nine content-gate checks before account creation. All 130
+frozen build/QA input hashes stayed unchanged; the concise acceptance record is
+`.local/p3-npcs/browser-acceptance-r1.json`.
+
+The local proxy was deliberately switched from the older physical-finisher
+database/export to these matched packages under `.local/p3-npcs/exports/`:
+`web-probe-r1` and `linux-probe-r1`. Strict PCK audits checked 865 Web core files
+and 1,668 Linux files, including the NPC catalog and remapped skins/materials.
+The Web export also builds and audits its streamed map packs. Prior routing is
+saved in `local-service-before.json`; `local-service-update.json` records verified
+served-manifest equality, database identity and auth health. Game/auth processes
+and all existing databases were preserved. The local proxy's owned exec session
+is 52594. A separate Chrome MCP tab shows the original server-selection screen
+with CH 1 online; no unrelated tabs or editor scenes were changed.
+
+This is local connectivity evidence. The public endpoint remains the protocol-4
+release; no new internet or Windows qualification is claimed. Normal packages
+still omit probes. Stationary NPCs have no interaction/shop/quest authority yet.
+
+## Item integrity and replay protection qualified locally
+
+Protocol 12 retains server-assigned persistent instance/stack IDs and adds checked
+item revisions to move/equip/unequip/use intents. Ownership is validated against
+both the active character and authenticated account; stale, forged, exhausted
+and invalid revisions fail closed. Quantity changes append private audit events
+in the same transaction as grants, stack changes, consumption, pickup and expiry.
+Automatic progression grants now propagate integrity errors, preventing a partial
+reward from being accepted. The ordinary full-bag ground fallback remains.
+
+The fresh `mt2-p2-item-security-r1-20260907` local database contains the recovery
+fixture with ordinary accounts, no guests and no privileged commands. Its module
+SHA-256 is `3c778ca5e0eef26693c0d8edfc4a2f0eb7dfee84a671bcefed3b711e1e9cb680`.
+Matching bindings contain 73 files, with schema SHA-256
+`997a48863cd84380226ea8fbf73739169276c02fb172d3d3b98a3a0a9d68a12d`.
+`security-two-client-r6.json` passes **110 checks**, with unchanged staged sources:
+independent identities and private inventories, mutual movement, forged IDs and
+revisions, foreign/inactive-character actions, stale movement, duplicate potion
+consumption, reconnect persistence without duplicated starters/effects, ordinary
+combat and drop production, reservation rejection, a two-client pickup race with
+exactly one winner, conserved quantities and private audit-query rejection on
+both clients. Failed preflights R1–R4 caught Godot lambda parsing before account
+creation. R5 passed the rejection/consumption checks but incorrectly compared
+reconnected inventory rows by order; R6 sorts by persistent ID and compares every
+field. No gameplay rule was relaxed to make these checks pass.
+
+The existing Godot component suite passes 130 checks and the new real-facade
+item intent suite passes 10. `make server-test` passes 109 Yongan unit, six combo
+builder, four item builder and two generated-definition tests. Strict Clippy,
+Python/GDScript lint and 189 Python tooling tests pass. The offline audit checker
+has fixture coverage for transfers, consumption, gaps, duplicate/live/exhausted
+IDs and stock/ownership/revision mismatches. It is a diagnostic tool, not an
+inventory repair command. An authenticated operator snapshot-export path and
+history retention/archival remain pending; a CLI SQL attempt was rejected by the
+module's account gate. No authentication exception or public audit table was added.
+Full-bag rollback has not received a new live scenario in this slice. Trading,
+shops, mail, storage and quest reward contracts remain future implementation.
+
+Evidence and frozen source/module review are under `.local/p2-item-security/`,
+including `review-root.json` and `handoff-root.json`. Changes are uncommitted.
+No current release export, editor MCP inspection, public deployment or database
+reset is claimed. The served local Web build remains protocol 10, and the public
+endpoint remains protocol 4.
+
+## Preceding item registry and gradual recovery
+
+That checkpoint uses protocol 11, trusted schema 7 and compiler 1.6.0.
+The profile's schema-1 item catalog resolves the selected Sword and small/medium
+red potions from pinned source rows. Shared lookups now drive size/stack limits,
+equipment requirements, physical power, public names/icons/tooltips and use
+dispatch. Recovery is a private life-scoped pool, with 300/800 HP effects and
+source 7%-of-maximum ticks. General item categories, applies, quest execution,
+SP-item live coverage, migration tooling and current exported qualification
+remain pending.
+
+The isolated `mt2-p2-items-recovery-r1-20260907` database uses a default-deny
+test module with two extra medium starter potions and loopback auth. The normal
+starter loadout remains one Sword and five small potions. No existing database
+was overwritten; no privileged actions or guest accounts were used.
+`recovery-two-client-r2.json` passes all 50 checks with unchanged staged sources:
+mutual presence/movement, private inventory, rejected uses, small-potion recovery
+289→589, medium-potion recovery 589→760 with a cap, exact consumption and pending
+effect cancellation across disconnect/reconnect. R1 remains failed: its full-health
+check used a character already injured during staging. Its corrected precondition
+uses the safely parked observer. Reports are under `.local/p2-items/`.
+
+Current Godot bindings were generated from this actual module: 72 files, schema
+hash `dd0b934dbca71784095da35e10ad072b5f8d2d62b92bdbab0410f8ea93c1b61d`.
+The isolated Godot component suite passes 130 checks; the rendered inventory
+test passes 21, including medium-potion right-click routing. The separate rendered
+tooltip capture passes 14 checks, and the item-registry melee regression passes
+94 live checks. Captures were reviewed. Python tooling passes 186 tests, including source-driven additional-item
+and malformed-registry checks. Full lint passes, followed by the final Rust
+link/fixture validation checks: 108 unit, six combo-builder, four item-builder
+and two generated-definition tests, plus strict Clippy. Rebuilding after those
+build-only checks yields the identical live-qualified WASM SHA-256
+`faa7b266c555dccfec5eaff45f92dbaa2935861066cf6ab904c109e88befc94f`.
+Model/texture/animation
+artifacts remain unchanged and were reused through the compiler's client generator.
+Godot editor MCP is unavailable; no editor inspection is claimed.
+
+The item changes have not replaced the local protocol-10 Web export or the
+public protocol-4 route. The previous physical growth, finisher and exported
+reports below remain evidence for their recorded artifacts.
+
+## Preceding physical damage integration
+
+That checkpoint integrates application protocol 10 and trusted content
+schema 6. The damage kernel consumes generated physical definitions and
+canonical progression/equipment. The private progression row now includes
+Attack minimum/maximum and Defense display values. Fresh local databases
+`mt2-p2-physical-{training,finisher,yongan}-r1-20260907` preserve existing worlds
+and contain no guest or privileged progression bootstrap.
+
+The training/Yongan Rust suites pass 99/104 unit tests respectively, plus six
+builder and two generated-definition tests each. Strict Clippy passes. The real server schema
+generated 71 client binding files, schema hash
+`4f692de9eab4b3d7b7007fcabb78e047ff2655e523476808859201c98ad1eacf`.
+The isolated Godot client suite passes 127 checks, including the physical UI and
+protocol gate. Model/texture/animation bytes remain unchanged from the accepted
+visual checkpoint. Build and publication records are under
+`.local/p2-physical/integration-r1/`.
+
+The focused two-account Godot run passes 101 checks:
+`.local/p2-physical/integration-r1/physical-two-client-r3.json`. It verifies
+mutual subscribed movement, private stat projections, equipment updates,
+targetless/stale-life handling, an accepted sword hit after unequipping,
+subsequent unarmed and equipped damage, dog damage, a kill reward, natural
+respawn, disconnect/reconnect and character switching. This is headless
+subscription evidence, not an exported-gameplay or visual comparison.
+
+The actual Web and Linux test exports pass package inspection, with 852 source
+files held unchanged throughout export. Their manifests are under
+`.local/p2-physical/integration-r1/exports-finisher/`. The 174 Python tool tests
+and full lint pass; the plan validator retains all 41 systems/194 records.
+
+The physical finisher now passes 65 checks in
+`physical-finisher-r2.json`, including both eligible victims on both real
+subscriptions, per-victim damage, 4.732 m force/standup, captured equipment after
+unequipping, the untouched third monster, fifth-input rejection and reconnect.
+The staged sources stayed unchanged. The separate `physical-lifecycle-r1.json`
+now passes 49 checks against `mt2-p2-physical-lifecycle-r1-20260907`: presence is
+removed before area activation, monster health/lives remain unchanged, and
+reconnect does not replay the cancelled attack or root displacement. This uses
+two real headless clients and the same reviewed finisher module on a fresh
+database; its staged sources stayed unchanged.
+
+The latest completed growth run, `physical-growth-r6.json`, passes all 1,063
+checks across four segments with unchanged staged sources. Two real clients
+verify twenty ordinary kills, exact XP/quarters, level two, private display,
+old/new STR damage across a queued action, and VIT/DEX effects on damage and
+display. Spending VIT increases maximum health without healing current health.
+All three earned points are spent privately. R5 remains failed because its
+assertion expected the second action at the exact 533,333 us input boundary;
+R6 records subscribed ticks and verifies the actual contract: the first simulation
+tick strictly after that boundary. No gameplay timing change was needed.
+Earlier failed runs also exposed JSON float-versus-integer test-domain comparisons
+and the need to finish an injured leftover monster through ordinary observer
+combat. The test now handles both without resetting database state. R2's separate
+transport timeout and observed scheduler activity gap remain recorded in
+`physical-growth-r2-review-root.json`.
+
+The actual `browser-physical-r1/report.json` passes 94 functional checks, including
+Web/native equip/unequip through UI, owner-only Attack/Defense projections,
+remote equipment attachment, movement and account lifecycle. All four relevant
+captures were reviewed: Attack 10 unarmed, 28–31 equipped, Defense 5, and the
+Sword+0 tooltip's 13–15 range. The overall run remains failed by its unchanged
+engine-error gate: Linux logs two embedded-tooltip signal-disconnect errors.
+A tiny independent Godot 4.7.2 release export reproduces them with a plain Button;
+the external-popup comparison is clean. See `browser-physical-r1-review-root.json`
+and [Godot issue 89657](https://github.com/godotengine/godot/issues/89657). The
+local 8186 proxy now serves the reviewed physical finisher export/database.
+Public routing, normal-export qualification and Windows execution are unchanged.
+
+The current all-feature Rust run passes 105 unit, six builder and two generated
+definition tests. All 180 Python tool tests pass, including six new content-diff
+tests; subsequent non-finite-number/schema hardening also passes those six focused
+tests. Full lint passes, followed by focused formatting/lint of the R6 scenario.
+The implemented `content_compile.py diff` reports changed generated fields and
+relevant QA scopes; the actual pre-physical/current comparison reports nine
+gameplay and two presentation field changes. This is development tooling, not
+general item/quest registries. Editor MCP remains unavailable in this session.
 
 ## Scope retained
 

@@ -5,21 +5,23 @@
   "source": {
     "client": {
       "repository": "https://git.old-metin2.com/metin2/client",
-      "revision": "bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7"
+      "revision": "bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7",
+      "files": [
+        {
+          "path": "src/UserInterface/PythonPlayer.cpp",
+          "git_sha": "be48be6b4b8249bed84da70390b4e255b90170c1",
+          "sha256": "cc9f8397642ea33f67c132e78516a5085cf5f2c6110bf15719a430330502ae71"
+        }
+      ]
     },
     "server_reference": {
       "repository": "https://git.old-metin2.com/metin2/server",
       "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
       "files": [
         {
-          "path": "gamefiles/conf/mob_proto.txt",
-          "git_sha": "002c00106dec10dcde3e8e292d6f1e242bf1c4d9",
-          "sha256": "9aeb98db989ed64ec51dcd1e0df844d7cbd52004779747156017b1617c6be3fa"
-        },
-        {
-          "path": "gamefiles/conf/mob_names_en.txt",
-          "git_sha": "5e832ca9ac25ce6227f140e41b55224e7a485b68",
-          "sha256": "171a1f706d6e7471138cab38f4101a059cb4d0803e62a7c4e044f154902e2ec3"
+          "path": "gamefiles/conf/item_names_en.txt",
+          "git_sha": "81404285be617d9b55c6ba23fcbcc87f7b3b8733",
+          "sha256": "5d0e18e89e8aad096a5a7475971a303baa92c065e1d77a999e8421897c5d7acf"
         },
         {
           "path": "gamefiles/conf/item_proto.txt",
@@ -27,19 +29,19 @@
           "sha256": "b16190baa1b37425eb372339f81eb188e37ecd0bdb06530f0a9a63f0fb045292"
         },
         {
-          "path": "gamefiles/conf/item_names_en.txt",
-          "git_sha": "81404285be617d9b55c6ba23fcbcc87f7b3b8733",
-          "sha256": "5d0e18e89e8aad096a5a7475971a303baa92c065e1d77a999e8421897c5d7acf"
+          "path": "gamefiles/conf/mob_names_en.txt",
+          "git_sha": "5e832ca9ac25ce6227f140e41b55224e7a485b68",
+          "sha256": "171a1f706d6e7471138cab38f4101a059cb4d0803e62a7c4e044f154902e2ec3"
         },
         {
-          "path": "src/game/src/constants.cpp",
-          "git_sha": "d03e04fcf009bee8ebeb11c79ae70fcd61d81fe6",
-          "sha256": "201c72ba54dd5f52462722f10c9d7bde4b0a9cd8ae7e23cb1620f33e5ad38347"
+          "path": "gamefiles/conf/mob_proto.txt",
+          "git_sha": "002c00106dec10dcde3e8e292d6f1e242bf1c4d9",
+          "sha256": "9aeb98db989ed64ec51dcd1e0df844d7cbd52004779747156017b1617c6be3fa"
         },
         {
-          "path": "src/game/src/constants.h",
-          "git_sha": "b570bdff657d00642016d5234fff36f7f54b86a0",
-          "sha256": "edd3230f8707cc88ae515b3263e3cbc8fb422655c03982c24074fd422127d4b9"
+          "path": "src/common/item_length.h",
+          "git_sha": "279d74f29967ae9ebeeb68e99d22dd3c23982cce",
+          "sha256": "19721a6df8088ad80810983ea016bc816afcca65cdcbd284da14f173cfa6cd4b"
         },
         {
           "path": "src/common/length.h",
@@ -47,14 +49,9 @@
           "sha256": "cdd6c822eb610ad21220bbdeb02912619865667d7490fee39a9b1bb9b309c4cc"
         },
         {
-          "path": "src/game/src/config.cpp",
-          "git_sha": "71915d402d7f6433d335f0edd7421f6019c88c88",
-          "sha256": "9c68ea574334a8d1c02e88e0da824e73777d53009ab24d1f8f1ba61fd991045a"
-        },
-        {
-          "path": "src/game/src/input_login.cpp",
-          "git_sha": "d60747c3006abf246d66317bd4c2e41627af21fe",
-          "sha256": "4bdf16f85575c2a0efc004025737e52a60da9650c6ba6fa475e187b4b21badc7"
+          "path": "src/game/src/battle.cpp",
+          "git_sha": "d30fd28ee37eb82d6a9fcb709cbcc9a2f01ccb05",
+          "sha256": "5b8f66250b5ed7248c870540f9ffaa44813ce3c5a77d0d4b16f62e2659ac4521"
         },
         {
           "path": "src/game/src/char.cpp",
@@ -72,6 +69,11 @@
           "sha256": "5d7e5bbd4da565fbe8c4ee873044748963846a6abfc224af8370c003b3a276d4"
         },
         {
+          "path": "src/game/src/char_item.cpp",
+          "git_sha": "995a8eeb577945b43ef95d941f1c73275c9e9d93",
+          "sha256": "59adc4618e5d954e9be65a43a08e04558fbf14100c9fd9a8a77ccb7e3911d1b6"
+        },
+        {
           "path": "src/game/src/char_manager.cpp",
           "git_sha": "f2936284950d1d4eb57c57f95a818e3f213130e6",
           "sha256": "015e64eb1eb9c5aa31460675bff3794c838c7d1729d7f9c53095e7618a0f6607"
@@ -82,9 +84,29 @@
           "sha256": "445a92400d30447e0005109430e5afbd3a8248776f03ea01ef145e7446b5a61e"
         },
         {
-          "path": "src/game/src/char_item.cpp",
-          "git_sha": "995a8eeb577945b43ef95d941f1c73275c9e9d93",
-          "sha256": "59adc4618e5d954e9be65a43a08e04558fbf14100c9fd9a8a77ccb7e3911d1b6"
+          "path": "src/game/src/config.cpp",
+          "git_sha": "71915d402d7f6433d335f0edd7421f6019c88c88",
+          "sha256": "9c68ea574334a8d1c02e88e0da824e73777d53009ab24d1f8f1ba61fd991045a"
+        },
+        {
+          "path": "src/game/src/constants.cpp",
+          "git_sha": "d03e04fcf009bee8ebeb11c79ae70fcd61d81fe6",
+          "sha256": "201c72ba54dd5f52462722f10c9d7bde4b0a9cd8ae7e23cb1620f33e5ad38347"
+        },
+        {
+          "path": "src/game/src/constants.h",
+          "git_sha": "b570bdff657d00642016d5234fff36f7f54b86a0",
+          "sha256": "edd3230f8707cc88ae515b3263e3cbc8fb422655c03982c24074fd422127d4b9"
+        },
+        {
+          "path": "src/game/src/input_login.cpp",
+          "git_sha": "d60747c3006abf246d66317bd4c2e41627af21fe",
+          "sha256": "4bdf16f85575c2a0efc004025737e52a60da9650c6ba6fa475e187b4b21badc7"
+        },
+        {
+          "path": "src/game/src/input_main.cpp",
+          "git_sha": "32fecde8b876ccad724efe46ddd42b478ec987ab",
+          "sha256": "981b04aa02e27e6d1788824b263eb60cd834f72238694143a79b84a03d5fc59b"
         },
         {
           "path": "src/game/src/item.h",
@@ -92,14 +114,19 @@
           "sha256": "b0d59d3f62c4f6d12da93898f8bd1d3d0df3053ae1e4f3fea4cad81ba8c73ddc"
         },
         {
+          "path": "src/game/src/packet.h",
+          "git_sha": "46aa288727c1ad0bce11eca67b4f6a56af6d4e2b",
+          "sha256": "ecb19942ed8a0fc19a1d7db0ad698edfbce51ae307efa60919d2872ab2d99b2f"
+        },
+        {
           "path": "src/game/src/utils.h",
           "git_sha": "938392a3e0f23c6de604fc2abd0275ab08674c5f",
           "sha256": "716eedde78fd9fa97b39470767e501c9c680664d1b15e2a22ec4c1bd351e6811"
         },
         {
-          "path": "src/common/item_length.h",
-          "git_sha": "279d74f29967ae9ebeeb68e99d22dd3c23982cce",
-          "sha256": "19721a6df8088ad80810983ea016bc816afcca65cdcbd284da14f173cfa6cd4b"
+          "path": "src/game/src/char_affect.cpp",
+          "git_sha": "d67ddcd073f93043cb700fbc0574ccfeadab70d7",
+          "sha256": "b52b4c6c6495a27ef19ecd6a298e3af0deea33c319a77ca1daf3efdd3fc386b2"
         }
       ]
     }
@@ -109,7 +136,11 @@
     "output_linear_unit": "meter",
     "source_axes": "+X right, +Y forward, +Z up",
     "godot_axes": "+X right, +Y up, -Z forward",
-    "source_to_godot": ["x / 100", "z / 100", "-y / 100"]
+    "source_to_godot": [
+      "x / 100",
+      "z / 100",
+      "-y / 100"
+    ]
   },
   "distribution": {
     "basis": "development-only-original-fixture",
@@ -153,37 +184,213 @@
         {
           "id": "general",
           "motions": [
-            {"action": "wait", "files": ["general/wait.msa", "general/wait_1.msa"], "weights": [70, 30], "loop": true},
-            {"action": "walk", "files": ["general/walk.msa"], "loop": true},
-            {"action": "run", "files": ["general/run.msa"], "loop": true},
-            {"action": "normal_attack", "files": ["general/attack.msa", "general/attack_1.msa"], "weights": [50, 50], "loop": false},
-            {"action": "front_damage", "files": ["general/damage.msa", "general/damage_1.msa"], "weights": [50, 50], "loop": false},
-            {"action": "back_damage", "files": ["general/damage_2.msa", "general/damage_3.msa"], "weights": [50, 50], "loop": false},
-            {"action": "death", "files": ["general/dead.msa"], "loop": false}
+            {
+              "action": "wait",
+              "files": [
+                "general/wait.msa",
+                "general/wait_1.msa"
+              ],
+              "weights": [
+                70,
+                30
+              ],
+              "loop": true
+            },
+            {
+              "action": "walk",
+              "files": [
+                "general/walk.msa"
+              ],
+              "loop": true
+            },
+            {
+              "action": "run",
+              "files": [
+                "general/run.msa"
+              ],
+              "loop": true
+            },
+            {
+              "action": "normal_attack",
+              "files": [
+                "general/attack.msa",
+                "general/attack_1.msa"
+              ],
+              "weights": [
+                50,
+                50
+              ],
+              "loop": false
+            },
+            {
+              "action": "front_damage",
+              "files": [
+                "general/damage.msa",
+                "general/damage_1.msa"
+              ],
+              "weights": [
+                50,
+                50
+              ],
+              "loop": false
+            },
+            {
+              "action": "back_damage",
+              "files": [
+                "general/damage_2.msa",
+                "general/damage_3.msa"
+              ],
+              "weights": [
+                50,
+                50
+              ],
+              "loop": false
+            },
+            {
+              "action": "death",
+              "files": [
+                "general/dead.msa"
+              ],
+              "loop": false
+            }
           ]
         },
         {
           "id": "onehand",
-          "required_item_vnums": [10],
+          "required_item_vnums": [
+            10
+          ],
           "motions": [
-            {"action": "wait", "files": ["onehand_sword/wait.msa", "onehand_sword/wait_1.msa"], "weights": [50, 50], "loop": true},
-            {"action": "walk", "files": ["onehand_sword/walk.msa"], "loop": true},
-            {"action": "run", "files": ["onehand_sword/run.msa"], "loop": true},
-            {"action": "front_damage", "files": ["onehand_sword/damage.msa", "onehand_sword/damage_1.msa"], "weights": [50, 50], "loop": false},
-            {"action": "back_damage", "files": ["onehand_sword/damage_2.msa", "onehand_sword/damage_3.msa"], "weights": [50, 50], "loop": false},
-            {"action": "combo_1", "files": ["onehand_sword/combo_01.msa"], "loop": false},
-            {"action": "combo_2", "files": ["onehand_sword/combo_02.msa"], "loop": false},
-            {"action": "combo_3", "files": ["onehand_sword/combo_03.msa"], "loop": false},
-            {"action": "combo_4", "files": ["onehand_sword/combo_04.msa"], "loop": false},
-            {"action": "combo_5", "files": ["onehand_sword/combo_05.msa"], "loop": false},
-            {"action": "combo_6", "files": ["onehand_sword/combo_06.msa"], "loop": false},
-            {"action": "combo_7", "files": ["onehand_sword/combo_07.msa"], "loop": false},
-            {"action": "death", "files": ["general/dead.msa"], "fallback_mode": "general", "loop": false}
+            {
+              "action": "wait",
+              "files": [
+                "onehand_sword/wait.msa",
+                "onehand_sword/wait_1.msa"
+              ],
+              "weights": [
+                50,
+                50
+              ],
+              "loop": true
+            },
+            {
+              "action": "walk",
+              "files": [
+                "onehand_sword/walk.msa"
+              ],
+              "loop": true
+            },
+            {
+              "action": "run",
+              "files": [
+                "onehand_sword/run.msa"
+              ],
+              "loop": true
+            },
+            {
+              "action": "front_damage",
+              "files": [
+                "onehand_sword/damage.msa",
+                "onehand_sword/damage_1.msa"
+              ],
+              "weights": [
+                50,
+                50
+              ],
+              "loop": false
+            },
+            {
+              "action": "back_damage",
+              "files": [
+                "onehand_sword/damage_2.msa",
+                "onehand_sword/damage_3.msa"
+              ],
+              "weights": [
+                50,
+                50
+              ],
+              "loop": false
+            },
+            {
+              "action": "combo_1",
+              "files": [
+                "onehand_sword/combo_01.msa"
+              ],
+              "loop": false
+            },
+            {
+              "action": "combo_2",
+              "files": [
+                "onehand_sword/combo_02.msa"
+              ],
+              "loop": false
+            },
+            {
+              "action": "combo_3",
+              "files": [
+                "onehand_sword/combo_03.msa"
+              ],
+              "loop": false
+            },
+            {
+              "action": "combo_4",
+              "files": [
+                "onehand_sword/combo_04.msa"
+              ],
+              "loop": false
+            },
+            {
+              "action": "combo_5",
+              "files": [
+                "onehand_sword/combo_05.msa"
+              ],
+              "loop": false
+            },
+            {
+              "action": "combo_6",
+              "files": [
+                "onehand_sword/combo_06.msa"
+              ],
+              "loop": false
+            },
+            {
+              "action": "combo_7",
+              "files": [
+                "onehand_sword/combo_07.msa"
+              ],
+              "loop": false
+            },
+            {
+              "action": "death",
+              "files": [
+                "general/dead.msa"
+              ],
+              "fallback_mode": "general",
+              "loop": false
+            }
           ],
           "combo_chains": [
-            ["combo_1", "combo_2", "combo_3", "combo_4"],
-            ["combo_1", "combo_2", "combo_3", "combo_5", "combo_7"],
-            ["combo_1", "combo_2", "combo_3", "combo_5", "combo_6", "combo_4"]
+            [
+              "combo_1",
+              "combo_2",
+              "combo_3",
+              "combo_4"
+            ],
+            [
+              "combo_1",
+              "combo_2",
+              "combo_3",
+              "combo_5",
+              "combo_7"
+            ],
+            [
+              "combo_1",
+              "combo_2",
+              "combo_3",
+              "combo_5",
+              "combo_6",
+              "combo_4"
+            ]
           ]
         }
       ],
@@ -213,17 +420,105 @@
         {
           "id": "general",
           "motions": [
-            {"action": "wait", "files": ["00.msa", "00_1.msa", "00_2.msa"], "weights": [65, 25, 10], "loop": true},
-            {"action": "walk", "files": ["02.msa"], "loop": true},
-            {"action": "run", "files": ["03.msa"], "loop": true},
-            {"action": "normal_attack", "files": ["20.msa", "20_1.msa"], "weights": [50, 50], "loop": false},
-            {"action": "front_damage", "files": ["30.msa"], "loop": false},
-            {"action": "front_death", "files": ["31.msa"], "loop": false},
-            {"action": "front_knockdown", "files": ["32.msa"], "loop": false},
-            {"action": "front_standup", "files": ["33.msa"], "loop": false},
-            {"action": "back_damage", "files": ["34.msa", "34_1.msa"], "weights": [50, 50], "loop": false},
-            {"action": "back_knockdown", "files": ["35.msa"], "loop": false},
-            {"action": "back_death", "files": ["37.msa", "37_1.msa"], "weights": [50, 50], "loop": false}
+            {
+              "action": "wait",
+              "files": [
+                "00.msa",
+                "00_1.msa",
+                "00_2.msa"
+              ],
+              "weights": [
+                65,
+                25,
+                10
+              ],
+              "loop": true
+            },
+            {
+              "action": "walk",
+              "files": [
+                "02.msa"
+              ],
+              "loop": true
+            },
+            {
+              "action": "run",
+              "files": [
+                "03.msa"
+              ],
+              "loop": true
+            },
+            {
+              "action": "normal_attack",
+              "files": [
+                "20.msa",
+                "20_1.msa"
+              ],
+              "weights": [
+                50,
+                50
+              ],
+              "loop": false
+            },
+            {
+              "action": "front_damage",
+              "files": [
+                "30.msa"
+              ],
+              "loop": false
+            },
+            {
+              "action": "front_death",
+              "files": [
+                "31.msa"
+              ],
+              "loop": false
+            },
+            {
+              "action": "front_knockdown",
+              "files": [
+                "32.msa"
+              ],
+              "loop": false
+            },
+            {
+              "action": "front_standup",
+              "files": [
+                "33.msa"
+              ],
+              "loop": false
+            },
+            {
+              "action": "back_damage",
+              "files": [
+                "34.msa",
+                "34_1.msa"
+              ],
+              "weights": [
+                50,
+                50
+              ],
+              "loop": false
+            },
+            {
+              "action": "back_knockdown",
+              "files": [
+                "35.msa"
+              ],
+              "loop": false
+            },
+            {
+              "action": "back_death",
+              "files": [
+                "37.msa",
+                "37_1.msa"
+              ],
+              "weights": [
+                50,
+                50
+              ],
+              "loop": false
+            }
           ]
         }
       ]
@@ -244,23 +539,34 @@
       ],
       "actor_attachment": "weapon_right",
       "attachment_transform": {
-        "translation_m": [0.0, 0.0, 0.0],
-        "rotation_degrees": [90.0, 0.0, 0.0],
-        "scale": [1.0, 1.0, 1.0]
+        "translation_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation_degrees": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
       }
     }
   ],
   "trusted_gameplay": {
     "player": {
       "actor_id": "actor.player.warrior-male",
-      "base_damage": 25,
       "attack_range_m": 2.7,
       "attack_cooldown_us": 850000,
       "primary_actions": {
         "general": "normal_attack",
         "onehand": "combo_1"
       },
-      "override_basis": "Preserve the implemented player base damage, attack reach and cooldown while source MSA supplies clip and hit-window timing."
+      "override_basis": "Preserve implemented attack reach and cooldown while schema-6 physical definitions replace prototype fixed damage."
     },
     "mob": {
       "actor_id": "actor.mob.wild-dog-101",
@@ -273,13 +579,11 @@
       "acquisition_range_m": 8.0,
       "chase_home_range_m": 16.0,
       "attack_range_m": 1.9,
-      "damage_min": 20,
-      "damage_max": 20,
       "attack_cooldown_us": 1300000,
       "respawn_us": 12000000,
       "reward_gold_min": 5,
       "reward_gold_max": 5,
-      "override_basis": "Preserve the implemented prototype balance while replacing its presentation; original vnum 101 reference values are retained below.",
+      "override_basis": "Preserve implemented HP, movement, timing, and rewards; schema-6 physical definitions derive damage from pinned vnum 101 columns.",
       "source_values": {
         "max_health": 126,
         "move_speed": 100,
@@ -296,10 +600,11 @@
     "item": {
       "item_id": "item.weapon.sword-10",
       "vnum": 10,
-      "attack_bonus": 10,
-      "allowed_actor_ids": ["actor.player.warrior-male"],
+      "allowed_actor_ids": [
+        "actor.player.warrior-male"
+      ],
       "equipment_mode": "onehand",
-      "override_basis": "Preserve the implemented starter-sword bonus; original item row identifies a size-2 WEAPON_SWORD with values 15-19 and 13-15."
+      "override_basis": "Preserve Sword+0 identity, equipment eligibility, and onehand mode; schema-6 physical definitions derive 13..15 power and refine 0 from VALUE3..VALUE5."
     },
     "progression": {
       "supported_character_class": 0,
@@ -330,5 +635,28 @@
       "source": "selected MSA motion events",
       "reason": "Sound and effect dependencies are reported when encountered but are not converted by this visual/action slice."
     }
-  ]
+  ],
+  "item_catalog": {
+    "schema_version": 1,
+    "items": [
+      {
+        "id": "item.weapon.sword-10",
+        "revision": 1,
+        "vnum": 10,
+        "icon": "icon/item/00010"
+      },
+      {
+        "id": "item.consumable.red-potion-small",
+        "revision": 1,
+        "vnum": 27001,
+        "icon": "icon/item/27001"
+      },
+      {
+        "id": "item.consumable.red-potion-medium",
+        "revision": 1,
+        "vnum": 27002,
+        "icon": "icon/item/27002"
+      }
+    ]
+  }
 }

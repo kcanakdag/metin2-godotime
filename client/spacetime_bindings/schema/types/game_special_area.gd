@@ -17,7 +17,12 @@ const table_names: Array[String] = []
 @export var center_y: float
 @export var center_z: float
 @export var heading: float
-@export var damage: int
+@export var attacker_level: int
+@export var attacker_strength: int
+@export var attacker_stat_attack: int
+@export var attacker_dexterity: int
+@export var equipped_item_id: int
+@export var equipped_vnum: int
 @export var hit_count: int
 
 #BSATN metadata
@@ -34,7 +39,12 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"center_y": "F32",
 	"center_z": "F32",
 	"heading": "F32",
-	"damage": "U16",
+	"attacker_level": "U8",
+	"attacker_strength": "U8",
+	"attacker_stat_attack": "I32",
+	"attacker_dexterity": "U8",
+	"equipped_item_id": "U64",
+	"equipped_vnum": "U32",
 	"hit_count": "U8"
 }
 
@@ -49,9 +59,14 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 ## 9. center_y: float[br]
 ## 10. center_z: float[br]
 ## 11. heading: float[br]
-## 12. damage: int[br]
-## 13. hit_count: int[br]
-static func create(p_character_id: PackedByteArray, p_owner_life_sequence: int, p_action_revision: int, p_action_started_at_us: int, p_activation_at_us: int, p_expires_at_us: int, p_activated_at_tick_us: int, p_center_x: float, p_center_y: float, p_center_z: float, p_heading: float, p_damage: int, p_hit_count: int) -> GameSpecialArea:
+## 12. attacker_level: int[br]
+## 13. attacker_strength: int[br]
+## 14. attacker_stat_attack: int[br]
+## 15. attacker_dexterity: int[br]
+## 16. equipped_item_id: int[br]
+## 17. equipped_vnum: int[br]
+## 18. hit_count: int[br]
+static func create(p_character_id: PackedByteArray, p_owner_life_sequence: int, p_action_revision: int, p_action_started_at_us: int, p_activation_at_us: int, p_expires_at_us: int, p_activated_at_tick_us: int, p_center_x: float, p_center_y: float, p_center_z: float, p_heading: float, p_attacker_level: int, p_attacker_strength: int, p_attacker_stat_attack: int, p_attacker_dexterity: int, p_equipped_item_id: int, p_equipped_vnum: int, p_hit_count: int) -> GameSpecialArea:
 	var result: GameSpecialArea = GameSpecialArea.new()
 	result.character_id = p_character_id
 	result.owner_life_sequence = p_owner_life_sequence
@@ -64,6 +79,11 @@ static func create(p_character_id: PackedByteArray, p_owner_life_sequence: int, 
 	result.center_y = p_center_y
 	result.center_z = p_center_z
 	result.heading = p_heading
-	result.damage = p_damage
+	result.attacker_level = p_attacker_level
+	result.attacker_strength = p_attacker_strength
+	result.attacker_stat_attack = p_attacker_stat_attack
+	result.attacker_dexterity = p_attacker_dexterity
+	result.equipped_item_id = p_equipped_item_id
+	result.equipped_vnum = p_equipped_vnum
 	result.hit_count = p_hit_count
 	return result

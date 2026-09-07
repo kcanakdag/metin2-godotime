@@ -53,6 +53,7 @@ REFERENCES = (
     "bin/pack/uiscript/uiscript/minimap.py",
     "bin/pack/uiscript/uiscript/atlaswindow.py",
     "bin/pack/uiscript/uiscript/characterwindow.py",
+    "bin/pack/uiscript/uiscript/mousebuttonwindow.py",
     "bin/pack/root/uitaskbar.py",
     "bin/pack/root/uicharacter.py",
     "bin/pack/root/uiinventory.py",
@@ -158,6 +159,11 @@ def selected_assets():
         | {UI_ROOT + name for name in TARGET_WINDOW_ASSETS}
         | {STATUS_ENGLISH_WINDOW_ROOT + name for name in STATUS_ENGLISH_WINDOW_ASSETS}
         | {"icon/item/00010.tga", "icon/item/27001.tga", "icon/item/27002.tga"}
+        | {
+            f"icon/face/{source_class}_{sex}.tga"
+            for source_class in ("warrior", "assassin", "sura", "shaman")
+            for sex in ("m", "w")
+        }
         | set(selected_intro_assets())
     )
 
@@ -194,7 +200,7 @@ def output_path(name):
     normalized = virtual_path(name)
     if normalized.startswith(UI_ROOT):
         normalized = normalized[len(UI_ROOT) :]
-    elif not normalized.startswith(("icon/item/", "locale/en/ui/")):
+    elif not normalized.startswith(("icon/item/", "icon/face/", "locale/en/ui/")):
         raise ValueError(f"Asset outside selected UI/icon namespace: {name}")
     return Path(normalized).with_suffix(".png")
 

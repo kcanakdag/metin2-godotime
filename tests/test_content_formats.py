@@ -254,7 +254,7 @@ Group MotionEventData
             )
             rejected(
                 lambda p: p["trusted_gameplay"]["player"].update(base_damage=70_000),
-                "positive u16",
+                "Legacy fixed damage inputs",
             )
 
     def test_trusted_payload_hash_and_windows_are_validated(self):

@@ -52,6 +52,7 @@ pub struct MonsterClock {
     pub attack_until_us: i64,
     pub pending_target: Identity,
     pub pending_target_generation: u32,
+    pub pending_source_generation: u32,
     pub pending_hit_at_us: i64,
     pub pending_hit_until_us: i64,
     pub pending_damage: u16,
@@ -90,7 +91,6 @@ pub struct PlayerAttackPlan {
     pub definition: &'static AttackDefinition,
     pub target_id: u32,
     pub target_generation: u32,
-    pub damage: u16,
     pub heading: Option<f32>,
     pub can_select_target: bool,
 }
@@ -99,6 +99,7 @@ pub struct PlayerAttackPlan {
 pub struct PendingPlayerHit {
     target_id: u32,
     target_generation: u32,
+    source_generation: u32,
     damage: u16,
     range_m: f32,
     invulnerability_us: i64,
@@ -110,6 +111,7 @@ pub struct PendingPlayerHit {
 struct PendingMonsterHit {
     target: Identity,
     target_generation: u32,
+    source_generation: u32,
     damage: u16,
 }
 
@@ -141,6 +143,15 @@ fn compare_due_hits(left: &DueHitEvent, right: &DueHitEvent) -> Ordering {
         })
 }
 
+fn exact_hit_generations_match(
+    captured_source: u32,
+    current_source: u32,
+    captured_target: u32,
+    current_target: u32,
+) -> bool {
+    captured_source == current_source && captured_target == current_target
+}
+
 fn visit_due_hits(events: &mut [DueHitEvent], mut visit: impl FnMut(DueHitEvent)) {
     events.sort_by(compare_due_hits);
     for event in events.iter().copied() {
@@ -149,15 +160,16 @@ fn visit_due_hits(events: &mut [DueHitEvent], mut visit: impl FnMut(DueHitEvent)
 }
 
 pub fn initialize(ctx: &ReducerContext) {
-    debug_assert_eq!(
-        (
-            definitions::MONSTER_SPAWNS[0].home_x,
-            definitions::MONSTER_SPAWNS[0].home_z,
-        ),
-        content::MONSTER_HOME,
-        "the primary trusted spawn must preserve the selected map baseline"
-    );
+    let bounds = collision_bounds(ctx);
     for spawn in definitions::MONSTER_SPAWNS {
+        content::valid_spawn(spawn.home_x, spawn.home_z)
+            .expect("Authored monster home must be traversable on the compiled map");
+        assert!(
+            !bounds
+                .iter()
+                .any(|bound| bound.contains(spawn.home_x, spawn.home_z)),
+            "Authored monster home intersects a training obstacle"
+        );
         ctx.db.monster().insert(fresh_monster(*spawn, 0, 0));
         ctx.db.monster_clock().insert(fresh_monster_clock(*spawn));
     }
@@ -210,6 +222,7 @@ fn fresh_monster_clock(spawn: MonsterSpawnDefinition) -> MonsterClock {
         attack_until_us: 0,
         pending_target: Identity::ZERO,
         pending_target_generation: 0,
+        pending_source_generation: 0,
         pending_hit_at_us: 0,
         pending_hit_until_us: 0,
         pending_damage: 0,
@@ -221,25 +234,18 @@ pub fn plan_player_attack(
     ctx: &ReducerContext,
     character: Identity,
     control: &Controller,
-) -> PlayerAttackPlan {
-    let definition = if inventory::equipped_weapon(ctx, character) == definitions::WEAPON_VNUM {
-        &definitions::PLAYER_ONEHAND_ATTACK
-    } else {
-        &definitions::PLAYER_GENERAL_ATTACK
-    };
-    let damage = definitions::PLAYER_BASE_DAMAGE
-        .checked_add(inventory::weapon_bonus(ctx, character))
-        .expect("trusted player and weapon damage must fit u16");
+) -> Result<PlayerAttackPlan, String> {
+    let definition =
+        crate::characters::attack(ctx, character, inventory::equipped_weapon(ctx, character))?;
     let bounds = collision_bounds(ctx);
     let Some(player) = ctx.db.player().identity().find(character) else {
-        return PlayerAttackPlan {
+        return Ok(PlayerAttackPlan {
             definition,
             target_id: 0,
             target_generation: 0,
-            damage,
             heading: None,
             can_select_target: false,
-        };
+        });
     };
     if control.combat_target_id != 0 {
         let selected = ctx
@@ -248,14 +254,13 @@ pub fn plan_player_attack(
             .id()
             .find(control.combat_target_id)
             .filter(|monster| monster.life_sequence == control.combat_target_life_sequence);
-        return PlayerAttackPlan {
+        return Ok(PlayerAttackPlan {
             definition,
             target_id: control.combat_target_id,
             target_generation: control.combat_target_life_sequence,
-            damage,
             heading: selected.map(|monster| (player.x - monster.x).atan2(player.z - monster.z)),
             can_select_target: false,
-        };
+        });
     }
     let target = ctx
         .db
@@ -275,16 +280,15 @@ pub fn plan_player_attack(
                 .hypot(a.z - player.z)
                 .total_cmp(&(b.x - player.x).hypot(b.z - player.z))
         });
-    PlayerAttackPlan {
+    Ok(PlayerAttackPlan {
         definition,
         target_id: target.as_ref().map_or(0, |monster| monster.id),
         target_generation: target.as_ref().map_or(0, |monster| monster.life_sequence),
-        damage,
         heading: target
             .as_ref()
             .map(|monster| (player.x - monster.x).atan2(player.z - monster.z)),
         can_select_target: target.is_some(),
-    }
+    })
 }
 
 pub fn start_player_action(
@@ -313,6 +317,32 @@ pub fn start_player_action(
         .checked_add(1)
         .ok_or("Attack sequence limit reached.")?;
     let has_ordinary_hit = plan.target_id != 0 && plan.definition.special_area.is_none();
+    let requires_sword = crate::characters::requires_weapon(plan.definition.id);
+    let captured_attacker = (has_ordinary_hit || plan.definition.special_area.is_some())
+        .then(|| crate::physical_damage::capture_player(ctx, controller.identity, requires_sword))
+        .transpose()?;
+    let validated_target = has_ordinary_hit
+        .then(|| {
+            ctx.db
+                .monster()
+                .id()
+                .find(plan.target_id)
+                .filter(|monster| {
+                    monster.health > 0 && monster.life_sequence == plan.target_generation
+                })
+        })
+        .flatten();
+    let pending_damage = crate::physical_damage::capture_ordinary_damage(
+        has_ordinary_hit,
+        validated_target,
+        |monster| {
+            crate::physical_damage::roll_player_hit(
+                ctx,
+                captured_attacker.expect("ordinary physical hits capture an attacker"),
+                &monster,
+            )
+        },
+    )?;
     let (hit_at_us, hit_until_us) = if !has_ordinary_hit {
         (0, 0)
     } else {
@@ -332,9 +362,14 @@ pub fn start_player_action(
     controller.action_revision = action_revision;
     controller.pending_attack_target_id = plan.target_id;
     controller.pending_attack_target_generation = plan.target_generation;
+    controller.pending_attack_source_generation = if has_ordinary_hit {
+        player.life_sequence
+    } else {
+        0
+    };
     controller.pending_attack_hit_at_us = hit_at_us;
     controller.pending_attack_hit_until_us = hit_until_us;
-    controller.pending_attack_damage = if has_ordinary_hit { plan.damage } else { 0 };
+    controller.pending_attack_damage = pending_damage;
     controller.pending_attack_range = if !has_ordinary_hit {
         0.0
     } else {
@@ -371,7 +406,7 @@ pub fn start_player_action(
         player.life_sequence,
         now,
         player.heading,
-        plan.damage,
+        captured_attacker,
     )?;
     player.attack_sequence = attack_sequence;
     player.attack_action_id = plan.definition.id.into();
@@ -450,6 +485,7 @@ pub fn take_due_player_hit(controller: &mut Controller, now: i64) -> Option<Pend
     let hit = still_valid.then_some(PendingPlayerHit {
         target_id: controller.pending_attack_target_id,
         target_generation: controller.pending_attack_target_generation,
+        source_generation: controller.pending_attack_source_generation,
         damage: controller.pending_attack_damage,
         range_m: controller.pending_attack_range,
         invulnerability_us: controller.pending_attack_invulnerability_us,
@@ -473,6 +509,7 @@ pub fn discard_expired_player_hit(controller: &mut Controller, now: i64) {
 pub fn cancel_player_attack(controller: &mut Controller) {
     controller.pending_attack_target_id = 0;
     controller.pending_attack_target_generation = 0;
+    controller.pending_attack_source_generation = 0;
     controller.pending_attack_hit_at_us = 0;
     controller.pending_attack_hit_until_us = 0;
     controller.pending_attack_damage = 0;
@@ -589,8 +626,13 @@ pub fn resolve_player_hit(ctx: &ReducerContext, character: Identity, hit: Pendin
     let now = now_us(ctx);
     if !player.online
         || player.health == 0
+        || !exact_hit_generations_match(
+            hit.source_generation,
+            player.life_sequence,
+            hit.target_generation,
+            monster.life_sequence,
+        )
         || monster.health == 0
-        || monster.life_sequence != hit.target_generation
         || !within_reach(
             (player.x, player.y, player.z),
             (monster.x, monster.y, monster.z),
@@ -916,14 +958,6 @@ pub(crate) fn mark_monster_hit_cooldown(
     Ok(())
 }
 
-fn roll_u16(ctx: &ReducerContext, minimum: u16, maximum: u16) -> u16 {
-    if minimum == maximum {
-        minimum
-    } else {
-        ctx.rng().gen_range(minimum..=maximum)
-    }
-}
-
 fn roll_u32(ctx: &ReducerContext, minimum: u32, maximum: u32) -> u32 {
     if minimum == maximum {
         minimum
@@ -971,7 +1005,7 @@ pub fn pickup_loot(ctx: &ReducerContext, id: u64) -> Result<(), String> {
     Ok(())
 }
 
-pub fn simulate(ctx: &ReducerContext, elapsed: f32) {
+pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
     let now = now_us(ctx);
     inventory::expire_drops(ctx);
     let bounds = collision_bounds(ctx);
@@ -1065,7 +1099,7 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) {
                     player.identity,
                     player.life_sequence,
                     now,
-                );
+                )?;
             }
         } else if distance > 0.1 {
             monster.action_started_at_us = 0;
@@ -1092,6 +1126,7 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) {
         ctx.db.monster().id().update(monster);
         ctx.db.monster_clock().id().update(clock);
     }
+    Ok(())
 }
 
 fn nearest_target(
@@ -1127,22 +1162,21 @@ fn schedule_monster_hit(
     target: Identity,
     target_generation: u32,
     now: i64,
-) {
+) -> Result<(), String> {
+    let damage = crate::physical_damage::roll_monster_hit(ctx, monster, target)?;
     clock.next_attack_us = now.saturating_add(definitions::MOB_ATTACK.cooldown_us);
     clock.attack_until_us = now.saturating_add(definitions::MOB_ATTACK.duration_us);
     clock.pending_target = target;
     clock.pending_target_generation = target_generation;
+    clock.pending_source_generation = monster.life_sequence;
     clock.pending_hit_at_us = now.saturating_add(definitions::MOB_ATTACK.hit_start_us);
     clock.pending_hit_until_us = now.saturating_add(definitions::MOB_ATTACK.hit_end_us);
-    clock.pending_damage = roll_u16(
-        ctx,
-        definitions::MOB_DAMAGE_MIN,
-        definitions::MOB_DAMAGE_MAX,
-    );
+    clock.pending_damage = damage;
     monster.attack_sequence = monster.attack_sequence.wrapping_add(1);
     monster.activity = 2;
     monster.action_started_at_us = now;
     monster.action_ends_at_us = clock.attack_until_us;
+    Ok(())
 }
 
 fn resolve_monster_hit(ctx: &ReducerContext, monster_id: u32, hit: PendingMonsterHit, now: i64) {
@@ -1153,9 +1187,14 @@ fn resolve_monster_hit(ctx: &ReducerContext, monster_id: u32, hit: PendingMonste
         return;
     };
     if monster.health == 0
+        || !exact_hit_generations_match(
+            hit.source_generation,
+            monster.life_sequence,
+            hit.target_generation,
+            player.life_sequence,
+        )
         || !player.online
         || player.health == 0
-        || player.life_sequence != hit.target_generation
         || !within_reach(
             (monster.x, monster.y, monster.z),
             (player.x, player.y, player.z),
@@ -1172,6 +1211,7 @@ fn resolve_monster_hit(ctx: &ReducerContext, monster_id: u32, hit: PendingMonste
         return;
     }
     if apply_damage(&mut player.health, hit.damage) {
+        crate::npcs::clear(ctx, player.identity);
         player.activity = 3;
         player.action_started_at_us = now;
         player.respawn_at_us = now.saturating_add(PLAYER_RESPAWN_US);
@@ -1201,6 +1241,7 @@ fn take_due_monster_hit(clock: &mut MonsterClock, now: i64) -> Option<PendingMon
     let hit = valid_window.then_some(PendingMonsterHit {
         target: clock.pending_target,
         target_generation: clock.pending_target_generation,
+        source_generation: clock.pending_source_generation,
         damage: clock.pending_damage,
     });
     cancel_monster_hit(clock);
@@ -1210,6 +1251,7 @@ fn take_due_monster_hit(clock: &mut MonsterClock, now: i64) -> Option<PendingMon
 pub(crate) fn cancel_monster_hit(clock: &mut MonsterClock) {
     clock.pending_target = Identity::ZERO;
     clock.pending_target_generation = 0;
+    clock.pending_source_generation = 0;
     clock.pending_hit_at_us = 0;
     clock.pending_hit_until_us = 0;
     clock.pending_damage = 0;
@@ -1235,6 +1277,7 @@ mod tests {
             action_revision: 5,
             pending_attack_target_id: 7,
             pending_attack_target_generation: 11,
+            pending_attack_source_generation: 2,
             pending_attack_hit_at_us: hit_at_us,
             pending_attack_hit_until_us: hit_until_us,
             pending_attack_damage: 35,
@@ -1276,6 +1319,7 @@ mod tests {
             attack_until_us: 2_000_000,
             pending_target: Identity::from_claims("test", "target"),
             pending_target_generation: 4,
+            pending_source_generation: 3,
             pending_hit_at_us: hit_at_us,
             pending_hit_until_us: hit_until_us,
             pending_damage: 20,
@@ -1372,6 +1416,7 @@ mod tests {
         let hit = take_due_player_hit(&mut controller, 1_250_000).unwrap();
         assert_eq!(hit.target_id, 7);
         assert_eq!(hit.target_generation, 11);
+        assert_eq!(hit.source_generation, 2);
         assert_eq!(hit.damage, 35);
         assert_eq!(take_due_player_hit(&mut controller, 1_300_000), None);
     }
@@ -1385,6 +1430,7 @@ mod tests {
         let hit = take_due_player_hit(&mut controller, 1_250_000).unwrap();
         assert_eq!(hit.target_id, 7);
         assert_eq!(hit.target_generation, 11);
+        assert_eq!(hit.source_generation, 2);
         assert_eq!(hit.damage, 35);
         assert_eq!(hit.target_revision, 9);
         assert!(hit.can_select_target);
@@ -1395,6 +1441,13 @@ mod tests {
         assert!(!definitions::MONSTER_SPAWNS.is_empty());
         for (index, spawn) in definitions::MONSTER_SPAWNS.iter().enumerate() {
             assert!(spawn.home_x.is_finite() && spawn.home_z.is_finite());
+            assert!(
+                content::valid_target(spawn.home_x, spawn.home_z).is_ok(),
+                "Blocked monster home {} at {}, {}",
+                spawn.id,
+                spawn.home_x,
+                spawn.home_z
+            );
             assert!(
                 definitions::MONSTER_SPAWNS[..index]
                     .iter()
@@ -1420,7 +1473,16 @@ mod tests {
         assert_eq!(take_due_player_hit(&mut stale, 1_500_000), None);
         let mut cancelled = controller_with_hit(1_192_308, 1_315_385);
         cancel_player_attack(&mut cancelled);
+        assert_eq!(cancelled.pending_attack_source_generation, 0);
         assert_eq!(take_due_player_hit(&mut cancelled, 1_250_000), None);
+    }
+
+    #[test]
+    fn both_hit_generations_must_match_and_zero_is_a_valid_fresh_life() {
+        assert!(exact_hit_generations_match(0, 0, 0, 0));
+        assert!(exact_hit_generations_match(3, 3, 7, 7));
+        assert!(!exact_hit_generations_match(3, 4, 7, 7));
+        assert!(!exact_hit_generations_match(3, 3, 7, 8));
     }
 
     #[test]
@@ -1428,9 +1490,11 @@ mod tests {
         let mut due = monster_clock_with_hit(1_320_195, 1_492_782);
         assert_eq!(take_due_monster_hit(&mut due, 1_320_194), None);
         let hit = take_due_monster_hit(&mut due, 1_400_000).unwrap();
+        assert_eq!(hit.source_generation, 3);
         assert_eq!(hit.target_generation, 4);
         assert_eq!(hit.damage, 20);
         assert_eq!(take_due_monster_hit(&mut due, 1_450_000), None);
+        assert_eq!(due.pending_source_generation, 0);
 
         let mut stale = monster_clock_with_hit(1_320_195, 1_492_782);
         assert_eq!(take_due_monster_hit(&mut stale, 2_100_000), None);

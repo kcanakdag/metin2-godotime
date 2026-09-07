@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "profile_id": "training-population",
+  "revision": 1,
+  "map_id": "training",
+  "basis": "authored-development-layout",
+  "placements": [
+    {"id": 1, "definition_vnum": 101, "home_x": 3.0, "home_z": 3.0}
+  ]
+}

@@ -72,6 +72,11 @@ def main():
         folder.mkdir(exist_ok=True)
         env[variable] = str(folder)
     with tempfile.TemporaryDirectory(prefix="stage-", dir=local) as temp:
+        # Godot writes a fixed tmpproject.binary filename during pack export.
+        # Give each invocation its own OS temp directory for concurrent targets.
+        godot_temp = Path(temp) / "godot-temp"
+        godot_temp.mkdir()
+        env["TMPDIR"] = str(godot_temp)
         stage = Path(temp) / "project"
         build = Path(temp) / "build"
         build.mkdir()

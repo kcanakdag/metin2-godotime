@@ -42,6 +42,17 @@ fn victim_scan_decision(
     }
 }
 
+fn apply_scan_decision(
+    decision: VictimScanDecision,
+    mut apply: impl FnMut() -> Result<bool, String>,
+) -> Result<bool, String> {
+    if decision == VictimScanDecision::ApplyHit {
+        apply()
+    } else {
+        Ok(false)
+    }
+}
+
 fn area_phase(
     now: i64,
     activation_at_us: i64,
@@ -77,7 +88,12 @@ pub struct SpecialArea {
     pub center_y: f32,
     pub center_z: f32,
     pub heading: f32,
-    pub damage: u16,
+    pub attacker_level: u8,
+    pub attacker_strength: u8,
+    pub attacker_stat_attack: i32,
+    pub attacker_dexterity: u8,
+    pub equipped_item_id: u64,
+    pub equipped_vnum: u32,
     pub hit_count: u8,
 }
 
@@ -98,10 +114,14 @@ pub struct SpecialAreaVictim {
 }
 
 fn valid_definition(area: SpecialAreaDefinition) -> bool {
-    area.authored_start_us == 659_316
-        && area.legacy_dispatch_frame == 39
-        && area.activation_offset_us == 666_667
-        && area.duration_us == 200_000
+    matches!(
+        (
+            area.authored_start_us,
+            area.legacy_dispatch_frame,
+            area.activation_offset_us
+        ),
+        (659_316, 39, 666_667) | (434_359, 26, 450_000)
+    ) && area.duration_us == 200_000
         && area.local_center_x_m.is_finite()
         && area.local_center_x_m == 0.0
         && area.local_center_z_m.is_finite()
@@ -135,6 +155,22 @@ fn valid_screen_wave(wave: ScreenWaveDefinition) -> bool {
 /// wave is presentation-only, but reading and checking it here prevents a
 /// malformed trusted definition from starting the authoritative area action.
 pub fn validate_action_definition(definition: &AttackDefinition) -> Result<(), String> {
+    if let (Some(area), None) = (definition.special_area, definition.screen_wave)
+        && valid_definition(area)
+        && area
+            .activation_offset_us
+            .checked_add(area.duration_us)
+            .is_some_and(|end| end <= definition.duration_us)
+        && definitions::CHARACTER_BASIC_ATTACKS
+            .iter()
+            .any(|(_, weapon, action)| {
+                *weapon == 10 && action.id == definition.id && action.special_area.is_some()
+            })
+    {
+        // These selected Warrior/Ninja finishers share the exact validated
+        // geometry, force and victim policy; activation times are captured.
+        return Ok(());
+    }
     match (definition.special_area, definition.screen_wave) {
         (None, None) => Ok(()),
         (Some(area), Some(wave))
@@ -243,16 +279,17 @@ pub fn start(
     owner_life_sequence: u32,
     now: i64,
     heading: f32,
-    damage: u16,
+    captured_attacker: Option<crate::physical_damage::CapturedPlayerAttacker>,
 ) -> Result<(), String> {
     clear(ctx, controller.identity);
     let Some(area) = definition.special_area else {
         return Ok(());
     };
+    let captured_attacker =
+        captured_attacker.ok_or("The trusted special-area attacker snapshot is missing.")?;
     if validate_action_definition(definition).is_err()
         || controller.action_revision == 0
         || !heading.is_finite()
-        || damage == 0
     {
         return Err("The trusted special-area action is invalid.".into());
     }
@@ -274,7 +311,12 @@ pub fn start(
         center_y: 0.0,
         center_z: 0.0,
         heading,
-        damage,
+        attacker_level: captured_attacker.level,
+        attacker_strength: captured_attacker.strength,
+        attacker_stat_attack: captured_attacker.stat_attack,
+        attacker_dexterity: captured_attacker.dexterity,
+        equipped_item_id: captured_attacker.equipped_item_id,
+        equipped_vnum: captured_attacker.equipped_vnum,
         hit_count: 0,
     });
     Ok(())
@@ -480,15 +522,27 @@ fn apply_hit(
         .identity()
         .find(area.character_id)
         .ok_or("The special-area owner is no longer present.")?;
+    let damage = crate::physical_damage::roll_player_hit(
+        ctx,
+        crate::physical_damage::CapturedPlayerAttacker {
+            level: area.attacker_level,
+            strength: area.attacker_strength,
+            stat_attack: area.attacker_stat_attack,
+            dexterity: area.attacker_dexterity,
+            equipped_item_id: area.equipped_item_id,
+            equipped_vnum: area.equipped_vnum,
+        },
+        monster,
+    )?;
     crate::combat::record_damage(
         ctx,
         monster.id,
         monster.life_sequence,
         area.character_id,
         controller.connection_id,
-        u32::from(area.damage),
+        u32::from(damage),
     )?;
-    if crate::combat::apply_damage(&mut monster.health, area.damage) {
+    if crate::combat::apply_damage(&mut monster.health, damage) {
         crate::combat::kill_monster(ctx, monster, area.character_id);
         return Ok(true);
     }
@@ -567,11 +621,7 @@ pub fn scan(ctx: &ReducerContext, now: i64) -> Result<(), String> {
                 continue;
             }
             let before_health = monster.health;
-            let hit = if decision == VictimScanDecision::ApplyHit {
-                apply_hit(ctx, &area, &mut monster, now)?
-            } else {
-                false
-            };
+            let hit = apply_scan_decision(decision, || apply_hit(ctx, &area, &mut monster, now))?;
             if let Some(mut row) = previous_row {
                 row.previous_center_x = current[0] as f32;
                 row.previous_center_y = current[1] as f32;
@@ -610,6 +660,7 @@ pub fn scan(ctx: &ReducerContext, now: i64) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cell::Cell;
 
     #[test]
     fn full_three_dimensional_first_scan_sweep_includes_crossing_and_boundary() {
@@ -655,6 +706,64 @@ mod tests {
         assert_eq!(rejected, VictimScanDecision::TrackOnly);
         let eligible_later = victim_scan_decision(0, 16, false, true, true);
         assert_eq!(eligible_later, VictimScanDecision::ApplyHit);
+    }
+
+    #[test]
+    fn area_damage_draw_runs_once_only_after_intersection_and_cooldown_allow_it() {
+        let calls = Cell::new(0_u8);
+        for decision in [
+            VictimScanDecision::TrackOnly,
+            VictimScanDecision::SkipAlreadyHit,
+            VictimScanDecision::StopAtLimit,
+        ] {
+            assert!(
+                !apply_scan_decision(decision, || {
+                    calls.set(calls.get() + 1);
+                    Ok(true)
+                })
+                .unwrap()
+            );
+        }
+        assert_eq!(calls.get(), 0);
+
+        let eligible = victim_scan_decision(0, 16, false, true, true);
+        assert!(
+            apply_scan_decision(eligible, || {
+                calls.set(calls.get() + 1);
+                Ok(true)
+            })
+            .unwrap()
+        );
+        assert_eq!(calls.get(), 1);
+
+        let same_life = victim_scan_decision(1, 16, true, true, true);
+        assert!(
+            !apply_scan_decision(same_life, || {
+                calls.set(calls.get() + 1);
+                Ok(true)
+            })
+            .unwrap()
+        );
+        assert_eq!(calls.get(), 1);
+
+        let cooldown_rejected = victim_scan_decision(1, 16, false, true, false);
+        assert!(
+            !apply_scan_decision(cooldown_rejected, || {
+                calls.set(calls.get() + 1);
+                Ok(true)
+            })
+            .unwrap()
+        );
+        assert_eq!(calls.get(), 1);
+        let eligible_later = victim_scan_decision(1, 16, false, true, true);
+        assert!(
+            apply_scan_decision(eligible_later, || {
+                calls.set(calls.get() + 1);
+                Ok(true)
+            })
+            .unwrap()
+        );
+        assert_eq!(calls.get(), 2);
     }
 
     #[test]

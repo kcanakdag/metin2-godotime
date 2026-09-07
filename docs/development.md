@@ -6,6 +6,24 @@ Node runs the authentication service and local development proxy/MCP tools.
 The auth service is deployed separately; no Python/Node runtime belongs inside
 a player's Godot client build.
 
+## Classic character builds
+
+Use `make characters-build` for the selected four-class/eight-appearance pipeline,
+with `BLENDER`, `CHARACTER_OUTPUT` and optional `CHARACTER_FLAGS='--offline --replace'`.
+Each output is a new revision; replacement preserves the previous installed
+package. The [character workflow](characters.md) documents inputs, receipts,
+runtime limits, the two-client `make test-classes` command, and exported
+`tools/test_browser_accounts.py --classes` qualification.
+
+Use separate `--work-dir` and `--output-dir` values when running Web/Linux exports
+concurrently. Each `tools/export_playable.py` invocation also supplies its own
+`TMPDIR`, since Godot uses a fixed `tmpproject.binary` name while exporting packs.
+
+The current application protocol is 14. Class-aware creation and progression
+require regenerated bindings and the same installed character catalog used for
+the server build. Publish incompatible schemas to a fresh database and preserve
+existing data. A local auth issuer build must stay on its matching local endpoint.
+
 ## Install the quality tools
 
 Use Python 3.12 or newer. This creates an ignored virtual environment at
@@ -710,6 +728,71 @@ the authenticated permission/replay/provision/revoke phase remains pending the
 explicit privilege approval. These local facts do not qualify the public P1
 endpoint or provision a public account.
 
+## World populations and offline dev mode
+
+Use [world-content authoring](world-content.md) for validated map populations,
+add/move/remove drafts and the isolated Godot inspector. `make world-validate`
+checks the default Yongan profile; `make world-preview` opens a separate offline
+project. Set `WORLD_PROFILE`, `WORLD_OUTPUT` and optional
+`WORLD_FLAGS='--npc <converted-NPC-directory>'` as needed. The default output
+includes a timestamp; an explicitly supplied directory must be new.
+
+Quests are deferred. Yongan's current population contains six Wild Dogs; the
+original guard can be installed with
+`make npc-install NPC_CONTENT=<converted-directory>`.
+`make test-npcs GODOT=/path/to/godot`
+checks the real Main scene, map chunk reload and NPC lifecycle in an isolated
+native project with an explicit offline connection spy. Changed populations require fresh
+development databases until an explicit migration tool is implemented. These
+tools do not grant live admin privileges or modify an existing database.
+
+The NPC compiler accepts repeated `--content` and `--population` arguments for
+additional converted definitions/maps. See the world-content guide for output,
+backup and resource-validation behavior. Normal exports validate this public
+catalog and its GLB/texture derivatives, and inspect the actual packaged NPC
+skins, materials and idle clips. They also check the public item catalog against
+the trusted server item definitions; source metadata remains excluded.
+
+The current local proxy at `http://127.0.0.1:8186` serves the qualified NPC Web
+test build against `mt2-p2-npc-interaction-r1-20260907`, preserving the previous
+databases and game/auth processes. The corresponding browser/Linux run passes
+103 checks. Use `tools/test_browser_accounts.py --world-npcs
+tests/fixtures/yongan-city-guard-route.json` with matched test exports; the full
+command and scenario limits are in the world-content guide. The public deployment
+has not changed.
+
+### NPC interaction authoring and QA
+
+After `make npc-install`, edit `content/worlds/yongan.interactions.json` to link
+an existing stable spawn ID to the shared `dialogue` handler and plain text.
+The server build reads the installed catalog as a trusted offline input and
+advertises its SHA-256. Keep the client and server built from the same catalog.
+There are no scripts or rewards in the interaction profile. Adding another
+NPC with the same handler requires content records, not a new UI/reducer.
+
+The build script emits content errors into the generated game definitions.
+Consequently a missing NPC catalog blocks the game module, while the standalone
+terrain inspector can still compile to help create the first catalog. This is
+not a server fallback or a fixture that may be published without its assets.
+
+For the protocol-13 interaction slice, publish to a new local database, regenerate
+bindings, and run the ordinary-account scenario (the game route can differ from
+the auth origin):
+
+```sh
+python3 tools/test_physical_combat.py --scenario npcs \
+  --server http://127.0.0.1:8186 --game-server http://127.0.0.1:13223 \
+  --database mt2-p2-npc-interaction-r1-20260907 --godot /path/to/godot \
+  --report .local/npc-interactions/network.json
+```
+
+This checks raw private subscriptions, invalid/remote requests, duplicate opens,
+foreign/stale session closes, movement/attack cleanup, real 60-second expiry,
+leave and reconnect. Export both clients and use the existing `--world-npcs`
+browser scenario for actual picking, approach, panel input, Escape and WASD.
+Godot MCP is unavailable in the current session; isolated CLI renders and actual
+exports provide runtime evidence while preserving the open editor.
+
 ## Working with the editor
 
 When available, prefer the configured `godot` MCP tools for live changes. Confirm
@@ -1192,6 +1275,106 @@ For the original small training-ground proof, build/publish with
 and reports distinct from Yongan evidence. Exporting Linux or Web with
 `--test-probe` adds only the explicit local test interface; normal exports remove
 all `client/tests/` sources and MCP bridges.
+
+## Focused physical-damage qualification
+
+For the protocol-10 physical-damage slice, run the focused test against a fresh
+training database with matching generated bindings. When the auth proxy and
+game database use separate local routes:
+
+```sh
+python3 tools/test_physical_combat.py \
+  --server http://127.0.0.1:8186 --game-server http://127.0.0.1:13223 \
+  --database mt2-p2-physical-training-r1-20260907 --godot /path/to/godot \
+  --report .local/p2-physical/combat-report.json
+```
+
+With a shared auth/game origin, use `make test-physical SERVER_URL=... DB=...`.
+This runner checks the actual schema and parses its isolated Godot project before
+creating accounts. It uses two ordinary authenticated identities, retains
+redacted evidence and logs out its fixture sessions. The focused scenario covers
+initial physical damage, owner-private display values, equipment capture,
+movement, a kill/respawn and reconnect/switching. The older combo/finisher browser
+scenarios still encode their protocol-9 fixed-damage expectations; their recorded
+passes are historical until adapted for the variable physical formula.
+
+The content verification matrix applies: this focused test does not rerun the
+four-minute auth-refresh scenario because the authentication implementation is
+unchanged. Select `--scenario finisher` with the separate three-dog database to
+check variable per-victim area damage and captured equipment through force and
+standup. Select `--scenario growth` with the one-dog training database to earn
+twenty kills in four sessions with refreshed credentials, then check level-two
+display values and STR/VIT/DEX allocations. The observer finishes an injured
+monster left by a previous failed run through ordinary combat, preserving zero
+starting XP for the measured character. No database reset or privileged XP grant
+is used. Reports include frozen staged-source hashes and respawn clock timings.
+
+Select `--scenario lifecycle` with a fresh separate three-dog finisher database
+to disconnect before the fourth attack's area activates. The observer checks
+presence removal before activation and unchanged monster health/lives; reconnect
+checks that neither the cancelled attack nor its root motion is replayed.
+
+For the item-recovery slice, use `--scenario recovery` against a fresh local
+training database built with `MT2_ITEM_TEST_FIXTURE=recovery` and a loopback
+`MT2_AUTH_ISSUER`. That bounded test fixture adds two medium potions to the
+otherwise unchanged starter loadout and advertises `training-item-recovery-v1`
+as its map content identity. The build rejects unknown item fixtures, Yongan,
+non-loopback issuers and simultaneous combat fixtures. It enables neither guest
+access nor privileged commands. Preserve existing databases and do not deploy
+this fixture publicly. Normal builds omit `MT2_ITEM_TEST_FIXTURE`.
+
+The recovery scenario earns its health deficit through ordinary dog attacks,
+then checks small/medium recovery timing, capped totals, exact item consumption,
+full/pending/foreign/unsupported rejections, mutual movement and reconnect without
+replaying recovery. Its source/schema preflight runs before account creation.
+Current application protocol is 13 with trusted content schema 7; the SpacetimeDB
+schema HTTP endpoint's `version=10` parameter is a separate wire/API version.
+
+For item integrity, select `--scenario security` against a fresh protocol-12
+training database with matching bindings (the recovery fixture is supported).
+It checks forged/foreign/inactive-character item intents, exact revision replay,
+consumption and ID persistence through reconnect, ordinary kill/drop production,
+competing pickups, quantity conservation and private audit query rejection. It
+uses ordinary authenticated accounts and normal combat, without granting privileges.
+The raw scenario helpers append the subscribed item revision unless a test
+explicitly supplies a stale/forged value. No automatic retry changes the tested intent.
+
+The offline operator checker accepts a consistent JSON snapshot with `inventory`,
+`drops` and `audit` arrays; order `audit` by ascending `id` and include its complete
+history from creation. Use the exact trusted definitions for that database:
+
+```sh
+python3 tools/audit_items.py .local/private-item-snapshot.json \
+  --definitions server/content/p0-warrior-dog/actions.v1.json \
+  --report .local/item-integrity-report.json
+python3 tools/test_target_client.py --godot /path/to/godot \
+  --suite item_intent --output .local/item-intent-check
+python3 tools/test_target_client.py --godot /path/to/godot \
+  --suite physical_ui --native --output .local/item-tooltip-check
+```
+
+The first command is offline reconciliation, not an export mechanism. An
+operator snapshot-export route and archive/retention workflow are still pending;
+do not weaken the account gate or expose private tables to obtain snapshots.
+`--native` uses an isolated Xvfb render and currently supports only the single
+`physical_ui` suite. It saves `physical-ui-component.png`; it does not inspect the
+user's open Godot editor or qualify an exported client.
+
+For the matching Web/Linux test exports, use
+`tools/test_browser_accounts.py --physical --url <origin> --database <database>
+--native <exported-Linux-binary> --chrome <browser> --hardware`. This focused
+Training UI scenario checks Attack/Defense, Sword+0 tooltips and equip/unequip
+through actual Web/native input, plus the standard account lifecycle. Omit other
+feature flags. Review its captures and engine logs as well as interaction checks.
+It does not replace the headless variable-damage scenarios.
+
+Godot 4.7.2 release exports have a reproduced embedded-tooltip issue matching
+[Godot issue 89657](https://github.com/godotengine/godot/issues/89657): removing
+a standard tooltip can log nonexistent `focus_entered`/`tree_exited` signal
+disconnects. The minimal local reproduction and external-popup comparison are
+under `.local/p2-physical/popup-repro/`. The game remains on the pinned engine
+and embedded UI; the exported QA error gate remains enabled. Record any affected
+run as functionally exercised with a failed clean-engine-log gate.
 
 ## Deploying an update
 

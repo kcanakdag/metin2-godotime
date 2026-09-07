@@ -25,10 +25,16 @@ func allocate_stat(character_id: PackedByteArray, stat_code: String) -> Spacetim
 func clear_combat_target() -> SpacetimeDBReducerCall:
 	return _client.call_reducer('clear_combat_target', [], [])
 
+## 0. session_id: int [br]
+func close_npc_interaction(session_id: int) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('close_npc_interaction', [session_id], [&'U64'])
+
 ## 0. slot: int [br]
 ## 1. name: String [br]
-func create_character(slot: int, name: String) -> SpacetimeDBReducerCall:
-	return _client.call_reducer('create_character', [slot, name], [&'U8', &'String'])
+## 2. character_class: int [br]
+## 3. sex: int [br]
+func create_character(slot: int, name: String, character_class: int, sex: int) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('create_character', [slot, name, character_class, sex], [&'U8', &'String', &'U8', &'U8'])
 
 
 func enter_selected_character() -> SpacetimeDBReducerCall:
@@ -39,8 +45,14 @@ func enter_world(name: String) -> SpacetimeDBReducerCall:
 	return _client.call_reducer('enter_world', [name], [&'String'])
 
 ## 0. id: int [br]
-func equip_item(id: int) -> SpacetimeDBReducerCall:
-	return _client.call_reducer('equip_item', [id], [&'U64'])
+## 1. expected_revision: int [br]
+func equip_item(id: int, expected_revision: int) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('equip_item', [id, expected_revision], [&'U64', &'U32'])
+
+## 0. spawn_id: String [br]
+## 1. catalog_hash: String [br]
+func interact_npc(spawn_id: String, catalog_hash: String) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('interact_npc', [spawn_id, catalog_hash], [&'String', &'String'])
 
 
 func leave_world() -> SpacetimeDBReducerCall:
@@ -48,8 +60,9 @@ func leave_world() -> SpacetimeDBReducerCall:
 
 ## 0. id: int [br]
 ## 1. cell: int [br]
-func move_item(id: int, cell: int) -> SpacetimeDBReducerCall:
-	return _client.call_reducer('move_item', [id, cell], [&'U64', &'U8'])
+## 2. expected_revision: int [br]
+func move_item(id: int, cell: int, expected_revision: int) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('move_item', [id, cell, expected_revision], [&'U64', &'U8', &'U32'])
 
 ## 0. x: float [br]
 ## 1. z: float [br]
@@ -107,10 +120,12 @@ func stop_moving() -> SpacetimeDBReducerCall:
 
 ## 0. id: int [br]
 ## 1. cell: int [br]
-func unequip_item(id: int, cell: int) -> SpacetimeDBReducerCall:
-	return _client.call_reducer('unequip_item', [id, cell], [&'U64', &'U8'])
+## 2. expected_revision: int [br]
+func unequip_item(id: int, cell: int, expected_revision: int) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('unequip_item', [id, cell, expected_revision], [&'U64', &'U8', &'U32'])
 
 ## 0. id: int [br]
-func use_item(id: int) -> SpacetimeDBReducerCall:
-	return _client.call_reducer('use_item', [id], [&'U64'])
+## 1. expected_revision: int [br]
+func use_item(id: int, expected_revision: int) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('use_item', [id, expected_revision], [&'U64', &'U32'])
 

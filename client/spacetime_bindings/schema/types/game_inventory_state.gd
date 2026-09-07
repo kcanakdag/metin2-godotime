@@ -7,19 +7,15 @@ const module_name : String = "Game"
 const table_names: Array[String] = []
 
 @export var owner: PackedByteArray
-@export var next_potion_us: int
 
 #BSATN metadata
 const primary_key: StringName = &'owner'
 const BSATN_TYPES: Dictionary[StringName, StringName] = {
-	"owner": "__identity__",
-	"next_potion_us": "I64"
+	"owner": "__identity__"
 }
 
 ## 1. owner: PackedByteArray[br]
-## 2. next_potion_us: int[br]
-static func create(p_owner: PackedByteArray, p_next_potion_us: int) -> GameInventoryState:
+static func create(p_owner: PackedByteArray) -> GameInventoryState:
 	var result: GameInventoryState = GameInventoryState.new()
 	result.owner = p_owner
-	result.next_potion_us = p_next_potion_us
 	return result

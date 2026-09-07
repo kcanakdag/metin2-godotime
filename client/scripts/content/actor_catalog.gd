@@ -8,10 +8,15 @@ const PROFILE_ID := "p0-warrior-dog"
 const WARRIOR_ID := "actor.player.warrior-male"
 const WILD_DOG_ID := "actor.mob.wild-dog-101"
 const SWORD_ID := "item.weapon.sword-10"
+const SWORD_POWER_MIN := 13
+const SWORD_POWER_MAX := 15
+const SWORD_REFINE_ATTACK := 0
+const CharacterCatalogScript := preload("res://scripts/content/character_catalog.gd")
 
 var manifest: Dictionary = {}
 var error_message := ""
 var report_errors := true
+var characters := CharacterCatalogScript.new()
 var _actors: Dictionary = {}
 var _items: Dictionary = {}
 var _items_by_vnum: Dictionary = {}
@@ -21,16 +26,20 @@ var _motions_by_action_id: Dictionary = {}
 var _motions_by_action: Dictionary = {}
 
 
-func load_required(path := MANIFEST_PATH) -> bool:
+func load_required(path := MANIFEST_PATH, intro_models := false) -> bool:
 	if not FileAccess.file_exists(path):
 		return _fail("Required actor profile is missing: %s. Run the P1 content build." % path)
 	var document: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if not document is Dictionary:
 		return _fail("Required actor profile is not valid JSON: " + path)
-	return load_document(document)
+	if not characters.load_required():
+		return _fail(characters.error_message)
+	return load_document(document, characters.document, intro_models)
 
 
-func load_document(document: Dictionary) -> bool:
+func load_document(
+	document: Dictionary, character_document: Dictionary = {}, intro_models := false
+) -> bool:
 	_clear()
 	var indexed_document: Dictionary = document.duplicate(true)
 	if not _validate_header(indexed_document):
@@ -39,15 +48,19 @@ func load_document(document: Dictionary) -> bool:
 	var actors: Array = indexed_document.get("actors")
 	var items: Array = indexed_document.get("items")
 	for value: Variant in artifacts:
+		if intro_models and value is Dictionary and value.get("id") == WARRIOR_ID:
+			continue
 		if not _index_artifact(value):
 			return false
 	for value: Variant in actors:
+		if intro_models and value is Dictionary and value.get("id") == WARRIOR_ID:
+			continue
 		if not _index_actor(value):
 			return false
 	for value: Variant in items:
 		if not _index_item(value):
 			return false
-	if not _validate_required_slice():
+	if not _index_characters(character_document, intro_models) or not _validate_required_slice():
 		return false
 	_freeze_variant(indexed_document)
 	_freeze_variant(_actors)
@@ -58,6 +71,20 @@ func load_document(document: Dictionary) -> bool:
 	_freeze_variant(_motions_by_action_id)
 	_freeze_variant(_motions_by_action)
 	manifest = indexed_document
+	return true
+
+
+func _index_characters(document: Dictionary, intro_models: bool) -> bool:
+	for value: Variant in document.get("artifacts", []):
+		if not intro_models and value is Dictionary and value.get("id") == WARRIOR_ID:
+			continue
+		if not value is Dictionary or not _index_artifact(value.duplicate(true)):
+			return false
+	for value: Variant in document.get("actors", []):
+		if not intro_models and value is Dictionary and value.get("id") == WARRIOR_ID:
+			continue
+		if not value is Dictionary or not _index_actor(value.duplicate(true)):
+			return false
 	return true
 
 
@@ -78,6 +105,9 @@ func _validate_header(document: Dictionary) -> bool:
 	var items: Variant = document.get("items")
 	if not artifacts is Array or not actors is Array or not items is Array:
 		return _fail("Actor profile artifacts, actors, and items must be arrays.")
+	var item_catalog := ItemCatalog.new()
+	if not item_catalog.load_document(document.get("item_catalog", {})):
+		return _fail(item_catalog.error_message)
 	return true
 
 
@@ -114,6 +144,11 @@ func validate_world(info: Dictionary) -> bool:
 		return _fail("Server and client actor profiles differ. Rebuild the client content.")
 	if str(info.get("definition_hash", "")) != gameplay_definition_hash():
 		return _fail("Server and client action definitions differ. Rebuild and republish together.")
+	if (
+		not characters.content_hash.is_empty()
+		and str(info.get("character_catalog_hash", "")) != characters.content_hash
+	):
+		return _fail("Server and client character catalogs differ. Rebuild and republish together.")
 	return true
 
 
@@ -156,6 +191,10 @@ func item_for_vnum(vnum: int) -> Dictionary:
 
 
 func player_actor_id(appearance: Dictionary) -> String:
+	if not characters.document.is_empty():
+		return characters.actor_id(
+			int(appearance.get("character_class", -1)), int(appearance.get("sex", -1))
+		)
 	if int(appearance.get("character_class", -1)) == 0 and int(appearance.get("sex", -1)) == 0:
 		return WARRIOR_ID
 	return ""
@@ -310,14 +349,48 @@ func _index_item(value: Variant) -> bool:
 	var vnum := int(vnum_value)
 	if _items_by_vnum.has(vnum):
 		return _fail("Actor profile contains a duplicate item vnum.")
-	if not _validate_model_reference(value.get("model")):
-		return _fail("Item %s has an invalid model reference." % id)
-	if not _validate_item_transform(id, value.get("attachment_transform")):
+	if not _validate_item_details(id, value):
 		return false
 	value["vnum"] = vnum
 	_items[id] = value
 	_items_by_vnum[vnum] = value
 	return true
+
+
+func _validate_item_details(id: String, value: Dictionary) -> bool:
+	if not _validate_model_reference(value.get("model")):
+		return _fail("Item %s has an invalid model reference." % id)
+	if not _validate_item_transform(id, value.get("attachment_transform")):
+		return false
+	if id == SWORD_ID and not _validate_selected_sword_physical(value.get("physical")):
+		return _fail("The selected Sword+0 must expose its exact public physical values.")
+	return true
+
+
+func _validate_selected_sword_physical(value: Variant) -> bool:
+	if not value is Dictionary or value.size() != 3:
+		return false
+	for field in ["power_min", "power_max", "refine_attack"]:
+		if not value.has(field) or not _exact_integer(value[field]):
+			return false
+	return (
+		int(value.power_min) == SWORD_POWER_MIN
+		and int(value.power_max) == SWORD_POWER_MAX
+		and int(value.refine_attack) == SWORD_REFINE_ATTACK
+	)
+
+
+func _exact_integer(value: Variant) -> bool:
+	return (
+		(value is int and value >= 0)
+		or (
+			value is float
+			and is_finite(value)
+			and value >= 0.0
+			and value <= 9007199254740991.0
+			and value == floor(value)
+		)
+	)
 
 
 func _validate_item_transform(id: String, transform: Variant) -> bool:
@@ -347,7 +420,10 @@ func _require_action(actor_id: String, mode_id: String, action: String) -> bool:
 
 func _valid_resource_path(path: String) -> bool:
 	return (
-		path.begins_with("res://assets/imported/content/%s/" % PROFILE_ID)
+		(
+			path.begins_with("res://assets/imported/content/%s/" % PROFILE_ID)
+			or path.begins_with("res://assets/imported/characters/actors/")
+		)
 		and path.ends_with(".glb")
 		and not ".." in path
 	)

@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "formula_id": "combat.physical.normal-melee.v1",
+  "cases": [
+    {"id": "level_two", "level": 2, "strength": 6, "vitality": 4, "dexterity": 3, "unspent": 3, "attack_min": 30, "attack_max": 33, "defense": 6, "sword_damage": [19, 20, 22], "dog_damage": [28, 29, 31, 32, 34], "rating_bits": 1059770978},
+    {"id": "strength", "level": 2, "strength": 7, "vitality": 4, "dexterity": 3, "unspent": 2, "attack_min": 32, "attack_max": 34, "defense": 6, "sword_damage": [20, 22, 23], "dog_damage": [28, 29, 31, 32, 34], "rating_bits": 1059770978},
+    {"id": "vitality", "level": 2, "strength": 7, "vitality": 5, "dexterity": 3, "unspent": 1, "attack_min": 32, "attack_max": 34, "defense": 7, "sword_damage": [20, 22, 23], "dog_damage": [27, 28, 30, 31, 33], "rating_bits": 1059770978},
+    {"id": "dexterity", "level": 2, "strength": 7, "vitality": 5, "dexterity": 4, "unspent": 0, "attack_min": 32, "attack_max": 35, "defense": 7, "sword_damage": [20, 22, 23], "dog_damage": [27, 28, 29, 31, 32], "rating_bits": 1059826902}
+  ]
+}

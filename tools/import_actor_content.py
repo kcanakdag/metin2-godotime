@@ -12,7 +12,7 @@ from pathlib import Path
 
 import bpy
 
-CONVERTER_VERSION = "actor-content-converter-v1.0.0"
+CONVERTER_VERSION = "actor-content-converter-v1.2.0"
 
 
 def arguments() -> argparse.Namespace:
@@ -76,12 +76,36 @@ def texture_map(asset: dict, source_root: Path) -> dict[str, Path]:
     return result
 
 
+def skin_rest_matrices(bones: list[dict]) -> dict:
+    from gr2_importer import addon
+
+    names = set()
+    for index, bone in enumerate(bones):
+        parent = bone.get("parentIndex")
+        if bone["name"] in names or type(parent) is not int or not -1 <= parent < index:
+            raise ValueError("Skin skeleton has duplicate names or unordered/cyclic parents")
+        names.add(bone["name"])
+        for field, length in (("position", 3), ("orientation", 4), ("scaleShear", 9)):
+            values = bone.get(field)
+            if values is not None and (
+                len(values) != length
+                or any(type(v) not in (int, float) or not math.isfinite(v) for v in values)
+            ):
+                raise ValueError("Skin skeleton has an invalid rest transform")
+    _, matrices = addon._compute_rest_matrices(bones)
+    return {
+        bone["name"]: [list(row) for row in matrix]
+        for bone, matrix in zip(bones, matrices, strict=True)
+    }
+
+
 def merge_default_hair(
     graph: dict, actor: dict, source_root: Path
 ) -> tuple[dict, list[dict], dict | None]:
     """Merge the race script's selected skinned hair onto the base actor rig."""
     import carbon_gr2
     from carbon_granny import reader
+    from gr2_bindings import validate_shared_skin_bones
     from metin_gr2_adapter import adapt_model_placement
 
     selected = actor.get("default_hair")
@@ -100,7 +124,6 @@ def merge_default_hair(
         or hair_graph["models"][0].get("meshBindings") != [0]
     ):
         raise ValueError("Selected default hair does not have the expected single skinned mesh")
-    actor_bones = {bone["name"] for bone in graph["skeletons"][0]["bones"]}
     hair_bones = {bone["name"] for bone in hair_graph["skeletons"][0]["bones"]}
     mesh = hair_graph["meshes"][0]
     bindings = mesh.get("boneBindings", [])
@@ -110,12 +133,11 @@ def merge_default_hair(
     positions = mesh.get("vertex", {}).get("position", [])
     if (
         not hair_bones
-        or not hair_bones.issubset(actor_bones)
         or len(indices) != len(weights)
         or len(indices) % 4 != 0
         or len(positions) != len(indices) // 4 * 3
     ):
-        raise ValueError("Selected default hair skeleton is incompatible with the Warrior")
+        raise ValueError("Selected default hair skeleton is incompatible with the actor")
     weighted_bones = set()
     for offset in range(0, len(indices), 4):
         vertex_weights = weights[offset : offset + 4]
@@ -138,11 +160,11 @@ def merge_default_hair(
                 raise ValueError("Selected default hair binding index is out of range")
             if weight > 0.0:
                 weighted_bones.add(binding_names[binding_index])
-    # The original client links the hair model to PART_MAIN and Granny remaps
-    # mesh bindings onto that skeleton. This pinned default mesh is rigidly
-    # weighted to the shared head bone; its unused front-hair bones may differ.
-    if weighted_bones != {"Bip01 Head"}:
-        raise ValueError("Selected default hair no longer uses only the shared head binding")
+    shared_skin = validate_shared_skin_bones(
+        skin_rest_matrices(graph["skeletons"][0]["bones"]),
+        skin_rest_matrices(hair_graph["skeletons"][0]["bones"]),
+        weighted_bones,
+    )
     mesh_index = len(graph["meshes"])
     graph["meshes"].extend(hair_graph["meshes"])
     graph["models"][0]["meshBindings"].append(mesh_index)
@@ -158,6 +180,7 @@ def merge_default_hair(
             "vertices": len(positions) // 3,
             "weighted_bones": sorted(weighted_bones),
             "linked_skeleton_part": "main",
+            **shared_skin,
         },
     )
 
@@ -401,6 +424,7 @@ def export_glb(path: Path, objects: list, *, animations: bool, skins: bool) -> N
 def convert_actor(actor: dict, source_root: Path, output: Path) -> dict:
     import carbon_gr2
     from carbon_granny import reader
+    from gr2_bindings import normalize_rigid_bindings
     from gr2_importer import addon
     from metin_gr2_adapter import adapt_legacy_animation, adapt_model_placement
 
@@ -409,6 +433,7 @@ def convert_actor(actor: dict, source_root: Path, output: Path) -> dict:
     graph = carbon_gr2.read_gr2(model_path)
     adapt_model_placement(model_path, graph)
     graph, hair_raw_meshes, hair_report = merge_default_hair(graph, actor, source_root)
+    rigid_bindings = normalize_rigid_bindings(graph)
     motions = [motion for mode in actor["modes"] for motion in mode["motions"]]
     for motion in motions:
         path = source_root / motion["source_gr2"]
@@ -506,6 +531,7 @@ def convert_actor(actor: dict, source_root: Path, output: Path) -> dict:
         "motions": action_report,
         "root_motion": root_motion,
         "scale_bake_max_error_m": scale_bake_error,
+        "rigid_bindings": rigid_bindings,
         **({"default_hair": hair_report} if hair_report is not None else {}),
     }
 

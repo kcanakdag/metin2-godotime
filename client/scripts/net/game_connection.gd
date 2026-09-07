@@ -27,9 +27,10 @@ signal server_clock_changed(server_time_us: int)
 signal progression_changed(rows: Array)
 signal command_feedback_changed(rows: Array)
 signal combat_target_changed(info: Dictionary)
+signal npc_interaction_changed(info: Dictionary)
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
-const EXPECTED_PROTOCOL_VERSION := 9
+const EXPECTED_PROTOCOL_VERSION := 14
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
 const TABLES := [
@@ -48,6 +49,7 @@ const TABLES := [
 	"character_progression",
 	"command_feedback",
 	"combat_target_view",
+	"npc_interaction",
 ]
 const LOBBY_QUERIES := [
 	"SELECT * FROM account_character",
@@ -67,6 +69,7 @@ const QUERIES := [
 	"SELECT * FROM player_appearance",
 	"SELECT * FROM simulation_clock",
 	"SELECT * FROM combat_target_view",
+	"SELECT * FROM npc_interaction",
 ]
 
 var local_identity := ""
@@ -98,6 +101,7 @@ var server_time_us := 0
 var progression: Array = []
 var command_feedback: Array = []
 var combat_target: Dictionary = {}
+var npc_interaction: Dictionary = {}
 
 var _client: SpacetimeDBClient
 var _session := 0
@@ -201,11 +205,18 @@ func reconnect_game() -> void:
 		connect_game(endpoint, database, _player_name, _profile)
 
 
-func create_character(slot: int, character_name: String) -> void:
+func create_character(slot: int, character_name: String, character_class := 0, sex := 0) -> void:
 	if slot < 0 or slot >= 4:
 		reducer_failed.emit("Choose one of the four character slots.")
 		return
-	_call_lobby("create_character", [slot, character_name], [&"U8", &"String"])
+	if character_class not in [0, 1, 2, 3] or sex not in [0, 1]:
+		reducer_failed.emit("Choose a valid character class and appearance.")
+		return
+	_call_lobby(
+		"create_character",
+		[slot, character_name, character_class, sex],
+		[&"U8", &"String", &"U8", &"U8"]
+	)
 
 
 func select_character(character_id: String) -> void:
@@ -269,6 +280,18 @@ func select_combat_target(target_id: int, target_life_sequence: int) -> void:
 	_call_reducer("select_combat_target", [target_id, target_life_sequence], [&"U32", &"U32"])
 
 
+func interact_npc(spawn_id: String) -> void:
+	_call_reducer(
+		"interact_npc",
+		[spawn_id, str(world_info.get("npc_catalog_hash", ""))],
+		[&"String", &"String"]
+	)
+
+
+func close_npc_interaction(session_id: int) -> void:
+	_call_reducer("close_npc_interaction", [session_id], [&"U64"])
+
+
 func clear_combat_target() -> void:
 	_call_reducer("clear_combat_target")
 
@@ -283,20 +306,28 @@ func pickup_item_drop(id: int) -> void:
 
 func move_item(id: int, cell: int) -> void:
 	if _valid_inventory_cell(cell):
-		_call_reducer("move_item", [id, cell], [&"U64", &"U8"])
+		_call_item_reducer("move_item", id, [cell], [&"U8"])
 
 
 func equip_item(id: int) -> void:
-	_call_reducer("equip_item", [id], [&"U64"])
+	_call_item_reducer("equip_item", id)
 
 
 func unequip_item(id: int, cell: int) -> void:
 	if _valid_inventory_cell(cell):
-		_call_reducer("unequip_item", [id, cell], [&"U64", &"U8"])
+		_call_item_reducer("unequip_item", id, [cell], [&"U8"])
 
 
 func use_item(id: int) -> void:
-	_call_reducer("use_item", [id], [&"U64"])
+	_call_item_reducer("use_item", id)
+
+
+func _call_item_reducer(name: String, id: int, args: Array = [], types: Array = []) -> void:
+	for item: Dictionary in own_inventory():
+		if int(item.id) == id:
+			_call_reducer(name, [id] + args + [int(item.revision)], [&"U64"] + types + [&"U32"])
+			return
+	reducer_failed.emit("That item is unavailable. Wait for the inventory update.")
 
 
 func own_inventory() -> Array:
@@ -603,6 +634,13 @@ func _flush_snapshots() -> void:
 				rows.sort_custom(func(a: Dictionary, b: Dictionary): return int(a.id) < int(b.id))
 				command_feedback = rows
 				command_feedback_changed.emit(command_feedback)
+			"npc_interaction":
+				npc_interaction = {}
+				for row: Dictionary in rows:
+					if _is_own_combat_target(row):
+						npc_interaction = row
+						break
+				npc_interaction_changed.emit(npc_interaction)
 			"combat_target_view":
 				combat_target = {}
 				for row: Dictionary in rows:
@@ -646,6 +684,10 @@ func _flush_snapshots() -> void:
 					and (
 						next_info.get("content_hash", "") != world_info.get("content_hash", "")
 						or next_info.get("map_id", "") != world_info.get("map_id", "")
+						or (
+							next_info.get("npc_catalog_hash", "")
+							!= world_info.get("npc_catalog_hash", "")
+						)
 					)
 				):
 					_fail(
@@ -745,6 +787,8 @@ func _clear_world_snapshots() -> void:
 	item_drops = []
 	appearances = []
 	combat_target = {}
+	npc_interaction = {}
+	npc_interaction_changed.emit(npc_interaction)
 	server_time_us = 0
 	inventory_changed.emit(inventory)
 	item_drops_changed.emit(item_drops)

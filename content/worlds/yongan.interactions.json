@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "map_id": "metin2_map_a1",
+  "interactions": [
+    {
+      "spawn_id": "spawn.yongan.city-guard-20354",
+      "kind": "dialogue",
+      "body": "Welcome to Yongan. Stay alert when you leave the village."
+    }
+  ]
+}

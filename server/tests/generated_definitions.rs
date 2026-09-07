@@ -7,7 +7,12 @@ mod definitions {
 fn generated_combo_constants_match_the_selected_source_prefix() {
     assert_eq!(
         definitions::DEFINITION_HASH,
-        "8112e4e78e83ed885e6cb2df0c2a15e5aba07c47784169aefa66e7d17a9aedbc"
+        serde_json::from_str::<serde_json::Value>(include_str!(
+            "../content/p0-warrior-dog/actions.v1.json"
+        ))
+        .unwrap()["gameplay_definition_hash"]
+            .as_str()
+            .unwrap()
     );
     assert_eq!(definitions::PLAYER_ONEHAND_COMBO.len(), 4);
     assert_eq!(
@@ -116,4 +121,56 @@ fn generated_combo_constants_match_the_selected_source_prefix() {
     assert!(definitions::PLAYER_GENERAL_ATTACK.root_motion.is_none());
     assert!(definitions::MOB_ATTACK.combo_input.is_none());
     assert!(definitions::MOB_ATTACK.root_motion.is_none());
+}
+
+#[test]
+fn generated_physical_definitions_match_the_selected_source_rows() {
+    let sword = definitions::SWORD_10_PHYSICAL;
+    assert_eq!(sword.item_id, "item.weapon.sword-10");
+    assert_eq!(
+        (
+            sword.vnum,
+            sword.power_min,
+            sword.power_max,
+            sword.refine_attack
+        ),
+        (10, 13, 15, 0)
+    );
+    assert!(matches!(
+        sword.class,
+        definitions::PhysicalWeaponClass::Sword
+    ));
+    let dog = definitions::WILD_DOG_101_PHYSICAL;
+    assert_eq!(
+        (
+            dog.vnum,
+            dog.level,
+            dog.strength,
+            dog.vitality,
+            dog.dexterity
+        ),
+        (101, 1, 3, 5, 6)
+    );
+    assert_eq!(
+        (
+            dog.proto_defense,
+            dog.power_min,
+            dog.power_max,
+            dog.sword_resistance_percent
+        ),
+        (4, 20, 24, 0)
+    );
+    assert_eq!(dog.damage_multiplier.to_bits(), 1.0_f32.to_bits());
+    assert_eq!(
+        definitions::SELECTED_PHYSICAL_POLICY.formula_id,
+        "combat.physical.normal-melee.v1"
+    );
+    assert_eq!(
+        definitions::SELECTED_PHYSICAL_POLICY.rating_policy_id,
+        "combat.attack-rating.attacker-level-victim-term.v1"
+    );
+    assert_eq!(
+        definitions::SELECTED_PHYSICAL_POLICY.rng_policy_id,
+        "combat.rng.accepted-action-area-per-victim.v1"
+    );
 }

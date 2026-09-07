@@ -13,6 +13,7 @@ const InventoryItem = preload('res://spacetime_bindings/schema/types/game_invent
 const ItemDrop = preload('res://spacetime_bindings/schema/types/game_item_drop.gd')
 const Loot = preload('res://spacetime_bindings/schema/types/game_loot.gd')
 const Monster = preload('res://spacetime_bindings/schema/types/game_monster.gd')
+const NpcInteraction = preload('res://spacetime_bindings/schema/types/game_npc_interaction.gd')
 const Obstacle = preload('res://spacetime_bindings/schema/types/game_obstacle.gd')
 const Player = preload('res://spacetime_bindings/schema/types/game_player.gd')
 const PlayerAppearance = preload('res://spacetime_bindings/schema/types/game_player_appearance.gd')

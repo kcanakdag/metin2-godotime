@@ -25,7 +25,8 @@ func _run() -> void:
 			_events.append(["register", user, email, password])
 	)
 	_intro.create_requested.connect(
-		func(slot: int, name: String) -> void: _events.append(["create", slot, name])
+		func(slot: int, name: String, character_class: int, sex: int) -> void:
+			_events.append(["create", slot, name, character_class, sex])
 	)
 	_intro.select_requested.connect(func(id: String) -> void: _events.append(["select", id]))
 	_intro.enter_requested.connect(func() -> void: _events.append(["enter"]))
@@ -96,17 +97,33 @@ func _run() -> void:
 	await process_frame
 	_check(_intro.snapshot().stage == "create", "Shinsoo selection opens warrior creation")
 	_check(
-		_intro._controls.female.disabled and _intro._controls.shape_2.disabled,
-		"unavailable appearances remain disabled"
+		not _intro._controls.female.disabled and _intro._controls.shape_2.disabled,
+		"both sexes are available while unsupported shape remains disabled"
 	)
-	_check(_intro.snapshot().preview.models == 1, "creation loads original warrior model")
+	_check(_intro.snapshot().preview.models == 4, "creation shows the original four-class lineup")
 	_check(_intro.snapshot().preview.camera_facing, "entry Warrior faces the fixed preview camera")
 	_intro._character_name.text = "TestWarrior"
 	await _capture("create")
 	_click("create_submit")
-	_check(_events.back() == ["create", 0, "TestWarrior"], "creation emits selected slot and name")
+	_check(
+		_events.back() == ["create", 0, "TestWarrior", 0, 0],
+		"creation emits slot, name, class and sex"
+	)
+	await _exercise_classes()
 	_check(_intro.snapshot().roster_count == 0, "creation does not invent a character")
-	_intro.set_roster([{"id": "char-a", "slot": 0, "name": "TestWarrior", "level": 1}], "char-a")
+	_intro.set_roster(
+		[
+			{
+				"character_class": 0,
+				"sex": 0,
+				"id": "char-a",
+				"slot": 0,
+				"name": "TestWarrior",
+				"level": 1
+			}
+		],
+		"char-a"
+	)
 	_check(
 		_intro.snapshot().stage == "create", "roster refresh preserves the active creation stage"
 	)
@@ -121,8 +138,8 @@ func _run() -> void:
 	)
 	_intro.set_roster(
 		[
-			{"id": "char-a", "slot": 0, "name": "TestWarrior"},
-			{"id": "char-b", "slot": 1, "name": "SecondWarrior"}
+			{"character_class": 0, "sex": 0, "id": "char-a", "slot": 0, "name": "TestWarrior"},
+			{"character_class": 0, "sex": 0, "id": "char-b", "slot": 1, "name": "SecondWarrior"}
 		],
 		"char-a"
 	)
@@ -132,8 +149,8 @@ func _run() -> void:
 	_check(_events.back() == ["select", "char-b"], "character selection sends stable server ID")
 	_intro.set_roster(
 		[
-			{"id": "char-a", "slot": 0, "name": "TestWarrior"},
-			{"id": "char-b", "slot": 1, "name": "SecondWarrior"}
+			{"character_class": 0, "sex": 0, "id": "char-a", "slot": 0, "name": "TestWarrior"},
+			{"character_class": 0, "sex": 0, "id": "char-b", "slot": 1, "name": "SecondWarrior"}
 		],
 		"char-b"
 	)
@@ -144,7 +161,19 @@ func _run() -> void:
 		_intro._password.text.is_empty() and _intro._register_password.text.is_empty(),
 		"logout clears retained passwords"
 	)
-	_intro.set_roster([{"id": "char-a", "slot": 0, "name": "TestWarrior", "level": 1}], "char-a")
+	_intro.set_roster(
+		[
+			{
+				"character_class": 0,
+				"sex": 0,
+				"id": "char-a",
+				"slot": 0,
+				"name": "TestWarrior",
+				"level": 1
+			}
+		],
+		"char-a"
+	)
 	await _capture("")
 	if not _failed:
 		print("CLASSIC_INTRO_SMOKE PASS ", _checks, " checks")
@@ -165,6 +194,49 @@ func _click(key: String) -> void:
 		event.position = point
 		event.pressed = pressed
 		root.push_input(event, true)
+
+
+func _exercise_classes() -> void:
+	var names := ["warrior", "ninja", "sura", "shaman"]
+	for character_class in 4:
+		for sex in 2:
+			_click("male" if sex == 0 else "female")
+			await process_frame
+			var snapshot: Dictionary = _intro.snapshot()
+			var expected: String = (
+				"actor.player." + names[character_class] + ("-male" if sex == 0 else "-female")
+			)
+			_check(
+				snapshot.character_class == character_class and snapshot.sex == sex,
+				"selected class and sex"
+			)
+			_check(
+				(
+					snapshot.preview.models == 4
+					and snapshot.preview.actors.get("CharacterSlot%d" % character_class) == expected
+				),
+				"selected appearance belongs to the four-class lineup"
+			)
+			_check(
+				snapshot.preview.motions.values().all(_is_intro_idle),
+				"every class uses its original intro idle"
+			)
+			_check(
+				snapshot.preview.camera_facing and snapshot.preview.error.is_empty(),
+				"class preview faces the camera without errors"
+			)
+			await _capture(names[character_class] + ("-male" if sex == 0 else "-female"))
+		_click("slot_next")
+	_click("male")
+	await process_frame
+	_check(
+		_intro.snapshot().character_class == 0 and _intro.snapshot().sex == 0,
+		"class cycling wraps without changing character slot"
+	)
+
+
+func _is_intro_idle(motion: Dictionary) -> bool:
+	return motion.mode == "intro" and str(motion.action_id).ends_with(".intro.wait")
 
 
 func _capture(stage: String) -> void:

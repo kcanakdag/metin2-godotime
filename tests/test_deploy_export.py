@@ -396,6 +396,7 @@ class P1ProfileAuditTests(unittest.TestCase):
                 {
                     "id": export_client.P1_SWORD_ITEM_ID,
                     "vnum": 10,
+                    "physical": export_client.P1_SWORD_PHYSICAL.copy(),
                     "model": {
                         "artifact_id": "sword-10",
                         "path": export_client.P1_ARTIFACTS[2],
@@ -445,6 +446,33 @@ class P1ProfileAuditTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, r"invalid at \$\.actors\[0\]\.model"):
             export_client.validate_p1_manifest(manifest)
 
+    def test_generated_manifest_accepts_public_items_but_rejects_private_nested_fields(self):
+        manifest = self.manifest()
+        item = {
+            "id": "item.weapon.sword-10",
+            "revision": 1,
+            "vnum": 10,
+            "name": "Sword+0",
+            "icon": "icon/item/00010",
+            "height": 2,
+            "stack_limit": 1,
+            "minimum_level": 0,
+            "allowed_classes": 7,
+            "allowed_sexes": 3,
+            "kind": "weapon",
+            "weapon": {"class": "sword", "power_min": 13, "power_max": 15, "refine_attack": 0},
+            "recovery": None,
+        }
+        manifest["item_catalog"] = {"schema_version": 1, "items": [item]}
+        export_client.validate_p1_manifest(manifest)
+        item["weapon"]["source"] = "private metadata"
+        with self.assertRaisesRegex(RuntimeError, r"unknown field at .*weapon.source"):
+            export_client.validate_p1_manifest(manifest)
+        del item["weapon"]["source"]
+        item["source"] = "private metadata"
+        with self.assertRaisesRegex(RuntimeError, r"unknown field at .*items\[0\].source"):
+            export_client.validate_p1_manifest(manifest)
+
     def test_generated_manifest_rejects_unknown_nested_presentation_fields(self):
         manifest = self.manifest()
         manifest["private_source"] = "assets/source/warrior/warrior_novice.gr2"
@@ -475,6 +503,47 @@ class P1ProfileAuditTests(unittest.TestCase):
             r"unknown field at \$\.actors\[0\]\.modes\[0\]\.motions\[0\]\.events\[0\]\.private_source",
         ):
             export_client.validate_p1_manifest(manifest)
+
+    def test_generated_manifest_allows_only_exact_public_sword_physical_dictionary(self):
+        manifest = self.manifest()
+        manifest["items"][0]["physical"] = {
+            "power_min": 13.0,
+            "power_max": 15.0,
+            "refine_attack": 0.0,
+        }
+        export_client.validate_p1_manifest(manifest)
+
+        invalid_values = [
+            {"power_min": True, "power_max": 15, "refine_attack": 0},
+            {"power_min": 13, "power_max": float("inf"), "refine_attack": 0},
+            {"power_min": 13, "power_max": 15, "refine_attack": 0.5},
+            {"power_min": 12, "power_max": 15, "refine_attack": 0},
+        ]
+        for physical in invalid_values:
+            with self.subTest(physical=physical):
+                manifest = self.manifest()
+                manifest["items"][0]["physical"] = physical
+                with self.assertRaisesRegex(RuntimeError, "invalid physical"):
+                    export_client.validate_p1_manifest(manifest)
+
+        for mutation in ("missing", "extra", "trusted", "other_item"):
+            with self.subTest(mutation=mutation):
+                manifest = self.manifest()
+                if mutation == "missing":
+                    del manifest["items"][0]["physical"]
+                elif mutation == "extra":
+                    manifest["items"][0]["physical"]["bonus"] = 1
+                elif mutation == "trusted":
+                    manifest["items"][0]["physical"]["server_damage_formula"] = "private"
+                else:
+                    manifest["items"].append(
+                        {
+                            "id": "item.other",
+                            "physical": export_client.P1_SWORD_PHYSICAL.copy(),
+                        }
+                    )
+                with self.assertRaisesRegex(RuntimeError, "physical"):
+                    export_client.validate_p1_manifest(manifest)
 
     def test_generated_manifest_requires_only_selected_warrior_default_hair(self):
         export_client.validate_p1_manifest(self.manifest())
@@ -598,13 +667,20 @@ class P1ProfileAuditTests(unittest.TestCase):
             p1_manifest = source / export_client.P1_MANIFEST
             legacy.parent.mkdir(parents=True)
             p1_manifest.parent.mkdir(parents=True)
+            (source / "assets/imported/characters/actors").mkdir(parents=True)
             legacy.write_bytes(b"legacy warrior")
             p1_manifest.write_text("{}")
             (source / "project.godot").write_text("config_version=5\n")
             (source / "export_presets.cfg").write_text('custom_template/debug=""\n')
             stage = root / "stage"
-            with patch.object(export_client, "ROOT", root):
+            # This fixture isolates legacy-resource exclusion. Real class package
+            # validation is exercised by the exported-client audit.
+            with (
+                patch.object(export_client, "ROOT", root),
+                patch.object(export_client, "validate_character_package") as validate_characters,
+            ):
                 export_client.stage_project(stage, root / "templates", p1_enabled=True)
+                self.assertEqual(validate_characters.call_count, 2)
             self.assertFalse((stage / "assets/imported/warrior.glb").exists())
             self.assertTrue((stage / export_client.P1_MANIFEST).is_file())
 

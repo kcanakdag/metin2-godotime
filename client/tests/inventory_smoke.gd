@@ -85,23 +85,34 @@ func _validate_inventory(first: GameConnection, second: GameConnection) -> bool:
 		)
 	)
 	await _rejected(
-		"other_owner_move_rejected", func(): second.move_item(_sword_id, 20), "another player"
+		"other_owner_move_rejected",
+		func(): second._call_reducer("move_item", [_sword_id, 20, 1], [&"U64", &"U8", &"U32"]),
+		"another player"
 	)
 	await _rejected(
-		"other_owner_equip_rejected", func(): second.equip_item(_sword_id), "another player"
+		"other_owner_equip_rejected",
+		func(): second._call_reducer("equip_item", [_sword_id, 1], [&"U64", &"U32"]),
+		"another player"
 	)
 	await _rejected(
-		"other_owner_use_rejected", func(): second.use_item(_potion_id), "another player"
+		"other_owner_use_rejected",
+		func(): second._call_reducer("use_item", [_potion_id, 1], [&"U64", &"U32"]),
+		"another player"
 	)
 	await _rejected(
-		"potion_cannot_be_equipped", func(): first.equip_item(_potion_id), "Only a sword"
+		"potion_cannot_be_equipped", func(): first.equip_item(_potion_id), "weapon slot"
 	)
 	await _rejected("vertical_overlap_rejected", func(): first.move_item(_potion_id, 5), "occupied")
 	await _rejected("page_boundary_rejected", func(): first.move_item(_sword_id, 40), "page")
 	# Bypass the UI's numeric guard to verify the server also rejects an encoded U8=255.
 	await _rejected(
 		"server_invalid_cell_rejected",
-		func(): first._call_reducer("move_item", [_sword_id, 255], [&"U64", &"U8"]),
+		func():
+			first._call_reducer(
+				"move_item",
+				[_sword_id, 255, int(_item(first, _sword_id).revision)],
+				[&"U64", &"U8", &"U32"]
+			),
 		"page"
 	)
 	first.move_item(_sword_id, 45)

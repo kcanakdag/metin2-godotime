@@ -68,6 +68,9 @@ func _process(delta: float) -> void:
 			"intelligence",
 			"current_sp",
 			"max_sp",
+			"display_attack_min",
+			"display_attack_max",
+			"display_defense",
 		]
 	)
 	snapshot["command_feedback"] = _project_rows(
@@ -98,6 +101,16 @@ func _process(delta: float) -> void:
 		actor_state["position"] = [actor.position.x, actor.position.y, actor.position.z]
 		monsters.append(actor_state)
 	snapshot["rendered_monsters"] = monsters
+	snapshot["rendered_npcs"] = _npc_snapshot()
+	snapshot["npc_interaction"] = get_parent().connection.npc_interaction.duplicate(true)
+	snapshot["npc_panel"] = get_parent().hud.npc_panel.snapshot()
+	snapshot["hover_npc"] = (
+		get_parent()._hovered_npc.spawn_id if is_instance_valid(get_parent()._hovered_npc) else ""
+	)
+	snapshot["world_info"] = {
+		"map_id": str(get_parent().connection.world_info.get("map_id", "")),
+		"content_hash": str(get_parent().connection.world_info.get("content_hash", "")),
+	}
 	var payload := JSON.stringify(snapshot)
 	if OS.has_feature("web"):
 		JavaScriptBridge.get_interface("window").mt2Snapshot = payload
@@ -105,6 +118,42 @@ func _process(delta: float) -> void:
 		var result := _publish_native_snapshot(payload)
 		if result != OK:
 			push_error("Export probe snapshot publication failed: %s" % error_string(result))
+
+
+func _npc_snapshot() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	var layer := get_parent().get_node_or_null("WorldNpcs")
+	if layer == null:
+		return rows
+	var camera := get_viewport().get_camera_3d()
+	for actor: Node3D in layer.get_children():
+		if not actor.is_visible_in_tree():
+			continue
+		var label := actor.get_node_or_null("NameLabel") as Label3D
+		var animations := actor.find_children("*", "AnimationPlayer", true, false)
+		var player: AnimationPlayer = animations[0] if animations.size() == 1 else null
+		var point := actor.global_position + Vector3.UP
+		var screen := Vector2.ZERO
+		var in_view := camera != null and not camera.is_position_behind(point)
+		if in_view:
+			screen = camera.unproject_position(point)
+			in_view = get_viewport().get_visible_rect().has_point(screen)
+		(
+			rows
+			. append(
+				{
+					"spawn_id": str(actor.get("spawn_id")),
+					"name": label.text if label != null else "",
+					"position": [actor.position.x, actor.position.y, actor.position.z],
+					"yaw": actor.rotation.y,
+					"idle": str(player.current_animation) if player != null else "",
+					"playing": player != null and player.is_playing(),
+					"in_view": in_view,
+					"screen": [screen.x, screen.y],
+				}
+			)
+		)
+	return rows
 
 
 func _publish_native_snapshot(payload: String) -> Error:

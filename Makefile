@@ -26,10 +26,25 @@ AUTH_PORT ?= 3219
 AUTH_ISSUER ?= http://127.0.0.1:$(AUTH_PORT)/auth
 AUTH_DATA_DIR ?= $(CURDIR)/.local/auth
 CONTENT_PROFILE ?= content/profiles/p0-warrior-dog.json
+WORLD_PROFILE ?= content/worlds/yongan.population.json
+WORLD_OUTPUT ?= .local/world-content/$@-$(shell date -u +%Y%m%dT%H%M%SZ)
+WORLD_FLAGS ?=
+NPC_CONTENT ?= .local/npcs/city-guard
+CHARACTER_OUTPUT ?= .local/characters/build-$(shell date -u +%Y%m%dT%H%M%SZ)
+CHARACTER_FLAGS ?=
+GAME_SERVER_URL ?= $(SERVER_URL)
 
 .PHONY: assets import-assets import-map import-ui content-build content-validate content-probe test-ui test-actors test-inventory bake-map map-preview test-map test-world-packs editor client preview check server-build server-test server-start server-publish mcp-build mcp-check dev-setup lint format bindings test-tools test-multiplayer test-combat export-windows export-web export-linux browser-setup test-browser deploy share-setup share-start share-status share-stop export-shared
-.PHONY: auth-setup auth-start test-auth test-accounts
+.PHONY: auth-setup auth-start test-auth test-accounts test-physical
 .PHONY: check-plan
+.PHONY: world-validate world-preview npc-install test-npcs
+.PHONY: characters-build test-classes
+
+characters-build:
+	python3 tools/import_character_content.py --blender "$(BLENDER)" --output "$(CHARACTER_OUTPUT)" --install $(CHARACTER_FLAGS)
+
+test-classes:
+	python3 tools/test_physical_combat.py --server "$(SERVER_URL)" --game-server "$(GAME_SERVER_URL)" --database "$(DB)" --scenario classes --godot "$(GODOT)" --report "$(CHARACTER_OUTPUT)/two-client.json"
 
 assets:
 	python3 tools/fetch_test_assets.py
@@ -47,6 +62,18 @@ bake-map:
 
 map-preview:
 	$(GODOT) --path client res://scenes/map_preview.tscn -- --map "$(MAP)"
+
+world-validate:
+	python3 tools/world_content.py validate --profile "$(WORLD_PROFILE)" --output "$(WORLD_OUTPUT)"
+
+world-preview:
+	python3 tools/world_content.py preview --profile "$(WORLD_PROFILE)" --output "$(WORLD_OUTPUT)" --godot "$(GODOT)" $(WORLD_FLAGS)
+
+npc-install:
+	python3 tools/build_npc_catalog.py --content "$(NPC_CONTENT)" --population "$(WORLD_PROFILE)" --output "$(WORLD_OUTPUT)" --install
+
+test-npcs:
+	python3 tools/test_world_npcs.py --godot "$(GODOT)" --native --output "$(WORLD_OUTPUT)"
 
 test-map:
 	python3 -m unittest discover -s tests -p 'test_metin_map.py'
@@ -82,6 +109,9 @@ test-auth:
 
 test-accounts:
 	python3 tools/test_accounts.py --godot "$(GODOT)" --server "$(SERVER_URL)" --database "$(DB)" --report .local/accounts-report.json
+
+test-physical:
+	python3 tools/test_physical_combat.py --godot "$(GODOT)" --server "$(SERVER_URL)" --database "$(DB)" --report .local/p2-physical/combat-report.json
 
 server-publish: server-build
 	$(SPACETIME) --config-path .local/spacetime-cli.toml publish --server "$(SERVER_URL)" --bin-path server/target/wasm32-unknown-unknown/release/mt2_server.wasm "$(DB)" --no-config

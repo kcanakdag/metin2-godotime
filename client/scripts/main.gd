@@ -8,6 +8,7 @@ const AccountScreens = preload("res://scripts/net/account_flow.gd")
 const ActorCatalogScript := preload("res://scripts/content/actor_catalog.gd")
 const TargetEffectCatalogScript := preload("res://scripts/content/target_effect_catalog.gd")
 const WorldPickerScript := preload("res://scripts/world/world_picker.gd")
+const WorldNpcsScript := preload("res://scripts/world/world_npcs.gd")
 const HOVER_REFRESH_SECONDS := 0.1
 const GROUND_PICK_RADIUS_M := 2.0
 
@@ -22,6 +23,7 @@ var _held_movement := false
 var _marker: MeshInstance3D
 var _marker_time := 0.0
 var _stream: WorldStream
+var _npcs: WorldNpcs
 var _pve: Dictionary = {}
 var _original_map := false
 var _content_generation := 0
@@ -34,7 +36,11 @@ var _player_sync_queued := false
 var _last_server_time_us := 0
 var _world_picker := WorldPickerScript.new()
 var _hovered_actor: PveActor
+var _hovered_npc: NpcActor
+var _npc_approach: NpcApproach
 var _hover_elapsed := 0.0
+
+var _attack_input := preload("res://scripts/actors/attack_input.gd").new()
 
 @onready var connection: GameConnection = $GameConnection
 @onready var world: DevMap = $DevMap
@@ -46,6 +52,15 @@ func _ready() -> void:
 	_stream = WorldStream.new()
 	_stream.name = "WorldStream"
 	add_child(_stream)
+	_npcs = WorldNpcsScript.new()
+	_npcs.name = "WorldNpcs"
+	add_child(_npcs)
+	_npcs.failed.connect(_on_npc_failure)
+	_npc_approach = NpcApproach.new()
+	add_child(_npc_approach)
+	_npc_approach.configure(connection)
+	connection.npc_interaction_changed.connect(hud.npc_panel.set_interaction)
+	hud.npc_close_requested.connect(connection.close_npc_interaction)
 	_stream.progress.connect(
 		func(message: String):
 			if not message.is_empty():
@@ -113,7 +128,24 @@ func _ready() -> void:
 		_connect_game(_settings.server_url, _settings.database, _settings.player_name)
 
 
+func _update_held_attack() -> void:
+	if (
+		connection.state != "connected"
+		or not is_instance_valid(_local_actor)
+		or hud.wants_keyboard()
+		or not get_window().has_focus()
+		or not Input.is_physical_key_pressed(KEY_SPACE)
+	):
+		_attack_input.release()
+		return
+	if _attack_input.should_send(
+		_local_actor.row, _actor_catalog, connection.server_time_us, Time.get_ticks_msec()
+	):
+		connection.perform_attack()
+
+
 func _process(delta: float) -> void:
+	_update_held_attack()
 	if is_instance_valid(_local_actor):
 		_stream.focus(_local_actor.server_position)
 	if _original_map:
@@ -160,6 +192,7 @@ func _physics_process(delta: float) -> void:
 		input.x = float(_key_down(KEY_D, KEY_RIGHT)) - float(_key_down(KEY_A, KEY_LEFT))
 		input.y = float(_key_down(KEY_S, KEY_DOWN)) - float(_key_down(KEY_W, KEY_UP))
 	if input.length_squared() > 0:
+		_npc_approach.cancel()
 		var direction := camera_rig.move_direction(input.normalized())
 		if (
 			is_instance_valid(_local_actor)
@@ -178,6 +211,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.keycode == KEY_SPACE and not event.pressed:
+		_attack_input.release()
 	if connection.state != "connected" and is_instance_valid(_account_flow):
 		if event is InputEventKey and _account_flow.handle_key(event):
 			get_viewport().set_input_as_handled()
@@ -187,6 +222,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			hud.toggle_debug()
 			get_viewport().set_input_as_handled()
 			return
+		if event.keycode in [KEY_ESCAPE, KEY_SPACE]:
+			_npc_approach.cancel(true)
 		if hud.handle_key(event):
 			get_viewport().set_input_as_handled()
 			return
@@ -196,6 +233,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_ENTER:
 				hud.focus_chat()
 			KEY_SPACE:
+				_attack_input.pressed(
+					_local_actor.row if is_instance_valid(_local_actor) else {},
+					Time.get_ticks_msec()
+				)
 				connection.perform_attack()
 			KEY_E, KEY_Z:
 				_pickup()
@@ -344,6 +385,9 @@ func _on_connection_state(state: String, message: String) -> void:
 	if state in ["connecting", "disconnected", "error", "lobby", "leaving"]:
 		_content_generation += 1
 		_stream.set_active(false)
+		_npcs.clear()
+	if state == "connected":
+		_npcs.set_active(true)
 	if state != "connected":
 		_held_movement = false
 		_set_hovered_actor(null)
@@ -413,7 +457,7 @@ func _reconcile_players() -> void:
 		if is_local:
 			_local_actor = player
 			camera_rig.target = player
-			hud.set_player_info(row)
+			hud.set_player_info(row, appearances_by_id.get(identity, {}))
 			hud.set_progression(connection.selected_progression())
 	for identity: String in _actors.keys():
 		if not present.has(identity):
@@ -504,7 +548,15 @@ func _prepare_world(info: Dictionary) -> void:
 			hud.show_notice(_stream.failure_message)
 			return
 		_stream.set_active(true)
+	if not _npcs.prepare(info, _stream.ready_at):
+		_on_npc_failure(_npcs.error_message)
+		return
 	connection.enter_loaded_world()
+
+
+func _on_npc_failure(message: String) -> void:
+	connection.disconnect_game()
+	hud.show_notice(message)
 
 
 func _on_monsters(rows: Array) -> void:
@@ -590,6 +642,13 @@ func _click_world(screen_position: Vector2) -> void:
 	var pick: Dictionary = _world_picker.pick(
 		camera_rig.camera, get_world_3d().direct_space_state, screen_position
 	)
+	_npc_approach.cancel(true)
+	if pick.get("kind") == "npc":
+		var npc: Variant = pick.get("actor")
+		if npc is NpcActor and _npcs.actors.values().has(npc):
+			_npc_approach.start(npc)
+			_marker_time = 0.0
+		return
 	if pick.get("kind") == "target":
 		var actor: Variant = pick.get("actor")
 		if not _pve.values().has(actor):
@@ -632,9 +691,16 @@ func _update_hover(screen_position: Vector2) -> void:
 	)
 	var actor: Variant = pick.get("actor") if pick.get("kind") == "target" else null
 	_set_hovered_actor(actor if actor is PveActor and _pve.values().has(actor) else null)
+	var npc: Variant = pick.get("actor") if pick.get("kind") == "npc" else null
+	if npc is NpcActor and _npcs.actors.values().has(npc):
+		_hovered_npc = npc
+		_hovered_npc.set_hovered(true)
 
 
 func _set_hovered_actor(actor: PveActor) -> void:
+	if is_instance_valid(_hovered_npc):
+		_hovered_npc.set_hovered(false)
+	_hovered_npc = null
 	if _hovered_actor == actor:
 		if is_instance_valid(_hovered_actor) and not _hovered_actor.is_pickable():
 			_hovered_actor.set_hovered(false)

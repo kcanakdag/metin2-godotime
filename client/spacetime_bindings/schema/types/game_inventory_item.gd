@@ -11,6 +11,7 @@ const table_names: Array[String] = ['inventory_item']
 @export var account: PackedByteArray
 @export var vnum: int
 @export var count: int
+@export var revision: int
 @export var cell: int
 @export var equipped: bool
 
@@ -22,6 +23,7 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"account": "__identity__",
 	"vnum": "U32",
 	"count": "U16",
+	"revision": "U32",
 	"cell": "U8",
 	"equipped": "Bool"
 }
@@ -31,15 +33,17 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 ## 3. account: PackedByteArray[br]
 ## 4. vnum: int[br]
 ## 5. count: int[br]
-## 6. cell: int[br]
-## 7. equipped: bool[br]
-static func create(p_id: int, p_owner: PackedByteArray, p_account: PackedByteArray, p_vnum: int, p_count: int, p_cell: int, p_equipped: bool) -> GameInventoryItem:
+## 6. revision: int[br]
+## 7. cell: int[br]
+## 8. equipped: bool[br]
+static func create(p_id: int, p_owner: PackedByteArray, p_account: PackedByteArray, p_vnum: int, p_count: int, p_revision: int, p_cell: int, p_equipped: bool) -> GameInventoryItem:
 	var result: GameInventoryItem = GameInventoryItem.new()
 	result.id = p_id
 	result.owner = p_owner
 	result.account = p_account
 	result.vnum = p_vnum
 	result.count = p_count
+	result.revision = p_revision
 	result.cell = p_cell
 	result.equipped = p_equipped
 	return result

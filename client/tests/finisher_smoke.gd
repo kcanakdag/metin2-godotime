@@ -64,9 +64,12 @@ func _enter_finisher_fixture(
 	):
 		return false
 	if not _check(
-		"finisher_protocol_nine_definition",
+		"finisher_protocol_definition",
 		(
-			int(actor.world_info.get("protocol_version", 0)) == 9
+			(
+				int(actor.world_info.get("protocol_version", 0))
+				== GameConnection.EXPECTED_PROTOCOL_VERSION
+			)
 			and str(actor.world_info.get("map_id", "")) == "training"
 			and str(actor.world_info.get("definition_hash", "")) == _expected_definition_hash
 			and actor.world_info == observer.world_info

@@ -1,5 +1,5 @@
 extends SubViewportContainer
-## Isolated visual preview: original warrior geometry, never a gameplay player.
+## Isolated class preview using the same converted appearance catalog as the world.
 
 const ActorCatalogScript := preload("res://scripts/content/actor_catalog.gd")
 const ActorPresentationScript := preload("res://scripts/actors/actor_presentation.gd")
@@ -16,7 +16,7 @@ var _error_message := ""
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if not _catalog.load_required():
+	if not _catalog.load_required(ActorCatalogScript.MANIFEST_PATH, true):
 		_error_message = _catalog.error_message
 	stretch = true
 	_viewport = SubViewport.new()
@@ -50,24 +50,36 @@ func _ready() -> void:
 	_update_rendering()
 
 
-func set_characters(rows: Array, slot: int, creating: bool) -> void:
-	_selected_slot = slot
+func class_definition(class_id: int) -> Dictionary:
+	return _catalog.characters.definition(class_id)
+
+
+func title_art(class_id: int) -> String:
+	var id := _catalog.characters.actor_id(class_id, 0)
+	var model_key := str(_catalog.actor(id).get("model_key", ""))
+	return "locale/en/ui/select/name_" + model_key.get_slice("_", 0)
+
+
+func set_characters(rows: Array, slot: int, creating: bool, appearance: Dictionary = {}) -> void:
+	_selected_slot = int(appearance.get("character_class", 0)) if creating else slot
 	_creating = creating
 	var wanted: Dictionary = {}
 	if creating:
-		wanted[slot] = true
+		for class_id in 4:
+			wanted[class_id] = _catalog.characters.actor_id(class_id, int(appearance.get("sex", 0)))
 	else:
 		for row: Dictionary in rows:
-			wanted[int(row.get("slot", 0))] = true
+			wanted[int(row.get("slot", 0))] = _catalog.player_actor_id(row)
 	for key in _models.keys():
-		if not wanted.has(key):
+		if not wanted.has(key) or _models[key].actor_id != wanted[key]:
+			_stage.remove_child(_models[key])
 			_models[key].queue_free()
 			_models.erase(key)
 	for key in wanted:
 		if not _models.has(key) and _error_message.is_empty():
 			var model := ActorPresentationScript.new()
-			model.name = "WarriorSlot%d" % key
-			if not model.configure(_catalog, ActorCatalogScript.WARRIOR_ID):
+			model.name = "CharacterSlot%d" % key
+			if not model.configure(_catalog, str(wanted[key])):
 				_error_message = model.error_message
 				model.queue_free()
 				continue
@@ -77,8 +89,9 @@ func set_characters(rows: Array, slot: int, creating: bool) -> void:
 			# on +Z, so turn this presentation toward it instead of showing its back.
 			model.rotation.y = CAMERA_FACING_YAW
 			model.set_weapon(0)
-			model.play_action("general", "", "wait", int(key))
-	_update_positions(true)
+			model.play_action("intro", "", "wait", int(key))
+			model.position = _target_position(int(key))
+	_update_positions(false)
 
 
 func _process(delta: float) -> void:
@@ -87,12 +100,18 @@ func _process(delta: float) -> void:
 
 func snapshot() -> Dictionary:
 	var camera_facing := true
+	var actors: Dictionary = {}
+	var motions: Dictionary = {}
 	for model: Node3D in _models.values():
+		actors[model.name] = model.actor_id
+		motions[model.name] = model.snapshot()
 		camera_facing = (
 			camera_facing and absf(wrapf(model.rotation.y - CAMERA_FACING_YAW, -PI, PI)) < 0.000001
 		)
 	return {
 		"models": _models.size(),
+		"actors": actors,
+		"motions": motions,
 		"selected_slot": _selected_slot,
 		"creating": _creating,
 		"camera_facing": camera_facing,
@@ -103,11 +122,13 @@ func snapshot() -> Dictionary:
 func _update_positions(immediate: bool, delta: float = 0) -> void:
 	for slot in _models:
 		var model: Node3D = _models[slot]
-		var angle := float(posmod(int(slot) - _selected_slot, 4)) * PI / 2
-		var target := Vector3(sin(angle) * 0.707, 0, cos(angle) * 0.707)
-		if _creating:
-			target = Vector3.ZERO
+		var target := _target_position(int(slot))
 		model.position = target if immediate else model.position.lerp(target, 1 - exp(-delta * 9))
+
+
+func _target_position(slot: int) -> Vector3:
+	var angle := float(posmod(slot - _selected_slot, 4)) * PI / 2
+	return Vector3(sin(angle) * sqrt(0.5), 0, cos(angle) * sqrt(0.5))
 
 
 func _update_rendering() -> void:

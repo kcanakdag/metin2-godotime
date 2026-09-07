@@ -1,11 +1,13 @@
 //! Server-owned item instances, grid placement, equipment, consumables and item drops.
+use crate::accounts::account_character;
 use crate::accounts::inventory_access;
+use crate::item_security::{self, Cause};
+use crate::progression::character_progression;
 use crate::{active_controller, collision_bounds, content, now_us, player};
 use spacetimedb::{Identity, ReducerContext, Table};
 
 pub(crate) const SWORD: u32 = crate::definitions::WEAPON_VNUM;
 const RED_POTION: u32 = crate::definitions::SMALL_POTION_VNUM;
-const MEDIUM_RED_POTION: u32 = crate::definitions::MEDIUM_POTION_VNUM;
 const EQUIPPED_CELL: u8 = 255;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -27,6 +29,7 @@ pub struct InventoryItem {
     pub account: Identity,
     pub vnum: u32,
     pub count: u16,
+    pub revision: u32,
     pub cell: u8,
     pub equipped: bool,
 }
@@ -35,7 +38,6 @@ pub struct InventoryItem {
 pub struct InventoryState {
     #[primary_key]
     pub owner: Identity,
-    pub next_potion_us: i64,
 }
 
 #[spacetimedb::table(accessor = item_drop, public)]
@@ -54,11 +56,8 @@ pub struct ItemDrop {
 }
 
 fn item_rules(vnum: u32) -> Result<(u8, u16), String> {
-    match vnum {
-        SWORD => Ok((2, 1)),
-        RED_POTION | MEDIUM_RED_POTION => Ok((1, crate::definitions::ITEM_STACK_LIMIT)),
-        _ => Err("Unknown item type.".into()),
-    }
+    let definition = crate::item_catalog::definition(vnum)?;
+    Ok((definition.height, definition.stack_limit))
 }
 
 fn footprint(vnum: u32, cell: u8) -> Result<Vec<u8>, String> {
@@ -98,79 +97,109 @@ fn owned_items(ctx: &ReducerContext, owner: Identity) -> Vec<InventoryItem> {
 }
 
 /// Apply the source quarter-step item award without making progression depend
-/// on free bag capacity. Schema/invariant failures are logged; a full bag uses
+/// on free bag capacity. Schema/invariant failures abort the transaction; a full bag uses
 /// the source's owner-reserved ground fallback in the same transaction.
 pub fn grant_automatic_progression(
     ctx: &ReducerContext,
     owner: Identity,
     vnum: u32,
     count: u16,
-) -> AutomaticGrantOutcome {
+) -> Result<AutomaticGrantOutcome, String> {
     let mut outcome = AutomaticGrantOutcome::default();
-    if count == 0 || !matches!(vnum, RED_POTION | MEDIUM_RED_POTION) {
-        spacetimedb::log::error!("invalid automatic progression item {vnum} x{count}");
-        return outcome;
+    let (_, limit) = item_rules(vnum)?;
+    if count == 0 {
+        return Err("Cannot grant an empty item stack.".into());
     }
-    let Some(access) = ctx.db.inventory_access().character_id().find(owner) else {
-        spacetimedb::log::error!("automatic progression item owner has no inventory access");
-        return outcome;
-    };
+    let access = ctx
+        .db
+        .inventory_access()
+        .character_id()
+        .find(owner)
+        .ok_or("Automatic item owner has no inventory access.")?;
     let mut remaining = count;
     let mut items = owned_items(ctx, owner);
-    for item in items.iter_mut().filter(|item| {
-        !item.equipped && item.vnum == vnum && item.count < crate::definitions::ITEM_STACK_LIMIT
-    }) {
-        let added = remaining.min(crate::definitions::ITEM_STACK_LIMIT - item.count);
+    validate_items(&items, access.account)?;
+    for item in items
+        .iter_mut()
+        .filter(|item| !item.equipped && item.vnum == vnum && item.count < limit)
+    {
+        let added = remaining.min(limit - item.count);
+        let previous_count = item.count;
+        item.revision = item_security::next_revision(item.revision, item.revision)?;
         item.count += added;
         remaining -= added;
         outcome.stacked += added;
         ctx.db.inventory_item().id().update(item.clone());
+        item_security::inventory(ctx, item, previous_count, Cause::Progression);
         if remaining == 0 {
-            return outcome;
+            return Ok(outcome);
         }
     }
     while remaining > 0 {
         let Ok(cell) = free_cell(&items, vnum, &[]) else {
             break;
         };
-        let inserted = remaining.min(crate::definitions::ITEM_STACK_LIMIT);
+        let inserted = remaining.min(limit);
         let item = ctx.db.inventory_item().insert(InventoryItem {
             id: 0,
             owner,
             account: access.account,
             vnum,
             count: inserted,
+            revision: 1,
             cell,
             equipped: false,
         });
+        item_security::inventory(ctx, &item, 0, Cause::Progression);
         items.push(item);
         outcome.inserted += inserted;
         remaining -= inserted;
     }
     if remaining > 0 {
-        let Some(player) = ctx.db.player().identity().find(owner) else {
-            spacetimedb::log::error!("automatic progression item owner has no player row");
-            return outcome;
-        };
+        let player = ctx
+            .db
+            .player()
+            .identity()
+            .find(owner)
+            .ok_or("Automatic item owner has no player row.")?;
         let now = now_us(ctx);
-        ctx.db.item_drop().insert(ItemDrop {
-            id: 0,
-            x: player.x,
-            y: player.y,
-            z: player.z,
-            vnum,
-            count: remaining,
-            owner,
-            reserved_until_us: now
-                .saturating_add(crate::definitions::AUTOMATIC_DROP_RESERVATION_US),
-            expires_at_us: now.saturating_add(crate::definitions::AUTOMATIC_DROP_EXPIRY_US),
-        });
-        outcome.dropped = remaining;
+        while remaining > 0 {
+            let count = remaining.min(limit);
+            let drop = ctx.db.item_drop().insert(ItemDrop {
+                id: 0,
+                x: player.x,
+                y: player.y,
+                z: player.z,
+                vnum,
+                count,
+                owner,
+                reserved_until_us: now
+                    .saturating_add(crate::definitions::AUTOMATIC_DROP_RESERVATION_US),
+                expires_at_us: now.saturating_add(crate::definitions::AUTOMATIC_DROP_EXPIRY_US),
+            });
+            item_security::ground(ctx, &drop, true, Cause::Progression);
+            outcome.dropped += count;
+            remaining -= count;
+        }
     }
-    outcome
+    Ok(outcome)
 }
 
-fn owned_item(ctx: &ReducerContext, id: u64) -> Result<InventoryItem, String> {
+fn validate_items(items: &[InventoryItem], account: Identity) -> Result<(), String> {
+    for item in items {
+        let (_, limit) = item_rules(item.vnum)?;
+        if item.account != account || item.count == 0 || item.count > limit || item.revision == 0 {
+            return Err("Inventory integrity check failed.".into());
+        }
+    }
+    Ok(())
+}
+
+fn owned_item(
+    ctx: &ReducerContext,
+    id: u64,
+    expected_revision: u32,
+) -> Result<InventoryItem, String> {
     active_controller(ctx)?;
     let item = ctx
         .db
@@ -181,11 +210,19 @@ fn owned_item(ctx: &ReducerContext, id: u64) -> Result<InventoryItem, String> {
     if item.owner != crate::accounts::selected_character(ctx)? {
         return Err("That item belongs to another player.".into());
     }
+    validate_items(std::slice::from_ref(&item), ctx.sender())?;
+    item_security::next_revision(item.revision, expected_revision)?;
     Ok(item)
 }
 
 // Reducer transactions roll back all stack changes if a later allocation has no room.
-fn grant(ctx: &ReducerContext, owner: Identity, vnum: u32, count: u16) -> Result<(), String> {
+fn grant(
+    ctx: &ReducerContext,
+    owner: Identity,
+    vnum: u32,
+    count: u16,
+    cause: Cause,
+) -> Result<(), String> {
     let account = ctx
         .db
         .inventory_access()
@@ -199,14 +236,18 @@ fn grant(ctx: &ReducerContext, owner: Identity, vnum: u32, count: u16) -> Result
     }
     let mut remaining = count;
     let mut items = owned_items(ctx, owner);
+    validate_items(&items, account)?;
     for item in items
         .iter_mut()
         .filter(|i| !i.equipped && i.vnum == vnum && i.count < limit)
     {
         let added = remaining.min(limit - item.count);
+        let previous_count = item.count;
+        item.revision = item_security::next_revision(item.revision, item.revision)?;
         item.count += added;
         remaining -= added;
         ctx.db.inventory_item().id().update(item.clone());
+        item_security::inventory(ctx, item, previous_count, cause);
         if remaining == 0 {
             return Ok(());
         }
@@ -220,9 +261,11 @@ fn grant(ctx: &ReducerContext, owner: Identity, vnum: u32, count: u16) -> Result
             account,
             vnum,
             count,
+            revision: 1,
             cell,
             equipped: false,
         });
+        item_security::inventory(ctx, &item, 0, cause);
         items.push(item);
         remaining -= count;
     }
@@ -233,18 +276,39 @@ pub fn ensure_starter(ctx: &ReducerContext, owner: Identity) -> Result<(), Strin
     if ctx.db.inventory_state().owner().find(owner).is_some() {
         return Ok(());
     }
-    grant(ctx, owner, SWORD, 1)?;
-    grant(ctx, owner, RED_POTION, 5)?;
-    ctx.db.inventory_state().insert(InventoryState {
-        owner,
-        next_potion_us: 0,
-    });
+    let appearance = crate::characters::owned_appearance(ctx, owner)?;
+    if crate::item_catalog::check_requirements(
+        crate::item_catalog::definition(SWORD)?,
+        1,
+        appearance.class_id,
+        appearance.sex,
+    )
+    .is_ok()
+    {
+        grant(ctx, owner, SWORD, 1, Cause::Starter)?;
+    }
+    grant(ctx, owner, RED_POTION, 5, Cause::Starter)?;
+    if crate::definitions::ITEM_RECOVERY_TEST_STARTER {
+        grant(
+            ctx,
+            owner,
+            crate::definitions::MEDIUM_POTION_VNUM,
+            2,
+            Cause::Starter,
+        )?;
+    }
+    ctx.db.inventory_state().insert(InventoryState { owner });
     Ok(())
 }
 
 #[spacetimedb::reducer]
-pub fn move_item(ctx: &ReducerContext, id: u64, cell: u8) -> Result<(), String> {
-    let mut item = owned_item(ctx, id)?;
+pub fn move_item(
+    ctx: &ReducerContext,
+    id: u64,
+    cell: u8,
+    expected_revision: u32,
+) -> Result<(), String> {
+    let mut item = owned_item(ctx, id, expected_revision)?;
     if item.equipped {
         return Err("Unequip that item before moving it.".into());
     }
@@ -255,38 +319,50 @@ pub fn move_item(ctx: &ReducerContext, id: u64, cell: u8) -> Result<(), String> 
         &[id],
     )?;
     item.cell = cell;
+    item.revision = item_security::next_revision(item.revision, expected_revision)?;
     ctx.db.inventory_item().id().update(item);
     Ok(())
 }
 
 #[spacetimedb::reducer]
-pub fn equip_item(ctx: &ReducerContext, id: u64) -> Result<(), String> {
-    let mut item = owned_item(ctx, id)?;
-    if item.vnum != SWORD || item.count != 1 {
-        return Err("Only a sword can be equipped in the weapon slot.".into());
+pub fn equip_item(ctx: &ReducerContext, id: u64, expected_revision: u32) -> Result<(), String> {
+    let mut item = owned_item(ctx, id, expected_revision)?;
+    if !crate::item_catalog::is_weapon(item.vnum) || item.count != 1 {
+        return Err("That item cannot be equipped in the weapon slot.".into());
     }
+    check_item_requirements(ctx, &item)?;
     if item.equipped {
         crate::appearance::sync(ctx, item.owner);
+        crate::progression::rebuild_display_projection(ctx, item.owner)?;
         return Ok(());
     }
     let items = owned_items(ctx, crate::accounts::selected_character(ctx)?);
+    validate_items(&items, item.account)?;
     if let Some(mut previous) = items.iter().find(|i| i.equipped).cloned() {
         previous.cell = free_cell(&items, previous.vnum, &[previous.id, id])?;
         previous.equipped = false;
+        previous.revision = item_security::next_revision(previous.revision, previous.revision)?;
         ctx.db.inventory_item().id().update(previous);
     }
     item.equipped = true;
     item.cell = EQUIPPED_CELL;
+    item.revision = item_security::next_revision(item.revision, expected_revision)?;
     ctx.db.inventory_item().id().update(item);
     let character = crate::accounts::selected_character(ctx)?;
     crate::combo::cancel_queued_link_for_character(ctx, character);
     crate::appearance::sync(ctx, character);
+    crate::progression::rebuild_display_projection(ctx, character)?;
     Ok(())
 }
 
 #[spacetimedb::reducer]
-pub fn unequip_item(ctx: &ReducerContext, id: u64, cell: u8) -> Result<(), String> {
-    let mut item = owned_item(ctx, id)?;
+pub fn unequip_item(
+    ctx: &ReducerContext,
+    id: u64,
+    cell: u8,
+    expected_revision: u32,
+) -> Result<(), String> {
+    let mut item = owned_item(ctx, id, expected_revision)?;
     if !item.equipped {
         return Err("That item is not equipped.".into());
     }
@@ -298,70 +374,53 @@ pub fn unequip_item(ctx: &ReducerContext, id: u64, cell: u8) -> Result<(), Strin
     )?;
     item.equipped = false;
     item.cell = cell;
+    item.revision = item_security::next_revision(item.revision, expected_revision)?;
     ctx.db.inventory_item().id().update(item);
     let character = crate::accounts::selected_character(ctx)?;
     crate::combo::cancel_queued_link_for_character(ctx, character);
     crate::appearance::sync(ctx, character);
+    crate::progression::rebuild_display_projection(ctx, character)?;
     Ok(())
 }
 
-fn healed_health(health: u16, max_health: u16) -> Result<u16, String> {
-    if health == 0 {
-        return Err("You are defeated. Wait for respawn.".into());
-    }
-    if health >= max_health {
-        return Err("Health is already full.".into());
-    }
-    Ok(health.saturating_add(40).min(max_health))
+fn check_item_requirements(ctx: &ReducerContext, item: &InventoryItem) -> Result<(), String> {
+    let definition = crate::item_catalog::definition(item.vnum)?;
+    let progression = ctx
+        .db
+        .character_progression()
+        .character_id()
+        .find(item.owner)
+        .ok_or("Character progression is missing.")?;
+    let (class, sex) = ctx
+        .db
+        .account_character()
+        .character_id()
+        .find(item.owner)
+        .map_or((0, 0), |character| {
+            (character.character_class, character.sex)
+        });
+    crate::item_catalog::check_requirements(definition, progression.level, class, sex)
 }
 
 #[spacetimedb::reducer]
-pub fn use_item(ctx: &ReducerContext, id: u64) -> Result<(), String> {
-    let mut item = owned_item(ctx, id)?;
-    if item.vnum != RED_POTION || item.equipped || item.count == 0 {
+pub fn use_item(ctx: &ReducerContext, id: u64, expected_revision: u32) -> Result<(), String> {
+    let mut item = owned_item(ctx, id, expected_revision)?;
+    if item.equipped || item.count == 0 {
         return Err("That item cannot be consumed.".into());
     }
-    let mut state = ctx
-        .db
-        .inventory_state()
-        .owner()
-        .find(crate::accounts::selected_character(ctx)?)
-        .ok_or("Enter the world first.")?;
-    let now = now_us(ctx);
-    if now < state.next_potion_us {
-        return Err("Potion is cooling down.".into());
-    }
-    let mut player = ctx
-        .db
-        .player()
-        .identity()
-        .find(crate::accounts::selected_character(ctx)?)
-        .ok_or("Enter the world first.")?;
-    player.health = healed_health(player.health, player.max_health)?;
-    state.next_potion_us = now.saturating_add(1_000_000);
-    ctx.db.inventory_state().owner().update(state);
-    ctx.db.player().identity().update(player);
+    check_item_requirements(ctx, &item)?;
+    let definition = crate::item_catalog::definition(item.vnum)?;
+    crate::item_effects::apply(ctx, item.owner, definition.kind)?;
+    let previous_count = item.count;
     item.count -= 1;
+    item.revision = item_security::next_revision(item.revision, expected_revision)?;
+    item_security::inventory(ctx, &item, previous_count, Cause::Consume);
     if item.count == 0 {
         ctx.db.inventory_item().id().delete(id);
     } else {
         ctx.db.inventory_item().id().update(item);
     }
     Ok(())
-}
-
-pub fn weapon_bonus(ctx: &ReducerContext, owner: Identity) -> u16 {
-    if ctx
-        .db
-        .inventory_item()
-        .owner()
-        .filter(owner)
-        .any(|i| i.equipped && i.vnum == SWORD)
-    {
-        crate::definitions::WEAPON_ATTACK_BONUS
-    } else {
-        0
-    }
 }
 
 pub fn equipped_weapon(ctx: &ReducerContext, owner: Identity) -> u32 {
@@ -373,12 +432,15 @@ pub fn equipped_weapon_item(ctx: &ReducerContext, owner: Identity) -> Option<(u6
         .inventory_item()
         .owner()
         .filter(owner)
-        .find_map(|item| (item.equipped && item.vnum == SWORD).then_some((item.id, item.vnum)))
+        .find_map(|item| {
+            (item.equipped && crate::item_catalog::is_weapon(item.vnum))
+                .then_some((item.id, item.vnum))
+        })
 }
 
 pub fn drop_potion(ctx: &ReducerContext, owner: Identity, x: f32, y: f32, z: f32) {
     let now = now_us(ctx);
-    ctx.db.item_drop().insert(ItemDrop {
+    let drop = ctx.db.item_drop().insert(ItemDrop {
         id: 0,
         x,
         y,
@@ -389,6 +451,7 @@ pub fn drop_potion(ctx: &ReducerContext, owner: Identity, x: f32, y: f32, z: f32
         reserved_until_us: now.saturating_add(10_000_000),
         expires_at_us: now.saturating_add(60_000_000),
     });
+    item_security::ground(ctx, &drop, true, Cause::Monster);
 }
 
 #[spacetimedb::reducer]
@@ -424,7 +487,9 @@ pub fn pickup_item_drop(ctx: &ReducerContext, id: u64) -> Result<(), String> {
         crate::accounts::selected_character(ctx)?,
         drop.vnum,
         drop.count,
+        Cause::Pickup(drop.id),
     )?;
+    item_security::ground(ctx, &drop, false, Cause::Pickup(drop.id));
     ctx.db.item_drop().id().delete(id);
     Ok(())
 }
@@ -432,6 +497,7 @@ pub fn pickup_item_drop(ctx: &ReducerContext, id: u64) -> Result<(), String> {
 pub fn expire_drops(ctx: &ReducerContext) {
     for drop in ctx.db.item_drop().iter() {
         if now_us(ctx) >= drop.expires_at_us {
+            item_security::ground(ctx, &drop, false, Cause::Expiry);
             ctx.db.item_drop().id().delete(drop.id);
         }
     }
@@ -448,6 +514,7 @@ mod tests {
             account: Identity::ZERO,
             vnum: RED_POTION,
             count: 1,
+            revision: 1,
             cell,
             equipped: false,
         }
@@ -485,13 +552,8 @@ mod tests {
     }
 
     #[test]
-    fn healing_and_stacks_have_server_limits() {
+    fn stacks_have_definition_limits() {
         assert_eq!(item_rules(RED_POTION).unwrap().1, 200);
         assert_eq!(item_rules(SWORD).unwrap().1, 1);
-        assert_eq!(healed_health(20, 100).unwrap(), 60);
-        assert_eq!(healed_health(90, 100).unwrap(), 100);
-        assert!(healed_health(100, 100).is_err());
-        assert!(healed_health(0, 100).is_err());
-        assert_eq!(healed_health(65530, 65535).unwrap(), 65535);
     }
 }

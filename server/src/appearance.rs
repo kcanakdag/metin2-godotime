@@ -65,7 +65,9 @@ pub fn remove(ctx: &ReducerContext, character_id: Identity) {
 fn equipped_weapon(items: impl IntoIterator<Item = (u32, bool)>) -> u32 {
     items
         .into_iter()
-        .find_map(|(vnum, equipped)| (equipped && vnum == crate::inventory::SWORD).then_some(vnum))
+        .find_map(|(vnum, equipped)| {
+            (equipped && crate::item_catalog::is_weapon(vnum)).then_some(vnum)
+        })
         .unwrap_or(NO_WEAPON)
 }
 

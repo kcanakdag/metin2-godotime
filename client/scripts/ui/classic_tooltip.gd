@@ -23,15 +23,39 @@ func show_item(row: Dictionary) -> void:
 		child.queue_free()
 	var vnum := int(row.get("vnum", 0))
 	var lines: Array[String] = [Art.item_name(vnum), ""]
-	if vnum == 10:
-		lines.append("Attack Value +10")
-		lines.append("[ Warrior ]")
-	elif vnum == 27002:
-		lines.append("Cannot be used yet.")
-	else:
-		lines.append("Restores 40 HP")
+	var definition := ItemCatalog.item(vnum)
+	if definition.get("kind") == "weapon":
+		var physical: Dictionary = definition.get("weapon", {})
+		var minimum := int(physical.get("power_min", 0)) + int(physical.get("refine_attack", 0))
+		var maximum := int(physical.get("power_max", 0)) + int(physical.get("refine_attack", 0))
+		lines.append("Attack Value %s" % _attack_value_text(minimum, maximum))
+		var classes: Array[String] = []
+		var names := ["Warrior", "Assassin", "Sura", "Shaman"]
+		for index in names.size():
+			if int(definition.get("allowed_classes", 0)) & (1 << index):
+				classes.append(names[index])
+		lines.append("[ %s ]" % " / ".join(classes))
+	elif definition.get("kind") == "recovery":
+		var effect: Dictionary = definition.get("recovery", {})
+		if int(effect.get("hp", 0)) > 0:
+			lines.append("Restores %d HP gradually" % int(effect.hp))
+		if int(effect.get("sp", 0)) > 0:
+			lines.append("Restores %d SP gradually" % int(effect.sp))
 		lines.append("Right-click to use")
-	size = Vector2(190, 12 + lines.size() * 17)
+	else:
+		lines.append("Cannot be used.")
+	var width := 190.0
+	for text: String in lines:
+		width = maxf(
+			width,
+			(
+				ceilf(
+					ThemeDB.fallback_font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+				)
+				+ 20.0
+			)
+		)
+	size = Vector2(width, 12 + lines.size() * 17)
 	Art.board(self, size, true)
 	for index in lines.size():
 		var line := Art.label(
@@ -40,3 +64,7 @@ func show_item(row: Dictionary) -> void:
 		line.size.x = size.x
 		line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	show()
+
+
+func _attack_value_text(minimum: int, maximum: int) -> String:
+	return str(minimum) if minimum == maximum else "%d-%d" % [minimum, maximum]

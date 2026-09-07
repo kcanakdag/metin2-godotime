@@ -19,6 +19,7 @@ const table_names: Array[String] = []
 @export var action_revision: int
 @export var pending_attack_target_id: int
 @export var pending_attack_target_generation: int
+@export var pending_attack_source_generation: int
 @export var pending_attack_hit_at_us: int
 @export var pending_attack_hit_until_us: int
 @export var pending_attack_damage: int
@@ -65,6 +66,7 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"action_revision": "U64",
 	"pending_attack_target_id": "U32",
 	"pending_attack_target_generation": "U32",
+	"pending_attack_source_generation": "U32",
 	"pending_attack_hit_at_us": "I64",
 	"pending_attack_hit_until_us": "I64",
 	"pending_attack_damage": "U16",
@@ -109,36 +111,37 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 ## 11. action_revision: int[br]
 ## 12. pending_attack_target_id: int[br]
 ## 13. pending_attack_target_generation: int[br]
-## 14. pending_attack_hit_at_us: int[br]
-## 15. pending_attack_hit_until_us: int[br]
-## 16. pending_attack_damage: int[br]
-## 17. pending_attack_range: float[br]
-## 18. pending_attack_invulnerability_us: int[br]
-## 19. pending_attack_target_revision: int[br]
-## 20. pending_attack_can_select_target: bool[br]
-## 21. pending_attack_action_revision: int[br]
-## 22. combat_target_id: int[br]
-## 23. combat_target_life_sequence: int[br]
-## 24. combat_target_change_not_before_us: int[br]
-## 25. combat_target_revision: int[br]
-## 26. combo_step: int[br]
-## 27. combo_chain_revision: int[br]
-## 28. combo_action_started_at_us: int[br]
-## 29. combo_action_ends_at_us: int[br]
-## 30. combo_target_id: int[br]
-## 31. combo_target_life_sequence: int[br]
-## 32. combo_target_can_be_selected: bool[br]
-## 33. combo_equipped_item_id: int[br]
-## 34. combo_equipped_vnum: int[br]
-## 35. combo_link_queued: bool[br]
-## 36. combo_transition_boundary_us: int[br]
-## 37. root_motion_step: int[br]
-## 38. root_motion_action_revision: int[br]
-## 39. root_motion_started_at_us: int[br]
-## 40. root_motion_consumed_elapsed_us: int[br]
-## 41. root_motion_heading: float[br]
-## 42. next_chat_us: int[br]
-static func create(p_identity: PackedByteArray, p_connection_id: PackedByteArray, p_direction_x: float, p_direction_z: float, p_target_x: float, p_target_z: float, p_mode: int, p_last_input_us: int, p_attack_until_us: int, p_next_attack_us: int, p_action_revision: int, p_pending_attack_target_id: int, p_pending_attack_target_generation: int, p_pending_attack_hit_at_us: int, p_pending_attack_hit_until_us: int, p_pending_attack_damage: int, p_pending_attack_range: float, p_pending_attack_invulnerability_us: int, p_pending_attack_target_revision: int, p_pending_attack_can_select_target: bool, p_pending_attack_action_revision: int, p_combat_target_id: int, p_combat_target_life_sequence: int, p_combat_target_change_not_before_us: int, p_combat_target_revision: int, p_combo_step: int, p_combo_chain_revision: int, p_combo_action_started_at_us: int, p_combo_action_ends_at_us: int, p_combo_target_id: int, p_combo_target_life_sequence: int, p_combo_target_can_be_selected: bool, p_combo_equipped_item_id: int, p_combo_equipped_vnum: int, p_combo_link_queued: bool, p_combo_transition_boundary_us: int, p_root_motion_step: int, p_root_motion_action_revision: int, p_root_motion_started_at_us: int, p_root_motion_consumed_elapsed_us: int, p_root_motion_heading: float, p_next_chat_us: int) -> GameController:
+## 14. pending_attack_source_generation: int[br]
+## 15. pending_attack_hit_at_us: int[br]
+## 16. pending_attack_hit_until_us: int[br]
+## 17. pending_attack_damage: int[br]
+## 18. pending_attack_range: float[br]
+## 19. pending_attack_invulnerability_us: int[br]
+## 20. pending_attack_target_revision: int[br]
+## 21. pending_attack_can_select_target: bool[br]
+## 22. pending_attack_action_revision: int[br]
+## 23. combat_target_id: int[br]
+## 24. combat_target_life_sequence: int[br]
+## 25. combat_target_change_not_before_us: int[br]
+## 26. combat_target_revision: int[br]
+## 27. combo_step: int[br]
+## 28. combo_chain_revision: int[br]
+## 29. combo_action_started_at_us: int[br]
+## 30. combo_action_ends_at_us: int[br]
+## 31. combo_target_id: int[br]
+## 32. combo_target_life_sequence: int[br]
+## 33. combo_target_can_be_selected: bool[br]
+## 34. combo_equipped_item_id: int[br]
+## 35. combo_equipped_vnum: int[br]
+## 36. combo_link_queued: bool[br]
+## 37. combo_transition_boundary_us: int[br]
+## 38. root_motion_step: int[br]
+## 39. root_motion_action_revision: int[br]
+## 40. root_motion_started_at_us: int[br]
+## 41. root_motion_consumed_elapsed_us: int[br]
+## 42. root_motion_heading: float[br]
+## 43. next_chat_us: int[br]
+static func create(p_identity: PackedByteArray, p_connection_id: PackedByteArray, p_direction_x: float, p_direction_z: float, p_target_x: float, p_target_z: float, p_mode: int, p_last_input_us: int, p_attack_until_us: int, p_next_attack_us: int, p_action_revision: int, p_pending_attack_target_id: int, p_pending_attack_target_generation: int, p_pending_attack_source_generation: int, p_pending_attack_hit_at_us: int, p_pending_attack_hit_until_us: int, p_pending_attack_damage: int, p_pending_attack_range: float, p_pending_attack_invulnerability_us: int, p_pending_attack_target_revision: int, p_pending_attack_can_select_target: bool, p_pending_attack_action_revision: int, p_combat_target_id: int, p_combat_target_life_sequence: int, p_combat_target_change_not_before_us: int, p_combat_target_revision: int, p_combo_step: int, p_combo_chain_revision: int, p_combo_action_started_at_us: int, p_combo_action_ends_at_us: int, p_combo_target_id: int, p_combo_target_life_sequence: int, p_combo_target_can_be_selected: bool, p_combo_equipped_item_id: int, p_combo_equipped_vnum: int, p_combo_link_queued: bool, p_combo_transition_boundary_us: int, p_root_motion_step: int, p_root_motion_action_revision: int, p_root_motion_started_at_us: int, p_root_motion_consumed_elapsed_us: int, p_root_motion_heading: float, p_next_chat_us: int) -> GameController:
 	var result: GameController = GameController.new()
 	result.identity = p_identity
 	result.connection_id = p_connection_id
@@ -153,6 +156,7 @@ static func create(p_identity: PackedByteArray, p_connection_id: PackedByteArray
 	result.action_revision = p_action_revision
 	result.pending_attack_target_id = p_pending_attack_target_id
 	result.pending_attack_target_generation = p_pending_attack_target_generation
+	result.pending_attack_source_generation = p_pending_attack_source_generation
 	result.pending_attack_hit_at_us = p_pending_attack_hit_at_us
 	result.pending_attack_hit_until_us = p_pending_attack_hit_until_us
 	result.pending_attack_damage = p_pending_attack_damage

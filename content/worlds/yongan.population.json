@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "profile_id": "yongan-population",
+  "revision": 1,
+  "map_id": "metin2_map_a1",
+  "basis": "authored-development-layout",
+  "placements": [
+    {"id": 1, "definition_vnum": 101, "home_x": 675.0, "home_z": 575.0},
+    {"id": 2, "definition_vnum": 101, "home_x": 690.0, "home_z": 575.0},
+    {"id": 3, "definition_vnum": 101, "home_x": 705.0, "home_z": 575.0},
+    {"id": 4, "definition_vnum": 101, "home_x": 675.0, "home_z": 600.0},
+    {"id": 5, "definition_vnum": 101, "home_x": 690.0, "home_z": 600.0},
+    {"id": 6, "definition_vnum": 101, "home_x": 705.0, "home_z": 600.0}
+  ]
+}
