@@ -4,8 +4,16 @@ use crate::{active_controller, collision_bounds, content, now_us, player};
 use spacetimedb::{Identity, ReducerContext, Table};
 
 pub(crate) const SWORD: u32 = crate::definitions::WEAPON_VNUM;
-const RED_POTION: u32 = 27001;
+const RED_POTION: u32 = crate::definitions::SMALL_POTION_VNUM;
+const MEDIUM_RED_POTION: u32 = crate::definitions::MEDIUM_POTION_VNUM;
 const EQUIPPED_CELL: u8 = 255;
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct AutomaticGrantOutcome {
+    pub stacked: u16,
+    pub inserted: u16,
+    pub dropped: u16,
+}
 
 #[spacetimedb::table(accessor = inventory_item, public)]
 #[derive(Clone)]
@@ -48,7 +56,7 @@ pub struct ItemDrop {
 fn item_rules(vnum: u32) -> Result<(u8, u16), String> {
     match vnum {
         SWORD => Ok((2, 1)),
-        RED_POTION => Ok((1, 200)),
+        RED_POTION | MEDIUM_RED_POTION => Ok((1, crate::definitions::ITEM_STACK_LIMIT)),
         _ => Err("Unknown item type.".into()),
     }
 }
@@ -85,8 +93,81 @@ fn free_cell(items: &[InventoryItem], vnum: u32, exclude: &[u64]) -> Result<u8, 
 
 fn owned_items(ctx: &ReducerContext, owner: Identity) -> Vec<InventoryItem> {
     let mut items: Vec<_> = ctx.db.inventory_item().owner().filter(owner).collect();
-    items.sort_by_key(|i| i.id);
+    items.sort_by_key(|i| (i.cell, i.id));
     items
+}
+
+/// Apply the source quarter-step item award without making progression depend
+/// on free bag capacity. Schema/invariant failures are logged; a full bag uses
+/// the source's owner-reserved ground fallback in the same transaction.
+pub fn grant_automatic_progression(
+    ctx: &ReducerContext,
+    owner: Identity,
+    vnum: u32,
+    count: u16,
+) -> AutomaticGrantOutcome {
+    let mut outcome = AutomaticGrantOutcome::default();
+    if count == 0 || !matches!(vnum, RED_POTION | MEDIUM_RED_POTION) {
+        spacetimedb::log::error!("invalid automatic progression item {vnum} x{count}");
+        return outcome;
+    }
+    let Some(access) = ctx.db.inventory_access().character_id().find(owner) else {
+        spacetimedb::log::error!("automatic progression item owner has no inventory access");
+        return outcome;
+    };
+    let mut remaining = count;
+    let mut items = owned_items(ctx, owner);
+    for item in items.iter_mut().filter(|item| {
+        !item.equipped && item.vnum == vnum && item.count < crate::definitions::ITEM_STACK_LIMIT
+    }) {
+        let added = remaining.min(crate::definitions::ITEM_STACK_LIMIT - item.count);
+        item.count += added;
+        remaining -= added;
+        outcome.stacked += added;
+        ctx.db.inventory_item().id().update(item.clone());
+        if remaining == 0 {
+            return outcome;
+        }
+    }
+    while remaining > 0 {
+        let Ok(cell) = free_cell(&items, vnum, &[]) else {
+            break;
+        };
+        let inserted = remaining.min(crate::definitions::ITEM_STACK_LIMIT);
+        let item = ctx.db.inventory_item().insert(InventoryItem {
+            id: 0,
+            owner,
+            account: access.account,
+            vnum,
+            count: inserted,
+            cell,
+            equipped: false,
+        });
+        items.push(item);
+        outcome.inserted += inserted;
+        remaining -= inserted;
+    }
+    if remaining > 0 {
+        let Some(player) = ctx.db.player().identity().find(owner) else {
+            spacetimedb::log::error!("automatic progression item owner has no player row");
+            return outcome;
+        };
+        let now = now_us(ctx);
+        ctx.db.item_drop().insert(ItemDrop {
+            id: 0,
+            x: player.x,
+            y: player.y,
+            z: player.z,
+            vnum,
+            count: remaining,
+            owner,
+            reserved_until_us: now
+                .saturating_add(crate::definitions::AUTOMATIC_DROP_RESERVATION_US),
+            expires_at_us: now.saturating_add(crate::definitions::AUTOMATIC_DROP_EXPIRY_US),
+        });
+        outcome.dropped = remaining;
+    }
+    outcome
 }
 
 fn owned_item(ctx: &ReducerContext, id: u64) -> Result<InventoryItem, String> {

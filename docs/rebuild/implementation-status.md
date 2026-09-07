@@ -124,6 +124,86 @@ This accepts the bounded local fixture. Full P0/P1 scope, normal-export package
 qualification, current Windows execution and original-client visual/behavioral
 parity remain incomplete.
 
+## Bounded P2 progression slice
+
+The next vertical slice implements the male Warrior portion of `SRV-007` on top
+of the accepted character (`SRV-003`), combat (`SRV-009`) and Wild Dog
+(`SRV-011`) fixtures. It also connects the bounded status presentation from
+`CLI-006`/`CLI-010` and adds default-deny development commands. This is a
+partial implementation of those catalog records, not completion of P2.
+
+| Work package | Current status | Implemented boundary |
+| --- | --- | --- |
+| Source-backed definitions | Integrated and compiler/build validated | Original EXP table through compiled level 120, runtime cap 99, normal level-delta percentages, exact single-precision quarter thresholds, male Warrior initial/growth constants, Wild Dog 101 level and 15 EXP reward, potion vnums 27001/27002 |
+| Authoritative progression | Integrated; live level-up run accepted | Owner-private row, level/EXP quarters, points, random HP/SP growth, alive-only quarter refill, automatic potion stack/bag/drop delivery, capped combat grants and closed stat allocation |
+| Non-party kill sharing | Integrated; live two-account split/reconnect accepted | Per-monster-life registered-damage/overkill ledger, same-live-connection and source approximate-50 m eligibility, 20% highest-contributor reserve plus 80% single-precision proportional shares |
+| Status/client protocol | Positive-XP exported Chrome/Linux path accepted | Protocol 5, owner-only progression and feedback subscriptions, server-authoritative `next_exp`, `C` status panel, reducer-backed point allocation, ordinary five-kill first-quarter/VIT interaction and real refresh persistence |
+| Development commands | Default-deny path live-tested; privileged path pending explicit approval | Private `/help`, capability-gated `/xp` and raise-only `/level`, bounded feedback/audit/receipts, action/argument replay binding, validation and rate limits |
+
+The canonical P2 compile records source-content hash
+`28ef6604c09daf6df371fdde1b09ae8b8b508302ba8bade5c38918b824d49c8f`
+and gameplay-definition hash
+`7719eec33753a367bb594e38181331dec359c5ec235db53b57d563d72bffbb35`.
+The three regenerated GLBs retain P1 presentation-output hash
+`2bcd691596bfb76f90359955a6469eda9a5a2d65045d00452f3b66fcc699c839`.
+Generated protocol-5 Godot bindings use schema hash
+`c3e5a8acbff528458936815c8a8903830e35a86b7573a1452cc302e011328fb3`.
+The P2 Rust suite passes 40 tests, including exact quarter/cap behavior,
+contribution splits and approximate-distance boundaries. Content extraction and
+malformed-artifact tests validate the same thresholds at Python and Rust build
+boundaries. The current combined Python tool suite passes 121 tests, all lint
+groups pass individually, and the 194-record/41-system plan check passes.
+
+The disposable training database `mt2-p2-progression-20260906` runs a
+default-deny protocol-5 module. Its final two-account headless run passes 298
+checks in `.local/p2/accounts-progression-20260907T0349.json`. The 105-check
+base verifies progression read privacy, exact initial Warrior state, no-point
+and foreign-character stat rejection, an ordinary Wild Dog's exact +15 EXP,
+and progression continuity through leave/reconnect. The shared test uses an
+untouched character, verifies registered-damage splits of 70/35 to 11/4 EXP and
+75/35 to 11/3 EXP on separate monster lives, reconnects between lives, and
+proves owner privacy and no old-life credit reuse. Four freshly authenticated
+five-kill segments preserve the production 12-second respawn and reach exact
+75/150/225 EXP quarter states before level 2 with zero carried EXP. They also
+verify exact automatic-potion counts, bounded HP/SP growth and VIT increasing
+maximum HP by 40 without healing current HP. The fixture establishes the
+authoritative out-of-range precondition before its delayed-hit checks; all base,
+shared and progression-segment assertions pass.
+
+The fresh default-deny Yongan database `mt2-p2-yongan-20260906` was published
+without deleting data from artifact SHA-256
+`c7a9535d10a8642fc55d7b46d92e76512248a9c0d0208ecdc3dfdc05f283d8b8`.
+It targets `metin2_map_a1`, protocol 5 and the definition hash above. P2 exports
+read back `Connected to Yongan.`, the exact gameplay-definition hash, nine loaded
+map chunks and no content error. Actual-PCK audits pass for 795 Web and 1,598
+Linux paths, all 225 selected UI images, all 40 declared clips and all 20
+isolated Yongan sections; see `.local/p2/export-root-audit.json`. The accepted
+exported Chrome/Linux progression-combat evidence passes 199 checks in
+`.local/p2/browser-positive-progression-fresh-read/report.json`. It uses ordinary
+movement and 20 actual Space attacks for five normally respawning Wild Dog
+lives, proves exact +15 XP per life and the first 75-EXP/+2-small-potion quarter,
+renders the source Status/orb, and performs a real VIT click that keeps current
+HP 740 while maximum HP changes 760 to 800. Positive state persists through
+switch, reconnect, reload, login and both real four-minute refresh timers. The
+AMD Radeon 860M WebGL2 Chrome client and exported Linux client recorded no
+browser or native engine errors; two transient partial native report reads
+recovered in 11 ms with no unavailable snapshot. The earlier 129-check zero-XP
+run remains narrower lifecycle evidence. The default-deny admin smoke passes 15
+checks. A
+distinct one-account bootstrap
+artifact is prepared only for local privileged permission/replay/revoke tests;
+publication was rejected by automatic approval review and remains pending
+explicit user authorization. Privileged selection-change replay behavior is
+therefore source-reviewed but not live-tested: a matching replay returns the
+receipt's original outcome without mutating the newly selected character.
+
+This slice deliberately leaves all other classes and sex variants, skills,
+party grouping, alignment, death EXP loss/luck, stat-driven full combat balance,
+complete item/loot parity, medium-potion consumption, levels above the default
+cap, champion progression and reset/lower-level operations for later catalog
+work. The current Wild Dog attack, health and damage values remain prototype
+balance even though its level and EXP reward are source-backed.
+
 ## Required QA evidence
 
 | Package | Required task evidence before review | Integration gate |

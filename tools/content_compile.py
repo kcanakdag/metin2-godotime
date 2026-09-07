@@ -21,12 +21,14 @@ from pathlib import Path, PurePosixPath
 from content_formats import parse_item_script, parse_motion_list, parse_msa, parse_race_script
 from fetch_test_assets import METIN_COMMIT, ROOT
 from metin_archive import Archive, safe_path, virtual_path, write_json
+from progression_definitions import parse_progression_definitions, quarter_thresholds
 
 SCHEMA = "mt2spacetime.normalized-content-manifest"
 SERVER_SCHEMA = "mt2spacetime.trusted-action-definitions"
 CLIENT_SCHEMA = "mt2spacetime.presentation-manifest"
 SCHEMA_VERSION = 1
-COMPILER_VERSION = "content-compiler-v1.0.0"
+SERVER_SCHEMA_VERSION = 2
+COMPILER_VERSION = "content-compiler-v1.1.0"
 DEFAULT_PROFILE = ROOT / "content/profiles/p0-warrior-dog.json"
 
 
@@ -176,6 +178,95 @@ def fetch_server_references(profile: dict, *, offline: bool) -> list[dict]:
             }
         )
     return result
+
+
+def _server_reference_text(profile: dict, relative: str) -> str:
+    revision = profile["source"]["server_reference"]["revision"]
+    path = ROOT / "assets/source/content/server" / revision / relative
+    try:
+        return path.read_text()
+    except UnicodeDecodeError:
+        return path.read_text(encoding="latin-1")
+
+
+def _selected_progression(profile: dict) -> dict:
+    definitions = parse_progression_definitions(
+        _server_reference_text(profile, "src/game/src/constants.cpp"),
+        _server_reference_text(profile, "src/common/length.h"),
+        _server_reference_text(profile, "src/game/src/config.cpp"),
+    ).to_record()
+    selected = profile["trusted_gameplay"]["progression"]
+    expected = {
+        "supported_character_class": 0,
+        "supported_sex": 0,
+        "mob_exp_rate_percent": 100,
+        "selected_modifiers": "all-zero-or-disabled",
+        "stat_cap": 90,
+        "stat_point_last_level_exclusive": 91,
+        "low_level_death_loss_exclusive": 10,
+        "quarter_reward_count": 2,
+        "small_potion_vnum": 27001,
+        "medium_potion_vnum": 27002,
+        "small_potion_resulting_level_max": 10,
+        "item_stack_limit": 200,
+        "automatic_drop_reservation_us": 60_000_000,
+        "automatic_drop_expiry_us": 300_000_000,
+        "eligibility_distance_source_cm": 5000,
+    }
+    if selected != expected:
+        raise ValueError("The selected progression profile constants changed without a contract")
+
+    mob_lines = _server_reference_text(profile, "gamefiles/conf/mob_proto.txt").splitlines()
+    mob_header = mob_lines[0].split("\t")
+    mob_rows = [dict(zip(mob_header, line.split("\t"), strict=True)) for line in mob_lines[1:]]
+    mob = next((row for row in mob_rows if row["VNUM"] == "101"), None)
+    if mob is None or int(mob["LEVEL"]) != 1 or int(mob["EXP"]) != 15:
+        raise ValueError("Pinned mob_proto must define Wild Dog 101 as level 1 with EXP 15")
+
+    item_rows = {
+        int(parts[0]): parts
+        for line in _server_reference_text(profile, "gamefiles/conf/item_proto.txt").splitlines()[
+            1:
+        ]
+        if (parts := line.split("\t")) and parts[0].isdigit()
+    }
+    item_names = {
+        int(parts[0]): parts[1]
+        for line in _server_reference_text(
+            profile, "gamefiles/conf/item_names_en.txt"
+        ).splitlines()[1:]
+        if len(parts := line.split("\t", 1)) == 2 and parts[0].isdigit()
+    }
+    reward_items = []
+    for vnum, expected_name in ((27001, "Red Potion(S)"), (27002, "Red Potion(M)")):
+        row = item_rows.get(vnum)
+        if (
+            row is None
+            or len(row) < 7
+            or row[2:5] != ["ITEM_USE", "USE_POTION", "1"]
+            or "ITEM_STACKABLE" not in row[6].split(" | ")
+            or item_names.get(vnum) != expected_name
+        ):
+            raise ValueError(f"Pinned item catalogs do not define selected potion {vnum}")
+        reward_items.append(
+            {
+                "vnum": vnum,
+                "source_name": expected_name,
+                "presentation_name": expected_name.replace("(", " (").replace(")", ")"),
+                "size": 1,
+                "stack_limit": selected["item_stack_limit"],
+            }
+        )
+
+    stack_source = _server_reference_text(profile, "src/common/item_length.h")
+    if len(re.findall(r"\bITEM_MAX_COUNT\s*=\s*200\s*,", stack_source)) != 1:
+        raise ValueError("Pinned item stack limit is missing or ambiguous")
+
+    return definitions | {
+        "selected_profile": selected,
+        "monster_reward": {"vnum": 101, "level": 1, "experience": 15},
+        "reward_items": reward_items,
+    }
 
 
 def source_archive(offline: bool) -> Archive:
@@ -401,6 +492,7 @@ def compile_normalized(profile_path: Path, *, offline: bool) -> dict:
         initial_paths.update({item["script"], item["model"], *item["textures"]})
     archive.fetch_many(initial_paths)
     catalog = _validate_catalogs(profile, archive)
+    progression = _selected_progression(profile)
     actors, unsupported = _normalise_motions(profile, archive)
     items = _normalise_items(profile, archive)
     sources = _source_records(archive, server_sources)
@@ -421,6 +513,7 @@ def compile_normalized(profile_path: Path, *, offline: bool) -> dict:
         "distribution": profile["distribution"],
         "sources": sources,
         "catalog_validation": catalog,
+        "progression": progression,
         "actors": actors,
         "items": items,
         "known_exclusions": profile["known_exclusions"],
@@ -508,7 +601,7 @@ def make_server_payload(profile: dict, normalized: dict) -> dict:
     )
     payload = {
         "schema": SERVER_SCHEMA,
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": SERVER_SCHEMA_VERSION,
         "profile_id": profile["profile_id"],
         "content_hash": normalized["content_hash"],
         "time_unit": "microsecond",
@@ -533,6 +626,7 @@ def make_server_payload(profile: dict, normalized: dict) -> dict:
         ],
         "actions": sorted(actions, key=lambda action: action["id"]),
         "items": [gameplay["item"]],
+        "progression": normalized["progression"],
     }
     payload["gameplay_definition_hash"] = digest(payload)
     return payload
@@ -572,7 +666,10 @@ def write_compile_outputs(profile_path: Path, normalized: dict, server: dict) ->
 
 
 def validate_server_payload(payload: dict, profile_id: str) -> None:
-    if payload.get("schema") != SERVER_SCHEMA or payload.get("schema_version") != 1:
+    if (
+        payload.get("schema") != SERVER_SCHEMA
+        or payload.get("schema_version") != SERVER_SCHEMA_VERSION
+    ):
         raise ValueError("Invalid trusted action schema")
     if payload.get("profile_id") != profile_id:
         raise ValueError("Trusted action profile mismatch")
@@ -599,6 +696,41 @@ def validate_server_payload(payload: dict, profile_id: str) -> None:
                 raise ValueError("Trusted hit window exceeds action duration")
             if not math.isfinite(window["range_m"]) or window["range_m"] <= 0:
                 raise ValueError("Trusted hit window has invalid range")
+    progression = payload.get("progression")
+    if not isinstance(progression, dict):
+        raise ValueError("Trusted definitions require progression data")
+    if progression.get("schema") != "mt2spacetime.progression-definitions":
+        raise ValueError("Trusted progression schema mismatch")
+    if progression.get("schema_version") != 1:
+        raise ValueError("Trusted progression schema version mismatch")
+    if progression.get("compiled_max_level") != 120:
+        raise ValueError("Trusted progression compiled maximum mismatch")
+    if progression.get("default_level_cap") != 99:
+        raise ValueError("Trusted progression level cap mismatch")
+    experience = progression.get("experience_to_next_level_by_current_level", [])
+    if (
+        len(experience) != 121
+        or any(type(value) is not int or not 0 <= value <= 0xFFFFFFFF for value in experience)
+        or experience[0] != 0
+        or any(value == 0 for value in experience[1:])
+    ):
+        raise ValueError("Trusted progression EXP table must contain levels 0..120")
+    level_delta = progression.get("normal_level_delta_percent", [])
+    if len(level_delta) != 31 or any(
+        type(value) is not int or not 0 <= value <= 1000 for value in level_delta
+    ):
+        raise ValueError("Trusted progression level-delta table must contain 31 values")
+    quarters = progression.get("quarter_thresholds_by_current_level", [])
+    if len(quarters) != 121:
+        raise ValueError("Trusted progression quarter table must contain levels 0..120")
+    for level, row in enumerate(quarters):
+        expected = list(quarter_thresholds(experience[level]))
+        if row != {
+            "level": level,
+            "next_experience": experience[level],
+            "thresholds": expected,
+        }:
+            raise ValueError("Trusted progression quarter table violates float32 thresholds")
 
 
 def _client_motion(motion: dict) -> dict:
@@ -774,6 +906,7 @@ def build_command(args: argparse.Namespace) -> None:
             str(Path(args.blender).resolve()),
             "--background",
             "--factory-startup",
+            "-noaudio",
             "--python-exit-code",
             "1",
             "--python",

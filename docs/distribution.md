@@ -3,15 +3,15 @@
 The Web client runs in a browser; desktop exports bundle their own Godot runtime.
 Players do not install Blender, Rust, Python, Node or the SDK. The current
 development endpoint is [https://kcanakdag.com:8443](https://kcanakdag.com:8443/),
-on `159.195.213.9`. It may restart during updates. Account release
-`20260906T173802450337Z` serves `mt2-accounts-v3` at that public origin.
-The preceding `mt2-yongan-v2` guest database is retained without public routes.
-The account milestone adds original entry screens, login, four character slots
-and server-owned private roster/inventory access, with 58 passing local account
-integration checks. Local and public independent Chrome/Linux runs each pass
-103 checks, including real four-minute token refresh. The completed deployment
-used `--delete-data=never`. The fixed test probe is authorized in the development
-build. Normal export commands omit it.
+on `159.195.213.9`. It may restart during updates. P1 release
+`20260906T204513591109Z` serves `mt2-p1-v4` at that public origin. Its publish
+preserved account, issuer-key, and game data and verified the served manifest.
+The public credentialed gameplay qualification is still pending explicit user
+approval. The preceding `mt2-accounts-v3` and `mt2-yongan-v2` databases remain
+stored without public routes. The account milestone adds original entry screens,
+login, four character slots, and server-owned private roster/inventory access.
+The fixed test probe is authorized only in a development test build; normal
+player export commands omit it.
 
 The preceding guest release `20260906T154235134255Z` passed 45 public Chrome/Linux
 checks for map/chat panels, inventory and multiplayer. Earlier Yongan gameplay,
@@ -26,8 +26,8 @@ for Web, `linux_release.x86_64` for Linux. Standard Godot/GDScript is used
 throughout. Engine and template versions must match.
 
 ```sh
-make export-web SERVER_URL=https://kcanakdag.com:8443 DB=mt2-accounts-v3
-make export-linux SERVER_URL=https://kcanakdag.com:8443 DB=mt2-accounts-v3
+make export-web SERVER_URL=https://kcanakdag.com:8443 DB=mt2-p1-v4
+make export-linux SERVER_URL=https://kcanakdag.com:8443 DB=mt2-p1-v4
 ```
 
 The underlying command accepts `--godot`, `--templates`, `--server`,
@@ -35,7 +35,7 @@ The underlying command accepts `--godot`, `--templates`, `--server`,
 
 ```sh
 python3 tools/export_playable.py --target web --include-map \
-  --server https://kcanakdag.com:8443 --database mt2-accounts-v3
+  --server https://kcanakdag.com:8443 --database mt2-p1-v4
 ```
 
 Make includes Yongan by default. Use `INCLUDE_MAP=` only when intentionally
@@ -63,7 +63,7 @@ Linux settings can be overridden on launch:
 
 ```sh
 ./dist/linux/MT2Spacetime.x86_64 -- \
-  --server https://kcanakdag.com:8443 --database mt2-accounts-v3 \
+  --server https://kcanakdag.com:8443 --database mt2-p1-v4 \
   --profile alice
 ```
 
@@ -122,8 +122,8 @@ accepts only the isolated proxy's overwritten client-IP header.
 | Remote directory | `/opt/metin2-godotime` |
 | Compose project | `metin2-godotime` |
 | Public game endpoint | TCP `8443`, HTTPS and WSS |
-| Public account database | `mt2-accounts-v3`, selected explicitly in export/deploy commands |
-| Retained previous database | `mt2-yongan-v2`; stored but not exposed by the account proxy |
+| Public P1 database | `mt2-p1-v4`, selected explicitly in export/deploy commands |
+| Retained previous databases | `mt2-accounts-v3` and `mt2-yongan-v2`; stored but not exposed by the P1 proxy |
 | Administrative database endpoint | `127.0.0.1:13210` on the VPS only |
 | Game persistence | Compose named volume `world` |
 | Account/session/key persistence | Separate Compose named volume `accounts`, mounted at auth `/data` |
@@ -142,8 +142,8 @@ Docker or provision/renew certificates. Existing HTTP/HTTPS services on ports
 
 ```sh
 make server-build
-make export-web SERVER_URL=https://kcanakdag.com:8443 DB=mt2-accounts-v3
-make deploy DB=mt2-accounts-v3
+make export-web SERVER_URL=https://kcanakdag.com:8443 DB=mt2-p1-v4
+make deploy DB=mt2-p1-v4
 ```
 
 Equivalent explicit deployment:
@@ -151,7 +151,7 @@ Equivalent explicit deployment:
 ```sh
 python3 tools/deploy.py --host root@159.195.213.9 \
   --public-name kcanakdag.com --certificate kcanakdag.com \
-  --port 8443 --database mt2-accounts-v3 --web-dir dist/web
+  --port 8443 --database mt2-p1-v4 --web-dir dist/web
 ```
 
 Before SSH, the script verifies every exported file against its build manifest,
@@ -255,27 +255,77 @@ The development build is explicitly authorized to include this probe.
 
 ```sh
 make browser-setup
-make export-web SERVER_URL=https://kcanakdag.com:8443 DB=mt2-accounts-v3 TEST_PROBE=--test-probe
-make export-linux SERVER_URL=https://kcanakdag.com:8443 DB=mt2-accounts-v3 TEST_PROBE=--test-probe
-make deploy DB=mt2-accounts-v3 WEB_DIR=dist/web-test DEPLOY_FLAGS=--allow-test-build
+make export-web SERVER_URL=https://kcanakdag.com:8443 DB=mt2-p1-v4 TEST_PROBE=--test-probe
+make export-linux SERVER_URL=https://kcanakdag.com:8443 DB=mt2-p1-v4 TEST_PROBE=--test-probe
+make deploy DB=mt2-p1-v4 WEB_DIR=dist/web-test DEPLOY_FLAGS=--allow-test-build
 .local/venv-dev/bin/python tools/test_browser_accounts.py \
-  --url https://kcanakdag.com:8443 --database mt2-accounts-v3 \
+  --url https://kcanakdag.com:8443 --database mt2-p1-v4 \
   --hardware --inventory --panels
 ```
 
 The account rollout and regular test deployment both preserve existing data.
-Both account services and a matching protocol-3 module must be available before
-running the clients. The runner creates actual test accounts/characters, uses
-visible browser entry controls and an independent rendered Linux export, and
-records private results under `.local/browser-accounts/<timestamp>/`.
-Both local and public final runs passed 103 checks. Add `--session-refresh` to
-verify both real four-minute token-refresh timers; this extends the run.
+Both account services and a matching module must be available before running the
+clients. The runner creates actual test accounts/characters, uses visible browser
+entry controls and an independent rendered Linux export, and records private
+results under `.local/browser-accounts/<timestamp>/`. Do not run the public
+credentialed qualification against P1 until explicit user approval is granted.
+Add `--session-refresh` to verify both real four-minute token-refresh timers;
+this extends the run.
 `--hardware` uses the
 workstation GPU; software-rendered Yongan can be too slow for reliable combat
 timing. See [development](development.md#browser-integration-checks).
 
 The older `make test-browser` runner exercises guest gameplay and is retained
 for disposable guest-enabled test worlds. It is not account-flow evidence.
+
+## Local P2 progression candidate
+
+P2 is local-only and default-deny. Export qualification uses the disposable
+Yongan database `mt2-p2-yongan-20260906`; the separate training-map database
+`mt2-p2-progression-20260906` preserves the accepted 298-check headless
+progression fixture and is also the target of the still-pending bootstrap
+approval. Both use `http://127.0.0.1:13223` through the local issuer
+`http://127.0.0.1:8186/auth`. Neither is the public P1 route, and neither may
+reuse, reset, or publish over the P1 database. The current generated
+client-binding schema is
+`c3e5a8acbff528458936815c8a8903830e35a86b7573a1452cc302e011328fb3`; the
+Yongan default-deny module WASM SHA-256 is
+`c7a9535d10a8642fc55d7b46d92e76512248a9c0d0208ecdc3dfdc05f283d8b8`.
+
+The bindings may contain typed progression rows and narrow admin reducer
+metadata. They do not contain a bootstrap identity, grant a capability, expose
+private audit data, or add a general evaluator. A normal export must exclude
+the local operator CLI and its isolated Godot driver, credentials/tokens,
+private reports and logs, MCP bridges, original GR2/Blender/source archives,
+and `server/content` trusted definitions. The export helper removes the bridge
+and test tree before packaging; its actual-PCK audit enforces these exclusions.
+
+The local default-deny smoke passed 15 two-account checks in
+`.local/p2/admin-default-deny-report.json`: independent identities and selected
+characters, denial of both typed admin requests, unchanged progression/items,
+private feedback, and absence from public chat. The unshipped operator CLI also
+recorded its expected bootstrap-required denial with `applied: false` in
+`.local/p2/operator-default-deny-report.json`. This is denial evidence only.
+The bootstrap-enabled artifact is prepared but unpublished; no capability grant,
+operator provisioning, or public P2 qualification has occurred.
+
+Actual local Web/Linux progression-combat qualification passes 199 checks in
+`.local/p2/browser-positive-progression-fresh-read/report.json`. Two independent
+exports used ordinary movement and Space input for five Wild Dog lives and exact
++15 rewards, rendered the first 75-EXP quarter and +2 potion result, applied VIT
+without healing current HP, and preserved the positive state through lifecycle
+changes and both real four-minute refresh timers. Browser and native engine
+errors were empty. This is local default-deny P2 evidence; the public route still
+serves P1, and privileged capability success remains unqualified.
+
+The P2 content rebuild and staged client boundary pass are recorded in
+`.local/p2/content-rebuild-report.json` and `.local/p2/readiness-audit.md`.
+They validate schema-2 trusted definitions and a current 1,576-file staged
+client with no forbidden path prefixes. They are not actual PCK/export evidence.
+Fresh Web/Linux P2 exports against `mt2-p2-yongan-20260906`, their PCK audits and
+two-client exported-client gameplay now have the bounded evidence above. They do
+not qualify public reachability, privileged controls, other classes/content, or
+the full P2 milestone.
 
 ## Windows and temporary local hosting
 
@@ -332,7 +382,7 @@ with exact UI pixel audits and separate public versus loopback chat checks.
 | Local client-origin proxy | `.local/accounts/local-entry-report.json` | Actual HTTP: auth health, configured database identity and Web index return 200; administrative schema route returns 403 and traversal returns 404 |
 | Public account deployment | `.local/accounts/public-deploy.log`, release `20260906T173802450337Z` | Created `mt2-accounts-v3` with `--delete-data=never`, retained guest database/auth/issuer keys, built auth with four passing HTTP suites |
 | Public account HTTPS checks | `.local/accounts/public-http-report.json` | Workstation HTTPS: auth health/discovery, public-only JWKS, database identity and served manifest exactly matching the Web export |
-| Current deployed configuration | `.local/accounts/deployment-config-preflight.json` | Both actual PCKs, adjacent Linux config and deployed routes target `mt2-accounts-v3`; deliberate mismatch rejected before remote commands, without changing exports |
+| Current P1 publication | `.local/p1/public-deploy.log`, release `20260906T204513591109Z` | Created `mt2-p1-v4` with reset mode `never`, retained auth accounts and issuer keys, and served the verified manifest; public credentialed gameplay qualification remains pending explicit user approval |
 | Current source checks | `.local/accounts/final-check.log`, deployment guard checks above | 22 Rust, 81 Python checks verified (79 in full `make check` plus two guard regressions), four auth HTTP suites, all linters and real Godot parser/runtime |
 | Current schema legacy gameplay checks | `.local/accounts/legacy-multiplayer.json`, `legacy-combat.json`, `legacy-inventory.json`: 22/19/60 checks | Disposable guest-enabled `mt2-account-legacy`; real subscribed movement/combat, direct account inventory RLS, foreign item rejection and privacy/persistence through reconnect/death; no account login or lobby coverage |
 | Previous public map/chat/inventory build | `.local/browser-proof/20260906-174806/report.json`, 45 checks | Independent Chrome/Linux clients, final panel drag/resize geometry, inventory, rejection, reconnect/refresh and no engine errors; no public chat sent |

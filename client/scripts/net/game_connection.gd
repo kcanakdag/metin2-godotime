@@ -23,9 +23,11 @@ signal lobby_action_completed(action: String)
 signal account_reconnect_requested
 signal appearances_changed(rows: Array)
 signal server_clock_changed(server_time_us: int)
+signal progression_changed(rows: Array)
+signal command_feedback_changed(rows: Array)
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
-const EXPECTED_PROTOCOL_VERSION := 4
+const EXPECTED_PROTOCOL_VERSION := 5
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
 const TABLES := [
@@ -41,8 +43,15 @@ const TABLES := [
 	"account_state",
 	"player_appearance",
 	"simulation_clock",
+	"character_progression",
+	"command_feedback",
 ]
-const LOBBY_QUERIES := ["SELECT * FROM account_character", "SELECT * FROM account_state"]
+const LOBBY_QUERIES := [
+	"SELECT * FROM account_character",
+	"SELECT * FROM account_state",
+	"SELECT * FROM character_progression",
+	"SELECT * FROM command_feedback",
+]
 const QUERIES := [
 	"SELECT * FROM player WHERE online = true",
 	"SELECT * FROM obstacle",
@@ -82,6 +91,8 @@ var item_drops: Array = []
 var require_content := false
 var appearances: Array = []
 var server_time_us := 0
+var progression: Array = []
+var command_feedback: Array = []
 
 var _client: SpacetimeDBClient
 var _session := 0
@@ -280,6 +291,57 @@ func appearance_for(character_id: String) -> Dictionary:
 	return {}
 
 
+func progression_for(character_id: String) -> Dictionary:
+	for row: Dictionary in progression:
+		if str(row.get("character_id", "")) == character_id:
+			return row
+	return {}
+
+
+func selected_progression() -> Dictionary:
+	return progression_for(local_identity)
+
+
+func allocate_stat(character_id: String, stat_code: String) -> void:
+	if not _is_lower_hex(character_id, 64):
+		reducer_failed.emit("Choose a valid character before allocating a stat.")
+		return
+	if stat_code not in ["st", "ht", "dx", "iq"]:
+		reducer_failed.emit("Choose STR, VIT, DEX, or INT.")
+		return
+	_call_reducer(
+		"allocate_stat", [character_id.hex_decode(), stat_code], [&"__identity__", &"String"]
+	)
+
+
+func request_command_help(request_id: String) -> void:
+	_call_command("request_command_help", request_id)
+
+
+func admin_grant_progression_xp(request_id: String, amount_text: String) -> void:
+	_call_command("admin_grant_progression_xp", request_id, amount_text)
+
+
+func admin_raise_progression_level(request_id: String, target_text: String) -> void:
+	_call_command("admin_raise_progression_level", request_id, target_text)
+
+
+func _call_command(reducer_name: String, request_id: String, argument: String = "") -> void:
+	if not _is_lower_hex(request_id, 32):
+		reducer_failed.emit("Could not create a secure command request.")
+		return
+	if reducer_name == "request_command_help":
+		_call_reducer(reducer_name, [request_id], [&"String"])
+	else:
+		_call_reducer(reducer_name, [request_id, argument], [&"String", &"String"])
+
+
+func _is_lower_hex(value: String, length: int) -> bool:
+	return (
+		value.length() == length and value == value.to_lower() and value.is_valid_hex_number(false)
+	)
+
+
 func _valid_inventory_cell(cell: int) -> bool:
 	# Reject before U8 encoding can wrap; the server independently checks footprint/ownership.
 	if cell < 0 or cell >= 90:
@@ -289,6 +351,9 @@ func _valid_inventory_cell(cell: int) -> bool:
 
 
 func send_chat(message: String) -> void:
+	if message.strip_edges().begins_with("/"):
+		reducer_failed.emit("Use /help for private commands.")
+		return
 	_call_reducer("send_chat", [message], [&"String"])
 
 
@@ -332,6 +397,8 @@ func _on_lobby_applied(session: int) -> void:
 		return
 	_dirty_tables["account_character"] = true
 	_dirty_tables["account_state"] = true
+	_dirty_tables["character_progression"] = true
+	_dirty_tables["command_feedback"] = true
 	_flush_snapshots()
 	_set_state("opening", "Opening your account…")
 	_call_lobby("open_account")
@@ -497,6 +564,17 @@ func _flush_snapshots() -> void:
 					var selected := str(account_state.get("selected_character", ""))
 					local_identity = "" if selected == "0".repeat(64) else selected
 				account_changed.emit(account_state)
+			"character_progression":
+				rows.sort_custom(
+					func(a: Dictionary, b: Dictionary):
+						return str(a.character_id) < str(b.character_id)
+				)
+				progression = rows
+				progression_changed.emit(progression)
+			"command_feedback":
+				rows.sort_custom(func(a: Dictionary, b: Dictionary): return int(a.id) < int(b.id))
+				command_feedback = rows
+				command_feedback_changed.emit(command_feedback)
 			"inventory_item":
 				inventory = rows
 				inventory_changed.emit(own_inventory())
@@ -596,8 +674,12 @@ func _clear_snapshots() -> void:
 	account_identity = ""
 	characters = []
 	account_state = {}
+	progression = []
+	command_feedback = []
 	roster_changed.emit(characters)
 	account_changed.emit(account_state)
+	progression_changed.emit(progression)
+	command_feedback_changed.emit(command_feedback)
 	connected_at_msec = 0
 	last_snapshot_msec = 0
 	rx_messages = 0

@@ -46,6 +46,13 @@ func _run() -> void:
 	_check("rosters_are_private", _private_roster(first, 4) and _private_roster(second, 1))
 	_check("account_state_is_private", _private_state(first) and _private_state(second))
 	_check("inventory_access_is_private", _private_access(first, 4) and _private_access(second, 1))
+	_check(
+		"progression_is_private",
+		await _wait_until(
+			func(): return _private_progression(first, 4) and _private_progression(second, 1)
+		)
+	)
+	_check("initial_warrior_progression_is_exact", first.progression.all(_initial_progression))
 	_check("warrior_male_empire_one", first.characters.all(_valid_warrior))
 	await _raw_rejection(
 		first, "create_character", [4, "Outside"], [&"U8", &"String"], "fifth_slot_rejected", "slot"
@@ -114,6 +121,29 @@ func _run() -> void:
 	_check(
 		"selected_identity_is_character",
 		first.local_identity == first_id and second.local_identity == second_id
+	)
+	_check(
+		"initial_warrior_health_is_exact",
+		(
+			int(_player(second, first_id).get("health", 0)) == 760
+			and int(_player(second, first_id).get("max_health", 0)) == 760
+		)
+	)
+	await _raw_rejection(
+		first,
+		"allocate_stat",
+		[first_id.hex_decode(), "ht"],
+		[&"__identity__", &"String"],
+		"allocation_without_points_rejected",
+		"No unspent"
+	)
+	await _raw_rejection(
+		second,
+		"allocate_stat",
+		[first_id.hex_decode(), "ht"],
+		[&"__identity__", &"String"],
+		"foreign_stat_allocation_rejected",
+		"selected"
 	)
 	_check(
 		"mutual_subscribed_presence",
@@ -219,8 +249,12 @@ func _run() -> void:
 	await _movement(first, second, first_id, -1.0, "original_after_duplicate")
 	var saved_player := _player(second, first_id).duplicate(true)
 	var saved_inventory := first.inventory.duplicate(true)
+	var saved_progression := first.progression_for(first_id).duplicate(true)
 	first.leave_world()
 	_check("leave_returns_lobby", await _wait_until(func(): return first.state == "lobby"))
+	_check(
+		"leave_preserves_private_progression", first.progression_for(first_id) == saved_progression
+	)
 	_check(
 		"leave_removes_presence",
 		await _wait_until(func(): return _player(second, first_id).is_empty())
@@ -322,6 +356,10 @@ func _run() -> void:
 	_check(
 		"reconnect_preserves_inventory_without_duplicate_starters",
 		await _wait_until(func(): return _same_inventory(saved_inventory, first.inventory))
+	)
+	_check(
+		"reconnect_preserves_private_progression",
+		await _wait_until(func(): return first.progression_for(first_id) == saved_progression)
 	)
 	second.disconnect_game()
 	_check(
@@ -437,7 +475,7 @@ func _pve_definition_and_approach(
 	actor: GameConnection, observer: GameConnection, actor_id: String
 ) -> bool:
 	var dog := _monster(observer)
-	if not _check(
+	var definition_valid := _check(
 		"wild_dog_trusted_definition",
 		(
 			int(dog.get("definition_vnum", 0)) == 101
@@ -447,15 +485,45 @@ func _pve_definition_and_approach(
 			and dog.get("motion_set") == "actor.mob.wild-dog-101.general"
 			and dog.get("attack_action_id") == "actor.mob.wild-dog-101.general.normal_attack.v1"
 		)
-	):
-		return false
-	if not _check(
+	)
+	var identity_valid := _check(
 		"trusted_definition_identity",
 		(
 			actor.world_info.get("definition_profile") == "p0-warrior-dog"
 			and actor.world_info.get("definition_hash") == _expected_definition_hash
 			and actor.server_time_us > 0
 		)
+	)
+	var dog_available := _check(
+		"wild_dog_available",
+		await _wait_until(func(): return int(_monster(observer).get("health", 0)) > 0, 16.0)
+	)
+	if not definition_valid or not identity_valid or not dog_available:
+		return false
+	dog = _monster(observer)
+	var player_position := _position(_player(observer, actor_id))
+	var dog_position := _position(dog)
+	if player_position.distance_to(dog_position) <= 5.0:
+		var away := player_position - dog_position
+		if away.is_zero_approx():
+			away = Vector2.LEFT
+		var target := player_position + away.normalized() * 6.0
+		actor.move_to(target.x, target.y)
+		await _wait_until(
+			func():
+				return (
+					_position(_player(observer, actor_id)).distance_to(
+						_position(_monster(observer))
+					)
+					> 5.0
+				),
+			10.0
+		)
+		actor.stop_moving()
+		await create_timer(0.2).timeout
+	if not _check(
+		"out_of_range_precondition",
+		_position(_player(observer, actor_id)).distance_to(_position(_monster(observer))) > 4.0
 	):
 		return false
 
@@ -576,6 +644,22 @@ func _pve_leave_cancellation(
 func _pve_prepare_death(
 	actor: GameConnection, observer: GameConnection, actor_id: String, sword: Dictionary
 ) -> bool:
+	if not _check(
+		"death_scenario_moves_observer_away", await _move_observer_away_from_dog(observer)
+	):
+		return false
+	var dog := _monster(observer)
+	actor.move_to(float(dog.x) - 2.35, float(dog.z))
+	if not await _wait_until(
+		func():
+			return (
+				_position(_player(observer, actor_id)).distance_to(_position(_monster(observer)))
+				<= 2.6
+			),
+		10.0
+	):
+		return _check("death_scenario_reaches_dog", false)
+	actor.stop_moving()
 	actor.unequip_item(int(sword.id), int(sword.cell))
 	var unequipped := await _wait_until(
 		func():
@@ -587,6 +671,29 @@ func _pve_prepare_death(
 	return _check("death_scenario_unequips_before_action", unequipped)
 
 
+func _move_observer_away_from_dog(observer: GameConnection) -> bool:
+	var observer_id := observer.local_identity
+	var observer_position := _position(_player(observer, observer_id))
+	var dog_position := _position(_monster(observer))
+	if observer_position.distance_to(dog_position) > 5.0:
+		return true
+	var away := observer_position - dog_position
+	if away.is_zero_approx():
+		away = Vector2.LEFT
+	var target := observer_position + away.normalized() * 7.0
+	observer.move_to(target.x, target.y)
+	var separated := await _wait_until(
+		func():
+			return (
+				_position(_player(observer, observer_id)).distance_to(_position(_monster(observer)))
+				> 5.0
+			),
+		10.0
+	)
+	observer.stop_moving()
+	return separated
+
+
 func _pve_death_cancellation(
 	actor: GameConnection, observer: GameConnection, actor_id: String
 ) -> bool:
@@ -595,7 +702,7 @@ func _pve_death_cancellation(
 	# must cancel the player's still-pending hit.
 	if not _check(
 		"dog_reduces_player_to_last_hit",
-		await _wait_until(func(): return int(_player(observer, actor_id).health) == 20, 12.0)
+		await _wait_until(func(): return int(_player(observer, actor_id).health) == 20, 60.0)
 	):
 		return false
 	var dog_sequence := int(_monster(observer).attack_sequence)
@@ -642,7 +749,11 @@ func _pve_death_cancellation(
 	var respawned := await _wait_until(
 		func():
 			var row := _player(observer, actor_id)
-			return int(row.get("health", 0)) == 100 and int(row.get("life_sequence", 0)) > dead_life,
+			return (
+				int(row.get("health", 0)) == int(row.get("max_health", 0))
+				and int(row.get("max_health", 0)) == 760
+				and int(row.get("life_sequence", 0)) > dead_life
+			),
 		10.0
 	)
 	if not _check("player_respawn_advances_life_generation", respawned):
@@ -671,6 +782,7 @@ func _pve_reward(
 		return _check("return_to_dog_after_respawn", false)
 	actor.stop_moving()
 	var loot_before := observer.loot.size()
+	var experience_before := int(actor.progression_for(actor_id).get("experience", -1))
 	for expected_health in [30, 0]:
 		await create_timer(0.9).timeout
 		actor.perform_attack()
@@ -684,6 +796,10 @@ func _pve_reward(
 		await _wait_until(func(): return observer.loot.size() == loot_before + 1)
 	):
 		return false
+	_check(
+		"ordinary_wild_dog_grants_exact_experience",
+		await _wait_until(_has_experience.bind(actor, actor_id, experience_before + 15))
+	)
 	await create_timer(0.4).timeout
 	_check("death_and_reward_are_exactly_once", observer.loot.size() == loot_before + 1)
 	var reward: Dictionary = observer.loot[-1]
@@ -768,6 +884,41 @@ func _private_inventory(client: GameConnection) -> bool:
 		if row.account.hex_encode() != client.account_identity:
 			return false
 	return true
+
+
+func _private_progression(client: GameConnection, expected_count: int) -> bool:
+	var rows := client._client.get_local_database().get_all_rows("character_progression")
+	var owned := client.characters.map(func(row: Dictionary): return str(row.character_id))
+	if rows.size() != expected_count:
+		return false
+	for row: Resource in rows:
+		if row.account.hex_encode() != client.account_identity:
+			return false
+		if row.character_id.hex_encode() not in owned:
+			return false
+	return true
+
+
+func _has_experience(client: GameConnection, character_id: String, experience: int) -> bool:
+	return int(client.progression_for(character_id).get("experience", -1)) == experience
+
+
+func _initial_progression(row: Dictionary) -> bool:
+	return (
+		int(row.get("level", 0)) == 1
+		and int(row.get("experience", -1)) == 0
+		and int(row.get("next_exp", 0)) == 300
+		and int(row.get("level_step", -1)) == 0
+		and int(row.get("unspent_stat_points", -1)) == 0
+		and int(row.get("strength", 0)) == 6
+		and int(row.get("vitality", 0)) == 4
+		and int(row.get("dexterity", 0)) == 3
+		and int(row.get("intelligence", 0)) == 3
+		and int(row.get("random_hp", -1)) == 0
+		and int(row.get("random_sp", -1)) == 0
+		and int(row.get("current_sp", 0)) == 260
+		and int(row.get("max_sp", 0)) == 260
+	)
 
 
 func _owned_sword(client: GameConnection, identity: String) -> Dictionary:

@@ -250,6 +250,80 @@ animation, quest, map, admin and test automation. Its future CLI names are not
 implemented commands. Continue using the tested commands elsewhere on this page
 until a vertical slice implements and documents their replacements.
 
+## Bounded P2 progression administration
+
+Protocol 5 adds three typed private command requests: `/help`, `/xp <amount>`,
+and `/level <target>`. The client maps those spellings to dedicated reducers;
+they are not a general command interpreter. `/help` requires a valid account and
+controlling connection. XP and level changes additionally require the fixed
+server-side `progression_admin` capability and an actively controlled selected
+character. Missing bootstrap configuration is intentionally default-deny.
+
+Bootstrap authorization is an exact account `Identity`, never a username,
+character name, email, token claim, or UI flag. The compile-time variable is a
+comma-separated list of canonical lowercase 64-hex identities. The build rejects
+malformed entries without printing their values. Preserve the variable on the
+actual module build invocation; setting it only for a later publish command does
+not change the compiled authorization list. For an isolated local P2 artifact:
+
+```sh
+MT2_AUTH_ISSUER=http://127.0.0.1:8186/auth \
+MT2_PROGRESSION_BOOTSTRAP_IDENTITIES='<exact-64-hex-account-identity>' \
+CARGO_TARGET_DIR="$PWD/.local/p2/server-target" \
+cargo build --manifest-path server/Cargo.toml --locked --no-default-features \
+  --target wasm32-unknown-unknown --release
+```
+
+Use a fresh `mt2-p2-*` database for this schema and preserve any existing P1
+database. The local two-phase runner first proves default deny and records two
+fresh QA accounts in an owner-only fixture. After rebuilding and republishing
+the same disposable database with the reported first identity as bootstrap, it
+verifies permission, replay, validation, provisioning, revocation, reconnect,
+feedback privacy, and public-chat rejection:
+
+```sh
+python3 tools/test_progression_admin.py prepare \
+  --server http://127.0.0.1:8186 --game-server http://127.0.0.1:13223 \
+  --database mt2-p2-progression-20260906 \
+  --fixture .local/p2/admin-smoke-fixture.json \
+  --report .local/p2/admin-default-deny-report.json
+
+python3 tools/test_progression_admin.py verify \
+  --server http://127.0.0.1:8186 --game-server http://127.0.0.1:13223 \
+  --database mt2-p2-progression-20260906 \
+  --fixture .local/p2/admin-smoke-fixture.json \
+  --report .local/p2/admin-bootstrap-report.json
+```
+
+Provisioning uses the unshipped structured operator CLI. It prompts for the
+bootstrap account username, password, and audit reason, or reads credentials
+from an owner-only JSON file and the reason from a separate owner-only text file.
+Passwords, account sessions, and game JWTs are never command-line arguments or
+report fields. The target remains an exact existing account identity:
+
+```sh
+chmod 600 .local/p2/operator-credentials.json .local/p2/operator-reason.txt
+python3 tools/progression_operator.py grant <exact-target-account-identity> \
+  --server http://127.0.0.1:8186 --game-server http://127.0.0.1:13223 \
+  --database mt2-p2-progression-20260906 \
+  --credential-file .local/p2/operator-credentials.json \
+  --reason-file .local/p2/operator-reason.txt
+```
+
+The current public endpoint remains on the P1 database and has not received this
+schema or any progression operator. No public user account is provisioned until
+its authenticated account identity is explicitly selected.
+
+The local default-deny checkpoint on `mt2-p2-progression-20260906` passed 15
+two-account checks in `.local/p2/admin-default-deny-report.json`, including
+identity separation, private permission feedback, unchanged progression/items,
+and absence from public chat. The structured CLI also returned the expected
+bootstrap-required denial and wrote a fresh owner-only `applied: false` report.
+The bootstrap-enabled artifact is prepared separately but has not been published;
+the authenticated permission/replay/provision/revoke phase remains pending the
+explicit privilege approval. These local facts do not qualify the public P1
+endpoint or provision a public account.
+
 ## Working with the editor
 
 Use the configured `godot` MCP tools for live changes. Confirm `get_project_info`
@@ -321,8 +395,9 @@ actual PCK audit retains a legacy branch only for inspecting already-created
 legacy packs, never as a fallback for a current export.
 
 Use `make import-ui` after `make dev-setup` for the selected original HUD,
-inventory, item icons and stitched Yongan minimap. This converts 196 UI images
-and 20 original DDS map tiles from 260 pinned source files with Pillow; Blender
+inventory, item icons and stitched Yongan minimap. This converts 224 UI images
+and 20 original DDS map tiles into 225 outputs from 293 pinned source files with
+Pillow; Blender
 is unnecessary for these raster assets. For a cached rebuild and format tests:
 
 ```sh
@@ -345,6 +420,7 @@ each its own output directory so one report cannot overwrite another:
 make test-ui UI_FLAGS="--suite ui --native --output .local/classic-panels-ui"
 make test-ui UI_FLAGS="--suite map --native --output .local/classic-map"
 make test-ui UI_FLAGS="--suite chat --native --output .local/classic-chat"
+make test-ui UI_FLAGS="--suite status --native --output .local/classic-status"
 ```
 
 Omit `--native` for a headless run; native rendering uses `xvfb-run` and saves a
@@ -405,6 +481,40 @@ itself deliberately keeps Chrome visible for desktop observation. Add
 Dog 101 fixture checks; it is not broad actor/content coverage. These modes
 produce scoped evidence and do not by themselves establish a final acceptance
 pass.
+`--progression` exercises the protocol-5 owner rows through two authenticated
+exports, opens Status with real `C` input, checks the taskbar projection, proves
+focused slash typing cannot move the character, and routes unknown, `/help`,
+and default-denied `/xp` text without putting it in public chat. It expects a
+default-deny database; operator success remains separate audited server QA.
+
+```sh
+.local/venv-dev/bin/python tools/test_browser_accounts.py \
+  --url http://127.0.0.1:8186 --database mt2-p2-progression-20260906 \
+  --output .local/p2/browser-progression --hardware --headless --progression
+```
+
+Add `--progression-combat` together with `--progression` to kill five normally
+respawning Wild Dogs through ordinary exported-client movement/attack inputs,
+prove exact +15 XP per life and the first +2 small-potion quarter reward without
+pickups, then click the Status VIT plus and verify VIT/max-HP changes without
+healing current HP. The mode also checks private progression ownership from both
+clients; it is rejected unless `--progression` is present. Combine it with
+`--session-refresh` for persistence through both real timers:
+
+```sh
+.local/venv-dev/bin/python tools/test_browser_accounts.py \
+  --url http://127.0.0.1:8186 --database <isolated-protocol-5-database> \
+  --native <matching-test-probe-linux-export> \
+  --output .local/p2/browser-positive-progression \
+  --actors --hardware --headless --inventory --panels \
+  --progression --progression-combat --session-refresh
+```
+
+The accepted actual run passes 199 checks in
+`.local/p2/browser-positive-progression-fresh-read/report.json`. It recovered
+two transient partial native report reads in 11 ms each, had no unavailable
+snapshot, and recorded clean browser and native engine results.
+
 Add `--session-refresh` to wait for both clients' real four-minute refresh
 timers and verify that they reconnect into the same world state; this is a
 longer test, not an accelerated timer simulation. The latest local P1 run uses

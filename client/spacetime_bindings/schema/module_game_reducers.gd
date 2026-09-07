@@ -6,6 +6,21 @@ var _client: SpacetimeDBClient
 
 func _init(p_client: SpacetimeDBClient) -> void:
 	_client = p_client
+## 0. request_id: String [br]
+## 1. amount_text: String [br]
+func admin_grant_progression_xp(request_id: String, amount_text: String) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('admin_grant_progression_xp', [request_id, amount_text], [&'String', &'String'])
+
+## 0. request_id: String [br]
+## 1. target_text: String [br]
+func admin_raise_progression_level(request_id: String, target_text: String) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('admin_raise_progression_level', [request_id, target_text], [&'String', &'String'])
+
+## 0. character_id: PackedByteArray [br]
+## 1. stat_code: String [br]
+func allocate_stat(character_id: PackedByteArray, stat_code: String) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('allocate_stat', [character_id, stat_code], [&'__identity__', &'String'])
+
 ## 0. slot: int [br]
 ## 1. name: String [br]
 func create_character(slot: int, name: String) -> SpacetimeDBReducerCall:
@@ -52,6 +67,17 @@ func pickup_item_drop(id: int) -> SpacetimeDBReducerCall:
 ## 0. id: int [br]
 func pickup_loot(id: int) -> SpacetimeDBReducerCall:
 	return _client.call_reducer('pickup_loot', [id], [&'U64'])
+
+## 0. request_id: String [br]
+## 1. target_account: PackedByteArray [br]
+## 2. enabled: bool [br]
+## 3. reason: String [br]
+func provision_progression_operator(request_id: String, target_account: PackedByteArray, enabled: bool, reason: String) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('provision_progression_operator', [request_id, target_account, enabled, reason], [&'String', &'__identity__', &'Bool', &'String'])
+
+## 0. request_id: String [br]
+func request_command_help(request_id: String) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('request_command_help', [request_id], [&'String'])
 
 ## 0. character_id: PackedByteArray [br]
 func select_character(character_id: PackedByteArray) -> SpacetimeDBReducerCall:

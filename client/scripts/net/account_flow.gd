@@ -66,6 +66,7 @@ func configure(
 		func(message: String): _intro.set_status("authenticating", message)
 	)
 	_connection.roster_changed.connect(_refresh_roster)
+	_connection.progression_changed.connect(_refresh_roster)
 	_connection.account_changed.connect(
 		func(_info: Dictionary): _refresh_roster(_connection.characters)
 	)
@@ -196,13 +197,22 @@ func _on_lobby_action(action: String) -> void:
 		_intro.set_status("ready", "Choose your character.")
 
 
-func _refresh_roster(rows: Array) -> void:
+func _refresh_roster(_rows: Array) -> void:
 	if not _active or _connection.account_identity.is_empty():
 		return
 	var roster: Array = []
-	for row: Dictionary in rows:
+	for row: Dictionary in _connection.characters:
 		var entry := row.duplicate()
 		entry["id"] = str(row.get("character_id", ""))
+		var progression := _connection.progression_for(entry.id)
+		if progression.is_empty():
+			_intro.set_status("loading", "Loading authoritative character progression…")
+			return
+		entry["level"] = int(progression.get("level", 0))
+		entry["hth"] = int(progression.get("vitality", 0))
+		entry["int"] = int(progression.get("intelligence", 0))
+		entry["str"] = int(progression.get("strength", 0))
+		entry["dex"] = int(progression.get("dexterity", 0))
 		roster.append(entry)
 	_intro.set_roster(roster, _connection.local_identity)
 

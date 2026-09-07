@@ -30,6 +30,76 @@
           "path": "gamefiles/conf/item_names_en.txt",
           "git_sha": "81404285be617d9b55c6ba23fcbcc87f7b3b8733",
           "sha256": "5d0e18e89e8aad096a5a7475971a303baa92c065e1d77a999e8421897c5d7acf"
+        },
+        {
+          "path": "src/game/src/constants.cpp",
+          "git_sha": "d03e04fcf009bee8ebeb11c79ae70fcd61d81fe6",
+          "sha256": "201c72ba54dd5f52462722f10c9d7bde4b0a9cd8ae7e23cb1620f33e5ad38347"
+        },
+        {
+          "path": "src/game/src/constants.h",
+          "git_sha": "b570bdff657d00642016d5234fff36f7f54b86a0",
+          "sha256": "edd3230f8707cc88ae515b3263e3cbc8fb422655c03982c24074fd422127d4b9"
+        },
+        {
+          "path": "src/common/length.h",
+          "git_sha": "c49d348b83ac4a89e725831ca7d9236b40e688f9",
+          "sha256": "cdd6c822eb610ad21220bbdeb02912619865667d7490fee39a9b1bb9b309c4cc"
+        },
+        {
+          "path": "src/game/src/config.cpp",
+          "git_sha": "71915d402d7f6433d335f0edd7421f6019c88c88",
+          "sha256": "9c68ea574334a8d1c02e88e0da824e73777d53009ab24d1f8f1ba61fd991045a"
+        },
+        {
+          "path": "src/game/src/input_login.cpp",
+          "git_sha": "d60747c3006abf246d66317bd4c2e41627af21fe",
+          "sha256": "4bdf16f85575c2a0efc004025737e52a60da9650c6ba6fa475e187b4b21badc7"
+        },
+        {
+          "path": "src/game/src/char.cpp",
+          "git_sha": "ef6cd03e865dc66fe4c26a967ba81292c3c4b0d4",
+          "sha256": "a34bf8a855d49ae488d16dd326f4b6aa69d65dfb5c327bd42264eb39aa633cbc"
+        },
+        {
+          "path": "src/game/src/char.h",
+          "git_sha": "1bb94a3d5c6b92b29c88162f369012207388410b",
+          "sha256": "1fb5f35df73f7bb7eb900631f5ca4f9cd5f08e46a2d48276ed40ce01c0cc41b5"
+        },
+        {
+          "path": "src/game/src/char_battle.cpp",
+          "git_sha": "799708a78195a7a30bf7ecfb0263dbb628de6f48",
+          "sha256": "5d7e5bbd4da565fbe8c4ee873044748963846a6abfc224af8370c003b3a276d4"
+        },
+        {
+          "path": "src/game/src/char_manager.cpp",
+          "git_sha": "f2936284950d1d4eb57c57f95a818e3f213130e6",
+          "sha256": "015e64eb1eb9c5aa31460675bff3794c838c7d1729d7f9c53095e7618a0f6607"
+        },
+        {
+          "path": "src/game/src/cmd_general.cpp",
+          "git_sha": "70980017970a73abf46a0527eb5fc256255f1359",
+          "sha256": "445a92400d30447e0005109430e5afbd3a8248776f03ea01ef145e7446b5a61e"
+        },
+        {
+          "path": "src/game/src/char_item.cpp",
+          "git_sha": "995a8eeb577945b43ef95d941f1c73275c9e9d93",
+          "sha256": "59adc4618e5d954e9be65a43a08e04558fbf14100c9fd9a8a77ccb7e3911d1b6"
+        },
+        {
+          "path": "src/game/src/item.h",
+          "git_sha": "7af3c458fef9a121b18731a25c2391d937c619a2",
+          "sha256": "b0d59d3f62c4f6d12da93898f8bd1d3d0df3053ae1e4f3fea4cad81ba8c73ddc"
+        },
+        {
+          "path": "src/game/src/utils.h",
+          "git_sha": "938392a3e0f23c6de604fc2abd0275ab08674c5f",
+          "sha256": "716eedde78fd9fa97b39470767e501c9c680664d1b15e2a22ec4c1bd351e6811"
+        },
+        {
+          "path": "src/common/item_length.h",
+          "git_sha": "279d74f29967ae9ebeeb68e99d22dd3c23982cce",
+          "sha256": "19721a6df8088ad80810983ea016bc816afcca65cdcbd284da14f173cfa6cd4b"
         }
       ]
     }
@@ -209,7 +279,9 @@
         "damage_min": 20,
         "damage_max": 24,
         "gold_min": 18,
-        "gold_max": 27
+        "gold_max": 27,
+        "level": 1,
+        "experience_reward": 15
       }
     },
     "item": {
@@ -219,6 +291,23 @@
       "allowed_actor_ids": ["actor.player.warrior-male"],
       "equipment_mode": "onehand",
       "override_basis": "Preserve the implemented starter-sword bonus; original item row identifies a size-2 WEAPON_SWORD with values 15-19 and 13-15."
+    },
+    "progression": {
+      "supported_character_class": 0,
+      "supported_sex": 0,
+      "mob_exp_rate_percent": 100,
+      "selected_modifiers": "all-zero-or-disabled",
+      "stat_cap": 90,
+      "stat_point_last_level_exclusive": 91,
+      "low_level_death_loss_exclusive": 10,
+      "quarter_reward_count": 2,
+      "small_potion_vnum": 27001,
+      "medium_potion_vnum": 27002,
+      "small_potion_resulting_level_max": 10,
+      "item_stack_limit": 200,
+      "automatic_drop_reservation_us": 60000000,
+      "automatic_drop_expiry_us": 300000000,
+      "eligibility_distance_source_cm": 5000
     }
   },
   "known_exclusions": [

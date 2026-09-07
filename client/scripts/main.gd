@@ -53,6 +53,8 @@ func _ready() -> void:
 	connection.players_changed.connect(_on_players)
 	connection.appearances_changed.connect(_on_appearances)
 	connection.server_clock_changed.connect(_on_server_clock)
+	connection.progression_changed.connect(_on_progression)
+	connection.command_feedback_changed.connect(hud.set_command_feedback)
 	connection.obstacles_changed.connect(world.set_obstacles)
 	connection.chat_changed.connect(hud.set_chat)
 	connection.world_info_changed.connect(_on_world_info)
@@ -69,6 +71,8 @@ func _ready() -> void:
 	hud.unequip_item_requested.connect(connection.unequip_item)
 	hud.use_item_requested.connect(connection.use_item)
 	hud.chat_submitted.connect(connection.send_chat)
+	hud.command_requested.connect(_on_command_requested)
+	hud.stat_allocation_requested.connect(connection.allocate_stat)
 	hud.debug_option_changed.connect(_on_debug_option)
 	hud.screenshot_requested.connect(_save_screenshot)
 	hud.copy_diagnostics_requested.connect(_copy_diagnostics)
@@ -198,6 +202,8 @@ func dev_snapshot() -> Dictionary:
 		"players": connection.players.size(),
 		"player_rows": connection.players.duplicate(true),
 		"appearances": connection.appearances.duplicate(true),
+		"progression": connection.progression.duplicate(true),
+		"command_feedback": connection.command_feedback.duplicate(true),
 		"actor_presentations": _actor_snapshots(),
 		"rx_messages": connection.rx_messages,
 		"tx_messages": connection.tx_messages,
@@ -301,6 +307,10 @@ func _on_appearances(rows: Array) -> void:
 	_queue_player_sync()
 
 
+func _on_progression(_rows: Array) -> void:
+	hud.set_progression(connection.selected_progression())
+
+
 func _on_server_clock(server_time_us: int) -> void:
 	if server_time_us <= 0:
 		_last_server_time_us = 0
@@ -346,6 +356,7 @@ func _reconcile_players() -> void:
 			_local_actor = player
 			camera_rig.target = player
 			hud.set_player_info(row)
+			hud.set_progression(connection.selected_progression())
 	for identity: String in _actors.keys():
 		if not present.has(identity):
 			_actors[identity].queue_free()
@@ -354,6 +365,7 @@ func _reconcile_players() -> void:
 		_local_actor = null
 		camera_rig.target = null
 		hud.set_player_info({})
+		hud.set_progression({})
 	hud.set_players(_player_rows, connection.local_identity)
 
 
@@ -398,6 +410,16 @@ func _on_loot(rows: Array) -> void:
 
 func _on_item_drops(rows: Array) -> void:
 	_sync_pve(rows, true, true)
+
+
+func _on_command_requested(command: String, request_id: String, argument: String) -> void:
+	match command:
+		"help":
+			connection.request_command_help(request_id)
+		"xp":
+			connection.admin_grant_progression_xp(request_id, argument)
+		"level":
+			connection.admin_raise_progression_level(request_id, argument)
 
 
 func _sync_pve(rows: Array, loot_mode: bool, item_mode: bool = false) -> void:

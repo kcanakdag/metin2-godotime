@@ -16,6 +16,7 @@ from content_compile import (
     rotate_actor_local_vector,
     validate_server_payload,
 )
+from progression_definitions import quarter_thresholds
 from content_formats import (
     parse_legacy_script,
     parse_motion_list,
@@ -180,9 +181,10 @@ Group MotionEventData
             )
 
     def test_trusted_payload_hash_and_windows_are_validated(self):
+        experience = [0, *([300] * 120)]
         payload = {
             "schema": "mt2spacetime.trusted-action-definitions",
-            "schema_version": 1,
+            "schema_version": 2,
             "profile_id": "p0-warrior-dog",
             "actors": [{"id": "actor", "primary_action_id": "attack"}],
             "actions": [
@@ -193,6 +195,22 @@ Group MotionEventData
                     "hit_windows": [{"start_us": 2, "end_us": 5, "range_m": 1.0}],
                 }
             ],
+            "progression": {
+                "schema": "mt2spacetime.progression-definitions",
+                "schema_version": 1,
+                "compiled_max_level": 120,
+                "default_level_cap": 99,
+                "experience_to_next_level_by_current_level": experience,
+                "normal_level_delta_percent": [100] * 31,
+                "quarter_thresholds_by_current_level": [
+                    {
+                        "level": level,
+                        "next_experience": value,
+                        "thresholds": list(quarter_thresholds(value)),
+                    }
+                    for level, value in enumerate(experience)
+                ],
+            },
         }
         payload["gameplay_definition_hash"] = digest(payload)
         validate_server_payload(payload, "p0-warrior-dog")
@@ -203,3 +221,19 @@ Group MotionEventData
         )
         with self.assertRaisesRegex(ValueError, "exceeds"):
             validate_server_payload(bad, "p0-warrior-dog")
+
+        bad_quarter = copy.deepcopy(payload)
+        bad_quarter["progression"]["quarter_thresholds_by_current_level"][1]["thresholds"][0] = 0
+        bad_quarter["gameplay_definition_hash"] = digest(
+            {key: value for key, value in bad_quarter.items() if key != "gameplay_definition_hash"}
+        )
+        with self.assertRaisesRegex(ValueError, "float32"):
+            validate_server_payload(bad_quarter, "p0-warrior-dog")
+
+        bad_delta = copy.deepcopy(payload)
+        bad_delta["progression"]["normal_level_delta_percent"][0] = 1001
+        bad_delta["gameplay_definition_hash"] = digest(
+            {key: value for key, value in bad_delta.items() if key != "gameplay_definition_hash"}
+        )
+        with self.assertRaisesRegex(ValueError, "level-delta"):
+            validate_server_payload(bad_delta, "p0-warrior-dog")

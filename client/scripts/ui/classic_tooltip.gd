@@ -26,6 +26,8 @@ func show_item(row: Dictionary) -> void:
 	if vnum == 10:
 		lines.append("Attack Value +10")
 		lines.append("[ Warrior ]")
+	elif vnum == 27002:
+		lines.append("Cannot be used yet.")
 	else:
 		lines.append("Restores 40 HP")
 		lines.append("Right-click to use")

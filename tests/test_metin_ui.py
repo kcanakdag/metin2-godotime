@@ -45,6 +45,46 @@ class UIAssets(unittest.TestCase):
             with self.subTest(text=text), self.assertRaises(ValueError):
                 ui.sub_image(text, "ymir work/ui/public/slot.sub")
 
+    def test_status_fixture_is_explicit_and_english(self):
+        assets = set(ui.selected_assets())
+        required = {
+            "ymir work/ui/public/parameter_slot_01.sub",
+            "ymir work/ui/game/windows/box_face.sub",
+            "ymir work/ui/game/windows/face_warrior.sub",
+            "ymir work/ui/game/windows/btn_plus_up.sub",
+            "ymir work/ui/game/windows/btn_plus_over.sub",
+            "ymir work/ui/game/windows/btn_plus_down.sub",
+            "ymir work/ui/game/windows/btn_minus_up.sub",
+            "ymir work/ui/game/windows/btn_minus_over.sub",
+            "ymir work/ui/game/windows/btn_minus_down.sub",
+            "locale/en/ui/windows/title_status.sub",
+            "locale/en/ui/windows/label_level.sub",
+            "locale/en/ui/windows/label_cur_exp.sub",
+            "locale/en/ui/windows/label_last_exp.sub",
+            "locale/en/ui/windows/label_std.sub",
+            "locale/en/ui/windows/label_uppt.sub",
+            "locale/en/ui/windows/label_std_item1.sub",
+            "locale/en/ui/windows/label_std_item2.sub",
+            "locale/en/ui/windows/label_ext.sub",
+            "locale/en/ui/windows/label_ext_item1.sub",
+            "locale/en/ui/windows/label_ext_item2.sub",
+            "locale/en/ui/windows/tab_1.sub",
+            "locale/en/ui/windows/tab_2.sub",
+            "locale/en/ui/windows/tab_3.sub",
+            "locale/en/ui/windows/tab_4.sub",
+            "icon/item/27002.tga",
+            "ymir work/ui/pattern/horizontalbar_left.tga",
+            "ymir work/ui/pattern/horizontalbar_center.tga",
+            "ymir work/ui/pattern/horizontalbar_right.tga",
+        }
+        self.assertTrue(required.issubset(assets))
+        self.assertNotIn("icon/item/27003.tga", assets)
+        self.assertIn("bin/pack/root/colorinfo.py", ui.REFERENCES)
+        self.assertEqual(
+            ui.output_path("locale/en/ui/windows/title_status.sub"),
+            Path("locale/en/ui/windows/title_status.png"),
+        )
+
     def test_exclusive_crop_preserves_alpha_and_rejects_padding(self):
         original = Image.new("RGBA", (4, 5), (20, 40, 60, 0))
         original.putpixel((2, 3), (10, 30, 50, 77))

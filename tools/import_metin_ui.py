@@ -14,6 +14,35 @@ from PIL import __version__ as pillow_version
 
 UI_ROOT = "ymir work/ui/"
 OUTPUT = ROOT / "client/assets/imported/ui"
+STATUS_WINDOW_ASSETS = (
+    "public/parameter_slot_01.sub",
+    "game/windows/box_face.sub",
+    "game/windows/face_warrior.sub",
+    "game/windows/btn_plus_up.sub",
+    "game/windows/btn_plus_over.sub",
+    "game/windows/btn_plus_down.sub",
+    "game/windows/btn_minus_up.sub",
+    "game/windows/btn_minus_over.sub",
+    "game/windows/btn_minus_down.sub",
+)
+STATUS_ENGLISH_WINDOW_ROOT = "locale/en/ui/windows/"
+STATUS_ENGLISH_WINDOW_ASSETS = (
+    "title_status.sub",
+    "label_level.sub",
+    "label_cur_exp.sub",
+    "label_last_exp.sub",
+    "label_std.sub",
+    "label_uppt.sub",
+    "label_std_item1.sub",
+    "label_std_item2.sub",
+    "label_ext.sub",
+    "label_ext_item1.sub",
+    "label_ext_item2.sub",
+    "tab_1.sub",
+    "tab_2.sub",
+    "tab_3.sub",
+    "tab_4.sub",
+)
 REFERENCES = (
     "bin/pack/locale_en/locale/en/ui/taskbar.py",
     "bin/pack/locale_en/locale/en/ui/inventorywindow.py",
@@ -22,15 +51,19 @@ REFERENCES = (
     "bin/pack/locale_en/locale/en/locale_interface.txt",
     "bin/pack/uiscript/uiscript/minimap.py",
     "bin/pack/uiscript/uiscript/atlaswindow.py",
+    "bin/pack/uiscript/uiscript/characterwindow.py",
     "bin/pack/root/uitaskbar.py",
+    "bin/pack/root/uicharacter.py",
     "bin/pack/root/uiinventory.py",
     "bin/pack/root/uiminimap.py",
     "bin/pack/root/uichat.py",
+    "bin/pack/root/colorinfo.py",
     "bin/pack/root/uitooltip.py",
     "bin/pack/root/ui.py",
     "bin/pack/root/localeinfo.py",
     "bin/pack/root/interfacemodule.py",
     "bin/pack/root/game.py",
+    "bin/pack/root/uiscriptlocale.py",
     "src/EterLib/GrpSubImage.cpp",
     "src/EterLib/GrpText.cpp",
     "src/EterLib/GrpFontTexture.cpp",
@@ -45,6 +78,9 @@ def selected_assets():
     names = {
         "equipment_bg_without_ring.tga",
         "pattern/taskbar_base.tga",
+        "pattern/horizontalbar_left.tga",
+        "pattern/horizontalbar_center.tga",
+        "pattern/horizontalbar_right.tga",
         "public/slot_base.sub",
         "public/parameter_slot_05.sub",
         "game/windows/money_icon.sub",
@@ -117,7 +153,9 @@ def selected_assets():
         names.add(f"pattern/chatlogwindow_titlebar_{part}.tga")
     return sorted(
         {UI_ROOT + name for name in names}
-        | {"icon/item/00010.tga", "icon/item/27001.tga"}
+        | {UI_ROOT + name for name in STATUS_WINDOW_ASSETS}
+        | {STATUS_ENGLISH_WINDOW_ROOT + name for name in STATUS_ENGLISH_WINDOW_ASSETS}
+        | {"icon/item/00010.tga", "icon/item/27001.tga", "icon/item/27002.tga"}
         | set(selected_intro_assets())
     )
 

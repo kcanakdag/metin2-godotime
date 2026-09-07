@@ -7,7 +7,10 @@ const Types = preload('res://spacetime_bindings/schema/module_game_types.gd')
 
 const AccountCharacter = Types.AccountCharacter
 const AccountState = Types.AccountState
+const AdminLevelRoll = Types.AdminLevelRoll
+const CharacterProgression = Types.CharacterProgression
 const ChatMessage = Types.ChatMessage
+const CommandFeedback = Types.CommandFeedback
 const InventoryAccess = Types.InventoryAccess
 const InventoryItem = Types.InventoryItem
 const ItemDrop = Types.ItemDrop

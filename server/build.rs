@@ -68,6 +68,50 @@ fn bounded_u32(row: &Map<String, Value>, name: &str, label: &str, maximum: u32) 
     value as u32
 }
 
+fn u32_from_value(value: &Value, label: &str) -> u32 {
+    let value = value
+        .as_u64()
+        .unwrap_or_else(|| fail(format!("{label} must be an unsigned integer")));
+    u32::try_from(value).unwrap_or_else(|_| fail(format!("{label} is outside u32")))
+}
+
+fn exact_u32(row: &Map<String, Value>, name: &str, label: &str, expected: u32) -> u32 {
+    let value = u32_from_value(field(row, name, label), &format!("{label}.{name}"));
+    if value != expected {
+        fail(format!("{label}.{name} must be {expected}"));
+    }
+    value
+}
+
+fn u32_array(value: &Value, label: &str, expected_len: usize) -> Vec<u32> {
+    let values = array(value, label);
+    if values.len() != expected_len {
+        fail(format!("{label} must contain {expected_len} values"));
+    }
+    values
+        .iter()
+        .enumerate()
+        .map(|(index, value)| u32_from_value(value, &format!("{label}[{index}]")))
+        .collect()
+}
+
+fn emit_u32_array(output: &mut String, name: &str, values: &[u32]) {
+    writeln!(output, "pub const {name}: [u32; {}] = [", values.len()).unwrap();
+    for chunk in values.chunks(8) {
+        writeln!(
+            output,
+            "\t{},",
+            chunk
+                .iter()
+                .map(u32::to_string)
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+        .unwrap();
+    }
+    writeln!(output, "];").unwrap();
+}
+
 fn actor<'a>(actors: &'a [Value], id: &str) -> &'a Map<String, Value> {
     actors
         .iter()
@@ -189,6 +233,7 @@ fn emit_attack(output: &mut String, name: &str, attack: Attack<'_>) {
 
 fn main() {
     println!("cargo:rerun-if-changed={DEFINITIONS}");
+    println!("cargo:rerun-if-env-changed=MT2_PROGRESSION_BOOTSTRAP_IDENTITIES");
     let path = Path::new(DEFINITIONS);
     let bytes = fs::read(path).unwrap_or_else(|error| {
         fail(format!(
@@ -200,7 +245,7 @@ fn main() {
         .unwrap_or_else(|error| fail(format!("{} is not valid JSON ({error})", path.display())));
     let root = object(&payload, "root");
     if text(root, "schema", "root") != "mt2spacetime.trusted-action-definitions"
-        || u64_value(root, "schema_version", "root") != 1
+        || u64_value(root, "schema_version", "root") != 2
         || text(root, "profile_id", "root") != PROFILE
         || text(root, "time_unit", "root") != "microsecond"
         || text(root, "linear_unit", "root") != "meter"
@@ -232,6 +277,157 @@ fn main() {
     let actors = array(field(root, "actors", "root"), "actors");
     let actions = array(field(root, "actions", "root"), "actions");
     let items = array(field(root, "items", "root"), "items");
+    let progression = object(field(root, "progression", "root"), "progression");
+    if text(progression, "schema", "progression") != "mt2spacetime.progression-definitions"
+        || u64_value(progression, "schema_version", "progression") != 1
+    {
+        fail("progression schema does not match this server");
+    }
+    exact_u32(progression, "compiled_max_level", "progression", 120);
+    let default_level_cap = exact_u32(progression, "default_level_cap", "progression", 99);
+    let experience_table = u32_array(
+        field(
+            progression,
+            "experience_to_next_level_by_current_level",
+            "progression",
+        ),
+        "progression.experience_to_next_level_by_current_level",
+        121,
+    );
+    if experience_table[0] != 0 || experience_table[1..].contains(&0) {
+        fail("progression EXP table must be zero only at index 0");
+    }
+    let level_delta = u32_array(
+        field(progression, "normal_level_delta_percent", "progression"),
+        "progression.normal_level_delta_percent",
+        31,
+    );
+    if level_delta.iter().any(|percent| *percent > 1000) {
+        fail("progression normal level-delta percents must be in 0..=1000");
+    }
+    let quarter_rows = array(
+        field(
+            progression,
+            "quarter_thresholds_by_current_level",
+            "progression",
+        ),
+        "progression.quarter_thresholds_by_current_level",
+    );
+    if quarter_rows.len() != 121 {
+        fail("progression quarter table must contain levels 0..120");
+    }
+    let mut quarter_thresholds: Vec<[u32; 4]> = Vec::with_capacity(121);
+    for (level, value) in quarter_rows.iter().enumerate() {
+        let row = object(value, "quarter_threshold");
+        if u64_value(row, "level", "quarter_threshold") != level as u64
+            || u32_from_value(
+                field(row, "next_experience", "quarter_threshold"),
+                "quarter_threshold.next_experience",
+            ) != experience_table[level]
+        {
+            fail("progression quarter row level/EXP mismatch");
+        }
+        let thresholds = u32_array(
+            field(row, "thresholds", "quarter_threshold"),
+            "quarter_threshold.thresholds",
+            4,
+        );
+        let experience = experience_table[level];
+        let quarter = (experience as f32 / 4.0) as u32;
+        let expected = [quarter, quarter * 2, quarter * 3, experience];
+        if thresholds != expected {
+            fail("progression quarter thresholds do not match the selected float32 formula");
+        }
+        quarter_thresholds.push(thresholds.try_into().expect("length checked"));
+    }
+    let warrior = object(
+        field(progression, "warrior_initial", "progression"),
+        "progression.warrior_initial",
+    );
+    let warrior_strength = exact_u32(warrior, "strength", "warrior_initial", 6);
+    let warrior_vitality = exact_u32(warrior, "vitality", "warrior_initial", 4);
+    let warrior_dexterity = exact_u32(warrior, "dexterity", "warrior_initial", 3);
+    let warrior_intelligence = exact_u32(warrior, "intelligence", "warrior_initial", 3);
+    let base_max_hp = exact_u32(warrior, "base_max_hp", "warrior_initial", 600);
+    let base_max_sp = exact_u32(warrior, "base_max_sp", "warrior_initial", 200);
+    let hp_per_vitality = exact_u32(warrior, "hp_per_vitality", "warrior_initial", 40);
+    let sp_per_intelligence = exact_u32(warrior, "sp_per_intelligence", "warrior_initial", 20);
+    let hp_roll = u32_array(
+        field(warrior, "hp_per_level_inclusive", "warrior_initial"),
+        "warrior_initial.hp_per_level_inclusive",
+        2,
+    );
+    let sp_roll = u32_array(
+        field(warrior, "sp_per_level_inclusive", "warrior_initial"),
+        "warrior_initial.sp_per_level_inclusive",
+        2,
+    );
+    if hp_roll != [36, 44] || sp_roll != [18, 22] {
+        fail("selected Warrior random growth ranges changed");
+    }
+    exact_u32(warrior, "initial_max_hp", "warrior_initial", 760);
+    exact_u32(warrior, "initial_max_sp", "warrior_initial", 260);
+    let selected = object(
+        field(progression, "selected_profile", "progression"),
+        "progression.selected_profile",
+    );
+    let selected_constants = [
+        ("supported_character_class", 0),
+        ("supported_sex", 0),
+        ("mob_exp_rate_percent", 100),
+        ("stat_cap", 90),
+        ("stat_point_last_level_exclusive", 91),
+        ("low_level_death_loss_exclusive", 10),
+        ("quarter_reward_count", 2),
+        ("small_potion_vnum", 27001),
+        ("medium_potion_vnum", 27002),
+        ("small_potion_resulting_level_max", 10),
+        ("item_stack_limit", 200),
+        ("automatic_drop_reservation_us", 60_000_000),
+        ("automatic_drop_expiry_us", 300_000_000),
+        ("eligibility_distance_source_cm", 5000),
+    ];
+    for (name, expected) in selected_constants {
+        exact_u32(selected, name, "progression.selected_profile", expected);
+    }
+    if text(
+        selected,
+        "selected_modifiers",
+        "progression.selected_profile",
+    ) != "all-zero-or-disabled"
+    {
+        fail("selected progression modifiers changed");
+    }
+    let monster_reward = object(
+        field(progression, "monster_reward", "progression"),
+        "progression.monster_reward",
+    );
+    exact_u32(monster_reward, "vnum", "progression.monster_reward", 101);
+    let mob_level = exact_u32(monster_reward, "level", "progression.monster_reward", 1);
+    let mob_experience = exact_u32(
+        monster_reward,
+        "experience",
+        "progression.monster_reward",
+        15,
+    );
+    let reward_items = array(
+        field(progression, "reward_items", "progression"),
+        "progression.reward_items",
+    );
+    if reward_items.len() != 2 {
+        fail("progression must define exactly two quarter reward items");
+    }
+    for (index, expected_vnum, expected_name) in
+        [(0, 27001, "Red Potion(S)"), (1, 27002, "Red Potion(M)")]
+    {
+        let row = object(&reward_items[index], "progression.reward_item");
+        exact_u32(row, "vnum", "progression.reward_item", expected_vnum);
+        exact_u32(row, "size", "progression.reward_item", 1);
+        exact_u32(row, "stack_limit", "progression.reward_item", 200);
+        if text(row, "source_name", "progression.reward_item") != expected_name {
+            fail("progression reward item name changed");
+        }
+    }
     let mut action_ids = HashSet::new();
     for value in actions {
         let row = object(value, "action");
@@ -354,6 +550,120 @@ fn main() {
         rust_string(&claimed_hash)
     )
     .unwrap();
+    writeln!(
+        output,
+        "pub const DEFAULT_LEVEL_CAP: u8 = {default_level_cap};"
+    )
+    .unwrap();
+    writeln!(output, "pub const SUPPORTED_CHARACTER_CLASS: u8 = 0;").unwrap();
+    writeln!(output, "pub const SUPPORTED_SEX: u8 = 0;").unwrap();
+    writeln!(
+        output,
+        "pub const WARRIOR_STRENGTH: u8 = {warrior_strength};"
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "pub const WARRIOR_VITALITY: u8 = {warrior_vitality};"
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "pub const WARRIOR_DEXTERITY: u8 = {warrior_dexterity};"
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "pub const WARRIOR_INTELLIGENCE: u8 = {warrior_intelligence};"
+    )
+    .unwrap();
+    writeln!(output, "pub const BASE_MAX_HP: u32 = {base_max_hp};").unwrap();
+    writeln!(output, "pub const BASE_MAX_SP: u32 = {base_max_sp};").unwrap();
+    writeln!(
+        output,
+        "pub const HP_PER_VITALITY: u32 = {hp_per_vitality};"
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "pub const SP_PER_INTELLIGENCE: u32 = {sp_per_intelligence};"
+    )
+    .unwrap();
+    writeln!(output, "pub const HP_PER_LEVEL_MIN: u32 = {};", hp_roll[0]).unwrap();
+    writeln!(output, "pub const HP_PER_LEVEL_MAX: u32 = {};", hp_roll[1]).unwrap();
+    writeln!(output, "pub const SP_PER_LEVEL_MIN: u32 = {};", sp_roll[0]).unwrap();
+    writeln!(output, "pub const SP_PER_LEVEL_MAX: u32 = {};", sp_roll[1]).unwrap();
+    writeln!(output, "pub const STAT_CAP: u8 = 90;").unwrap();
+    writeln!(
+        output,
+        "pub const STAT_POINT_LAST_LEVEL_EXCLUSIVE: u8 = 91;"
+    )
+    .unwrap();
+    writeln!(output, "pub const QUARTER_REWARD_COUNT: u16 = 2;").unwrap();
+    writeln!(output, "pub const ITEM_STACK_LIMIT: u16 = 200;").unwrap();
+    writeln!(output, "pub const SMALL_POTION_VNUM: u32 = 27001;").unwrap();
+    writeln!(output, "pub const MEDIUM_POTION_VNUM: u32 = 27002;").unwrap();
+    writeln!(
+        output,
+        "pub const SMALL_POTION_RESULTING_LEVEL_MAX: u8 = 10;"
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "pub const AUTOMATIC_DROP_RESERVATION_US: i64 = 60_000_000;"
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "pub const AUTOMATIC_DROP_EXPIRY_US: i64 = 300_000_000;"
+    )
+    .unwrap();
+    writeln!(output, "pub const EXP_ELIGIBILITY_DISTANCE_CM: i64 = 5000;").unwrap();
+    writeln!(output, "pub const MOB_LEVEL: u8 = {mob_level};").unwrap();
+    writeln!(output, "pub const MOB_EXPERIENCE: u32 = {mob_experience};").unwrap();
+    emit_u32_array(&mut output, "EXPERIENCE_TABLE", &experience_table);
+    emit_u32_array(&mut output, "NORMAL_LEVEL_DELTA_PERCENT", &level_delta);
+    writeln!(output, "pub const QUARTER_THRESHOLDS: [[u32; 4]; 121] = [").unwrap();
+    for thresholds in quarter_thresholds {
+        writeln!(
+            output,
+            "\t[{}, {}, {}, {}],",
+            thresholds[0], thresholds[1], thresholds[2], thresholds[3]
+        )
+        .unwrap();
+    }
+    writeln!(output, "];").unwrap();
+    let bootstrap = std::env::var("MT2_PROGRESSION_BOOTSTRAP_IDENTITIES").unwrap_or_default();
+    let mut bootstrap_identities = Vec::new();
+    if !bootstrap.is_empty() {
+        for (index, identity) in bootstrap.split(',').enumerate() {
+            if identity.len() != 64
+                || !identity
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+            {
+                fail(format!(
+                    "MT2_PROGRESSION_BOOTSTRAP_IDENTITIES entry {index} must be canonical lowercase 64-hex"
+                ));
+            }
+            if !bootstrap_identities
+                .iter()
+                .any(|existing| existing == identity)
+            {
+                bootstrap_identities.push(identity.to_owned());
+            }
+        }
+    }
+    bootstrap_identities.sort();
+    writeln!(
+        output,
+        "pub const PROGRESSION_BOOTSTRAP_IDENTITIES: &[&str] = &["
+    )
+    .unwrap();
+    for identity in bootstrap_identities {
+        writeln!(output, "\t{},", rust_string(&identity)).unwrap();
+    }
+    writeln!(output, "];").unwrap();
     writeln!(
         output,
         "pub const PLAYER_BASE_DAMAGE: u16 = {player_base_damage};"

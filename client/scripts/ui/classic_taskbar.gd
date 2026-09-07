@@ -3,6 +3,7 @@ extends Control
 
 signal inventory_requested
 signal system_requested
+signal character_requested
 signal slot_primary(slot: Control)
 signal slot_secondary(slot: Control)
 signal slot_dropped(slot: Control, row: Dictionary)
@@ -22,7 +23,13 @@ var _middle: Control
 var _right: Control
 var _base: TextureRect
 var _hp_clip: Control
+var _sp_clip: Control
+var _xp_clips: Array[Control] = []
+var _xp_points: Array[TextureRect] = []
+var _xp_hover: Control
+var _sp_hover: Control
 var _page_number: TextureRect
+var _character_button: TextureButton
 
 
 func _ready() -> void:
@@ -42,7 +49,25 @@ func _ready() -> void:
 	_hp_clip.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(_hp_clip)
 	Art.image(_hp_clip, "pattern/hpgauge/01", Vector2.ZERO)
+	_sp_clip = Control.new()
+	_sp_clip.position = Vector2(59, 14)
+	_sp_clip.size = Vector2(95, 11)
+	_sp_clip.clip_contents = true
+	_sp_clip.mouse_filter = Control.MOUSE_FILTER_PASS
+	add_child(_sp_clip)
+	Art.image(_sp_clip, "pattern/spgauge/01", Vector2.ZERO)
 	Art.image(self, "game/taskbar/exp_gauge", Vector2(158, 0))
+	for index in 4:
+		var clip := Control.new()
+		clip.position = Vector2(163 + index * 25, 9)
+		clip.size = Vector2(19, 0)
+		clip.clip_contents = true
+		clip.mouse_filter = Control.MOUSE_FILTER_PASS
+		add_child(clip)
+		_xp_points.append(Art.image(clip, "game/taskbar/exp_gauge_point", Vector2.ZERO))
+		_xp_clips.append(clip)
+	_sp_hover = _hover_region(Vector2(59, 14), Vector2(95, 11))
+	_xp_hover = _hover_region(Vector2(158, 0), Vector2(105, 37))
 	_middle = Control.new()
 	_middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_middle)
@@ -87,9 +112,13 @@ func _build_middle() -> void:
 
 
 func _build_right() -> void:
-	var character := Art.button(_right, "game/taskbar/character_button_", Vector2.ZERO, Callable())
-	character.tooltip_text = "Character"
-	character.disabled = true
+	_character_button = Art.button(
+		_right,
+		"game/taskbar/character_button_",
+		Vector2.ZERO,
+		func() -> void: character_requested.emit()
+	)
+	_character_button.tooltip_text = "Character"
 	var inventory := Art.button(
 		_right,
 		"game/taskbar/inventory_button_",
@@ -112,10 +141,47 @@ func _build_right() -> void:
 
 
 func set_player(row: Dictionary) -> void:
-	var health := float(row.get("health", 0))
-	var maximum := maxf(1, float(row.get("max_health", 100)))
-	_hp_clip.size.x = 95 * clampf(health / maximum, 0, 1)
+	var health := int(row.get("health", 0))
+	var maximum := int(row.get("max_health", 0))
+	_hp_clip.size.x = 95 * clampf(float(health) / maxf(1, maximum), 0, 1)
 	_hp_clip.tooltip_text = "HP: %d / %d" % [health, maximum]
+
+
+func set_progression(row: Dictionary) -> void:
+	var current_sp := int(row.get("current_sp", 0))
+	var max_sp := int(row.get("max_sp", 0))
+	_sp_clip.size.x = 95 * clampf(float(current_sp) / maxf(1, max_sp), 0, 1)
+	_sp_hover.tooltip_text = "SP: %d / %d" % [current_sp, max_sp]
+	var experience := int(row.get("experience", 0))
+	var next_exp := int(row.get("next_exp", 0))
+	var quarters := 0.0
+	if next_exp > 0:
+		var quarter_exp := maxi(1, next_exp / 4)
+		quarters = clampf(float(experience) / quarter_exp, 0, 4)
+	for index in _xp_clips.size():
+		var height := 19.0 * clampf(quarters - index, 0, 1)
+		# The original SetRenderingRect crops from the top. Move the clip and
+		# texture together so the fixed-size orb fills upward without stretching.
+		_xp_clips[index].position.y = 9 + 19 - height
+		_xp_clips[index].size = Vector2(19, height)
+		_xp_points[index].position.y = -(19 - height)
+	var tooltip := "XP: —"
+	if not row.is_empty():
+		tooltip = (
+			"XP: Maximum level"
+			if next_exp == 0
+			else "XP: %d / %d (%.2f%%)" % [experience, next_exp, experience * 100.0 / next_exp]
+		)
+	_xp_hover.tooltip_text = tooltip
+
+
+func _hover_region(at: Vector2, dimensions: Vector2) -> Control:
+	var result := Control.new()
+	result.position = at
+	result.size = dimensions
+	result.mouse_filter = Control.MOUSE_FILTER_PASS
+	add_child(result)
+	return result
 
 
 func set_rows(rows: Array) -> void:
@@ -150,7 +216,27 @@ func snapshot() -> Dictionary:
 	for slot in _slots:
 		var point := slot.get_global_rect().get_center()
 		centers.append([point.x, point.y])
-	return {"page": page, "bindings": bindings, "slot_centers": centers}
+	var xp_fills: Array = []
+	for clip: Control in _xp_clips:
+		var fill := {"height": clip.size.y, "top": clip.position.y, "width": clip.size.x}
+		xp_fills.append(fill)
+	var character_center := _character_button.get_global_rect().get_center()
+	var xp_hover_center := _xp_hover.get_global_rect().get_center()
+	var sp_hover_center := _sp_hover.get_global_rect().get_center()
+	return {
+		"page": page,
+		"bindings": bindings,
+		"slot_centers": centers,
+		"hp_width": _hp_clip.size.x,
+		"sp_width": _sp_clip.size.x,
+		"xp_fills": xp_fills,
+		"xp_tooltip": _xp_hover.tooltip_text,
+		"xp_hover_tooltip": _xp_hover.tooltip_text,
+		"xp_hover_center": [xp_hover_center.x, xp_hover_center.y],
+		"sp_hover_tooltip": _sp_hover.tooltip_text,
+		"sp_hover_center": [sp_hover_center.x, sp_hover_center.y],
+		"character_center": [character_center.x, character_center.y],
+	}
 
 
 func _refresh() -> void:

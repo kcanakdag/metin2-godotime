@@ -1,10 +1,12 @@
 //! Authoritative shared development map for the Godot client.
 mod accounts;
+mod admin;
 mod appearance;
 mod combat;
 mod content;
 mod inventory;
 mod movement;
+mod progression;
 
 mod definitions {
     include!(concat!(env!("OUT_DIR"), "/trusted_definitions.rs"));
@@ -126,7 +128,7 @@ pub struct TickSchedule {
 fn compiled_world_info() -> WorldInfo {
     WorldInfo {
         id: 1,
-        protocol_version: 4,
+        protocol_version: 5,
         map_name: if content::YONGAN {
             "Yongan"
         } else {
@@ -197,6 +199,7 @@ pub fn init(ctx: &ReducerContext) {
         scheduled_at: Duration::from_millis(u64::from(TICK_MS)).into(),
     });
     combat::initialize(ctx);
+    admin::initialize();
 }
 
 #[spacetimedb::reducer(client_connected)]
@@ -277,6 +280,7 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
     {
         return Err("This character is already playing in another connection.".into());
     }
+    progression::rebuild_projection(ctx, character)?;
     let mut player = ctx
         .db
         .player()
@@ -418,6 +422,9 @@ pub fn perform_attack(ctx: &ReducerContext) -> Result<(), String> {
 pub fn send_chat(ctx: &ReducerContext, message: String) -> Result<(), String> {
     let mut controller = active_controller(ctx)?;
     let message = valid_chat(&message)?;
+    if message.starts_with('/') {
+        return Err("Use the dedicated command controls for slash commands.".into());
+    }
     if now_us(ctx) < controller.next_chat_us {
         return Err("Wait one second between messages.".into());
     }

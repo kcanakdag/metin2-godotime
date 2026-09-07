@@ -5,9 +5,10 @@ fixture from client archive commit
 `bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7`. It imports taskbar gauges and button
 states, eight quickslot legends, inventory/equipment art, common window and
 tooltip frames, chat bar/history pieces, minimap/area-map controls, selected
-account/character entry art, sword icon `00010` and potion
-icon `27001`. The original sword icon occupies 32 × 64 pixels; the potion is
-32 × 32. This is an asset pipeline, separate from gameplay item definitions.
+account/character entry art, sword icon `00010`, potion icons `27001` and
+`27002`, and one English male-Warrior Status-page fixture. The original sword
+icon occupies 32 × 64 pixels; the potions are 32 × 32. This is an asset
+pipeline, separate from gameplay item definitions.
 
 ```sh
 python3 tools/dev.py setup
@@ -41,6 +42,9 @@ drive prefix. Below `res://assets/imported/ui/`, remove the initial
 | `d:/ymir work/ui/equipment_bg_without_ring.tga` | `equipment_bg_without_ring.png` |
 | `icon/item/00010.tga` | `icon/item/00010.png` |
 | `icon/item/27001.tga` | `icon/item/27001.png` |
+| `icon/item/27002.tga` | `icon/item/27002.png` |
+| `d:/ymir work/ui/game/windows/face_warrior.sub` | `game/windows/face_warrior.png` |
+| `locale/en/ui/windows/tab_1.sub` | `locale/en/ui/windows/tab_1.png` |
 | `locale/en/ui/login/loginwindow.sub` | `locale/en/ui/login/loginwindow.png` |
 
 `manifest.json` has `version = 1`, `commit`, `repository`, `converter`,
@@ -52,6 +56,27 @@ drive prefix. Below `res://assets/imported/ui/`, remove the initial
 or `null` for an uncropped image. `atlas` is the original archive path, or
 `null`. `sources` maps every used archive path to Git blob hash, SHA-256, and
 byte count, including descriptors, atlases, and consulted source references.
+
+## P2 Status-page fixture
+
+The selected Status-page conversion remains narrow: its common art is
+`public/parameter_slot_01`, `game/windows/box_face`, the male-Warrior
+`face_warrior`, and the three-state `btn_plus` and `btn_minus` controls. The
+English window fixture is `locale/en/ui/windows/` with `title_status`, level
+and EXP labels, the attributes/points/item-column labels, the extended-stat
+labels, and `tab_1` through `tab_4`. The selected common pattern fixture also
+includes the three-part horizontal bar used by the attributes and extended-stat
+headers. The P2 client renders `tab_1`; Skill, Action, and Quest remain inactive.
+The upstream layout comments out its `title_status` alternative, so the runtime
+keeps that image as provenance data but does not draw it over the EXP values.
+Minus art is present only to preserve the original fixture; P2 hides reset/minus
+controls.
+
+`icon/item/27002.png` is the selected original Red Potion (M) presentation
+input for the server-owned quarter reward. It does not add an item-use effect or
+expand the item catalog. Exact generated resources, dimensions, descriptor and
+atlas provenance, PNG SHA-256, and decoded RGBA SHA-256 are recorded in the
+ignored `client/assets/imported/ui/manifest.json` after running the converter.
 
 Original `src/EterLib/GrpSubImage.cpp` establishes the descriptor rules:
 version 1.0 resolves atlas filenames under `ymir work/ui/`; version 2.0 resolves
@@ -105,6 +130,9 @@ centered at `screen_height - 25 - 37` and gives it a 200-pixel history height.
 line fading after five seconds, or once a line is fifth-newest or older;
 opacity decreases by ten percent per update until at most 0.1. `PythonChat.h`
 sets the default line spacing to 15 pixels and retained history to 300 lines.
+`colorinfo.py` defines Info chat as RGB `(255, 200, 200)`; private command
+feedback and local command guidance use that pale pink while normal chat stays
+white.
 These are consulted source observations; runtime verification is separate.
 
 The original chat source keeps editing after a nonempty submission. The current
@@ -156,7 +184,7 @@ the small minimap instead starts at scale 2, doubles/halves zoom, and clamps
 to `[0.5, 4]`. Its source cell scale is two meters, so the default minimap
 scale corresponds to one rendered pixel per meter.
 
-The current conversion produces 196 UI images and one stitched map using 260
+The current conversion produces 224 UI images and one stitched map using 293
 pinned source files. Synthetic tests cover atlas version rules, invalid crops,
 alpha preservation and map tile orientation. Actual conversion verified PNG
 pixel round trips; Godot rendering and interaction require separate client

@@ -10,6 +10,7 @@ signal reset_identity_requested
 signal attack_requested
 signal pickup_requested
 signal chat_submitted(message: String)
+signal command_requested(command: String, request_id: String, argument: String)
 signal debug_option_changed(option: String, value: Variant)
 signal screenshot_requested
 signal copy_diagnostics_requested
@@ -17,6 +18,7 @@ signal move_item_requested(item_id: int, cell: int)
 signal equip_item_requested(item_id: int)
 signal unequip_item_requested(item_id: int, cell: int)
 signal use_item_requested(item_id: int)
+signal stat_allocation_requested(character_id: String, stat_code: String)
 
 const Art = preload("res://scripts/ui/classic_art.gd")
 const Inventory = preload("res://scripts/ui/classic_inventory.gd")
@@ -24,6 +26,7 @@ const Taskbar = preload("res://scripts/ui/classic_taskbar.gd")
 const ItemTooltip = preload("res://scripts/ui/classic_tooltip.gd")
 const MapPanel = preload("res://scripts/ui/classic_map_panel.gd")
 const ChatPanel = preload("res://scripts/ui/classic_chat.gd")
+const StatusPanel = preload("res://scripts/ui/classic_status.gd")
 
 const INK := Color(0.055, 0.065, 0.077, 0.96)
 const BRONZE := Color(0.63, 0.47, 0.28)
@@ -78,6 +81,7 @@ var _profile_key := ""
 var _minimap: Control
 var _system: Control
 var _system_buttons: Dictionary = {}
+var _status: Control
 var _connected := false
 var _state := "disconnected"
 var _account_entry := false
@@ -94,6 +98,7 @@ func _ready() -> void:
 	_build_connection()
 	_build_chat()
 	_build_hotbar()
+	_build_status()
 	_build_inventory()
 	_build_minimap()
 	_build_system()
@@ -122,6 +127,7 @@ func set_connection_state(state: String, message: String) -> void:
 	_minimap.visible = _connected
 	if not _connected:
 		_inventory.hide()
+		_status.set_connected(false)
 		_minimap.close_top()
 		_system.hide()
 		_cancel_carry()
@@ -153,8 +159,14 @@ func set_world_info(info: Dictionary) -> void:
 
 func set_player_info(row: Dictionary) -> void:
 	_hotbar.set_player(row)
+	_status.set_player(row)
 	_inventory.set_gold(int(row.get("gold", 0)))
 	_minimap.set_player_info(row)
+
+
+func set_progression(row: Dictionary) -> void:
+	_hotbar.set_progression(row)
+	_status.set_progression(row)
 
 
 func set_players(rows: Array, local_identity: String) -> void:
@@ -173,6 +185,14 @@ func set_players(rows: Array, local_identity: String) -> void:
 
 func set_chat(rows: Array) -> void:
 	_chat_panel.set_chat(rows)
+
+
+func set_command_feedback(rows: Array) -> void:
+	_chat_panel.set_feedback(rows)
+
+
+func _show_info(message: String) -> void:
+	_chat_panel.add_local_info(message)
 
 
 func set_diagnostics(data: Dictionary) -> void:
@@ -344,16 +364,49 @@ func _field(parent: Node, title: String, placeholder: String) -> LineEdit:
 func _build_chat() -> void:
 	_chat_panel = ChatPanel.new()
 	_root.add_child(_chat_panel)
-	_chat_panel.submitted.connect(func(message: String): chat_submitted.emit(message))
+	_chat_panel.submitted.connect(_on_chat_input)
+
+
+func _on_chat_input(message: String) -> void:
+	if not message.begins_with("/"):
+		chat_submitted.emit(message)
+		return
+	var separator := message.find(" ")
+	var command := message if separator < 0 else message.left(separator)
+	var argument := "" if separator < 0 else message.substr(separator + 1)
+	if command == "/help" and not argument.is_empty():
+		_show_info("Usage: /help")
+		return
+	if command not in ["/help", "/xp", "/level"]:
+		_show_info("Unknown command. Use /help.")
+		return
+	var request_id := Crypto.new().generate_random_bytes(16).hex_encode()
+	command_requested.emit(command.trim_prefix("/"), request_id, argument)
 
 
 func _build_hotbar() -> void:
 	_hotbar = Taskbar.new()
 	_root.add_child(_hotbar)
 	_hotbar.inventory_requested.connect(func() -> void: _inventory.toggle())
+	_hotbar.character_requested.connect(_status_toggle)
 	_hotbar.system_requested.connect(func() -> void: _system.visible = not _system.visible)
 	_connect_slots(_hotbar)
 	_hotbar.settings_changed.connect(_save_profile)
+
+
+func _build_status() -> void:
+	_status = StatusPanel.new()
+	_root.add_child(_status)
+	_status.allocation_requested.connect(
+		func(character_id: String, stat_code: String):
+			stat_allocation_requested.emit(character_id, stat_code)
+	)
+	_status.settings_changed.connect(_save_profile)
+
+
+func _status_toggle() -> void:
+	if _connected:
+		_status.toggle()
 
 
 func _build_inventory() -> void:
@@ -547,13 +600,18 @@ func handle_key(event: InputEventKey) -> bool:
 			pass
 		elif _chat_panel.close_top():
 			pass
+		elif _status.close_top():
+			pass
 		elif _connected:
 			_system.visible = not _system.visible
 		return true
 	if wants_keyboard() or not _connected or event.ctrl_pressed or event.alt_pressed:
 		return false
 	var toggles := {
-		KEY_M: _minimap.toggle_atlas, KEY_L: _chat_panel.toggle_history, KEY_I: _inventory.toggle
+		KEY_M: _minimap.toggle_atlas,
+		KEY_L: _chat_panel.toggle_history,
+		KEY_I: _inventory.toggle,
+		KEY_C: _status_toggle,
 	}
 	if toggles.has(event.keycode):
 		toggles[event.keycode].call()
@@ -584,6 +642,8 @@ func inventory_snapshot() -> Dictionary:
 	result["dragging"] = not _carry.is_empty() or get_viewport().gui_is_dragging()
 	result["map"] = _minimap.snapshot()
 	result["chat"] = _chat_panel.snapshot()
+	result["status"] = _status.snapshot()
+	result["taskbar"] = quick
 	var system := {"visible": _system.is_visible_in_tree()}
 	for key: String in _system_buttons:
 		var center: Vector2 = _system_buttons[key].get_global_rect().get_center()
@@ -702,6 +762,7 @@ func set_profile(key: String) -> void:
 	_hotbar.bindings.fill(0)
 	_hotbar.set_page(0)
 	_inventory.restore_settings({})
+	_status.restore_settings({})
 	if key.length() != 64 or not key.is_valid_hex_number():
 		return
 	var path := "user://ui/" + key + ".json"
@@ -714,6 +775,7 @@ func set_profile(key: String) -> void:
 					_hotbar.bindings[index] = maxi(0, int(bindings[index]))
 			_hotbar.set_page(int(data.get("quickslot_page", 0)))
 			_inventory.restore_settings(data)
+			_status.restore_settings(data)
 	_profile_key = key
 
 
@@ -723,13 +785,11 @@ func _save_profile() -> void:
 	DirAccess.make_dir_recursive_absolute("user://ui")
 	var file := FileAccess.open("user://ui/" + _profile_key + ".json", FileAccess.WRITE)
 	if file:
-		file.store_string(
-			JSON.stringify(
-				{
-					"bindings": _hotbar.bindings,
-					"quickslot_page": _hotbar.page,
-					"inventory_page": _inventory.page,
-					"inventory_position": [_inventory.position.x, _inventory.position.y]
-				}
-			)
-		)
+		var data := {
+			"bindings": _hotbar.bindings,
+			"quickslot_page": _hotbar.page,
+			"inventory_page": _inventory.page,
+			"inventory_position": [_inventory.position.x, _inventory.position.y],
+			"status_position": [_status.position.x, _status.position.y],
+		}
+		file.store_string(JSON.stringify(data))

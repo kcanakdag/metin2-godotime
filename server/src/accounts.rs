@@ -1,5 +1,7 @@
 //! Account authentication, stable character ownership and connection leases.
-use crate::{active_session, controller, inventory, now_us, player, session, valid_name};
+use crate::{
+    active_session, controller, inventory, now_us, player, progression, session, valid_name,
+};
 use spacetimedb::{AuthCtx, ConnectionId, Filter, Identity, ReducerContext, Table};
 
 const AUTH_ISSUER: &str = match option_env!("MT2_AUTH_ISSUER") {
@@ -60,6 +62,10 @@ const OWN_INVENTORY_ACCESS: Filter =
 #[spacetimedb::client_visibility_filter]
 const OWN_INVENTORY: Filter =
     Filter::Sql("SELECT * FROM inventory_item WHERE inventory_item.account = :sender");
+#[spacetimedb::client_visibility_filter]
+const OWN_PROGRESSION: Filter = Filter::Sql(
+    "SELECT * FROM character_progression WHERE character_progression.account = :sender",
+);
 
 fn validate_account_auth(auth: &AuthCtx, sender: Identity, now: i64) -> Result<i64, String> {
     let jwt = auth.jwt().ok_or("Sign in to an account first.")?;
@@ -140,7 +146,9 @@ pub fn require_guest(ctx: &ReducerContext) -> Result<(), String> {
     Ok(())
 }
 
-fn controlled_account(ctx: &ReducerContext) -> Result<AccountState, String> {
+pub fn authenticated_controlled_account(
+    ctx: &ReducerContext,
+) -> Result<(AccountState, ConnectionId), String> {
     authenticated_account(ctx)?;
     let connection_id = active_session(ctx)?;
     let control = ctx
@@ -152,11 +160,17 @@ fn controlled_account(ctx: &ReducerContext) -> Result<AccountState, String> {
     if control.connection_id != connection_id || control.expires_at_us <= now_us(ctx) {
         return Err("This account is controlled by another connection or has expired.".into());
     }
-    ctx.db
+    let state = ctx
+        .db
         .account_state()
         .account()
         .find(ctx.sender())
-        .ok_or("Open your account first.".into())
+        .ok_or("Open your account first.")?;
+    Ok((state, connection_id))
+}
+
+fn controlled_account(ctx: &ReducerContext) -> Result<AccountState, String> {
+    authenticated_controlled_account(ctx).map(|(state, _)| state)
 }
 
 pub fn selected_character(ctx: &ReducerContext) -> Result<Identity, String> {
@@ -311,6 +325,7 @@ pub fn create_character(ctx: &ReducerContext, slot: u8, name: String) -> Result<
         character_id: character,
         account: ctx.sender(),
     });
+    progression::create_character(ctx, character, ctx.sender())?;
     inventory::ensure_starter(ctx, character)?;
     state.selected_character = character;
     ctx.db.account_state().account().update(state);

@@ -188,6 +188,7 @@ func handle_key(event: InputEventKey) -> bool:
 
 func snapshot() -> Dictionary:
 	var rectangles: Dictionary = {}
+	var character_values: Dictionary = {}
 	var focused_control := ""
 	var focused := get_viewport().gui_get_focus_owner()
 	for key in _controls:
@@ -196,6 +197,8 @@ func snapshot() -> Dictionary:
 		rectangles[key] = [rect.position.x, rect.position.y, rect.size.x, rect.size.y]
 		if control == focused:
 			focused_control = str(key)
+	for key: String in _character_values:
+		character_values[key] = _character_values[key].text
 	return {
 		"visible": is_visible_in_tree(),
 		"stage": _stage,
@@ -207,6 +210,7 @@ func snapshot() -> Dictionary:
 		"controls": rectangles,
 		"focused_control": focused_control,
 		"character_name_input": _character_name.text,
+		"character_values": character_values,
 		"preview": _preview.snapshot(),
 		"password_masked": _password.secret and _register_password.secret,
 		"message": _message.text

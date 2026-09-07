@@ -10,10 +10,13 @@ const LINE_STEP := 15.0
 const VIEW_SECONDS := 5.0
 const LOG_MINIMUM := Vector2(450, 120)
 const MAX_MESSAGES := 300
+const INFO_COLOR := Color8(255, 200, 200)
 
 var _connected := false
 var _waiting_for_rows := true
 var _rows: Array[Dictionary] = []
+var _feedback: Array[Dictionary] = []
+var _local_info: Array[Dictionary] = []
 var _arrivals: Dictionary = {}
 var _opacities: Dictionary = {}
 var _sent: Array[String] = []
@@ -38,7 +41,9 @@ var _scroll_thumb: TextureButton
 var _scroll_position := 1.0
 var _history_all: TextureButton
 var _history_normal: TextureButton
+var _history_info: TextureButton
 var _show_normal := true
+var _show_info := true
 var _drag_mode := ""
 var _drag_offset := Vector2.ZERO
 var _last_fade_tick := -1
@@ -180,11 +185,15 @@ func _build_history() -> void:
 	_history_all = _filter_button("All", 13, _select_all)
 	_history_all.button_pressed = true
 	_history_normal = _filter_button("Normal", 61, _select_normal)
-	var unavailable := ["Party", "Guild", "Shout", "Info", "Notice"]
+	var unavailable := ["Party", "Guild", "Shout"]
 	for index in unavailable.size():
 		var button := _filter_button(unavailable[index], 109 + index * 48, Callable())
 		button.disabled = true
 		button.tooltip_text = unavailable[index] + " is not available yet"
+	_history_info = _filter_button("Info", 253, _select_info)
+	var notice := _filter_button("Notice", 301, Callable())
+	notice.disabled = true
+	notice.tooltip_text = "Notice is not available yet"
 	_history_lines = Control.new()
 	_history_lines.name = "HistoryLines"
 	_history_lines.position = Vector2(10, 45)
@@ -250,10 +259,11 @@ func set_connected(value: bool) -> void:
 		_close_history()
 		close_input()
 		_sent.clear()
+		_local_info.clear()
+		_refresh_lines()
 	if value and not _connected and _waiting_for_rows:
 		_rows.clear()
-		_arrivals.clear()
-		_opacities.clear()
+		_prune_display_state()
 		_refresh_lines()
 	_connected = value
 	visible = value
@@ -281,15 +291,108 @@ func set_chat(rows: Array) -> void:
 		)
 		var key := str(row.get("id", "")) + ":" + text
 		row["display_text"] = text
-		row["key"] = key
-		row["arrived"] = float(arrivals.get(key, Time.get_ticks_msec() / 1000.0))
-		kept_arrivals[key] = row["arrived"]
-		kept_opacities[key] = opacities.get(key, 1.0)
+		row["key"] = "normal:" + key
+		row["kind"] = "normal"
+		row["color"] = Color.WHITE
+		row["order_at"] = int(row.get("sent_at", row.get("id", 0)))
+		row["arrived"] = float(arrivals.get(row["key"], Time.get_ticks_msec() / 1000.0))
+		kept_arrivals[row["key"]] = row["arrived"]
+		kept_opacities[row["key"]] = opacities.get(row["key"], 1.0)
 		_rows.append(row)
+	for row: Dictionary in _feedback + _local_info:
+		kept_arrivals[row["key"]] = row["arrived"]
+		kept_opacities[row["key"]] = _opacities.get(row["key"], 1.0)
 	_arrivals = kept_arrivals
 	_opacities = kept_opacities
 	if is_node_ready():
 		_refresh_lines()
+
+
+func set_feedback(rows: Array) -> void:
+	var previous_by_id: Dictionary = {}
+	for previous: Dictionary in _feedback:
+		previous_by_id[int(previous.get("id", 0))] = previous
+	var by_id: Dictionary = {}
+	for value: Variant in rows:
+		if value is Dictionary:
+			by_id[int(value.get("id", 0))] = value
+	var ids: Array = by_id.keys()
+	ids.sort()
+	_feedback.clear()
+	for id: int in ids.slice(maxi(0, ids.size() - 32)):
+		var row: Dictionary = by_id[id].duplicate()
+		var key := "feedback:%d" % id
+		row["display_text"] = "Info : " + str(row.get("message", ""))
+		row["key"] = key
+		row["kind"] = "info"
+		row["color"] = INFO_COLOR
+		row["order_at"] = int(row.get("created_at", id))
+		var previous: Dictionary = previous_by_id.get(id, {})
+		var changed := previous.is_empty() or not _same_feedback(previous, row)
+		row["arrived"] = (
+			Time.get_ticks_msec() / 1000.0
+			if changed
+			else float(_arrivals.get(key, Time.get_ticks_msec() / 1000.0))
+		)
+		_arrivals[key] = row["arrived"]
+		_opacities[key] = 1.0 if changed else _opacities.get(key, 1.0)
+		_feedback.append(row)
+	_prune_display_state()
+	if is_node_ready():
+		_refresh_lines()
+
+
+func _same_feedback(left: Dictionary, right: Dictionary) -> bool:
+	for field in ["request_id", "severity", "message", "created_at"]:
+		if left.get(field) != right.get(field):
+			return false
+	return true
+
+
+func add_local_info(message: String) -> void:
+	var text := message.strip_edges()
+	if text.is_empty():
+		return
+	var key := "local:%d" % Time.get_ticks_usec()
+	var row := {
+		"display_text": "Info : " + text,
+		"key": key,
+		"kind": "info",
+		"color": INFO_COLOR,
+		"order_at": int(Time.get_unix_time_from_system() * 1000000.0),
+		"arrived": Time.get_ticks_msec() / 1000.0,
+	}
+	_local_info.append(row)
+	if _local_info.size() > 32:
+		_local_info.pop_front()
+	_arrivals[key] = row["arrived"]
+	_opacities[key] = 1.0
+	_prune_display_state()
+	_refresh_lines()
+
+
+func _prune_display_state() -> void:
+	var live: Dictionary = {}
+	for row: Dictionary in _display_rows():
+		live[row["key"]] = true
+	for key: String in _arrivals.keys():
+		if not live.has(key):
+			_arrivals.erase(key)
+			_opacities.erase(key)
+
+
+func _display_rows() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	result.append_array(_rows)
+	result.append_array(_feedback)
+	result.append_array(_local_info)
+	result.sort_custom(
+		func(a: Dictionary, b: Dictionary):
+			if int(a["order_at"]) == int(b["order_at"]):
+				return str(a["key"]) < str(b["key"])
+			return int(a["order_at"]) < int(b["order_at"])
+	)
+	return result
 
 
 func focus_chat() -> void:
@@ -393,11 +496,12 @@ func _on_input_key(event: InputEvent, field: LineEdit) -> void:
 
 func _process(delta: float) -> void:
 	var now := Time.get_ticks_msec() / 1000.0
-	for index in _rows.size():
-		var row := _rows[index]
+	var display := _display_rows()
+	for index in display.size():
+		var row := display[index]
 		if _entry.visible:
 			_opacities[row["key"]] = 1.0
-		elif now - float(row["arrived"]) >= VIEW_SECONDS or _rows.size() - index >= 5:
+		elif now - float(row["arrived"]) >= VIEW_SECONDS or display.size() - index >= 5:
 			# Match decay at the original 60 Hz target independently of browser FPS.
 			_opacities[row["key"]] = float(_opacities[row["key"]]) * pow(0.9, delta * 60)
 	var tick := Time.get_ticks_msec() / 100
@@ -458,11 +562,11 @@ func _refresh_lines() -> void:
 
 func _refresh_passive() -> void:
 	var lines: Array[Dictionary] = []
-	for row in _rows:
+	for row in _display_rows():
 		var opacity := 1.0 if _entry.visible else float(_opacities.get(row["key"], 1.0))
 		if opacity > 0.1:
 			for text in _wrap(str(row["display_text"]), _passive.size.x):
-				lines.append({"text": text, "opacity": opacity})
+				lines.append({"text": text, "opacity": opacity, "color": row["color"]})
 	_show_lines(_passive, lines, 1.0)
 	_update_backdrop(lines.size())
 
@@ -482,10 +586,10 @@ func _update_backdrop(line_count: int) -> void:
 
 func _refresh_history() -> void:
 	var lines: Array[Dictionary] = []
-	if _show_normal:
-		for row in _rows:
+	for row in _display_rows():
+		if (row["kind"] == "normal" and _show_normal) or (row["kind"] == "info" and _show_info):
 			for text in _wrap(str(row["display_text"]), _history_lines.size.x):
-				lines.append({"text": text, "opacity": 1.0})
+				lines.append({"text": text, "opacity": 1.0, "color": row["color"]})
 	_show_lines(_history_lines, lines, _scroll_position)
 
 
@@ -512,7 +616,9 @@ func _show_lines(parent: Control, lines: Array[Dictionary], end: float) -> void:
 	var first := maxi(0, last - count)
 	var top := parent.size.y - (last - first) * LINE_STEP
 	for index in range(first, last):
-		var label := Art.label(parent, str(lines[index]["text"]), Vector2(0, top), Color.WHITE)
+		var label := Art.label(
+			parent, str(lines[index]["text"]), Vector2(0, top), lines[index]["color"]
+		)
 		label.modulate.a = float(lines[index]["opacity"])
 		label.size = Vector2(parent.size.x, LINE_STEP)
 		label.clip_text = true
@@ -521,14 +627,28 @@ func _show_lines(parent: Control, lines: Array[Dictionary], end: float) -> void:
 
 func _select_all() -> void:
 	_show_normal = true
+	_show_info = true
 	_history_all.button_pressed = true
 	_history_normal.button_pressed = false
+	_history_info.button_pressed = false
 	_refresh_history()
 
 
 func _select_normal() -> void:
-	_show_normal = _history_normal.button_pressed
+	_show_normal = true
+	_show_info = false
 	_history_all.button_pressed = false
+	_history_normal.button_pressed = true
+	_history_info.button_pressed = false
+	_refresh_history()
+
+
+func _select_info() -> void:
+	_show_normal = false
+	_show_info = true
+	_history_all.button_pressed = false
+	_history_normal.button_pressed = false
+	_history_info.button_pressed = true
 	_refresh_history()
 
 
@@ -618,8 +738,10 @@ func _update_drag(mouse: Vector2) -> void:
 
 func snapshot() -> Dictionary:
 	var shown: Array[String] = []
+	var shown_colors: Array[String] = []
 	for label: Label in _passive.get_children():
 		shown.append(label.text)
+		shown_colors.append(label.get_theme_color("font_color").to_html())
 	var history: Array[String] = []
 	for label: Label in _history_lines.get_children():
 		history.append(label.text)
@@ -642,8 +764,14 @@ func snapshot() -> Dictionary:
 		"history_scroll": _scroll_position,
 		"history_lines": history,
 		"passive_lines": shown,
+		"passive_colors": shown_colors,
 		"passive_visible_count": shown.size(),
 		"message_count": _rows.size(),
+		"feedback_count": _feedback.size(),
+		"feedback_lines": _feedback.map(func(row: Dictionary): return row["display_text"]),
+		"local_info_count": _local_info.size(),
+		"show_normal": _show_normal,
+		"show_info": _show_info,
 		"input_limit": _chat_input.max_length,
 		"entry_position": [_entry.position.x, _entry.position.y]
 	}

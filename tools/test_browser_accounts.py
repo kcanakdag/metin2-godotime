@@ -22,7 +22,9 @@ from pathlib import Path
 from browser_snapshot import (
     POSITION_INVALID,
     POSITION_VALID,
+    SnapshotUnavailableError,
     authoritative_position_distance,
+    read_fresh_json_snapshot,
     subscribed_player_position,
 )
 from playwright.sync_api import sync_playwright
@@ -30,6 +32,7 @@ from test_browser import distance
 from test_browser_actors import exercise_actors
 from test_browser_inventory import exercise_inventory
 from test_browser_panels import exercise_panels
+from test_browser_progression import exercise_progression, exercise_progression_combat
 
 ROOT = Path(__file__).resolve().parents[1]
 RENEWAL_INPUT_AUDIT = """() => {
@@ -113,6 +116,13 @@ def seen(snapshot: dict, identity: str):
     )
 
 
+def progression(snapshot: dict, identity: str) -> dict:
+    return next(
+        (row for row in snapshot.get("progression", []) if row.get("character_id") == identity),
+        {},
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", default="https://kcanakdag.com:8443")
@@ -131,6 +141,12 @@ def main() -> None:
     parser.add_argument("--inventory", action="store_true")
     parser.add_argument("--actors", action="store_true")
     parser.add_argument("--panels", action="store_true")
+    parser.add_argument("--progression", action="store_true")
+    parser.add_argument(
+        "--progression-combat",
+        action="store_true",
+        help="Kill five production Wild Dogs and allocate the first VIT point",
+    )
     parser.add_argument(
         "--session-refresh",
         action="store_true",
@@ -139,6 +155,8 @@ def main() -> None:
     parser.add_argument("--native", type=Path, default=ROOT / "dist/linux-test/MT2Spacetime.x86_64")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+    if args.progression_combat and not args.progression:
+        parser.error("--progression-combat requires --progression")
     if not args.native.is_file():
         parser.error("Missing exported Linux test client; export with --test-probe first.")
     if not shutil.which("xvfb-run"):
@@ -167,6 +185,16 @@ def main() -> None:
     process = None
     passed = False
     failure = ""
+    last_web_snapshot: dict = {}
+    native_snapshot_ready = False
+    native_snapshot_reads = {
+        "recovered_count": 0,
+        "unavailable_count": 0,
+        "max_attempts": 1,
+        "max_elapsed_seconds": 0.0,
+        "events": [],
+    }
+    samples["native_snapshot_reads"] = native_snapshot_reads
     started = time.monotonic()
 
     def redact(text: str) -> str:
@@ -175,10 +203,50 @@ def main() -> None:
         return re.sub(r"([?&]token=)[^ &]+", r"\1[REDACTED]", text)
 
     def desktop() -> dict:
+        nonlocal native_snapshot_ready
         try:
-            return json.loads(report_path.read_text())
-        except (OSError, ValueError):
-            return {}
+            snapshot, attempts, elapsed = read_fresh_json_snapshot(report_path)
+        except SnapshotUnavailableError as error:
+            native_snapshot_reads["unavailable_count"] += 1
+            native_snapshot_reads["max_attempts"] = max(
+                native_snapshot_reads["max_attempts"], error.attempts
+            )
+            native_snapshot_reads["max_elapsed_seconds"] = max(
+                native_snapshot_reads["max_elapsed_seconds"], round(error.elapsed, 3)
+            )
+            native_snapshot_reads["events"].append(
+                {
+                    "result": "unavailable",
+                    "startup": not native_snapshot_ready,
+                    "attempts": error.attempts,
+                    "elapsed_seconds": round(error.elapsed, 3),
+                    "reason": error.reason,
+                }
+            )
+            del native_snapshot_reads["events"][:-32]
+            raise
+        native_snapshot_ready = True
+        native_snapshot_reads["max_attempts"] = max(native_snapshot_reads["max_attempts"], attempts)
+        native_snapshot_reads["max_elapsed_seconds"] = max(
+            native_snapshot_reads["max_elapsed_seconds"], round(elapsed, 3)
+        )
+        if attempts > 1:
+            native_snapshot_reads["recovered_count"] += 1
+            native_snapshot_reads["events"].append(
+                {
+                    "result": "recovered",
+                    "attempts": attempts,
+                    "elapsed_seconds": round(elapsed, 3),
+                }
+            )
+            del native_snapshot_reads["events"][:-32]
+        return snapshot
+
+    def native_boot_ready() -> bool:
+        try:
+            return bool(account(desktop()))
+        except SnapshotUnavailableError:
+            return False
 
     def native_command(action: str, **values) -> None:
         nonlocal sequence
@@ -188,7 +256,11 @@ def main() -> None:
         temporary.replace(command_path)
 
     def web() -> dict:
-        return page.evaluate("() => JSON.parse(window.mt2Snapshot || '{}')")
+        nonlocal last_web_snapshot
+        snapshot = page.evaluate("() => JSON.parse(window.mt2Snapshot || '{}')")
+        if isinstance(snapshot, dict):
+            last_web_snapshot = snapshot
+        return snapshot
 
     def account(snapshot=None) -> dict:
         return (web() if snapshot is None else snapshot).get("account", {})
@@ -367,7 +439,7 @@ def main() -> None:
             page.goto(args.url, wait_until="domcontentloaded")
             wait(
                 "both_exported_account_screens_boot",
-                lambda: bool(account()) and bool(account(desktop())),
+                lambda: bool(account()) and native_boot_ready(),
                 90,
             )
             samples["browser_renderer"] = {
@@ -422,6 +494,20 @@ def main() -> None:
             click("empire_confirm")
             stage("create", "supported_empire_opens_original_creation")
             fill("character_name", names["web"])
+            if args.progression:
+                page.keyboard.press("c")
+                wait(
+                    "account_field_C_stays_in_character_name",
+                    lambda: (
+                        account().get("character_name_input") == names["web"] + "c"
+                        and not web()["ui"]["status"]["visible"]
+                    ),
+                )
+                page.keyboard.press("Backspace")
+                wait(
+                    "character_name_restored_after_C_focus_check",
+                    lambda: account().get("character_name_input") == names["web"],
+                )
             page.screenshot(path=str(output / "account-create.png"))
             click("create_submit")
             wait("browser_creation_is_server_confirmed", lambda: selection_ready(names["web"]))
@@ -461,6 +547,17 @@ def main() -> None:
             native_command("capture")
             wait("native_initial_world_capture_saved", lambda: (output / "desktop.png").is_file())
             (output / "desktop.png").replace(output / "desktop-initial.png")
+            if args.progression:
+                samples["progression"] = exercise_progression(
+                    page,
+                    web,
+                    desktop,
+                    web_command,
+                    wait,
+                    web_id,
+                    native_id,
+                    output,
+                )
             if args.actors:
                 samples["actors"] = exercise_actors(
                     page,
@@ -471,6 +568,25 @@ def main() -> None:
                     web_id,
                     native_id,
                     output,
+                )
+            if args.progression_combat and args.inventory:
+                # The inventory quickslot rejection needs the full-health starter
+                # state. Combat later leaves deliberately partial HP for the VIT
+                # no-heal proof, while its quarter award still stacks onto this item.
+                samples["inventory"] = exercise_inventory(page, web, wait, output)
+            if args.progression_combat:
+                samples["progression_combat_diagnostics"] = {}
+                samples["progression_combat"] = exercise_progression_combat(
+                    page,
+                    web,
+                    desktop,
+                    web_command,
+                    native_command,
+                    wait,
+                    web_id,
+                    native_id,
+                    output,
+                    samples["progression_combat_diagnostics"],
                 )
             start = seen(desktop(), web_id)
             page.locator("canvas").focus()
@@ -519,7 +635,7 @@ def main() -> None:
             wait("native_owned_character_returns", lambda: seen(web(), native_id) is not None)
             if args.panels:
                 samples["panels"] = exercise_panels(page, web, wait, output)
-            if args.inventory:
+            if args.inventory and "inventory" not in samples:
                 samples["inventory"] = exercise_inventory(page, web, wait, output)
             first_position = settle(web_id, "first_character_position_saved_before_switch")
             system_action("change_character")
@@ -585,15 +701,29 @@ def main() -> None:
                 "restored_session_enters_original_character",
                 lambda: distance(seen(desktop(), web_id), position) < 0.1,
             )
+            if args.progression_combat:
+                expected_progression = samples["progression_combat"]["after_vitality"]
+                peer_progression = samples["progression_combat"]["peer_progression"]
+                wait(
+                    "positive_progression_survives_switch_reconnect_and_reload",
+                    lambda: (
+                        progression(web(), web_id) == expected_progression
+                        and progression(desktop(), native_id) == peer_progression
+                        and not progression(web(), native_id)
+                        and not progression(desktop(), web_id)
+                    ),
+                )
             if args.inventory:
+                expected_inventory = (
+                    samples["progression_combat"]["inventory"]
+                    if args.progression_combat
+                    else [samples["inventory"]["sword"], samples["inventory"]["potion"]]
+                )
                 wait(
                     "account_restore_preserves_character_inventory",
                     lambda: (
                         sorted(web().get("inventory", []), key=lambda row: row["id"])
-                        == sorted(
-                            [samples["inventory"]["sword"], samples["inventory"]["potion"]],
-                            key=lambda row: row["id"],
-                        )
+                        == sorted(expected_inventory, key=lambda row: row["id"])
                     ),
                 )
 
@@ -657,6 +787,16 @@ def main() -> None:
                 "both_accounts_render_after_logout_and_login",
                 lambda: seen(web(), native_id) is not None and seen(desktop(), web_id) is not None,
             )
+            if args.progression_combat:
+                wait(
+                    "positive_progression_survives_both_account_logins",
+                    lambda: (
+                        progression(web(), web_id) == expected_progression
+                        and progression(desktop(), native_id) == peer_progression
+                        and not progression(web(), native_id)
+                        and not progression(desktop(), web_id)
+                    ),
+                )
             page.screenshot(path=str(output / "account-world-final.png"))
             native_command("capture")
             wait("native_render_capture_saved", lambda: (output / "desktop.png").is_file())
@@ -848,6 +988,16 @@ def main() -> None:
                 )
                 samples["after_session_refresh_web"] = web()
                 samples["after_session_refresh_native"] = desktop()
+                if args.progression_combat:
+                    wait(
+                        "positive_progression_survives_both_real_session_refreshes",
+                        lambda: (
+                            progression(web(), web_id) == expected_progression
+                            and progression(desktop(), native_id) == peer_progression
+                            and not progression(web(), native_id)
+                            and not progression(desktop(), web_id)
+                        ),
+                    )
                 page.screenshot(path=str(output / "account-session-refresh.png"))
             assert not browser_errors, "Browser engine errors: " + "; ".join(browser_errors[:3])
             checks.append("browser_has_no_engine_errors")
@@ -856,6 +1006,8 @@ def main() -> None:
             browser.close()
     except Exception as error:
         failure = redact(str(error))
+        if last_web_snapshot:
+            samples["last_successful_web"] = last_web_snapshot
         if page is not None and not page.is_closed():
             with contextlib.suppress(Exception):
                 samples["failed_web"] = web()
@@ -876,6 +1028,10 @@ def main() -> None:
         if "SCRIPT ERROR:" in native_log or "\nERROR:" in native_log:
             passed = False
             failure = failure or "Native client reported an engine error; see desktop.log"
+        try:
+            desktop_final = desktop()
+        except SnapshotUnavailableError as error:
+            desktop_final = {"snapshot_unavailable": str(error)}
         result = {
             "passed": passed,
             "failure": failure,
@@ -883,7 +1039,7 @@ def main() -> None:
             "database": args.database,
             "checks": checks,
             "samples": samples,
-            "desktop_final": desktop(),
+            "desktop_final": desktop_final,
             "browser_errors": browser_errors,
         }
         private_write(output / "report.json", redact(json.dumps(result, indent=2)) + "\n")

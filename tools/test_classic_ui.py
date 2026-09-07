@@ -8,6 +8,7 @@ import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import tempfile
 from pathlib import Path
@@ -40,11 +41,17 @@ def run(command: list[str], environment: dict[str, str], log: Path) -> str:
     return result.stdout
 
 
+def free_port() -> int:
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        return int(listener.getsockname()[1])
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument("--native", action="store_true", help="Render under Xvfb and save a PNG.")
-    parser.add_argument("--suite", choices=["ui", "map", "chat", "intro"], default="ui")
+    parser.add_argument("--suite", choices=["ui", "map", "chat", "intro", "status"], default="ui")
     parser.add_argument("--output", type=Path, default=ROOT / ".local/classic-ui")
     options = parser.parse_args()
     script = f"classic_{options.suite}_smoke.gd"
@@ -77,6 +84,7 @@ def main() -> None:
             "XDG_DATA_HOME": str(stage / ".data"),
             "XDG_CONFIG_HOME": str(stage / ".config"),
         }
+        lsp_port, dap_port, debug_port = (free_port() for _ in range(3))
         run(
             [
                 options.godot,
@@ -87,11 +95,11 @@ def main() -> None:
                 "--import",
                 "--quit",
                 "--lsp-port",
-                "6135",
+                str(lsp_port),
                 "--dap-port",
-                "6136",
+                str(dap_port),
                 "--debug-server",
-                "tcp://127.0.0.1:6137",
+                f"tcp://127.0.0.1:{debug_port}",
             ],
             environment,
             options.output / "import.log",

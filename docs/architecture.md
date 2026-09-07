@@ -17,7 +17,7 @@ flowchart LR
     Auth -->|Short-lived signed JWT| Client
     Client -->|Authenticated character intents| Server
     Server --> Tick[Authoritative 50 ms simulation]
-    Tick --> Tables[Replicated player, monster and loot rows]
+    Tick --> Tables[Replicated world rows and owner-private progression]
     Tables --> Client
 ```
 
@@ -66,7 +66,7 @@ with no multiplayer connection.
 
 Without the Cargo feature, the server uses the small flat training ground with
 five box obstacles. Make enables Yongan by default; raw Cargo has no default
-feature. Both builds expose the same protocol-4 schema.
+feature. Both builds expose the same protocol-5 schema.
 
 ## Networking and runtime boundaries
 
@@ -79,7 +79,7 @@ The socket subprotocol is `v3.bsatn.spacetimedb`. In the pinned server,
 coalesces messages using the
 [v2 binary schema](https://github.com/clockworklabs/SpacetimeDB/blob/v2.8.3/crates/client-api-messages/src/websocket/v2.rs).
 This transport version is separate from application
-`world_info.protocol_version = 4`, checked before joining.
+`world_info.protocol_version = 5`, checked before joining.
 
 Decoding runs on the main thread, with no compression and
 `confirmed_reads = false`. Cached tables require primary keys; Brotli is
@@ -95,6 +95,8 @@ The standard engine and pure GDScript path support Web without a .NET dependency
 | `server/src/content.rs` | Trusted terrain, map bounds, building/water blocking and elevated surfaces |
 | `server/src/combat.rs` | Monster simulation, attacks, health, death/respawn and loot |
 | `server/src/inventory.rs` | Item ownership, grid placement, equipment, consumables and item drops |
+| `server/src/progression.rs` | Source-backed Warrior stats, experience quarters, levels and stat allocation |
+| `server/src/admin.rs` | Default-deny progression capabilities, private feedback, receipts and audit records |
 | `client/scripts/net/game_connection.gd` | Typed account/gameplay facade, SDK lifecycle, version checks and subscription dictionaries |
 | `client/scripts/net/account_auth.gd` | Same-origin auth HTTP requests and private remembered-session storage |
 | `client/scripts/net/account_flow.gd` | Entry screens, availability, selection, logout and JWT refresh/reconnect |
@@ -144,6 +146,8 @@ names confer no ownership. `GameConnection.account_identity` and
 | `inventory_access` | Character-to-account mapping; public with a strict account-only read filter |
 | `inventory_item` | Numeric ID; owner character, server-assigned account, vnum, count, bag cell, equipped flag; account-owned rows only through RLS |
 | `item_drop` | Numeric ID; position, vnum/count, owner character, reservation and expiry |
+| `character_progression` | Character Identity primary key; owner account, level/current and next experience, quarter step, unspent points, base stats, random HP/SP growth and SP totals; owner-only RLS |
+| `command_feedback` | Bounded account-private command result stream ordered by server ID; owner-only RLS |
 | `world_info` | Protocol, map identity/content hash, trusted action profile/hash, tick interval and legacy half-size |
 | `simulation_clock` | Public authoritative tick timestamp used to seek late-joined action clips |
 | `obstacle`, `chat_message` | Training obstacles and retained normal chat |
@@ -157,26 +161,29 @@ including inactive characters, but can act only as its selected active
 character. This is independent of client-side filtering. Roster and selection
 filters also select the authenticated caller's account. The direct filter
 avoids a join that the actual 2.8.3 subscription engine rejected even with the
-join columns indexed. Two real authenticated accounts pass 58 headless checks
-through the HTTP service, Godot SDK and SpacetimeDB, including raw subscribed
-roster, state, access-map and inventory privacy, four-slot creation, rejected
-foreign actions, switching and reconnect. The updated guest-enabled disposable
-world separately passes 60 inventory checks, including unreadable foreign
-items and preserved privacy through reconnects and death. See
+join columns indexed. Two real authenticated accounts exercise the HTTP service,
+Godot SDK and SpacetimeDB together, including raw subscribed roster, state,
+access-map, inventory and progression privacy, four-slot creation, rejected
+foreign actions, switching and reconnect. The retained guest-enabled disposable
+world has separate historical inventory evidence. See
 [verification evidence](distribution.md#verification-status).
 
-Read privacy is limited to account-to-character mappings, account state,
-inventory access mappings and inventory rows. The public `player` table has no
-server-enforced online-only filter: other authenticated accounts can read
-offline character names, positions, health and gold. The client's online-only
-query controls presentation, not access. RLS checks account identity alone.
+Read privacy covers account-to-character mappings, account state, inventory
+access mappings, inventory rows, character progression and command feedback.
+Private operator receipts, rate state, capabilities, audits and monster-damage
+ledgers are not product subscriptions. The public `player` table has no
+server-enforced online-only filter: other authenticated accounts can read offline
+character names, positions, health and gold. The client's online-only query
+controls presentation, not access. Owner RLS checks account identity alone.
 JWT expiry rejects gameplay reducers and removes active presence, but revoking
 already-established read subscriptions at expiry or logout has not been
 demonstrated. A stale same-account socket may retain reads unless the host
 closes it; this is a source-review concern, not a reproduced runtime result.
 
-The lobby subscribes to the private account roster and selection. World entry
-adds online players, monsters, drops, inventory, map information and chat;
+The lobby subscribes to the private account roster, selection, progression and
+command feedback. Those owner subscriptions remain active during world play so
+status and command results do not need an overlapping world subscription. World
+entry adds online players, monsters, drops, inventory, map information and chat;
 leaving unsubscribes that world state. No spatial interest filtering exists yet.
 Yongan bounds come from baked content rather than the legacy `half_size` field.
 
@@ -191,6 +198,9 @@ Yongan bounds come from baked content rather than the legacy `half_size` field.
 | `perform_attack()` | Enforce cooldown, stop movement and damage an eligible nearby enemy |
 | `pickup_loot(id)`, `pickup_item_drop(id)` | Validate owner/reservation, range, expiry and capacity; grant rewards atomically |
 | `move_item`, `equip_item`, `unequip_item`, `use_item` | Validate the active character's ownership, placement and consumable rules |
+| `allocate_stat(character_id, stat_code)` | Require the currently selected in-world character, ownership, live controller and an unspent point; accept only `st`, `ht`, `dx` or `iq` |
+| `request_command_help(request_id)` | Return bounded owner-private help without writing synthetic public chat |
+| `admin_grant_progression_xp(request_id, amount_text)`, `admin_raise_progression_level(request_id, target_text)` | Require a fixed server-side capability and active selected character; validate bounded decimal text, rate limits and replay-safe request identity before applying the normal progression kernel |
 | `send_chat(message)` | Validate 1–160 printable characters, one message per second, retain latest 100 |
 
 Private `session` and `account_control` tables bind authenticated accounts to
@@ -202,11 +212,12 @@ movement, attacks and pickups reject dead characters.
 
 Public account builds reject guest credentials. `enter_world(name)` remains
 only for disposable legacy tests with compile-time `MT2_ALLOW_GUESTS=1`.
-The public account rollout targets a new `mt2-accounts-v3` database and retains
-the old `mt2-yongan-v2` guest database without exposing its gameplay routes.
-No guest claim or migration API is implemented. Local development keeps its
-tested database name; public exports and deployment select the new name
-explicitly. Deployment preserves existing data.
+The current public P1 development route uses `mt2-p1-v4`; the preceding
+`mt2-accounts-v3` account database and old `mt2-yongan-v2` guest database remain
+stored without exposing their gameplay routes. No guest claim or migration API
+is implemented. Protocol 5 progression development uses a new database until a
+deliberate migration and compatible public client are ready. Deployment
+preserves existing data.
 
 ## Movement and combat
 
@@ -266,10 +277,83 @@ deletes the loot and credits the player, preventing duplicate grants. A dead
 player respawns after 8 seconds at the town spawn with full health and retained
 gold. Reconnecting does not bypass death or attack deadlines.
 
+## Character progression and operator controls
+
+The bounded P2 progression slice implements catalog item `SRV-007` for the one
+currently supported male Warrior. The generated trusted definition contains the
+original level table through compiled level 120, the normal monster/player level
+delta percentages and the Warrior's initial constants. Runtime progression is
+capped at level 99. At the cap, `experience`, `next_exp` and `level_step` are all
+zero, which gives clients a defined cap state without shipping the experience
+table. A new Warrior starts at level 1 with ST 6, HT 4, DX 3, IQ 3, 760 maximum
+HP and 260 maximum SP.
+
+The server computes quarter thresholds using the source's single-precision
+operation: `q = (next_exp as f32 / 4.0) as u32`, followed by `q`, `2q`, `3q`
+and the exact level requirement. Each crossed positive step refills HP and SP if
+the character is alive and attempts to deliver two automatic potions. Resulting
+levels through 10 use small red potions (`vnum=27001`); later levels use medium
+red potions (`vnum=27002`). Grants fill existing stacks, then free bag cells,
+then create an owner-reserved ground drop that expires after 300 seconds. Only
+items actually stacked, inserted or dropped count as delivered. Consumption of
+the medium potion remains outside this slice.
+
+The first three quarters grant one stat point while the pre-level is below 91.
+The fourth rolls and stores 36–44 HP and 18–22 SP growth, advances the level and
+also performs the common refill/potion effect. `allocate_stat` consumes one point
+and caps each stat at 90. Vitality and intelligence immediately update maximum
+HP/SP but do not heal the current resource as a side effect of manual allocation.
+
+Monster experience uses a private per-monster-life damage ledger. Registered
+damage includes overkill rather than only the target's remaining health. At
+death, a contributor must still be online on the same connection that registered
+the damage and within the source approximate-distance limit of 5,000 cm; being
+dead does not itself remove eligibility. Reconnecting invalidates credit tied to
+the old connection. For a non-party kill, 20% of the level-adjusted reward goes
+to the highest contributor and 80% is split by damage proportion using the
+source's single-precision truncation. Stable character Identity order replaces
+the original process-local VID for deterministic ties. Party grouping is deferred.
+The current Wild Dog level 1 reward is 15 experience; its attack/damage values
+remain the explicit prototype balance described above.
+
+Operator commands use dedicated typed reducers and never pass through public
+chat. `/help` is available to an authenticated controlled account. `/xp` and
+`/level` require an active account capability and an active selected character
+controlled by that connection. Exact compile-time bootstrap identities can seed
+the first capabilities; an authorized capability holder can then provision or
+revoke persisted operator capabilities through the audited typed reducer.
+Production/default builds provision no identities. Bounded private feedback,
+rate checks, receipts and audits make a replay with the same actor, action and
+normalized arguments return
+the recorded outcome without another mutation. The receipt retains the original
+target, so changing character selection before that replay does not redirect the
+grant. Reusing the request ID with a different action or normalized argument is
+rejected. Combat experience clamps at remaining cap capacity,
+while an operator's exact requested amount is rejected if it cannot be applied
+in full. `/level` only raises a character by applying the normal experience
+steps; lowering remains a separate reset/migration concern. See
+[development and admin automation](rebuild/development-and-admin.md).
+
+The accepted local training report
+`.local/p2/accounts-progression-20260907T0349.json` contains 298 passing checks.
+It covers an exact +15 solo reward, separate 70/35 to 11/4 and 75/35 to 11/3
+registered-damage lives, owner privacy, disconnect/reconnect invalidation, all
+20 level-1 Wild Dog kills, the three quarter states, level 2, automatic potions,
+bounded growth and VIT allocation without healing current HP. The accepted
+199-check exported Chrome/Linux run in
+`.local/p2/browser-positive-progression-fresh-read/report.json` covers five
+ordinary kills and 20 actual Space attacks, exact +15 rewards, the first
+75-EXP/+2-potion quarter and source orb, a real VIT click changing 740/760 to
+740/800 without healing, private ownership, lifecycle persistence, both real
+four-minute refresh timers, and clean browser/native engine results. Privileged
+operator success and an explicit
+selection-change replay assertion also remain pending with the unpublished local
+bootstrap fixture. Protocol 5 has not replaced the public P1 route.
+
 ## Inventory and original UI
 
 Inventory retains character-keyed `Player`, `Monster` and `Loot` state and adds
-a server-assigned account field to item rows under application protocol 4.
+a server-assigned account field to item rows under application protocol 5.
 Clients require the account tables, reducers and regenerated bindings. Publish
 the matching module before running the client; older schemas cannot satisfy
 its subscriptions. This milestone creates a separate public account database;
@@ -297,9 +381,9 @@ equipment and cooldown state survive death/reconnect; there is no player-driven
 item deletion, trading or arbitrary item/currency grant endpoint.
 
 The UI uses selected original raster artwork converted by
-`tools/import_metin_ui.py`: 196 UI images and one Yongan map assembled from 20
-original minimap tiles, using 260 pinned source files. Source resolution and
-alpha are preserved. Layout
+`tools/import_metin_ui.py`: 224 UI images and one Yongan map assembled from 20
+original minimap tiles, producing 225 images from 293 pinned source files.
+Source resolution and alpha are preserved. Layout
 references guide the 176 × 565 inventory, 37-pixel taskbar, eight visible
 quickslots and minimap. See [UI assets](ui-assets.md) for provenance and limits.
 
@@ -313,8 +397,10 @@ Original UI fidelity is a target. Entry screens use selected original art and
 a 3D warrior preview; additional classes/empires, skills and social controls
 remain inactive. The preview uses the existing wait animation rather than a
 complete original intro motion set. Font rendering and complete behavior have
-not been compared with a running original client. The inventory introduces a narrow weapon/consumable loop, not a complete original
-equipment or progression system.
+not been compared with a running original client. `C` and the character button
+open the status panel for the subscribed owner row and normal stat allocation.
+The inventory and status panel introduce bounded equipment and progression
+loops, not complete original equipment, skill or class progression systems.
 
 ## Original map and chat panels
 

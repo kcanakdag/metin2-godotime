@@ -12,9 +12,10 @@ on the VPS at `159.195.213.9`. It is updated during development and may restart.
 Account login and character selection are now implemented: username/password
 registration and sign-in, four persistent character slots, original entry-screen
 art, character previews, selection, world entry and logout. The server enforces
-character ownership and private roster/inventory reads. Two real local accounts
-pass **58 headless integration checks** for creation, ownership, movement,
-switching and reconnect. Native editor entry and return to character selection
+character ownership and private roster, inventory, progression and
+command-feedback reads. The accepted P1 checkpoint passed **94 authenticated
+server checks** for creation, ownership, movement, combat, switching and
+reconnect. Native editor entry and return to character selection
 have also been observed. The P1 development release
 `20260906T204513591109Z` is live on `mt2-p1-v4`; publication preserved account,
 key and game data, and verified the served manifest. Its public exported-gameplay
@@ -30,6 +31,25 @@ two-client lifecycle and both real refresh timers. The same checkpoint has 94
 authenticated server checks, 52 source-freeze actor checks, 30 Rust tests and
 101 Python tool tests. Export audits cover 711 Web paths, 1,514 Linux paths, all
 197 selected UI images, all 40 declared clips and all 20 Yongan section packs.
+
+The local protocol-5 P2 candidate has also produced matching Web/Linux exports
+for the fresh default-deny `mt2-p2-yongan-20260906` database. Their actual-PCK
+audits cover 795 Web paths, 1,598 Linux paths, all 225 selected UI images, all
+40 clips and all 20 isolated Yongan sections. A real exported client read back
+Yongan, the exact P2 gameplay-definition hash, nine loaded map chunks and no
+content error. A 199-check exported Chrome/Linux run verifies five ordinary
+Wild Dog kills, exact +15 XP per life, the first +2-potion quarter, the source
+Status/orb, VIT allocation without healing, state persistence through switch,
+reconnect, reload and login, and both real four-minute token refreshes. The
+report is `.local/p2/browser-positive-progression-fresh-read/report.json`. The
+separate 298-check headless report at
+`.local/p2/accounts-progression-20260907T0349.json` verifies an ordinary +15
+Wild Dog reward, the source float32 70/35 to 11/4 and 75/35 to 11/3 splits on
+separate lives, owner privacy and reconnect, all 20 ordinary kills from level 1
+to 2, quarter potions, and VIT allocation without a current-HP heal. Privileged
+operator success still awaits explicit authorization for its isolated bootstrap
+fixture. Protocol 5 remains local; this does not change the public `mt2-p1-v4`
+route.
 
 The preceding guest build, release `20260906T154235134255Z`, passed 45 public
 Chrome/Linux panel, inventory and multiplayer checks. Earlier Yongan tests also
@@ -51,8 +71,11 @@ other empires/classes, skills and social systems remain inactive. Matching
 original fonts, intro animations and complete behavior has not been established
 against a running original client. The equipped sword is projected through a
 small public presence row so peers can attach it without reading another
-account's inventory. There are no quests, leveling or full Metin2 combat
-balance. Yongan has all
+account's inventory. The bounded P2 slice adds source-backed level 1 male
+Warrior stats, experience through the level-99 cap, quarter-step stat points
+and automatic potion grants. Other classes, skills, quests, death penalties,
+party experience and full Metin2 combat/stat balance remain unimplemented.
+Yongan has all
 20 terrain sections and 601 building/prop placements; **368 trees and 6 effects
 remain unsupported**. See [the rebuild roadmap](docs/full-rebuild-plan.md).
 
@@ -137,9 +160,11 @@ still use 3210. Start `make editor` separately and press **F5**, or use the clie
 commands below. A saved editor profile may override the built-in endpoint.
 Register an account, choose the supported empire, create a character and enter.
 Game data is in `.local/spacetimedb`; account data and keys are in `.local/auth`.
-Use a new database or an explicit migration for incompatible changes. The local
-default stays `mt2-yongan-v2`; public account exports/deployment explicitly use
-`DB=mt2-p1-v4`.
+Use a new database or an explicit migration for incompatible changes. The
+Makefile's retained legacy placeholder is `mt2-yongan-v2`; current protocol-5
+development should pass a fresh explicit `DB`, such as
+`DB=mt2-p2-yongan-local`. Public P1 exports/deployment still use
+`DB=mt2-p1-v4` until a separately qualified P2 rollout.
 
 Two clients on one machine use different local profiles and separate accounts:
 
@@ -154,9 +179,11 @@ Make enables the `yongan` Cargo feature by default, requiring the ignored
 For the smaller training world, use
 `make server-publish SERVER_FEATURES= DB=mt2-training-v2` and select that database
 in both clients. Raw Cargo without `--features yongan` also selects training.
-Both variants use application protocol 4. The production default requires an
-account token. Legacy guest smoke tests need a separate module compiled with
-`MT2_ALLOW_GUESTS=1`; never enable that option in a public build.
+Both variants use application protocol 5. Protocol-4 databases do not contain
+the private progression/command-feedback tables and need a new database or an
+explicit migration before using a current client. The production default
+requires an account token. Legacy guest smoke tests need a separate module
+compiled with `MT2_ALLOW_GUESTS=1`; never enable that option in a public build.
 
 ## Play and inspect
 
@@ -173,6 +200,7 @@ account token. Legacy guest smoke tests need a separate module compiled with
 | 1–4 / F1–F4 | Activate one of the eight visible quickslots |
 | Shift+1–4 / quickslot arrows | Select a quickslot page |
 | M / minimap atlas button | Open/close the draggable original Yongan area map |
+| C / character button | Open/close the character status window and allocate earned stat points |
 | Minimap close/reopen and +/− buttons | Hide/show the minimap or change zoom |
 | L / chat-history button | Open the draggable, resizable chat log |
 | Enter | Open chat; send nonempty text and return to movement; empty Enter closes |
@@ -186,6 +214,24 @@ gold and one red potion. It can also defeat the player. Player respawn takes 8 s
 respawn takes 12. Loot is reserved for its slayer for 10 seconds and expires
 after 60. Reconnecting preserves gold, position and death state.
 
+A new supported male Warrior starts at level 1 with 6 strength, 4 vitality,
+3 dexterity, 3 intelligence, 760 HP and 260 SP. Wild Dog 101 grants 15 ordinary
+experience. At 75, 150 and 225 experience the character earns a stat point;
+300 advances it to level 2 and applies the source-backed random HP/SP growth.
+Every positive quarter step refills living characters' HP/SP and grants two
+small red potions through level 10. Later supported steps grant two medium red
+potions (`vnum=27002`); their storage and full-bag fallback are implemented,
+while consuming that later potion is deferred. Experience is authoritative and
+private to the owning account. Eligible non-party contributors share a kill's
+experience by registered damage and must remain on the same live connection and
+within the original approximate 50 m rule when the monster dies.
+
+`/help` returns private command help and never emits public chat. `/xp AMOUNT`
+and `/level TARGET` use the normal progression kernel but require a server-side
+operator capability; builds default to no authorized operators. Operator setup,
+auditing, idempotency and rate limits are documented in
+[development and admin automation](docs/rebuild/development-and-admin.md).
+
 Each character receives one sword and five potions once. The sword occupies two
 vertical bag cells and adds 10 to the base 25 attack damage when equipped.
 A potion restores up to 40 HP with a one-second server cooldown; full-health
@@ -193,10 +239,10 @@ and dead-player use is rejected. The 90 bag cells form two 5 × 9 pages, and
 potions stack to 200. Item ownership, placement, rewards and consumption belong
 to the server; quickslot assignments and window preferences are saved locally.
 
-`make import-ui` converts 196 selected original UI images and stitches Yongan's
-20 original DDS minimap tiles, using 260 pinned source files. The minimap uses
-that stitched image; the area-map window uses its separate original 171 × 214
-image. Player markers come from subscribed state. Chat uses the original
+`make import-ui` converts 224 selected original UI images and stitches Yongan's
+20 original DDS minimap tiles into image 225, using 293 pinned source files.
+The minimap uses that stitched image; the area-map window uses its separate
+original 171 × 214 image. Player markers come from subscribed state. Chat uses the original
 centered entry and fading passive lines, with normal messages still limited to
 160 characters by the server. Every exported UI texture is checked against its
 decoded source-pixel hash. See [UI assets](docs/ui-assets.md) for conversion,

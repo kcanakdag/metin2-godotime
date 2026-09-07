@@ -30,6 +30,27 @@ func _process(delta: float) -> void:
 		return
 	_elapsed = 0
 	var snapshot: Dictionary = get_parent().dev_snapshot()
+	snapshot["progression"] = _project_rows(
+		snapshot.get("progression", []),
+		[
+			"character_id",
+			"level",
+			"experience",
+			"next_exp",
+			"level_step",
+			"unspent_stat_points",
+			"strength",
+			"vitality",
+			"dexterity",
+			"intelligence",
+			"current_sp",
+			"max_sp",
+		]
+	)
+	snapshot["command_feedback"] = _project_rows(
+		snapshot.get("command_feedback", []),
+		["id", "request_id", "severity", "message", "created_at"]
+	)
 	snapshot["errors"] = _errors
 	snapshot["state_message"] = get_parent().connection.state_message
 	var actors: Array = []
@@ -61,6 +82,20 @@ func _process(delta: float) -> void:
 		if command is Dictionary and int(command.get("sequence", -1)) > _sequence:
 			_sequence = int(command.sequence)
 			_dispatch(command)
+
+
+func _project_rows(values: Variant, fields: Array[String]) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if not values is Array:
+		return result
+	for value: Variant in values:
+		if not value is Dictionary:
+			continue
+		var row: Dictionary = {}
+		for field: String in fields:
+			row[field] = value.get(field)
+		result.append(row)
+	return result
 
 
 func _web_command(args: Array) -> void:

@@ -33,6 +33,24 @@ static func tile(parent: Node, path: String, rect: Rect2) -> TextureRect:
 	return result
 
 
+static func horizontal_bar(parent: Node, rect: Rect2) -> Control:
+	const BLOCK_WIDTH := 32.0
+	var result := Control.new()
+	result.position = rect.position
+	result.size = rect.size
+	result.clip_contents = true
+	result.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(result)
+	image(result, "pattern/horizontalbar_left", Vector2.ZERO)
+	tile(
+		result,
+		"pattern/horizontalbar_center",
+		Rect2(BLOCK_WIDTH, 0, maxf(0, rect.size.x - BLOCK_WIDTH * 2), 17)
+	)
+	image(result, "pattern/horizontalbar_right", Vector2(rect.size.x - BLOCK_WIDTH, 0))
+	return result
+
+
 static func button(parent: Node, path: String, at: Vector2, action: Callable) -> TextureButton:
 	var result := TextureButton.new()
 	result.position = at
@@ -123,4 +141,11 @@ static func item_height(vnum: int) -> int:
 
 
 static func item_name(vnum: int) -> String:
-	return "Sword+0" if vnum == 10 else "Red Potion (S)"
+	match vnum:
+		10:
+			return "Sword+0"
+		27001:
+			return "Red Potion (S)"
+		27002:
+			return "Red Potion (M)"
+	return "Unknown Item"

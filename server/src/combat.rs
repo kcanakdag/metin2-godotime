@@ -1,10 +1,12 @@
 //! PvE actions, delayed hit windows, damage, death, respawn and rewards.
 use crate::definitions::{self, AttackDefinition};
+use crate::progression::{self, character_progression};
 use crate::{
-    Controller, active_controller, collision_bounds, content, controller, inventory, now_us, player,
+    Controller, active_controller, collision_bounds, content, controller, inventory, now_us,
+    player, session,
 };
 use spacetimedb::rand::Rng;
-use spacetimedb::{Identity, ReducerContext, Table};
+use spacetimedb::{ConnectionId, Identity, ReducerContext, Table};
 use std::cmp::Ordering;
 
 const PLAYER_RESPAWN_US: i64 = 8_000_000;
@@ -50,6 +52,20 @@ pub struct MonsterClock {
     pub pending_hit_at_us: i64,
     pub pending_hit_until_us: i64,
     pub pending_damage: u16,
+}
+
+#[spacetimedb::table(accessor = monster_damage)]
+#[derive(Clone)]
+pub struct MonsterDamage {
+    #[primary_key]
+    #[auto_inc]
+    pub id: u64,
+    #[index(btree)]
+    pub monster_id: u32,
+    pub monster_life_sequence: u32,
+    pub character_id: Identity,
+    pub controller_connection_id: ConnectionId,
+    pub registered_damage: u32,
 }
 
 #[spacetimedb::table(accessor = loot, public)]
@@ -354,6 +370,21 @@ pub fn resolve_player_hit(ctx: &ReducerContext, character: Identity, hit: Pendin
     }
     player.heading = (player.x - monster.x).atan2(player.z - monster.z);
     ctx.db.player().identity().update(player);
+    let controller = ctx
+        .db
+        .controller()
+        .identity()
+        .find(character)
+        .expect("a resolved player hit has an active controller");
+    record_damage(
+        ctx,
+        monster.id,
+        monster.life_sequence,
+        character,
+        controller.connection_id,
+        u32::from(hit.damage),
+    )
+    .unwrap_or_else(|error| panic!("cannot record resolved monster damage: {error}"));
     if apply_damage(&mut monster.health, hit.damage) {
         kill_monster(ctx, &mut monster, character);
     }
@@ -371,6 +402,7 @@ fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, character: Identity
         cancel_monster_hit(&mut clock);
         ctx.db.monster_clock().id().update(clock);
     }
+    award_monster_experience(ctx, monster);
     inventory::drop_potion(ctx, character, monster.x, monster.y, monster.z);
     ctx.db.loot().insert(Loot {
         id: 0,
@@ -386,6 +418,201 @@ fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, character: Identity
         reserved_until_us: now.saturating_add(LOOT_RESERVED_US),
         expires_at_us: now.saturating_add(LOOT_EXPIRES_US),
     });
+}
+
+fn record_damage(
+    ctx: &ReducerContext,
+    monster_id: u32,
+    monster_life_sequence: u32,
+    character_id: Identity,
+    controller_connection_id: ConnectionId,
+    damage: u32,
+) -> Result<(), String> {
+    if damage == 0 {
+        return Ok(());
+    }
+    let mut matching: Vec<_> = ctx
+        .db
+        .monster_damage()
+        .monster_id()
+        .filter(monster_id)
+        .filter(|row| {
+            row.monster_life_sequence == monster_life_sequence
+                && row.character_id == character_id
+                && row.controller_connection_id == controller_connection_id
+        })
+        .collect();
+    if matching.len() > 1 {
+        return Err("The monster damage ledger contains duplicate attribution rows.".into());
+    }
+    if let Some(mut row) = matching.pop() {
+        row.registered_damage = row
+            .registered_damage
+            .checked_add(damage)
+            .ok_or("Registered monster damage overflowed.")?;
+        ctx.db.monster_damage().id().update(row);
+    } else {
+        ctx.db.monster_damage().insert(MonsterDamage {
+            id: 0,
+            monster_id,
+            monster_life_sequence,
+            character_id,
+            controller_connection_id,
+            registered_damage: damage,
+        });
+    }
+    Ok(())
+}
+
+fn source_distance_approx_cm(dx_cm: i64, dz_cm: i64) -> Option<i64> {
+    let x = dx_cm.checked_abs()?;
+    let z = dz_cm.checked_abs()?;
+    let minimum = x.min(z);
+    let maximum = x.max(z);
+    maximum
+        .checked_mul(246)?
+        .checked_add(minimum.checked_mul(102)?)
+        .map(|value| value >> 8)
+}
+
+fn source_distance_between_meters(a: (f32, f32), b: (f32, f32)) -> Option<i64> {
+    let to_cm = |delta: f64| {
+        let value = (delta * 100.0).trunc();
+        if value.is_finite() && value >= i64::MIN as f64 && value <= i64::MAX as f64 {
+            Some(value as i64)
+        } else {
+            None
+        }
+    };
+    let dx = to_cm(f64::from(a.0) - f64::from(b.0))?;
+    let dz = to_cm(f64::from(a.1) - f64::from(b.1))?;
+    source_distance_approx_cm(dx, dz)
+}
+
+fn distribute_raw_experience(
+    base: u32,
+    contributions: &[(Identity, u32)],
+) -> Result<Vec<(Identity, u32)>, String> {
+    if base == 0 || contributions.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut contributions = contributions.to_vec();
+    contributions.sort_by_key(|left| left.0.to_string());
+    let total = contributions.iter().try_fold(0_u32, |sum, (_, damage)| {
+        sum.checked_add(*damage)
+            .ok_or("Eligible monster damage overflowed.")
+    })?;
+    if total == 0 {
+        return Ok(Vec::new());
+    }
+    let highest = contributions
+        .iter()
+        .enumerate()
+        .fold(0, |highest, (index, (_, damage))| {
+            if *damage > contributions[highest].1 {
+                index
+            } else {
+                highest
+            }
+        });
+    let reserve = base / 5;
+    let remainder = base - reserve;
+    let mut result = Vec::with_capacity(contributions.len());
+    let (highest_identity, highest_damage) = contributions[highest];
+    let highest_proportion = ((highest_damage as f32) / (total as f32)).min(1.0);
+    result.push((
+        highest_identity,
+        reserve + ((remainder as f32) * highest_proportion) as u32,
+    ));
+    if highest_proportion == 1.0 {
+        return Ok(result);
+    }
+    for (index, (identity, damage)) in contributions.into_iter().enumerate() {
+        if index == highest {
+            continue;
+        }
+        let proportion = ((damage as f32) / (total as f32)).min(1.0);
+        let raw = ((remainder as f32) * proportion) as u32;
+        if raw > 0 {
+            result.push((identity, raw));
+        }
+    }
+    Ok(result)
+}
+
+fn clear_monster_damage(ctx: &ReducerContext, monster_id: u32, life_sequence: u32) {
+    let ids: Vec<_> = ctx
+        .db
+        .monster_damage()
+        .monster_id()
+        .filter(monster_id)
+        .filter(|row| row.monster_life_sequence == life_sequence)
+        .map(|row| row.id)
+        .collect();
+    for id in ids {
+        ctx.db.monster_damage().id().delete(id);
+    }
+}
+
+fn award_monster_experience(ctx: &ReducerContext, monster: &Monster) {
+    let mut eligible: Vec<(Identity, u32)> = Vec::new();
+    for row in ctx
+        .db
+        .monster_damage()
+        .monster_id()
+        .filter(monster.id)
+        .filter(|row| row.monster_life_sequence == monster.life_sequence)
+    {
+        let Some(player) = ctx.db.player().identity().find(row.character_id) else {
+            continue;
+        };
+        let same_live_connection = player.online
+            && ctx
+                .db
+                .controller()
+                .identity()
+                .find(row.character_id)
+                .is_some_and(|control| {
+                    control.connection_id == row.controller_connection_id
+                        && ctx
+                            .db
+                            .session()
+                            .connection_id()
+                            .find(control.connection_id)
+                            .is_some()
+                });
+        let in_range = source_distance_between_meters((player.x, player.z), (monster.x, monster.z))
+            .is_some_and(|distance| distance <= definitions::EXP_ELIGIBILITY_DISTANCE_CM);
+        if same_live_connection
+            && in_range
+            && ctx
+                .db
+                .character_progression()
+                .character_id()
+                .find(row.character_id)
+                .is_some()
+        {
+            if let Some((_, damage)) = eligible
+                .iter_mut()
+                .find(|(identity, _)| *identity == row.character_id)
+            {
+                *damage = damage
+                    .checked_add(row.registered_damage)
+                    .unwrap_or_else(|| {
+                        panic!("eligible monster damage overflowed for one character")
+                    });
+            } else {
+                eligible.push((row.character_id, row.registered_damage));
+            }
+        }
+    }
+    let shares = distribute_raw_experience(definitions::MOB_EXPERIENCE, &eligible)
+        .unwrap_or_else(|error| panic!("cannot distribute monster experience: {error}"));
+    for (recipient, share) in shares {
+        progression::apply_combat_experience(ctx, recipient, definitions::MOB_LEVEL, share)
+            .unwrap_or_else(|error| panic!("cannot apply monster experience: {error}"));
+    }
+    clear_monster_damage(ctx, monster.id, monster.life_sequence);
 }
 
 fn apply_damage(health: &mut u16, damage: u16) -> bool {
@@ -477,6 +704,7 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) {
         if monster.health == 0 {
             if now >= monster.respawn_at_us {
                 let life_sequence = monster.life_sequence.wrapping_add(1);
+                clear_monster_damage(ctx, monster.id, monster.life_sequence);
                 ctx.db
                     .monster()
                     .id()
@@ -823,5 +1051,54 @@ mod tests {
         assert!(apply_damage(&mut health, 35));
         assert_eq!(health, 0);
         assert!(!apply_damage(&mut health, 35));
+    }
+
+    #[test]
+    fn no_party_split_preserves_overkill_and_unassigned_float_remainder() {
+        let high = Identity::from_claims("test", "high");
+        let low = Identity::from_claims("test", "low");
+        let shares = distribute_raw_experience(15, &[(low, 35), (high, 75)]).unwrap();
+        assert_eq!(shares.iter().find(|row| row.0 == high).unwrap().1, 11);
+        assert_eq!(shares.iter().find(|row| row.0 == low).unwrap().1, 3);
+        assert_eq!(shares.iter().map(|row| row.1).sum::<u32>(), 14);
+    }
+
+    #[test]
+    fn no_party_tie_uses_stable_identity_order_and_single_contributor_gets_all() {
+        let first = Identity::from_claims("test", "a");
+        let second = Identity::from_claims("test", "b");
+        let expected_high = [first, second]
+            .into_iter()
+            .min_by_key(|identity| identity.to_string())
+            .unwrap();
+        let tied = distribute_raw_experience(15, &[(second, 50), (first, 50)]).unwrap();
+        assert_eq!(tied.iter().find(|row| row.0 == expected_high).unwrap().1, 9);
+        assert_eq!(tied.iter().map(|row| row.1).sum::<u32>(), 15);
+        assert_eq!(
+            distribute_raw_experience(15, &[(first, 110)]).unwrap(),
+            [(first, 15)]
+        );
+        assert_eq!(
+            distribute_raw_experience(15, &[(first, u32::MAX - 1), (second, 1)]).unwrap(),
+            [(first, 15)]
+        );
+    }
+
+    #[test]
+    fn source_approximate_distance_keeps_exact_boundary_and_rejects_invalid_positions() {
+        assert_eq!(source_distance_approx_cm(5_204, 0), Some(5_000));
+        assert_eq!(source_distance_approx_cm(5_205, 0), Some(5_001));
+        assert!(
+            source_distance_between_meters((0.0, 0.0), (52.03, 0.0)).unwrap()
+                <= definitions::EXP_ELIGIBILITY_DISTANCE_CM
+        );
+        assert!(
+            source_distance_between_meters((0.0, 0.0), (52.06, 0.0)).unwrap()
+                > definitions::EXP_ELIGIBILITY_DISTANCE_CM
+        );
+        assert_eq!(
+            source_distance_between_meters((f32::NAN, 0.0), (0.0, 0.0)),
+            None
+        );
     }
 }

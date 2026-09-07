@@ -3,7 +3,10 @@
 
 const AccountCharacter = preload('res://spacetime_bindings/schema/types/game_account_character.gd')
 const AccountState = preload('res://spacetime_bindings/schema/types/game_account_state.gd')
+const AdminLevelRoll = preload('res://spacetime_bindings/schema/types/game_admin_level_roll.gd')
+const CharacterProgression = preload('res://spacetime_bindings/schema/types/game_character_progression.gd')
 const ChatMessage = preload('res://spacetime_bindings/schema/types/game_chat_message.gd')
+const CommandFeedback = preload('res://spacetime_bindings/schema/types/game_command_feedback.gd')
 const InventoryAccess = preload('res://spacetime_bindings/schema/types/game_inventory_access.gd')
 const InventoryItem = preload('res://spacetime_bindings/schema/types/game_inventory_item.gd')
 const ItemDrop = preload('res://spacetime_bindings/schema/types/game_item_drop.gd')

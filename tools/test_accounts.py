@@ -60,7 +60,7 @@ class AuthClient:
                 value = json.load(response)
                 signed_session = response.headers.get("set-auth-token", "")
         except urllib.error.HTTPError as error:
-            retry = error.headers.get("X-Retry-After")
+            retry = error.headers.get("Retry-After") or error.headers.get("X-Retry-After")
             suffix = f"; retry after {retry} seconds" if retry and retry.isdigit() else ""
             raise RuntimeError(f"Auth {path} returned HTTP {error.code}{suffix}.") from None
         except (OSError, ValueError) as error:
@@ -96,6 +96,18 @@ class AuthClient:
             raise RuntimeError("Auth /auth/token returned an invalid game credential format.")
         return token
 
+    def game_token(self, session_index: int) -> str:
+        value, replacement = self.request("/auth/token", session=self.sessions[session_index])
+        if replacement:
+            self.sessions[session_index] = replacement
+        if not isinstance(value, dict) or not isinstance(value.get("token"), str):
+            raise RuntimeError("Auth /auth/token omitted the renewed game credential.")
+        token = value["token"]
+        if not JWT_PATTERN.fullmatch(token):
+            raise RuntimeError("Auth /auth/token returned an invalid renewed credential format.")
+        self.secrets.append(token)
+        return token
+
     def logout(self) -> bool:
         successful = True
         for session in self.sessions:
@@ -114,6 +126,8 @@ def stage_project(stage: Path) -> None:
         "scripts/net/game_connection.gd",
         "tests/account_smoke.gd",
         "tests/multiplayer_smoke.gd",
+        "tests/progression_combat_smoke.gd",
+        "tests/progression_shared_smoke.gd",
     ):
         destination = stage / filename
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -153,6 +167,22 @@ def run_godot(
     return output
 
 
+def merge_subreport(report: dict, subreport: Path, prefix: str, report_path: Path) -> None:
+    """Persist completed checks even when a later progression process fails."""
+    if not subreport.is_file():
+        return
+    result = json.loads(subreport.read_text())
+    report["checks"].extend(
+        {
+            "name": f"{prefix}_{check['name']}",
+            "passed": check["passed"],
+        }
+        for check in result.get("checks", [])
+    )
+    report["passed"] = bool(report["checks"]) and all(check["passed"] for check in report["checks"])
+    report_path.write_text(json.dumps(report, indent=2) + "\n")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--server", default="http://127.0.0.1:3210")
@@ -163,6 +193,11 @@ def main() -> None:
     parser.add_argument("--database", default="mt2-yongan-v2")
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument("--report", type=Path, default=ROOT / ".local/accounts-report.json")
+    parser.add_argument(
+        "--progression",
+        action="store_true",
+        help="Continue ordinary authenticated Wild Dog kills through level 2.",
+    )
     options = parser.parse_args()
     report_path = options.report.resolve()
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -206,10 +241,14 @@ def main() -> None:
                 "--dap-port",
                 "6166",
             )
-            for script, label in (
+            scripts = [
                 ("spacetime_bindings/schema/module_game_client.gd", "bindings"),
                 ("tests/account_smoke.gd", "smoke"),
-            ):
+            ]
+            if options.progression:
+                scripts.append(("tests/progression_combat_smoke.gd", "progression"))
+                scripts.append(("tests/progression_shared_smoke.gd", "shared"))
+            for script, label in scripts:
                 run_godot(
                     options.godot,
                     stage,
@@ -268,6 +307,77 @@ def main() -> None:
             report = json.loads(report_path.read_text())
             if not report.get("passed") or "MT2_MULTIPLAYER_SMOKE PASS" not in output:
                 raise RuntimeError(f"Godot account checks failed; report: {report_path}")
+            if options.progression:
+                shared_report = stage / "progression-shared.json"
+                with fixture.open("w") as handle:
+                    json.dump(
+                        {
+                            "server": game_server,
+                            "database": options.database,
+                            "tokens": [auth.game_token(0), auth.game_token(1)],
+                            "report": str(shared_report),
+                        },
+                        handle,
+                    )
+                try:
+                    shared_output = run_godot(
+                        options.godot,
+                        stage,
+                        auth,
+                        report_path.with_suffix(".progression-shared.log"),
+                        "--script",
+                        "res://tests/progression_shared_smoke.gd",
+                        "--",
+                        "--progression-config",
+                        str(fixture),
+                        timeout=90,
+                    )
+                finally:
+                    merge_subreport(report, shared_report, "progression_shared", report_path)
+                shared = json.loads(shared_report.read_text())
+                if not shared.get("passed") or "MT2_MULTIPLAYER_SMOKE PASS" not in shared_output:
+                    raise RuntimeError(f"Godot shared progression failed; report: {shared_report}")
+                for target_kills in (5, 10, 15, 20):
+                    segment_report = stage / f"progression-{target_kills}.json"
+                    with fixture.open("w") as handle:
+                        json.dump(
+                            {
+                                "server": game_server,
+                                "database": options.database,
+                                "token": auth.game_token(0),
+                                "target_kills": target_kills,
+                                "report": str(segment_report),
+                            },
+                            handle,
+                        )
+                    try:
+                        segment_output = run_godot(
+                            options.godot,
+                            stage,
+                            auth,
+                            report_path.with_suffix(f".progression-{target_kills}.log"),
+                            "--script",
+                            "res://tests/progression_combat_smoke.gd",
+                            "--",
+                            "--progression-config",
+                            str(fixture),
+                            timeout=120,
+                        )
+                    finally:
+                        merge_subreport(
+                            report,
+                            segment_report,
+                            f"progression_{target_kills}",
+                            report_path,
+                        )
+                    segment = json.loads(segment_report.read_text())
+                    if (
+                        not segment.get("passed")
+                        or "MT2_MULTIPLAYER_SMOKE PASS" not in segment_output
+                    ):
+                        raise RuntimeError(
+                            f"Godot progression segment failed; report: {segment_report}"
+                        )
             print(
                 f"Verified {len(report['checks'])} account/multiplayer checks; report: {report_path}"
             )
