@@ -197,11 +197,58 @@ func _test_player() -> void:
 		player.position.distance_to(combo_1_position) < 0.001,
 		"combo presentation accumulation does not move the server actor root"
 	)
+	var combo_3 := _catalog.motion(
+		ActorCatalog.WARRIOR_ID, "", "actor.player.warrior-male.onehand.combo_3"
+	)
+	var combo_3_start_us := 4_150_000
+	row.attack_sequence = 7
+	row.attack_action_id = str(combo_3.action_id)
+	row.action_started_at_us = combo_3_start_us
+	row.action_ends_at_us = combo_3_start_us + int(combo_3.duration_us)
+	player.apply_state(row, true, appearance, combo_3_start_us + 310_000)
+	state = player.presentation_snapshot()
+	_check(
+		state.action_id == combo_3.action_id and state.sequence == 7 and state.attack_sequence == 7,
+		"subscribed combo step 3 action ID and sequence replace step 2"
+	)
+	_check(
+		absf(float(state.animation_position) - 0.31) < 0.08,
+		"subscribed combo step 3 seeks only from its authoritative start time"
+	)
+	var combo_3_static_position := player.position
+	var presentation_local_position: Array = state.presentation_local_position.duplicate()
+	var model_local_position: Array = state.model_local_position.duplicate()
+	await create_timer(0.08).timeout
+	_check(
+		player.position.distance_to(combo_3_static_position) < 0.001,
+		"combo step 3 clip does not translate an unchanged subscribed actor root"
+	)
+	var subscribed_root_delta := Vector3(0.6, 0.0, -0.8)
+	row.x = float(row.x) + subscribed_root_delta.x
+	row.z = float(row.z) + subscribed_root_delta.z
+	player.apply_state(row, true, appearance, combo_3_start_us + 390_000)
+	_check(
+		player.server_position.is_equal_approx(combo_3_static_position + subscribed_root_delta),
+		"combo step 3 receives its authoritative displacement only from subscribed coordinates"
+	)
+	await create_timer(0.4).timeout
+	state = player.presentation_snapshot()
+	_check(
+		player.position.distance_to(player.server_position) < 0.01,
+		"rendered actor converges once on the subscribed displaced root"
+	)
+	_check(
+		(
+			state.presentation_local_position == presentation_local_position
+			and state.model_local_position == model_local_position
+		),
+		"authoritative actor travel leaves presentation and imported model offsets unchanged"
+	)
 	row.activity = 0
 	row.action_started_at_us = 0
 	row.action_ends_at_us = 0
 	appearance = _appearance(0)
-	player.apply_state(row, true, appearance, 4_150_000)
+	player.apply_state(row, true, appearance, 5_300_000)
 	_check(not player.presentation_snapshot().equipment_attached, "unequipped sword is removed")
 	row.health = 70
 	player.apply_state(row, true, appearance, 2_200_000)

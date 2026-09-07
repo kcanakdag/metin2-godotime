@@ -1523,6 +1523,46 @@
                 },
                 {
                   "algebraic_type": {
+                    "U8": []
+                  },
+                  "name": {
+                    "some": "root_motion_step"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U64": []
+                  },
+                  "name": {
+                    "some": "root_motion_action_revision"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "root_motion_started_at_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "root_motion_consumed_elapsed_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "root_motion_heading"
+                  }
+                },
+                {
+                  "algebraic_type": {
                     "I64": []
                   },
                   "name": {

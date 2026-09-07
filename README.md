@@ -84,6 +84,37 @@ evidence uses authorized local instrumented exports; it does not qualify the
 public route, normal exports, current Windows execution, original-client parity
 or the remaining P2 scope.
 
+The bounded local protocol-8 third-combo/root-motion Slice C is accepted. It adds
+the third common Sword+0 combo action and server-authoritative horizontal
+displacement for all three actions. The server publishes each accepted action
+and resulting position; local and remote actors follow those subscribed rows
+without applying animation root displacement themselves. The interim trajectory
+policy is a linear approximation of the three pinned GR2 endpoints in fixed
+50 ms physical quanta, with collision and exact terminal remainders enforced by
+the server. Each accepted action keeps its captured heading through hit
+resolution; a later action may capture a new heading.
+
+The final 297-check run with hardware-accelerated Chrome and an exported Linux
+client verifies browser-origin and native-origin three-step chains, exact
+100→65→30→0 Wild Dog health, source-window receipts, same-life target renewal,
+constant action headings and authoritative root travel on both clients. It also
+verifies queue cancellation by WASD, ground movement and target clear while the
+accepted root continues, lethal-hit root completion, zero reconnect
+displacement, 0.921997 m travel clipped by an authored Yongan wall, both real
+four-minute refreshes and no browser engine errors. Root reviewed both final
+step-3 captures. See the
+[297-check exported report](.local/p2-rootmotion/revision2/browser-root-lifecycle-20260907/report.json)
+and [root acceptance review](.local/p2-rootmotion/root-acceptance-review.json).
+The revision-2 live headless run separately passes 91 checks, including the
+attacker traveling past its target before the hit, authoritative root endpoints
+and collision, cancellation, target death and disconnect without replay; see
+the [headless report](.local/p2-rootmotion/revision2/headless-root-20260907.json).
+The current generated actor manifest also passes the isolated
+[77-check actor smoke](.local/p2-rootmotion/revision2/client-actors-current-local-sockets/report.json).
+This evidence uses authorized local instrumented exports. It does not qualify
+the public route, normal exports, current Windows execution, editor MCP behavior,
+full P2 behavior or original Granny within-cycle and transition-blend parity.
+
 The preceding guest build, release `20260906T154235134255Z`, passed 45 public
 Chrome/Linux panel, inventory and multiplayer checks. Earlier Yongan tests also
 verified terrain appearance, combat, loot, both respawns and database-container
@@ -214,9 +245,9 @@ commands below. A saved editor profile may override the built-in endpoint.
 Register an account, choose the supported empire, create a character and enter.
 Game data is in `.local/spacetimedb`; account data and keys are in `.local/auth`.
 Use a new database or an explicit migration for incompatible changes. The
-Makefile's retained legacy placeholder is `mt2-yongan-v2`; current protocol-7
+Makefile's retained legacy placeholder is `mt2-yongan-v2`; current protocol-8
 development should pass a fresh explicit `DB`, such as
-`DB=mt2-p2-combo-yongan-local`. Public P1 exports/deployment still use
+`DB=mt2-p2-rootmotion-yongan-local`. Public P1 exports/deployment still use
 `DB=mt2-p1-v4` until a separately qualified P2 rollout.
 
 Two clients on one machine use different local profiles and separate accounts:
@@ -232,7 +263,7 @@ Make enables the `yongan` Cargo feature by default, requiring the ignored
 For the smaller training world, use
 `make server-publish SERVER_FEATURES= DB=mt2-training-v2` and select that database
 in both clients. Raw Cargo without `--features yongan` also selects training.
-Both variants use application protocol 7. Earlier databases do not contain all
+Both variants use application protocol 8. Earlier databases do not contain all
 private progression, command-feedback, and combat-target tables and need a new
 database or an explicit migration before using a current client. The production
 default requires an account token. Legacy guest smoke tests need a separate module
@@ -246,7 +277,7 @@ compiled with `MT2_ALLOW_GUESTS=1`; never enable that option in a public build.
 | Left click living monster | Request selection of that exact subscribed monster generation |
 | WASD / arrows | Move relative to the camera |
 | Right mouse drag; wheel | Orbit; zoom |
-| Space | Attack the selected exact monster, or the nearest valid enemy when no target is selected; Sword+0 accepts one server-timed follow-up step |
+| Space | Attack the selected exact monster, or the nearest valid enemy when no target is selected; Sword+0 accepts the current three-step server-timed prefix |
 | E / Z | Collect nearby gold/items with server distance/ownership validation |
 | I / Inventory button | Open the two-page inventory |
 | Item left click, then destination; drag/drop | Carry or move an item between valid bag/equipment/quickslot locations |
@@ -272,13 +303,16 @@ actually nearest to the camera ray. Buildings without a client collider cannot
 visually occlude a target proxy, while server movement blocking remains
 authoritative.
 
-With Sword+0 equipped, a second Space during the source-defined input window
-requests the bounded `combo_2` link. The server alone schedules and publishes
-that transition; both clients keep presenting `combo_1` until its subscribed
-action row changes. An accepted movement intent or target clear cancels a queued
-link, while renewing the same exact target preserves it. Physical movement
-still resumes only after the current attack window. A targetless or missed
-chain may animate both accepted steps without inventing damage or a new target.
+With Sword+0 equipped, a second or third Space during the current action's
+source-defined input window requests the next link through `combo_3`. The server
+alone schedules and publishes each transition; both clients keep presenting the
+current action until its subscribed row changes. An accepted movement intent or
+target clear cancels a queued link, while renewing the same exact target
+preserves it. The current accepted action's authoritative root travel and hit
+continue after those queue cancellations; stored ordinary locomotion begins
+after the attack hold ends. Target death clears future links but the lethal
+action continues its root travel through clip end. A targetless or missed chain
+may animate and travel without inventing damage or a new selection.
 
 Approach the Wild Dog near the town spawn, attack it, and collect its
 gold and one red potion. It can also defeat the player. Player respawn takes 8 seconds; monster
@@ -411,7 +445,7 @@ client/scripts/net/          SDK, identity and subscription boundary
 client/scripts/actors/       Warrior, monster and loot presentation
 client/scripts/world/        Training ground and streamed Yongan sections
 client/scripts/ui/           Original taskbar/inventory/minimap, chat and diagnostics
-client/spacetime_bindings/   Generated protocol-7 schema and provenance
+client/spacetime_bindings/   Generated protocol-8 schema and provenance
 client/addons/SpacetimeDB/   Pinned runtime SDK
 client/addons/godot_mcp/     Editor tooling, excluded from exports
 server/src/                 Identity, movement, map content and combat rules

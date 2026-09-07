@@ -116,9 +116,21 @@ func apply_state(
 
 func presentation_snapshot() -> Dictionary:
 	var result: Dictionary = _presentation.snapshot() if is_instance_valid(_presentation) else {}
+	var presentation_local: Vector3 = (
+		_presentation.position if is_instance_valid(_presentation) else Vector3.ZERO
+	)
+	var model_local: Vector3 = (
+		_presentation.model.position
+		if is_instance_valid(_presentation) and is_instance_valid(_presentation.model)
+		else Vector3.ZERO
+	)
 	result["identity"] = identity
 	result["visible"] = is_instance_valid(_presentation) and _presentation.visible
 	result["server_position"] = [server_position.x, server_position.y, server_position.z]
+	result["presentation_local_position"] = [
+		presentation_local.x, presentation_local.y, presentation_local.z
+	]
+	result["model_local_position"] = [model_local.x, model_local.y, model_local.z]
 	result["attack_sequence"] = int(row.get("attack_sequence", 0))
 	return result
 

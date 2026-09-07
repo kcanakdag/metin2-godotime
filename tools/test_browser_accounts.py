@@ -147,12 +147,12 @@ def main() -> None:
     parser.add_argument(
         "--targeting",
         action="store_true",
-        help="Exercise protocol-7 target picking, private UI, effects, combat, and cleanup",
+        help="Exercise protocol-8 target picking, private UI, effects, combat, and cleanup",
     )
     parser.add_argument(
         "--combo",
         action="store_true",
-        help="Exercise both exported clients' server-timed two-step Sword+0 combo",
+        help="Exercise both exported clients' server-timed three-step Sword+0 combo and root travel",
     )
     parser.add_argument(
         "--progression-combat",

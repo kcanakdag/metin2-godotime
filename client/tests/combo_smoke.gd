@@ -1,5 +1,5 @@
 extends "res://tests/account_smoke.gd"
-## Two authenticated clients exercise the bounded server-owned Sword+0 combo link.
+## Two authenticated clients exercise the accepted two-step combo behavior on protocol 8.
 
 const COMBO_ONE := "actor.player.warrior-male.onehand.combo_1"
 const COMBO_TWO := "actor.player.warrior-male.onehand.combo_2"
@@ -83,9 +83,9 @@ func _enter_combo_fixture(
 	):
 		return false
 	return _check(
-		"protocol_seven_definition",
+		"protocol_eight_definition",
 		(
-			int(actor.world_info.get("protocol_version", 0)) == 7
+			int(actor.world_info.get("protocol_version", 0)) == 8
 			and str(actor.world_info.get("definition_hash", "")) == _expected_definition_hash
 			and actor.world_info == observer.world_info
 		)

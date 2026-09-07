@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the bounded Sword+0 combo through two authenticated Godot clients."""
+"""Exercise the three-step Sword+0 combo and authoritative roots with two clients."""
 
 from __future__ import annotations
 
@@ -46,7 +46,9 @@ def main() -> None:
     parser.add_argument("--game-server")
     parser.add_argument("--database", required=True)
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
-    parser.add_argument("--report", type=Path, default=ROOT / ".local/p2-combo/combo-report.json")
+    parser.add_argument(
+        "--report", type=Path, default=ROOT / ".local/p2-rootmotion/combo-report.json"
+    )
     options = parser.parse_args()
     if not options.database.startswith("mt2-p2-"):
         raise RuntimeError("Combo smoke requires a disposable mt2-p2- database.")
@@ -66,17 +68,20 @@ def main() -> None:
             "combo_step",
             "combo_chain_revision",
             "pending_attack_action_revision",
+            "root_motion_started_at_us",
             "perform_attack",
             "combat_target_view",
         )
         if any(name not in schema for name in required_schema):
-            raise RuntimeError("The selected database does not expose the protocol 7 combo schema.")
+            raise RuntimeError("The selected database does not expose the protocol 8 combo schema.")
         definition_hash = trusted_definition_hash()
-        with tempfile.TemporaryDirectory(prefix="combos-", dir=ROOT / ".local") as scratch:
+        with tempfile.TemporaryDirectory(prefix="root-motion-", dir=ROOT / ".local") as scratch:
             stage = Path(scratch)
             stage_project(stage)
             combo_script = Path("tests/combo_smoke.gd")
-            (stage / combo_script).write_bytes((ROOT / "client" / combo_script).read_bytes())
+            root_script = Path("tests/root_motion_smoke.gd")
+            for script in (combo_script, root_script):
+                (stage / script).write_bytes((ROOT / "client" / script).read_bytes())
             run_godot(
                 options.godot,
                 stage,
@@ -93,6 +98,7 @@ def main() -> None:
             for script, label in (
                 ("spacetime_bindings/schema/module_game_client.gd", "bindings"),
                 ("tests/combo_smoke.gd", "smoke"),
+                ("tests/root_motion_smoke.gd", "root-motion-smoke"),
             ):
                 run_godot(
                     options.godot,
@@ -127,11 +133,11 @@ def main() -> None:
                     auth,
                     report_path.with_suffix(".log"),
                     "--script",
-                    "res://tests/combo_smoke.gd",
+                    "res://tests/root_motion_smoke.gd",
                     "--",
                     "--account-config",
                     str(fixture),
-                    timeout=180,
+                    timeout=240,
                 )
             finally:
                 if private_report.is_file():

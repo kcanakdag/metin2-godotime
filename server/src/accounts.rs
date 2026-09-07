@@ -448,6 +448,7 @@ pub fn stop_character(ctx: &ReducerContext, character: Identity) {
         control.attack_until_us = 0;
         crate::combat::cancel_player_attack(&mut control);
         crate::combo::clear_chain(&mut control);
+        crate::root_motion::clear(&mut control);
         crate::targeting::clear_character_target(ctx, &mut control)
             .unwrap_or_else(|error| panic!("cannot clear stopped character target: {error}"));
         ctx.db.controller().identity().update(control);

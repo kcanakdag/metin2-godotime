@@ -5,6 +5,31 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Current project overview
+
+The current local build is a playable, bounded shared-Yongan vertical slice.
+Authenticated accounts can create and select characters, enter the same map,
+see and move with each other, use the selected original Warrior, Sword+0, Wild
+Dog, Yongan and classic-UI assets, manage the connected inventory/equipment
+subset, fight and respawn through server-owned PvE, gain and allocate the
+implemented progression, select an exact private target, and play the common
+three-step one-hand combo with authoritative root displacement. These are
+integrated slices of their catalog systems; they are not complete versions of
+the original game.
+
+Current P2 work is qualified on isolated local default-deny databases. The
+protocol-8 combo/root-motion Slice C has accepted server, headless and package
+evidence plus a 297-check instrumented Web/Linux gameplay run. The public route
+remains the older protocol-4 `mt2-p1-v4` checkpoint; its HTTP availability was
+verified, but it does not expose or qualify the local P2 progression, targeting,
+combo or root-motion work.
+
+Full P0 definition coverage and the full P1 content/motion factory remain
+incomplete. The broader P3 through P10 systems are still pending. The 194
+feature records across 41 systems are a scope inventory with different sizes,
+dependencies and acceptance criteria, so their record counts do not support a
+meaningful percentage-complete claim.
+
 ## Scope retained
 
 At `8b3ecd3`, the canonical plan contains **194 feature records across 41
@@ -37,9 +62,10 @@ must never grant a weapon, a stat change, or an action.
 Owners are execution roles for assignment and handoff. These statuses accept one
 bounded local fixture; they do not mark the full P0/P1 catalog phases complete.
 
-## Current P1 artifact evidence
+## Historical P1 checkpoint artifact evidence
 
-The generated `p0-warrior-dog` manifest currently records source-content hash
+At the P1 checkpoint, the generated `p0-warrior-dog` manifest recorded
+source-content hash
 `c43d781897983618ae669121a5eda067ec2f309a522c2326030c4e0d8a3e5a37`,
 gameplay-definition hash
 `44b8f276a6dc3bf566886f898f30aa3359b72be7dabe644c59d0a9dbb8226c69`,
@@ -347,6 +373,79 @@ fixture gates and retain exact reducer receipt assertions. Normal exports omit
 the fixed-input probe and were not exercised. Public Slice B gameplay/deployment,
 Windows, Godot MCP, original-client parity, later combo steps, root motion, full
 P2 and the full game remain incomplete.
+
+## Protocol 8 combo/root-motion Slice C
+
+The current local implementation extends the trusted common male-Warrior
+Sword+0 prefix through `combo_3`. Schema 4 derives all three action records,
+their input windows and exact raw-GR2 root endpoints from pinned content. The
+server retains the argument-free attack intent, private checked chain/action/root
+state and the existing public player position/action projection. No client
+timing or transform becomes authoritative. A root-enabled action keeps its
+captured public heading through its hit instead of turning toward the target at
+hit time; rootless attacks preserve the established target-facing behavior.
+
+Root displacement uses the documented `linear-endpoint-approx-v1` policy with
+f64 cumulative endpoint fractions, bounded action-relative 50 ms samples and
+the existing f32 terrain/sweep path. Queue-only input does not create a physics
+sample. Accepted replacement flushes only its outgoing partial interval;
+collision-clipped distance is consumed. Pending hits, future links and current
+root state remain separate so target death and cancellation cannot rewrite the
+accepted current action, while character/account lifecycle clears residual
+movement with no reconnect catch-up. Exact Granny curve and blend behavior is
+still a fidelity gap.
+
+The isolated server suite passes 67 training and 72 all-feature gameplay tests,
+five build-boundary tests and one generated-definition test per configuration;
+all-target/all-feature clippy passes with warnings denied. Training, dual and
+Yongan default-deny artifacts and fresh database identities are bound by
+`.local/p2-rootmotion/revision2/build-manifest-root.json` and
+`.local/p2-rootmotion/revision2/publication-root.json`. The gameplay definition
+hash is
+`2f096ae82998eeecb839df391a7350f8309e477a7004ef4c2e333167bc4ada8d`.
+The composed two-account revision-2 headless run passed 91 checks in
+`.local/p2-rootmotion/revision2/headless-root-20260907.json`. Its normal authenticated
+paths cover three-step targetless/far-missed/selected chains, exact
+`100 -> 65 -> 30 -> 0` damage, open-terrain endpoints within 0.97--11.44
+micrometres, training-stone clipping, current-root continuation through target
+death and equipment cancellation, and disconnect/reconnect without catch-up.
+Its crossed-target case holds the captured and post-hit headings at
+`-1.57207345962524` while the superseded hit-time target bearing differs by pi.
+Root's independent binding is
+`.local/p2-rootmotion/revision2/root-headless-acceptance.json`. The original
+88-check report remains preserved under `.local/p2-rootmotion/` as historical
+evidence superseded by revision 2.
+The reviewed revision-2 test-probe Web/Linux package audit is
+`.local/p2-rootmotion/revision2/exports-root-reviewed.json` (832/1,635 paths,
+226 UI images, three actors, 40 clips, 20 Web world sections and two 11-frame
+target effects). The matching exact-manifest actor regression passes 77 checks
+in `.local/p2-rootmotion/revision2/client-actors-current-local-sockets/report.json`,
+and the fresh dual-target regression passes 51 checks in
+`.local/p2-rootmotion/revision2/targets-root-20260907.json`.
+
+The matching exported Web/Linux gameplay run passed 297 checks in
+`.local/p2-rootmotion/revision2/browser-root-lifecycle-20260907/report.json`.
+Both clients observed `100 -> 65 -> 30 -> 0`, all three public/rendered action
+steps, renewal before both transitions and constant per-action heading. Maximum
+linear endpoint error was 0.452 mm. The cancellation matrix preserved each
+current hit/root while canceling its queued link, disconnect/reconnect added no
+movement, and both clients agreed on the Yongan wall's clipped 0.92199707 m
+travel. Both real four-minute refresh timers passed; 52 Web and 51 native
+position samples had zero drift, with transient pending rows only during
+lifecycle changes. No browser engine errors or native engine-log errors were
+observed; the intentional ownership rejection remains recorded.
+
+The focused client component report passes 66 checks and the Python tooling
+suite passes 148. Together with the 91-check headless run, 51-check target and
+77-check current-manifest actor regressions, the 67/72 Rust gameplay suites,
+five build-boundary tests and one generated-definition test, this evidence is
+bound by `.local/p2-rootmotion/root-acceptance-review.json`.
+
+The bounded local instrumented protocol-8 Slice C is accepted. Public Slice C
+gameplay/deployment, normal exports without the fixed-input probe, Windows,
+current Godot MCP inspection, exact Granny within-cycle/transition-blend and
+original-client trajectory parity, terminal step 4, skills, full P2 and the full
+game remain incomplete.
 
 ## Required QA evidence
 

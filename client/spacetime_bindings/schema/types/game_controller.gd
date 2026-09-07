@@ -41,6 +41,11 @@ const table_names: Array[String] = []
 @export var combo_equipped_vnum: int
 @export var combo_link_queued: bool
 @export var combo_transition_boundary_us: int
+@export var root_motion_step: int
+@export var root_motion_action_revision: int
+@export var root_motion_started_at_us: int
+@export var root_motion_consumed_elapsed_us: int
+@export var root_motion_heading: float
 @export var next_chat_us: int
 
 #BSATN metadata
@@ -81,6 +86,11 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"combo_equipped_vnum": "U32",
 	"combo_link_queued": "Bool",
 	"combo_transition_boundary_us": "I64",
+	"root_motion_step": "U8",
+	"root_motion_action_revision": "U64",
+	"root_motion_started_at_us": "I64",
+	"root_motion_consumed_elapsed_us": "I64",
+	"root_motion_heading": "F32",
 	"next_chat_us": "I64"
 }
 
@@ -119,8 +129,13 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 ## 33. combo_equipped_vnum: int[br]
 ## 34. combo_link_queued: bool[br]
 ## 35. combo_transition_boundary_us: int[br]
-## 36. next_chat_us: int[br]
-static func create(p_identity: PackedByteArray, p_connection_id: PackedByteArray, p_direction_x: float, p_direction_z: float, p_target_x: float, p_target_z: float, p_mode: int, p_last_input_us: int, p_attack_until_us: int, p_next_attack_us: int, p_action_revision: int, p_pending_attack_target_id: int, p_pending_attack_target_generation: int, p_pending_attack_hit_at_us: int, p_pending_attack_hit_until_us: int, p_pending_attack_damage: int, p_pending_attack_range: float, p_pending_attack_target_revision: int, p_pending_attack_can_select_target: bool, p_pending_attack_action_revision: int, p_combat_target_id: int, p_combat_target_life_sequence: int, p_combat_target_change_not_before_us: int, p_combat_target_revision: int, p_combo_step: int, p_combo_chain_revision: int, p_combo_action_started_at_us: int, p_combo_action_ends_at_us: int, p_combo_target_id: int, p_combo_target_life_sequence: int, p_combo_target_can_be_selected: bool, p_combo_equipped_item_id: int, p_combo_equipped_vnum: int, p_combo_link_queued: bool, p_combo_transition_boundary_us: int, p_next_chat_us: int) -> GameController:
+## 36. root_motion_step: int[br]
+## 37. root_motion_action_revision: int[br]
+## 38. root_motion_started_at_us: int[br]
+## 39. root_motion_consumed_elapsed_us: int[br]
+## 40. root_motion_heading: float[br]
+## 41. next_chat_us: int[br]
+static func create(p_identity: PackedByteArray, p_connection_id: PackedByteArray, p_direction_x: float, p_direction_z: float, p_target_x: float, p_target_z: float, p_mode: int, p_last_input_us: int, p_attack_until_us: int, p_next_attack_us: int, p_action_revision: int, p_pending_attack_target_id: int, p_pending_attack_target_generation: int, p_pending_attack_hit_at_us: int, p_pending_attack_hit_until_us: int, p_pending_attack_damage: int, p_pending_attack_range: float, p_pending_attack_target_revision: int, p_pending_attack_can_select_target: bool, p_pending_attack_action_revision: int, p_combat_target_id: int, p_combat_target_life_sequence: int, p_combat_target_change_not_before_us: int, p_combat_target_revision: int, p_combo_step: int, p_combo_chain_revision: int, p_combo_action_started_at_us: int, p_combo_action_ends_at_us: int, p_combo_target_id: int, p_combo_target_life_sequence: int, p_combo_target_can_be_selected: bool, p_combo_equipped_item_id: int, p_combo_equipped_vnum: int, p_combo_link_queued: bool, p_combo_transition_boundary_us: int, p_root_motion_step: int, p_root_motion_action_revision: int, p_root_motion_started_at_us: int, p_root_motion_consumed_elapsed_us: int, p_root_motion_heading: float, p_next_chat_us: int) -> GameController:
 	var result: GameController = GameController.new()
 	result.identity = p_identity
 	result.connection_id = p_connection_id
@@ -157,5 +172,10 @@ static func create(p_identity: PackedByteArray, p_connection_id: PackedByteArray
 	result.combo_equipped_vnum = p_combo_equipped_vnum
 	result.combo_link_queued = p_combo_link_queued
 	result.combo_transition_boundary_us = p_combo_transition_boundary_us
+	result.root_motion_step = p_root_motion_step
+	result.root_motion_action_revision = p_root_motion_action_revision
+	result.root_motion_started_at_us = p_root_motion_started_at_us
+	result.root_motion_consumed_elapsed_us = p_root_motion_consumed_elapsed_us
+	result.root_motion_heading = p_root_motion_heading
 	result.next_chat_us = p_next_chat_us
 	return result

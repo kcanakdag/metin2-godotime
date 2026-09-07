@@ -5,7 +5,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 mod build_combo;
-use build_combo::{ComboInput, MOB_ACTION_ID, PLAYER_COMBO_ACTION_IDS, PLAYER_GENERAL_ACTION_ID};
+use build_combo::{
+    ComboInput, MOB_ACTION_ID, PLAYER_COMBO_ACTION_IDS, PLAYER_GENERAL_ACTION_ID, RootMotion,
+};
 
 const PROFILE: &str = "p0-warrior-dog";
 const DEFINITIONS: &str = "content/p0-warrior-dog/actions.v1.json";
@@ -149,22 +151,31 @@ struct Attack<'a> {
     hit_end_us: i64,
     range_m: f32,
     combo_input: Option<ComboInput>,
+    root_motion: Option<RootMotion>,
+}
+
+#[derive(Clone, Copy)]
+struct AttackContract<'a> {
+    actor_id: &'a str,
+    mode: &'a str,
+    action: &'a str,
+    required_item: Option<u32>,
+    combo_input: Option<ComboInput>,
+    root_motion: Option<RootMotion>,
 }
 
 fn checked_attack<'a>(
     actions: &'a [Value],
     id: &'a str,
-    actor_id: &str,
-    mode: &str,
-    expected_action: &str,
-    required_item: Option<u32>,
-    combo_input: Option<ComboInput>,
+    contract: AttackContract<'_>,
 ) -> Attack<'a> {
     let row = action(actions, id);
-    if text(row, "actor_id", "action") != actor_id {
+    if text(row, "actor_id", "action") != contract.actor_id {
         fail(format!("action {id:?} belongs to the wrong actor"));
     }
-    if text(row, "mode", "action") != mode || text(row, "action", "action") != expected_action {
+    if text(row, "mode", "action") != contract.mode
+        || text(row, "action", "action") != contract.action
+    {
         fail(format!(
             "action {id:?} has an unexpected mode or action name"
         ));
@@ -175,7 +186,7 @@ fn checked_attack<'a>(
         field(row, "required_item_vnums", "action"),
         "required_item_vnums",
     );
-    let expected: Vec<u64> = required_item.into_iter().map(u64::from).collect();
+    let expected: Vec<u64> = contract.required_item.into_iter().map(u64::from).collect();
     let actual: Vec<u64> = required
         .iter()
         .map(|value| {
@@ -224,7 +235,8 @@ fn checked_attack<'a>(
         hit_start_us,
         hit_end_us,
         range_m,
-        combo_input,
+        combo_input: contract.combo_input,
+        root_motion: contract.root_motion,
     }
 }
 
@@ -309,8 +321,15 @@ fn attack_expression(attack: Attack<'_>) -> String {
         ),
         None => "None".to_owned(),
     };
+    let root_motion = match attack.root_motion {
+        Some(root) => format!(
+            "Some(RootMotionDefinition {{ endpoint_x_m: {:?}, endpoint_z_m: {:?}, duration_us: {} }})",
+            root.endpoint_x_m, root.endpoint_z_m, root.duration_us
+        ),
+        None => "None".to_owned(),
+    };
     format!(
-        "AttackDefinition {{ id: {}, duration_us: {}, cooldown_us: {}, hit_start_us: {}, hit_end_us: {}, range_m: {:?}, combo_input: {} }}",
+        "AttackDefinition {{ id: {}, duration_us: {}, cooldown_us: {}, hit_start_us: {}, hit_end_us: {}, range_m: {:?}, combo_input: {}, root_motion: {} }}",
         rust_string(attack.id),
         attack.duration_us,
         attack.cooldown_us,
@@ -318,6 +337,7 @@ fn attack_expression(attack: Attack<'_>) -> String {
         attack.hit_end_us,
         attack.range_m,
         combo_input,
+        root_motion,
     )
 }
 
@@ -347,7 +367,7 @@ fn main() {
         .unwrap_or_else(|error| fail(format!("{} is not valid JSON ({error})", path.display())));
     let root = object(&payload, "root");
     if text(root, "schema", "root") != "mt2spacetime.trusted-action-definitions"
-        || u64_value(root, "schema_version", "root") != 3
+        || u64_value(root, "schema_version", "root") != 4
         || text(root, "profile_id", "root") != PROFILE
         || text(root, "time_unit", "root") != "microsecond"
         || text(root, "linear_unit", "root") != "meter"
@@ -378,7 +398,7 @@ fn main() {
     }
     let actors = array(field(root, "actors", "root"), "actors");
     let actions = array(field(root, "actions", "root"), "actions");
-    let combo_inputs = build_combo::validate(root).unwrap_or_else(|error| fail(error));
+    let combo_actions = build_combo::validate(root).unwrap_or_else(|error| fail(error));
     let items = array(field(root, "items", "root"), "items");
     let progression = object(field(root, "progression", "root"), "progression");
     if text(progression, "schema", "progression") != "mt2spacetime.progression-definitions"
@@ -554,36 +574,59 @@ fn main() {
     let general = checked_attack(
         actions,
         general_id,
-        player_id,
-        "general",
-        "normal_attack",
-        None,
-        None,
+        AttackContract {
+            actor_id: player_id,
+            mode: "general",
+            action: "normal_attack",
+            required_item: None,
+            combo_input: None,
+            root_motion: None,
+        },
     );
     let combo_1 = checked_attack(
         actions,
         onehand_id,
-        player_id,
-        "onehand",
-        "combo_1",
-        Some(10),
-        Some(combo_inputs[0]),
+        AttackContract {
+            actor_id: player_id,
+            mode: "onehand",
+            action: "combo_1",
+            required_item: Some(10),
+            combo_input: Some(combo_actions[0].combo_input),
+            root_motion: Some(combo_actions[0].root_motion),
+        },
     );
     let combo_2 = checked_attack(
         actions,
         PLAYER_COMBO_ACTION_IDS[1],
-        player_id,
-        "onehand",
-        "combo_2",
-        Some(10),
-        Some(combo_inputs[1]),
+        AttackContract {
+            actor_id: player_id,
+            mode: "onehand",
+            action: "combo_2",
+            required_item: Some(10),
+            combo_input: Some(combo_actions[1].combo_input),
+            root_motion: Some(combo_actions[1].root_motion),
+        },
+    );
+    let combo_3 = checked_attack(
+        actions,
+        PLAYER_COMBO_ACTION_IDS[2],
+        AttackContract {
+            actor_id: player_id,
+            mode: "onehand",
+            action: "combo_3",
+            required_item: Some(10),
+            combo_input: Some(combo_actions[2].combo_input),
+            root_motion: Some(combo_actions[2].root_motion),
+        },
     );
     if general.cooldown_us != player_cooldown
         || combo_1.cooldown_us != player_cooldown
         || combo_2.cooldown_us != player_cooldown
+        || combo_3.cooldown_us != player_cooldown
         || general.range_m != player_range
         || combo_1.range_m != player_range
         || combo_2.range_m != player_range
+        || combo_3.range_m != player_range
     {
         fail("player actions disagree with the authoritative player definition");
     }
@@ -601,11 +644,14 @@ fn main() {
     let mob_attack = checked_attack(
         actions,
         mob_action_id,
-        mob_id,
-        "general",
-        "normal_attack",
-        None,
-        None,
+        AttackContract {
+            actor_id: mob_id,
+            mode: "general",
+            action: "normal_attack",
+            required_item: None,
+            combo_input: None,
+            root_motion: None,
+        },
     );
     if mob_attack.cooldown_us != bounded_u32(mob, "attack_cooldown_us", "mob", 60_000_000) as i64 {
         fail("mob action cooldown disagrees with the authoritative mob definition");
@@ -652,6 +698,12 @@ fn main() {
          \tpub link_us: i64,\n\
          }\n\
          #[derive(Clone, Copy, Debug)]\n\
+         pub struct RootMotionDefinition {\n\
+         \tpub endpoint_x_m: f64,\n\
+         \tpub endpoint_z_m: f64,\n\
+         \tpub duration_us: i64,\n\
+         }\n\
+         #[derive(Clone, Copy, Debug)]\n\
          pub struct AttackDefinition {\n\
          \tpub id: &'static str,\n\
          \tpub duration_us: i64,\n\
@@ -660,6 +712,7 @@ fn main() {
          \tpub hit_end_us: i64,\n\
          \tpub range_m: f32,\n\
          \tpub combo_input: Option<ComboInputDefinition>,\n\
+         \tpub root_motion: Option<RootMotionDefinition>,\n\
          }\n",
     );
     writeln!(
@@ -796,11 +849,12 @@ fn main() {
     emit_attack(&mut output, "PLAYER_GENERAL_ATTACK", general);
     writeln!(
         output,
-        "pub const PLAYER_ONEHAND_COMBO: [AttackDefinition; 2] = ["
+        "pub const PLAYER_ONEHAND_COMBO: [AttackDefinition; 3] = ["
     )
     .unwrap();
     writeln!(output, "\t{},", attack_expression(combo_1)).unwrap();
     writeln!(output, "\t{},", attack_expression(combo_2)).unwrap();
+    writeln!(output, "\t{},", attack_expression(combo_3)).unwrap();
     writeln!(output, "];").unwrap();
     writeln!(
         output,

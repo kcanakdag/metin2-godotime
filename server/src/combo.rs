@@ -1,4 +1,4 @@
-//! Server-owned first one-hand combo link and private queued transition state.
+//! Server-owned common one-hand combo prefix and private queued transition state.
 
 use crate::combat::monster;
 use crate::definitions::{self, ComboInputDefinition};
@@ -9,11 +9,12 @@ use std::cmp::Ordering;
 const COMBO_NONE: u8 = 0;
 const COMBO_STEP_ONE: u8 = 1;
 const COMBO_STEP_TWO: u8 = 2;
+const COMBO_STEP_THREE: u8 = 3;
 
 const EARLY_ERROR: &str = "Combo follow-up input is too early.";
 const DUPLICATE_ERROR: &str = "A combo follow-up is already queued.";
 const LATE_ERROR: &str = "Combo follow-up input is too late.";
-const BOUNDED_ERROR: &str = "This bounded combo has no third step.";
+const BOUNDED_ERROR: &str = "This bounded combo has no fourth step.";
 const TARGET_ERROR: &str = "The combo target is no longer available.";
 const EQUIPMENT_ERROR: &str = "The combo weapon has changed.";
 
@@ -29,6 +30,7 @@ struct DueTransition {
     boundary_us: i64,
     character: Identity,
     chain_revision: u64,
+    combo_step: u8,
 }
 
 pub struct ChainStart {
@@ -216,22 +218,26 @@ fn transition_is_valid(ctx: &ReducerContext, control: &Controller) -> Result<(),
     Ok(())
 }
 
-fn transition_to_step_two(
+fn transition_to_next_step(
     ctx: &ReducerContext,
     control: &mut Controller,
     now: i64,
 ) -> Result<(), String> {
+    let next_step = control
+        .combo_step
+        .checked_add(1)
+        .ok_or("Combo step is outside the supported range.")?;
+    if next_step > COMBO_STEP_THREE {
+        return Err(BOUNDED_ERROR.into());
+    }
+    let definition = definitions::PLAYER_ONEHAND_COMBO
+        .get(usize::from(next_step - 1))
+        .ok_or("The trusted combo prefix is incomplete.")?;
     transition_is_valid(ctx, control)?;
     combat::discard_expired_player_hit(control, now);
     if control.pending_attack_hit_at_us != 0 {
         return Err("The current captured hit must resolve before the combo advances.".into());
     }
-    let player = ctx
-        .db
-        .player()
-        .identity()
-        .find(control.identity)
-        .ok_or("Enter the world first.")?;
     let target = if control.combo_target_id == 0 {
         None
     } else {
@@ -243,26 +249,38 @@ fn transition_to_step_two(
                 .ok_or(TARGET_ERROR)?,
         )
     };
+    let damage = if target.is_some() {
+        definitions::PLAYER_BASE_DAMAGE
+            .checked_add(definitions::WEAPON_ATTACK_BONUS)
+            .ok_or("Combo damage is outside the supported range.")?
+    } else {
+        0
+    };
+    combat::validate_player_action_start(ctx, control, definition, target.is_some(), now)?;
+    // All state-dependent scheduled-transition rejection paths are resolved
+    // before this physical sample. The remaining start checks repeat trusted
+    // definition and checked timestamp/revision invariants atomically.
+    crate::root_motion::advance_for_replacement(ctx, control, now)?;
+    let player = ctx
+        .db
+        .player()
+        .identity()
+        .find(control.identity)
+        .ok_or("Enter the world first.")?;
     let can_select_target = control.combo_target_can_be_selected
         && control.combat_target_id == 0
         && control.combat_target_life_sequence == 0
         && target.is_some();
     let plan = combat::PlayerAttackPlan {
-        definition: &definitions::PLAYER_ONEHAND_COMBO[1],
+        definition,
         target_id: control.combo_target_id,
         target_generation: control.combo_target_life_sequence,
-        damage: if target.is_some() {
-            definitions::PLAYER_BASE_DAMAGE
-                .checked_add(definitions::WEAPON_ATTACK_BONUS)
-                .ok_or("Combo damage is outside the supported range.")?
-        } else {
-            0
-        },
+        damage,
         heading: target.map(|target| (player.x - target.x).atan2(player.z - target.z)),
         can_select_target,
     };
     combat::start_player_action(ctx, control, plan, now)?;
-    control.combo_step = COMBO_STEP_TWO;
+    control.combo_step = next_step;
     control.combo_action_started_at_us = now;
     control.combo_action_ends_at_us = control.attack_until_us;
     cancel_queued_link(control);
@@ -278,19 +296,19 @@ pub fn handle_follow_up(
 ) -> Result<bool, String> {
     match control.combo_step {
         COMBO_NONE => return Ok(false),
-        COMBO_STEP_TWO => {
+        COMBO_STEP_THREE => {
             if now >= control.combo_action_ends_at_us {
                 clear_chain(control);
                 return Ok(false);
             }
             return Err(BOUNDED_ERROR.into());
         }
-        COMBO_STEP_ONE => {}
+        COMBO_STEP_ONE | COMBO_STEP_TWO => {}
         _ => return Err("Combo chain state is invalid.".into()),
     }
-    let input = definitions::PLAYER_ONEHAND_COMBO[0]
+    let input = definitions::PLAYER_ONEHAND_COMBO[usize::from(control.combo_step - 1)]
         .combo_input
-        .ok_or("The trusted first combo step has no input timing.")?;
+        .ok_or("The trusted combo step has no input timing.")?;
     match classify_follow_up(
         now,
         control.combo_action_started_at_us,
@@ -314,7 +332,7 @@ pub fn handle_follow_up(
             Ok(true)
         }
         FollowUp::Transition => {
-            transition_to_step_two(ctx, control, now)?;
+            transition_to_next_step(ctx, control, now)?;
             Ok(true)
         }
     }
@@ -328,7 +346,7 @@ pub fn resolve_due_transitions(ctx: &ReducerContext, now: i64) {
             ctx.db.controller().identity().update(control);
             continue;
         }
-        if control.combo_step == COMBO_STEP_ONE
+        if matches!(control.combo_step, COMBO_STEP_ONE | COMBO_STEP_TWO)
             && control.combo_link_queued
             && transition_is_due(now, control.combo_transition_boundary_us)
         {
@@ -336,6 +354,7 @@ pub fn resolve_due_transitions(ctx: &ReducerContext, now: i64) {
                 boundary_us: control.combo_transition_boundary_us,
                 character: control.identity,
                 chain_revision: control.combo_chain_revision,
+                combo_step: control.combo_step,
             });
         }
     }
@@ -344,7 +363,7 @@ pub fn resolve_due_transitions(ctx: &ReducerContext, now: i64) {
         let Some(mut control) = ctx.db.controller().identity().find(event.character) else {
             continue;
         };
-        if control.combo_step != COMBO_STEP_ONE
+        if control.combo_step != event.combo_step
             || !control.combo_link_queued
             || control.combo_transition_boundary_us != event.boundary_us
             || control.combo_chain_revision != event.chain_revision
@@ -354,7 +373,7 @@ pub fn resolve_due_transitions(ctx: &ReducerContext, now: i64) {
         }
         if now >= control.combo_action_ends_at_us {
             clear_chain(&mut control);
-        } else if transition_to_step_two(ctx, &mut control, now).is_err() {
+        } else if transition_to_next_step(ctx, &mut control, now).is_err() {
             cancel_queued_link(&mut control);
         }
         ctx.db.controller().identity().update(control);
@@ -374,41 +393,62 @@ mod tests {
 
     #[test]
     fn exact_follow_up_boundaries_are_source_generated() {
-        let input = first_input();
-        let start = 1_000_000;
-        let end = start + definitions::PLAYER_ONEHAND_COMBO[0].duration_us;
-        assert_eq!(
-            classify_follow_up(start + input.pre_input_us, start, end, false, input).unwrap_err(),
-            EARLY_ERROR
-        );
-        assert_eq!(
-            classify_follow_up(start + input.pre_input_us + 1, start, end, false, input).unwrap(),
-            FollowUp::Queue {
-                boundary_us: start + input.direct_input_us
-            }
-        );
-        assert!(matches!(
-            classify_follow_up(start + input.direct_input_us, start, end, false, input).unwrap(),
-            FollowUp::Queue { .. }
-        ));
-        assert_eq!(
-            classify_follow_up(start + input.direct_input_us + 1, start, end, false, input)
-                .unwrap(),
-            FollowUp::Transition
-        );
-        assert_eq!(
-            classify_follow_up(start + input.input_limit_us, start, end, false, input).unwrap(),
-            FollowUp::Transition
-        );
-        assert_eq!(
-            classify_follow_up(start + input.input_limit_us + 1, start, end, false, input)
-                .unwrap_err(),
-            LATE_ERROR
-        );
-        assert_eq!(
-            classify_follow_up(end, start, end, false, input).unwrap(),
-            FollowUp::Expired
-        );
+        let expected = [
+            (167_094, 533_333, 602_564, 58_889),
+            (100_513, 543_248, 636_581, 19_658),
+        ];
+        for (index, expected_input) in expected.into_iter().enumerate() {
+            let input = definitions::PLAYER_ONEHAND_COMBO[index]
+                .combo_input
+                .expect("generated combo input");
+            assert_eq!(
+                (
+                    input.pre_input_us,
+                    input.direct_input_us,
+                    input.input_limit_us,
+                    input.link_us,
+                ),
+                expected_input
+            );
+            let start = 1_000_000;
+            let end = start + definitions::PLAYER_ONEHAND_COMBO[index].duration_us;
+            assert_eq!(
+                classify_follow_up(start + input.pre_input_us, start, end, false, input)
+                    .unwrap_err(),
+                EARLY_ERROR
+            );
+            assert_eq!(
+                classify_follow_up(start + input.pre_input_us + 1, start, end, false, input)
+                    .unwrap(),
+                FollowUp::Queue {
+                    boundary_us: start + input.direct_input_us
+                }
+            );
+            assert!(matches!(
+                classify_follow_up(start + input.direct_input_us, start, end, false, input)
+                    .unwrap(),
+                FollowUp::Queue { .. }
+            ));
+            assert_eq!(
+                classify_follow_up(start + input.direct_input_us + 1, start, end, false, input,)
+                    .unwrap(),
+                FollowUp::Transition
+            );
+            assert_eq!(
+                classify_follow_up(start + input.input_limit_us, start, end, false, input,)
+                    .unwrap(),
+                FollowUp::Transition
+            );
+            assert_eq!(
+                classify_follow_up(start + input.input_limit_us + 1, start, end, false, input,)
+                    .unwrap_err(),
+                LATE_ERROR
+            );
+            assert_eq!(
+                classify_follow_up(end, start, end, false, input).unwrap(),
+                FollowUp::Expired
+            );
+        }
     }
 
     #[test]
@@ -480,6 +520,11 @@ mod tests {
             combo_equipped_vnum: 19,
             combo_link_queued: true,
             combo_transition_boundary_us: 1_533,
+            root_motion_step: COMBO_STEP_ONE,
+            root_motion_action_revision: 9,
+            root_motion_started_at_us: 1_000,
+            root_motion_consumed_elapsed_us: 150,
+            root_motion_heading: 0.75,
             next_chat_us: 0,
         }
     }
@@ -516,6 +561,13 @@ mod tests {
             control.combo_target_life_sequence,
             control.combo_equipped_item_id,
             control.combo_equipped_vnum,
+        );
+        let root = (
+            control.root_motion_step,
+            control.root_motion_action_revision,
+            control.root_motion_started_at_us,
+            control.root_motion_consumed_elapsed_us,
+            control.root_motion_heading,
         );
 
         cancel_queued_link(&mut control);
@@ -561,6 +613,16 @@ mod tests {
                 control.combo_equipped_vnum,
             )
         );
+        assert_eq!(
+            root,
+            (
+                control.root_motion_step,
+                control.root_motion_action_revision,
+                control.root_motion_started_at_us,
+                control.root_motion_consumed_elapsed_us,
+                control.root_motion_heading,
+            )
+        );
     }
 
     #[test]
@@ -576,6 +638,11 @@ mod tests {
         assert_eq!(control.attack_until_us, 2_000);
         assert_eq!(control.mode, 2);
         assert_eq!((control.target_x, control.target_z), (12.0, 34.0));
+        assert_eq!(control.root_motion_step, COMBO_STEP_ONE);
+        assert_eq!(control.root_motion_action_revision, 9);
+        assert_eq!(control.root_motion_started_at_us, 1_000);
+        assert_eq!(control.root_motion_consumed_elapsed_us, 150);
+        assert_eq!(control.root_motion_heading, 0.75);
     }
 
     #[test]

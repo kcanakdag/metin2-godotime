@@ -12,15 +12,26 @@ var _attack_ack_sequence := 0
 var _perform_attack_acks: Array[Dictionary] = []
 var _target_ack_sequence := 0
 var _select_combat_target_acks: Array[Dictionary] = []
+var _public_action_history: Array[Dictionary] = []
+var _last_public_actions: Dictionary = {}
+var _last_own_action_fingerprint := ""
+var _monster_health_history: Array[Dictionary] = []
+var _last_monster_health: Dictionary = {}
 
 
 func _ready() -> void:
-	get_parent().connection.reducer_failed.connect(func(message: String): _errors.append(message))
+	get_parent().connection.reducer_failed.connect(_on_reducer_failed)
 	get_parent().connection.reducer_completed.connect(_on_reducer_completed)
+	get_parent().connection.players_changed.connect(_on_players_changed)
+	get_parent().connection.monsters_changed.connect(_on_monsters_changed)
+	get_parent().connection.connection_state_changed.connect(_on_connection_state_changed)
 	if OS.has_feature("web"):
 		_callback = JavaScriptBridge.create_callback(_web_command)
 		JavaScriptBridge.get_interface("window").mt2Command = _callback
 		_publish_ack_views()
+		_publish_error_view()
+		_publish_own_action_view()
+		_publish_monster_health_view()
 	else:
 		var args := OS.get_cmdline_user_args()
 		for i in range(args.size() - 1):
@@ -61,6 +72,8 @@ func _process(delta: float) -> void:
 	snapshot["errors"] = _errors
 	snapshot["perform_attack_acks"] = _perform_attack_acks.duplicate(true)
 	snapshot["select_combat_target_acks"] = _select_combat_target_acks.duplicate(true)
+	snapshot["public_action_history"] = _public_action_history.duplicate(true)
+	snapshot["monster_health_history"] = _monster_health_history.duplicate(true)
 	snapshot["state_message"] = get_parent().connection.state_message
 	var actors: Array = []
 	for actor in get_parent().get_node("Players").get_children():
@@ -259,19 +272,135 @@ func _on_reducer_completed(
 	_publish_ack_views()
 
 
+func _on_players_changed(rows: Array) -> void:
+	var players := get_parent().get_node_or_null("Players")
+	for value: Variant in rows:
+		if not value is Dictionary:
+			continue
+		var player: Dictionary = value
+		var identity := str(player.get("identity", ""))
+		if identity.is_empty():
+			continue
+		var public_action := _public_action(player)
+		var fingerprint := JSON.stringify(public_action)
+		if str(_last_public_actions.get(identity, "")) == fingerprint:
+			continue
+		_last_public_actions[identity] = fingerprint
+		var actor: Node3D
+		if is_instance_valid(players):
+			for candidate: Node in players.get_children():
+				if candidate is Node3D and str(candidate.get("identity")) == identity:
+					actor = candidate
+					break
+		var rendered_position: Array = []
+		var presentation: Dictionary = {}
+		if is_instance_valid(actor):
+			rendered_position = [actor.position.x, actor.position.y, actor.position.z]
+			if actor.has_method("presentation_snapshot"):
+				var snapshot: Variant = actor.call("presentation_snapshot")
+				if snapshot is Dictionary:
+					presentation = snapshot
+		(
+			_public_action_history
+			. append(
+				{
+					"identity": identity,
+					"observed_at_ticks_ms": Time.get_ticks_msec(),
+					"server_time_us": get_parent().connection.server_time_us,
+					"public_action": public_action,
+					"rendered_position": rendered_position,
+					"presentation": _project_presentation(presentation),
+				}
+			)
+		)
+		while _public_action_history.size() > 256:
+			_public_action_history.pop_front()
+	_publish_own_action_view()
+
+
+func _on_reducer_failed(message: String) -> void:
+	_errors.append(message)
+	_publish_error_view()
+
+
+func _on_monsters_changed(rows: Array) -> void:
+	var present: Dictionary = {}
+	var changed := false
+	for value: Variant in rows:
+		if not value is Dictionary:
+			continue
+		var monster: Dictionary = value
+		var row_id := int(monster.get("id", 0))
+		if row_id <= 0:
+			continue
+		present[row_id] = true
+		var fingerprint := JSON.stringify([monster.get("life_sequence"), monster.get("health")])
+		if str(_last_monster_health.get(row_id, "")) == fingerprint:
+			continue
+		_last_monster_health[row_id] = fingerprint
+		(
+			_monster_health_history
+			. append(
+				{
+					"id": row_id,
+					"life_sequence": monster.get("life_sequence"),
+					"health": monster.get("health"),
+					"observed_at_ticks_ms": Time.get_ticks_msec(),
+				}
+			)
+		)
+		changed = true
+	while _monster_health_history.size() > 128:
+		_monster_health_history.pop_front()
+	for row_id: Variant in _last_monster_health.keys():
+		if not present.has(row_id):
+			_last_monster_health.erase(row_id)
+	if changed:
+		_publish_monster_health_view()
+
+
+func _on_connection_state_changed(_state: String, _message: String) -> void:
+	_last_public_actions.clear()
+	_last_own_action_fingerprint = ""
+	_last_monster_health.clear()
+	_publish_own_action_view()
+
+
 func _own_public_action(connection: GameConnection) -> Dictionary:
 	var player: Dictionary = {}
 	for row: Dictionary in connection.players:
 		if str(row.get("identity", "")) == connection.local_identity:
 			player = row
 			break
+	return _public_action(player)
+
+
+func _public_action(player: Dictionary) -> Dictionary:
 	return {
 		"activity": player.get("activity"),
 		"attack_action_id": player.get("attack_action_id"),
 		"attack_sequence": player.get("attack_sequence"),
 		"action_started_at_us": player.get("action_started_at_us"),
 		"action_ends_at_us": player.get("action_ends_at_us"),
+		"x": player.get("x"),
+		"y": player.get("y"),
+		"z": player.get("z"),
+		"heading": player.get("heading"),
 	}
+
+
+func _project_presentation(value: Dictionary) -> Dictionary:
+	var result: Dictionary = {}
+	for field: String in [
+		"action_id",
+		"sequence",
+		"attack_sequence",
+		"server_position",
+		"presentation_local_position",
+		"model_local_position",
+	]:
+		result[field] = value.get(field)
+	return result
 
 
 func _publish_ack_views() -> void:
@@ -285,4 +414,47 @@ func _publish_ack_views() -> void:
 	else:
 		# The native runner reads the same full snapshot, but ACK evidence must not
 		# wait for the ordinary 200 ms reporting cadence.
+		_elapsed = 0.2
+
+
+func _publish_error_view() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.get_interface("window").mt2ProbeErrors = JSON.stringify(_errors)
+	else:
+		_elapsed = 0.2
+
+
+func _publish_own_action_view() -> void:
+	var action := _own_public_action(get_parent().connection)
+	var fingerprint := (
+		JSON
+		. stringify(
+			[
+				action.get("activity"),
+				action.get("attack_action_id"),
+				action.get("attack_sequence"),
+				action.get("action_started_at_us"),
+				action.get("action_ends_at_us"),
+			]
+		)
+	)
+	if fingerprint == _last_own_action_fingerprint:
+		return
+	_last_own_action_fingerprint = fingerprint
+	if OS.has_feature("web"):
+		JavaScriptBridge.get_interface("window").mt2OwnPublicAction = JSON.stringify(action)
+	else:
+		# Native action transitions schedule one prompt full snapshot; position-only
+		# root ticks retain the ordinary 200 ms reporting cadence.
+		_elapsed = 0.2
+
+
+func _publish_monster_health_view() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.get_interface("window").mt2MonsterHealthHistory = JSON.stringify(
+			_monster_health_history
+		)
+	else:
+		# Public health changes schedule one prompt full snapshot so a later action
+		# cannot erase the intermediate subscribed value from exported QA evidence.
 		_elapsed = 0.2

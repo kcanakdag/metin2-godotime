@@ -21,14 +21,31 @@ from pathlib import Path, PurePosixPath
 from content_formats import parse_item_script, parse_motion_list, parse_msa, parse_race_script
 from fetch_test_assets import METIN_COMMIT, ROOT
 from metin_archive import Archive, safe_path, virtual_path, write_json
+from metin_root_motion import (
+    COORDINATE_CONVERSION,
+    MAX_ENDPOINT_COMPONENT_M,
+    MAX_SOURCE_COMPONENT_CM,
+    MSA_COMPONENT_TOLERANCE_M,
+    extract_root_motion,
+    source_cm_to_output_actor_local_m,
+)
+from metin_root_motion import (
+    EXPECTED_INPUTS as EXPECTED_ROOT_MOTION_INPUTS,
+)
+from metin_root_motion import (
+    MAX_DURATION_US as MAX_ROOT_MOTION_DURATION_US,
+)
+from metin_root_motion import (
+    POLICY_ID as ROOT_MOTION_POLICY_ID,
+)
 from progression_definitions import parse_progression_definitions, quarter_thresholds
 
 SCHEMA = "mt2spacetime.normalized-content-manifest"
 SERVER_SCHEMA = "mt2spacetime.trusted-action-definitions"
 CLIENT_SCHEMA = "mt2spacetime.presentation-manifest"
 SCHEMA_VERSION = 1
-SERVER_SCHEMA_VERSION = 3
-COMPILER_VERSION = "content-compiler-v1.2.0"
+SERVER_SCHEMA_VERSION = 4
+COMPILER_VERSION = "content-compiler-v1.3.0"
 DEFAULT_PROFILE = ROOT / "content/profiles/p0-warrior-dog.json"
 
 PLAYER_ACTOR_ID = "actor.player.warrior-male"
@@ -37,6 +54,7 @@ PLAYER_GENERAL_ACTION_ID = f"{PLAYER_ACTOR_ID}.general.normal_attack.v1"
 PLAYER_COMBO_ACTION_IDS = (
     f"{PLAYER_ACTOR_ID}.onehand.combo_1",
     f"{PLAYER_ACTOR_ID}.onehand.combo_2",
+    f"{PLAYER_ACTOR_ID}.onehand.combo_3",
 )
 MOB_ACTION_ID = f"{MOB_ACTOR_ID}.general.normal_attack.v1"
 EXPECTED_SERVER_ACTION_IDS = {
@@ -46,6 +64,16 @@ EXPECTED_SERVER_ACTION_IDS = {
 }
 COMBO_INPUT_FIELDS = {"pre_input_us", "direct_input_us", "input_limit_us", "link_us"}
 MAX_COMBO_TIME_US = 60_000_000
+ROOT_MOTION_FIELDS = {"endpoint_x_m", "endpoint_z_m", "duration_us"}
+ROOT_MOTION_POLICY = {
+    "id": ROOT_MOTION_POLICY_ID,
+    "source_endpoint": "raw-gr2-loop-translation",
+    "coordinate_conversion": COORDINATE_CONVERSION,
+    "msa_role": "rounded-corroboration-only",
+    "msa_component_tolerance_micrometers": 50,
+    "granny_within_cycle_parity": False,
+    "granny_transition_blend_parity": False,
+}
 
 
 def canonical_bytes(value: object) -> bytes:
@@ -393,12 +421,24 @@ def _normalise_motions(profile: dict, archive: Archive) -> tuple[list[dict], lis
                     gr2_path = archive.resolve(parsed["motion_file"])
                     if Path(gr2_path).suffix.lower() != ".gr2":
                         raise ValueError(f"MSA did not resolve to GR2: {msa_path}")
-                    archive.get(gr2_path)
+                    gr2_local = archive.get(gr2_path)
                     base_id = f"{actor['id']}.{mode['id']}.{declaration['action']}"
                     action_id = (
                         base_id if len(declaration["files"]) == 1 else f"{base_id}.v{index + 1}"
                     )
                     godot_name = re.sub(r"[^A-Za-z0-9_]+", "_", action_id).strip("_")
+                    root_motion_source = None
+                    if action_id in EXPECTED_ROOT_MOTION_INPUTS:
+                        root_motion_source = extract_root_motion(
+                            gr2_local,
+                            archive.get(msa_path),
+                            source_gr2=gr2_path,
+                            source_msa=msa_path,
+                            action_id=action_id,
+                            duration_us=parsed["duration_us"],
+                            msa_accumulation_m=parsed["accumulation_m"],
+                            yaw_degrees=actor["orientation"]["yaw_correction_degrees"],
+                        )
                     for entry in parsed.pop("unsupported"):
                         unsupported.append(
                             {
@@ -419,6 +459,11 @@ def _normalise_motions(profile: dict, archive: Archive) -> tuple[list[dict], lis
                             "fallback_mode": declaration.get("fallback_mode"),
                             "source_msa": msa_path,
                             "source_gr2": gr2_path,
+                            **(
+                                {"root_motion_source": root_motion_source}
+                                if root_motion_source is not None
+                                else {}
+                            ),
                             **parsed,
                         }
                     )
@@ -587,15 +632,15 @@ def _selected_combo_prefix(player: dict) -> tuple[dict, list[dict]]:
     if not isinstance(chains, list) or not chains:
         raise ValueError("Selected onehand mode requires declared combo chains")
     for chain in chains:
-        if not isinstance(chain, list) or len(chain) < 2:
-            raise ValueError("Every selected combo chain requires at least two actions")
+        if not isinstance(chain, list) or len(chain) < 3:
+            raise ValueError("Every selected combo chain requires at least three actions")
         if any(type(name) is not str or not name for name in chain):
             raise ValueError("Selected combo chain action names must be nonempty strings")
-    prefix = chains[0][:2]
-    if prefix != ["combo_1", "combo_2"] or prefix[0] == prefix[1]:
-        raise ValueError("Selected combo prefix must be distinct combo_1 then combo_2")
-    if any(chain[:2] != prefix for chain in chains):
-        raise ValueError("Selected combo chains disagree on their two-action prefix")
+    prefix = chains[0][:3]
+    if prefix != ["combo_1", "combo_2", "combo_3"] or len(set(prefix)) != 3:
+        raise ValueError("Selected combo prefix must be distinct combo_1 then combo_2 then combo_3")
+    if any(chain[:3] != prefix for chain in chains):
+        raise ValueError("Selected combo chains disagree on their three-action prefix")
     motions = []
     for name in prefix:
         matches = [motion for motion in mode["motions"] if motion["action"] == name]
@@ -625,6 +670,179 @@ def _checked_combo_input(value: object, duration_us: int, context: str) -> dict:
     return {field: value[field] for field in sorted(COMBO_INPUT_FIELDS)}
 
 
+def _finite_number(value: object, label: str, bound: float) -> float:
+    if type(value) not in {int, float} or not math.isfinite(value):
+        raise ValueError(f"{label} must be a finite number")
+    result = float(value)
+    if abs(result) > bound:
+        raise ValueError(f"{label} exceeds the supported bound")
+    return result
+
+
+def _finite_vector(value: object, length: int, label: str, bound: float) -> list[float]:
+    if not isinstance(value, list) or len(value) != length:
+        raise ValueError(f"{label} must contain exactly {length} values")
+    return [_finite_number(component, label, bound) for component in value]
+
+
+def _decimal_number(value: object, label: str, bound: float) -> float:
+    if not isinstance(value, str) or not value or value.strip() != value or len(value) > 32:
+        raise ValueError(f"{label} must be a bounded decimal string")
+    try:
+        number = float(value)
+    except ValueError as error:
+        raise ValueError(f"{label} must be a finite decimal string") from error
+    if not math.isfinite(number) or abs(number) > bound:
+        raise ValueError(f"{label} must be a finite bounded decimal string")
+    return number
+
+
+def _decimal_vector(value: object, length: int, label: str, bound: float) -> list[float]:
+    if not isinstance(value, list) or len(value) != length:
+        raise ValueError(f"{label} must contain exactly {length} decimal strings")
+    return [_decimal_number(component, label, bound) for component in value]
+
+
+def _checked_root_motion(value: object, duration_us: int, context: str) -> dict:
+    if not isinstance(value, dict) or set(value) != ROOT_MOTION_FIELDS:
+        raise ValueError(f"{context} root_motion must contain exactly x, z, and duration")
+    endpoint_x = _finite_number(
+        value["endpoint_x_m"], f"{context} root_motion.endpoint_x_m", MAX_ENDPOINT_COMPONENT_M
+    )
+    endpoint_z = _finite_number(
+        value["endpoint_z_m"], f"{context} root_motion.endpoint_z_m", MAX_ENDPOINT_COMPONENT_M
+    )
+    if (
+        type(value["duration_us"]) is not int
+        or not 0 < value["duration_us"] <= MAX_ROOT_MOTION_DURATION_US
+        or value["duration_us"] != duration_us
+    ):
+        raise ValueError(f"{context} root_motion duration must equal the action duration")
+    return {
+        "duration_us": duration_us,
+        "endpoint_x_m": endpoint_x,
+        "endpoint_z_m": endpoint_z,
+    }
+
+
+def _checked_root_motion_source(
+    value: object, action_id: str, action_root_motion: dict, duration_us: int
+) -> dict:
+    fields = {
+        "action_id",
+        "source_gr2",
+        "source_msa",
+        "carbon_reader",
+        "animation_count",
+        "animation_duration_s_raw_decimal",
+        "animation_duration_us_rounded",
+        "track_group_count",
+        "track_group_name",
+        "accumulation_flags",
+        "loop_translation_source_cm_decimal",
+        "endpoint_output_actor_local_godot_m_decimal",
+        "periodic_loop",
+        "root_motion",
+        "initial_placement",
+        "msa_accumulation_output_actor_local_godot_m_decimal",
+    }
+    if not isinstance(value, dict) or set(value) != fields or value.get("action_id") != action_id:
+        raise ValueError(f"{action_id} root-motion source record is malformed")
+    expected = EXPECTED_ROOT_MOTION_INPUTS[action_id]
+    for label, suffix in (("source_gr2", "gr2"), ("source_msa", "msa")):
+        source = value[label]
+        if not isinstance(source, dict) or set(source) != {"path", "sha256", "bytes"}:
+            raise ValueError(f"{action_id} {label} provenance is malformed")
+        if (
+            source["path"] != expected[f"{suffix}_path"]
+            or source["sha256"] != expected[suffix]
+            or type(source["bytes"]) is not int
+            or source["bytes"] != expected[f"{suffix}_bytes"]
+        ):
+            raise ValueError(f"{action_id} {label} provenance does not match the pin")
+    carbon = value["carbon_reader"]
+    if carbon != {
+        "commit": "8cba23114bf1d30c9da597c1ecf49271e00b939d",
+        "sha256": "c3c8698c5987b6783586cc312e291e63eb315f8a5b0968b4f556219688a0fdce",
+    }:
+        raise ValueError(f"{action_id} Carbon raw reader pin changed")
+    if (
+        type(value["animation_count"]) is not int
+        or value["animation_count"] != 1
+        or type(value["track_group_count"]) is not int
+        or value["track_group_count"] != 1
+        or value["track_group_name"] != "Bip01"
+        or type(value["accumulation_flags"]) is not int
+        or value["accumulation_flags"] != 3
+        or value["periodic_loop"] is not None
+        or value["root_motion"] is not None
+    ):
+        raise ValueError(f"{action_id} raw GR2 accumulation metadata is unsupported")
+    raw_duration = _decimal_number(
+        value["animation_duration_s_raw_decimal"],
+        f"{action_id} raw animation duration",
+        MAX_ROOT_MOTION_DURATION_US / 1_000_000,
+    )
+    if raw_duration <= 0 or round(raw_duration * 1_000_000) != duration_us:
+        raise ValueError(f"{action_id} raw GR2 duration does not match the action")
+    if (
+        type(value["animation_duration_us_rounded"]) is not int
+        or value["animation_duration_us_rounded"] != duration_us
+    ):
+        raise ValueError(f"{action_id} rounded raw GR2 duration is invalid")
+    source_endpoint = _decimal_vector(
+        value["loop_translation_source_cm_decimal"],
+        3,
+        f"{action_id} raw LoopTranslation",
+        MAX_SOURCE_COMPONENT_CM,
+    )
+    expected_endpoint = source_cm_to_output_actor_local_m(source_endpoint, 180.0)
+    reported_endpoint = _decimal_vector(
+        value["endpoint_output_actor_local_godot_m_decimal"],
+        3,
+        f"{action_id} converted endpoint",
+        MAX_ENDPOINT_COMPONENT_M,
+    )
+    if reported_endpoint != expected_endpoint or reported_endpoint[1] != 0.0:
+        raise ValueError(f"{action_id} endpoint coordinate conversion is invalid")
+    if (
+        action_root_motion["endpoint_x_m"] != reported_endpoint[0]
+        or action_root_motion["endpoint_z_m"] != reported_endpoint[2]
+    ):
+        raise ValueError(f"{action_id} runtime endpoint does not match raw GR2 metadata")
+    msa_endpoint = _decimal_vector(
+        value["msa_accumulation_output_actor_local_godot_m_decimal"],
+        3,
+        f"{action_id} MSA accumulation",
+        MAX_ENDPOINT_COMPONENT_M,
+    )
+    differences = [msa_endpoint[index] - reported_endpoint[index] for index in range(3)]
+    if any(abs(component) > MSA_COMPONENT_TOLERANCE_M for component in differences):
+        raise ValueError(f"{action_id} MSA accumulation does not corroborate the raw endpoint")
+    placement = value["initial_placement"]
+    if not isinstance(placement, dict) or set(placement) != {
+        "flags",
+        "position_source_cm_decimal",
+        "orientation_xyzw_decimal",
+    }:
+        raise ValueError(f"{action_id} InitialPlacement evidence is malformed")
+    if type(placement["flags"]) is not int or not 0 <= placement["flags"] <= 0xFFFFFFFF:
+        raise ValueError(f"{action_id} InitialPlacement flags are invalid")
+    _decimal_vector(
+        placement["position_source_cm_decimal"],
+        3,
+        f"{action_id} InitialPlacement position",
+        MAX_SOURCE_COMPONENT_CM,
+    )
+    _decimal_vector(
+        placement["orientation_xyzw_decimal"],
+        4,
+        f"{action_id} InitialPlacement orientation",
+        2.0,
+    )
+    return value
+
+
 def make_server_payload(profile: dict, normalized: dict) -> dict:
     gameplay = profile["trusted_gameplay"]
     normalized_actors = normalized.get("actors")
@@ -643,6 +861,43 @@ def make_server_payload(profile: dict, normalized: dict) -> dict:
         raise ValueError("Selected onehand primary action must be combo_1")
     onehand_mode, combo_motions = _selected_combo_prefix(player)
     combo_by_action = {motion["action"]: motion for motion in combo_motions}
+    root_motion_sources = []
+
+    def selected_root_motion(motion: dict) -> dict:
+        source = motion.get("root_motion_source")
+        if not isinstance(source, dict):
+            raise ValueError(
+                f"Selected combo action has no raw root-motion metadata: {motion['action_id']}"
+            )
+        endpoint = source.get("endpoint_output_actor_local_godot_m_decimal")
+        if not isinstance(endpoint, list) or len(endpoint) != 3:
+            raise ValueError(
+                f"Selected combo action has a malformed root endpoint: {motion['action_id']}"
+            )
+        endpoint = [
+            _decimal_number(
+                component,
+                f"{motion['action_id']} root endpoint",
+                MAX_ENDPOINT_COMPONENT_M,
+            )
+            for component in endpoint
+        ]
+        root_motion = _checked_root_motion(
+            {
+                "endpoint_x_m": endpoint[0],
+                "endpoint_z_m": endpoint[2],
+                "duration_us": motion["duration_us"],
+            },
+            motion["duration_us"],
+            motion["action_id"],
+        )
+        root_motion_sources.append(
+            _checked_root_motion_source(
+                source, motion["action_id"], root_motion, motion["duration_us"]
+            )
+        )
+        return root_motion
+
     actions = []
     player_primary = {}
     for mode_id, action_name in sorted(gameplay["player"]["primary_actions"].items()):
@@ -669,32 +924,35 @@ def make_server_payload(profile: dict, normalized: dict) -> dict:
                             motion.get("combo"),
                             motion["duration_us"],
                             motion["action_id"],
-                        )
+                        ),
+                        "root_motion": selected_root_motion(motion),
                     }
                     if mode_id == "onehand"
                     else {}
                 ),
             }
         )
-    motion = combo_by_action["combo_2"]
-    windows = _events_for_server(motion, gameplay["player"]["attack_range_m"])
-    if not windows:
-        raise ValueError(f"Selected combo action has no hit window: {motion['action_id']}")
-    actions.append(
-        {
-            "id": motion["action_id"],
-            "actor_id": player["id"],
-            "mode": "onehand",
-            "action": "combo_2",
-            "duration_us": motion["duration_us"],
-            "cooldown_us": gameplay["player"]["attack_cooldown_us"],
-            "hit_windows": windows,
-            "required_item_vnums": onehand_mode["required_item_vnums"],
-            "combo_input": _checked_combo_input(
-                motion.get("combo"), motion["duration_us"], motion["action_id"]
-            ),
-        }
-    )
+    for action_name in ("combo_2", "combo_3"):
+        motion = combo_by_action[action_name]
+        windows = _events_for_server(motion, gameplay["player"]["attack_range_m"])
+        if not windows:
+            raise ValueError(f"Selected combo action has no hit window: {motion['action_id']}")
+        actions.append(
+            {
+                "id": motion["action_id"],
+                "actor_id": player["id"],
+                "mode": "onehand",
+                "action": action_name,
+                "duration_us": motion["duration_us"],
+                "cooldown_us": gameplay["player"]["attack_cooldown_us"],
+                "hit_windows": windows,
+                "required_item_vnums": onehand_mode["required_item_vnums"],
+                "combo_input": _checked_combo_input(
+                    motion.get("combo"), motion["duration_us"], motion["action_id"]
+                ),
+                "root_motion": selected_root_motion(motion),
+            }
+        )
     mob_motion = _primary_motion(mob, "general", "normal_attack")
     mob_windows = _events_for_server(mob_motion, gameplay["mob"]["attack_range_m"])
     if not mob_windows:
@@ -718,6 +976,8 @@ def make_server_payload(profile: dict, normalized: dict) -> dict:
         "content_hash": normalized["content_hash"],
         "time_unit": "microsecond",
         "linear_unit": "meter",
+        "root_motion_policy": ROOT_MOTION_POLICY,
+        "root_motion_sources": root_motion_sources,
         "actors": [
             {
                 "id": player["id"],
@@ -794,8 +1054,8 @@ def validate_server_payload(payload: dict, profile_id: str) -> None:
     if claimed != digest(unhashed):
         raise ValueError("Trusted action definition hash mismatch")
     actions = payload.get("actions")
-    if not isinstance(actions, list) or len(actions) != 4:
-        raise ValueError("Trusted definitions require exactly four actions")
+    if not isinstance(actions, list) or len(actions) != 5:
+        raise ValueError("Trusted definitions require exactly five actions")
     if any(not isinstance(action, dict) for action in actions):
         raise ValueError("Trusted actions must be objects")
     action_id_list = [action.get("id") for action in actions]
@@ -809,6 +1069,15 @@ def validate_server_payload(payload: dict, profile_id: str) -> None:
     prefix = payload.get("base_combo_prefix")
     if prefix != list(PLAYER_COMBO_ACTION_IDS):
         raise ValueError("Trusted base combo prefix is missing, reordered, or changed")
+    if payload.get("root_motion_policy") != ROOT_MOTION_POLICY:
+        raise ValueError("Trusted root-motion policy or limitation record changed")
+    root_sources = payload.get("root_motion_sources")
+    if not isinstance(root_sources, list) or len(root_sources) != len(PLAYER_COMBO_ACTION_IDS):
+        raise ValueError("Trusted definitions require exactly three root-motion source records")
+    if [
+        source.get("action_id") if isinstance(source, dict) else None for source in root_sources
+    ] != list(PLAYER_COMBO_ACTION_IDS):
+        raise ValueError("Trusted root-motion source records are missing, duplicate, or reordered")
     actors = payload.get("actors")
     if not isinstance(actors, list) or any(not isinstance(actor, dict) for actor in actors):
         raise ValueError("Trusted definitions require actors")
@@ -873,8 +1142,13 @@ def validate_server_payload(payload: dict, profile_id: str) -> None:
             raise ValueError("Trusted action does not match the fixed fixture")
         if action["id"] in PLAYER_COMBO_ACTION_IDS:
             _checked_combo_input(action.get("combo_input"), duration_us, action["id"])
+            root_motion = _checked_root_motion(action.get("root_motion"), duration_us, action["id"])
+            source = root_sources[PLAYER_COMBO_ACTION_IDS.index(action["id"])]
+            _checked_root_motion_source(source, action["id"], root_motion, duration_us)
         elif "combo_input" in action:
             raise ValueError("Non-prefix actions must omit combo_input")
+        elif "root_motion" in action:
+            raise ValueError("Non-prefix actions must omit root_motion")
     progression = payload.get("progression")
     if not isinstance(progression, dict):
         raise ValueError("Trusted definitions require progression data")

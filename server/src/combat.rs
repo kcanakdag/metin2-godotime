@@ -290,6 +290,7 @@ pub fn start_player_action(
     plan: PlayerAttackPlan,
     now: i64,
 ) -> Result<(), String> {
+    validate_player_action_start(ctx, controller, plan.definition, plan.target_id != 0, now)?;
     let attack_until_us = now
         .checked_add(plan.definition.duration_us)
         .ok_or("Attack timestamp is outside the supported range.")?;
@@ -347,12 +348,51 @@ pub fn start_player_action(
     if let Some(heading) = plan.heading {
         player.heading = heading;
     }
+    crate::root_motion::start(
+        controller,
+        plan.definition,
+        now,
+        player.heading,
+        action_revision,
+    )?;
     player.attack_sequence = attack_sequence;
     player.attack_action_id = plan.definition.id.into();
     player.action_started_at_us = now;
     player.action_ends_at_us = attack_until_us;
     ctx.db.player().identity().update(player);
     Ok(())
+}
+
+pub fn validate_player_action_start(
+    ctx: &ReducerContext,
+    controller: &Controller,
+    definition: &AttackDefinition,
+    has_target: bool,
+    now: i64,
+) -> Result<(), String> {
+    now.checked_add(definition.duration_us)
+        .ok_or("Attack timestamp is outside the supported range.")?;
+    fresh_action_not_before(now, definition)?;
+    controller
+        .action_revision
+        .checked_add(1)
+        .ok_or("Attack action revision limit reached.")?;
+    let player = ctx
+        .db
+        .player()
+        .identity()
+        .find(controller.identity)
+        .ok_or("Enter the world first.")?;
+    player
+        .attack_sequence
+        .checked_add(1)
+        .ok_or("Attack sequence limit reached.")?;
+    if has_target {
+        now.checked_add(definition.hit_start_us)
+            .and_then(|_| now.checked_add(definition.hit_end_us))
+            .ok_or("Attack hit timestamp is outside the supported range.")?;
+    }
+    crate::root_motion::validate_action_definition(definition)
 }
 
 fn fresh_action_not_before(now: i64, definition: &AttackDefinition) -> Result<i64, String> {
@@ -533,14 +573,15 @@ pub fn resolve_player_hit(ctx: &ReducerContext, character: Identity, hit: Pendin
     {
         return;
     }
-    player.heading = (player.x - monster.x).atan2(player.z - monster.z);
-    ctx.db.player().identity().update(player);
     let controller = ctx
         .db
         .controller()
         .identity()
         .find(character)
         .expect("a resolved player hit has an active controller");
+    player.heading = crate::root_motion::active_action_heading(&controller)
+        .unwrap_or_else(|| (player.x - monster.x).atan2(player.z - monster.z));
+    ctx.db.player().identity().update(player);
     record_damage(
         ctx,
         monster.id,
@@ -1066,6 +1107,7 @@ fn resolve_monster_hit(ctx: &ReducerContext, monster_id: u32, hit: PendingMonste
             controller.attack_until_us = 0;
             cancel_player_attack(&mut controller);
             crate::combo::clear_chain(&mut controller);
+            crate::root_motion::clear(&mut controller);
             crate::targeting::clear_character_target(ctx, &mut controller)
                 .unwrap_or_else(|error| panic!("cannot clear defeated character target: {error}"));
             ctx.db.controller().identity().update(controller);
@@ -1138,6 +1180,11 @@ mod tests {
             combo_equipped_vnum: 0,
             combo_link_queued: false,
             combo_transition_boundary_us: 0,
+            root_motion_step: 0,
+            root_motion_action_revision: 0,
+            root_motion_started_at_us: 0,
+            root_motion_consumed_elapsed_us: 0,
+            root_motion_heading: 0.0,
             next_chat_us: 0,
         }
     }

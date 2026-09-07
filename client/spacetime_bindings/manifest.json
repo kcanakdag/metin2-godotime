@@ -1,6 +1,6 @@
 {
   "sdk_commit": "f6c59d7068e5dacbde0559906746d0a6c5933ffb",
-  "schema_sha256": "762fef9f44446202331e97b1d391b7ac78c5d0de444c2b3fc1a256918a8fe06e",
+  "schema_sha256": "18acb6374eba52efcf2a511a5f4a8638bf805aa7522a46b58cd8cda86d85247c",
   "files": {
     "module_game_client.gd": "ceabef43add50b0d8bb9418ca19a666ac7d8cea4d14a07dfdfa4fdb603baa337",
     "module_game_db.gd": "c6a9bfe212c89513277145a0d796f389260a5cdebd3053eb97e3e48dfb708a94",
@@ -52,7 +52,7 @@
     "types/game_chat_message.gd": "b046eb843cf5f8a711634e264cd0026c7a0f78e68747476f125a445add1cb398",
     "types/game_combat_target_view.gd": "0e3cf72e91126946ca066cc9306abe148a9b2eee4ab3c756b969ac56dc07dcf3",
     "types/game_command_feedback.gd": "5bfb310d2ae8f63d79938755a702f98b00a00587fb748f91bd62c9b29d7425e3",
-    "types/game_controller.gd": "1288d629ca70714ffafcd4b46d8583ec83d7f88a77c19d426ff6adb00d2348a9",
+    "types/game_controller.gd": "92d2f05b0a5465220d9def63bae808cbc22196b0ab1418d4897bd89bbe106b70",
     "types/game_inventory_access.gd": "03510e5d6b71cdd6ef76a9347ff57ca9e1829223c63d8fc8a5fde52bf8cec950",
     "types/game_inventory_item.gd": "a0e0b6dde1b27ce3d230f4599b86f9ce7fde68bf3befcc1665f6b9bf2001fc50",
     "types/game_inventory_state.gd": "83dd3dfa994de69b15e8d520cb8c24fc3f6510f41d0e2538a2c52e7be15019e6",

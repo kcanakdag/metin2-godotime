@@ -1,4 +1,4 @@
-"""Exported pointer and keyboard checks for protocol-7 combat targeting."""
+"""Exported pointer and keyboard checks for protocol-8 combat targeting."""
 
 from __future__ import annotations
 
@@ -1372,10 +1372,10 @@ def exercise_targeting(
         "timings_seconds": timings,
         "evidence": evidence,
         "limits": [
-            "local protocol-7 exported Web/Linux clients against normal one-dog Yongan",
+            "local protocol-8 exported Web/Linux clients against normal one-dog Yongan",
             "native pointer and Space use the fixed test-probe InputEvent allowlist",
             "fixture approach waits for the server Wild Dog to settle at home before one ordinary move intent; it is not client auto-chase evidence",
-            "dual-target far-lock/no-fallback remains covered by the separate 53-check server run",
+            "dual-target far-lock/no-fallback remains covered by the separate server regression",
             "one ordinary Wild Dog kill; this does not execute the five-kill progression branch",
         ],
     }

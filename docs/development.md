@@ -448,6 +448,118 @@ Public Slice B gameplay/deployment, Windows execution, Godot MCP and
 original-client parity remain unverified; later combo steps, root movement, full
 P2 and the full game remain incomplete.
 
+## Protocol 8 three-step combo and root displacement
+
+Slice C extends the same argument-free `perform_attack()` intent through the
+common `combo_3` action and adds server-owned displacement for all three combo
+steps. Trusted schema 4 derives exact local-space endpoints and durations from
+the pinned GR2 metadata. Runtime movement uses bounded action-relative 50 ms
+quanta and the existing terrain/sweep rules; its linear endpoint policy remains
+an approximation of the unavailable proprietary Granny within-cycle curve and
+transition blend. Root-enabled actions also retain the heading captured at
+action acceptance across their hit; established rootless target-facing behavior
+is unchanged.
+
+Run the server checks in the isolated Slice C target directory:
+
+```sh
+CARGO_TARGET_DIR="$PWD/.local/p2-rootmotion/server-target" \
+cargo test --manifest-path server/Cargo.toml --all-features
+
+CARGO_TARGET_DIR="$PWD/.local/p2-rootmotion/server-target" \
+cargo clippy --manifest-path server/Cargo.toml \
+  --all-targets --all-features -- -D warnings
+```
+
+After root publishes a fresh default-deny protocol-8 training database and
+generates matching bindings, run the single-process, two-account headless smoke:
+
+```sh
+python3 tools/test_combos.py \
+  --server http://127.0.0.1:8186 \
+  --game-server http://127.0.0.1:13223 \
+  --database <fresh-protocol-8-root-motion-training-database> \
+  --report .local/p2-rootmotion/combo-report-fresh.json
+```
+
+The runner stages and parses both the accepted combo base and focused root
+script before its only two registrations. It uses only normal authenticated
+movement, targeting, attack and equipment reducers. The composed phases cover
+two-way subscriptions, retained-dog restoration through ordinary combat,
+targetless and far-missed three-step chains, exact `35 + 35 + lethal 35`
+damage, terminal target-death root continuation, the flat training stone's
+swept collision, equipment queue cancellation with the current trajectory
+preserved, and disconnect/reconnect without residual movement replay. Reducer
+receipts and the first public action-transition rows anchor timing and position
+evidence. This smoke requires the flat one-dog training fixture; it does not
+reset or mutate an existing database outside normal gameplay.
+
+The accepted revision-2 composed headless run passed 91 checks in
+`.local/p2-rootmotion/revision2/headless-root-20260907.json`. It covered every
+phase listed above with two authenticated clients on the fresh revision-2
+fixture, including ordinary dog combat and natural respawn. A deliberately
+crossed target also proves the root-enabled public heading remains equal to its
+captured action heading after the hit; the old target-facing bearing differed by
+pi.
+Open-terrain endpoint errors were 0.97--11.44 micrometres. The direct
+step-2/step-3 receipts were 558,770/572,670 microseconds after their action
+starts, and the equipment cancellation receipts were accepted at
+184,369/184,465 microseconds, before the 192,308-microsecond captured first hit.
+The frozen revision-2 harness, report, server build and publication are bound by
+`.local/p2-rootmotion/revision2/root-headless-acceptance.json`. The initial
+88-check result remains preserved under `.local/p2-rootmotion/` as superseded
+historical evidence.
+
+Current isolated checks also pass 67 training gameplay tests and 72 all-feature
+gameplay tests, plus five build-boundary and one generated-definition test in
+each configuration. All-target/all-feature clippy, the complete configured
+lint, 148 Python tool tests, GDScript parsing and the runner's pre-registration
+checks pass. Revision-2 build and fresh local publication evidence is recorded
+in `.local/p2-rootmotion/revision2/build-manifest-root.json` and
+`.local/p2-rootmotion/revision2/publication-root.json`. The reviewed revision-2
+test-probe package audit in
+`.local/p2-rootmotion/revision2/exports-root-reviewed.json` covers 832 Web paths,
+1,635 Linux paths, 226 UI images, three actors, 40 clips, 20 Web world sections
+and both 11-frame target effects.
+
+Run the composed exported-client check with a fresh output directory:
+
+```sh
+.local/venv-dev/bin/python tools/test_browser_accounts.py \
+  --url http://127.0.0.1:8186 \
+  --database <fresh-protocol-8-yongan-database> \
+  --native <matching-test-probe-linux-export> \
+  --output .local/p2-rootmotion/browser-rootmotion-fresh \
+  --actors --hardware --headless --inventory --panels \
+  --progression --targeting --combo --session-refresh
+```
+
+The accepted instrumented Web/Linux run passed 297 checks in
+`.local/p2-rootmotion/revision2/browser-root-lifecycle-20260907/report.json`.
+On both clients it observed the exact `100 -> 65 -> 30 -> 0` health sequence,
+three public and rendered actions, same-target renewal before both transitions,
+constant per-action heading and terminal endpoint error no greater than
+0.452 mm. Web queue receipts were 271,275/237,314 microseconds and native queue
+receipts were 310,395/196,039 microseconds after their source action starts;
+the respective transitions were 572,074/544,167 and 543,862/549,354
+microseconds. Held/released WASD, ground click and target clear each canceled
+the future link while preserving the current hit and root. Disconnect/reconnect
+added no movement, both clients agreed on the Yongan wall's clipped
+0.92199707 m travel, and both real four-minute refresh timers passed.
+
+The matching exact-manifest actor and target regressions pass 77 and 51 checks,
+the focused client component report passes 66, and the Python tooling suite
+passes 148. Root's acceptance record at
+`.local/p2-rootmotion/root-acceptance-review.json` binds those results, the
+91-check headless run, the 67/72 Rust gameplay suites, the five build-boundary
+tests, the generated-definition test and the audited probe packages.
+
+This qualifies the bounded local instrumented protocol-8 Slice C path. Public
+Slice C gameplay/deployment, normal exports without the fixed-input probe,
+Windows execution, current Godot MCP inspection, exact Granny within-cycle and
+100 ms transition-blend parity, terminal combo step 4, skills, full P2 and the
+full game remain unqualified.
+
 ## Bounded P2 progression administration
 
 Protocol 5 introduced three typed private command requests, retained by protocol

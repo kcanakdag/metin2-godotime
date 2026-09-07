@@ -66,7 +66,7 @@ with no multiplayer connection.
 
 Without the Cargo feature, the server uses the small flat training ground with
 five box obstacles. Make enables Yongan by default; raw Cargo has no default
-feature. Both normal builds expose the same protocol-7 schema.
+feature. Both normal builds expose the same protocol-8 schema.
 
 ## Networking and runtime boundaries
 
@@ -79,7 +79,7 @@ The socket subprotocol is `v3.bsatn.spacetimedb`. In the pinned server,
 coalesces messages using the
 [v2 binary schema](https://github.com/clockworklabs/SpacetimeDB/blob/v2.8.3/crates/client-api-messages/src/websocket/v2.rs).
 This transport version is separate from application
-`world_info.protocol_version = 7`, checked before joining.
+`world_info.protocol_version = 8`, checked before joining.
 
 Decoding runs on the main thread, with no compression and
 `confirmed_reads = false`. Cached tables require primary keys; Brotli is
@@ -95,7 +95,8 @@ The standard engine and pure GDScript path support Web without a .NET dependency
 | `server/src/content.rs` | Trusted terrain, map bounds, building/water blocking and elevated surfaces |
 | `server/src/combat.rs` | Monster simulation, attacks, health, death/respawn and loot |
 | `server/src/targeting.rs` | Private selected-target state, owner-only projection, churn limits and cleanup |
-| `server/src/combo.rs` | Private two-step combo chain, input classification, queued transitions and cancellation |
+| `server/src/combo.rs` | Private three-step combo chain, input classification, queued transitions and cancellation |
+| `server/src/root_motion.rs` | Server-owned combo displacement, canonical stepping and collision consumption |
 | `server/src/inventory.rs` | Item ownership, grid placement, equipment, consumables and item drops |
 | `server/src/progression.rs` | Source-backed Warrior stats, experience quarters, levels and stat allocation |
 | `server/src/admin.rs` | Default-deny progression capabilities, private feedback, receipts and audit records |
@@ -414,6 +415,95 @@ normal exports exclude the fixed-input probe and were not used for this input
 run. Public Slice B gameplay/deployment, native Windows execution, Godot MCP
 inspection, original-client visual/timing parity, later combo steps, root
 movement, full P2 and the full game remain outside this acceptance.
+
+Protocol 8 extends the common Sword+0 prefix through `combo_3` and adds
+server-owned displacement for all three actions. Trusted schema 4 derives each
+local-space endpoint and normalized duration from the pinned raw GR2 metadata.
+The endpoints are `(0, -1.317569580078125)`,
+`(0, -0.852515640258789)` and `(0, -1.4301394653320312)` metres. The current
+`linear-endpoint-approx-v1` policy linearly samples those exact endpoints;
+proprietary Granny within-cycle curves and 100 ms transition blending remain
+unverified.
+
+The controller stores root state privately and captures the server-planned
+heading at each accepted action. A hit during a root-enabled action preserves
+that captured public heading instead of turning the player toward the target at
+hit time; rootless attacks retain their established target-facing behavior.
+Simulation advances completed action-relative
+50 ms quanta in stable identity order before due hits and combo transitions;
+only an accepted direct, queued or fresh action replacement flushes the outgoing
+partial interval. Queue-only inputs cannot change physical sampling. Each delta
+uses the existing authoritative terrain height and swept collision path. A
+blocked remainder is consumed, repeated timestamps apply nothing and the final
+endpoint is clamped to the action duration. When an action ends inside a tick,
+ordinary locomotion receives only the post-action part of that tick, still
+bounded by the existing 100 ms movement policy.
+
+Root state remains independent from the pending-hit and combo-chain snapshots.
+Accepted movement, target changes and real equipment changes cancel a queued
+link while the current hit and root trajectory continue. Target death clears
+the target and future chain but lets the current action finish its root.
+Character death, leave, switch, disconnect or invalid control lease clears root
+immediately, and reconnect cannot replay the unconsumed remainder. The client
+adds no motion endpoint or optimistic transform: local and peer actors continue
+to follow subscribed public player coordinates and action timestamps.
+
+The isolated protocol-8 server checks pass 67 training gameplay tests and 72
+all-feature/Yongan gameplay tests, plus five build-boundary tests and one
+generated-definition test in each configuration. All-target/all-feature clippy
+passes with warnings denied. Root's reviewed revision-2 build and publication
+records are `.local/p2-rootmotion/revision2/build-manifest-root.json` and
+`.local/p2-rootmotion/revision2/publication-root.json`; they bind separate
+default-deny training, dual-training and Yongan artifacts to gameplay definition
+hash
+`2f096ae82998eeecb839df391a7350f8309e477a7004ef4c2e333167bc4ada8d`.
+The composed two-account revision-2 headless run passed 91 checks against the
+fresh flat training database. It exercised the three-step targetless and
+far-missed paths, the exact `35 + 35 + 35` selected-target path, the training
+stone sweep, equipment cancellation during the pending first hit, target death
+and disconnect/reconnect. It also staged a hit after the action root crossed
+the monster: the captured and post-hit headings were both
+`-1.57207345962524`, while the old target-facing bearing differed by pi.
+Observed open-terrain endpoint errors were 0.97--11.44
+micrometres; direct step-2/step-3 receipts arrived 558,770/572,670 microseconds
+after their source action starts. The queue and unequip receipts arrived
+184,369/184,465 microseconds after combo 1, before its 192,308-microsecond hit.
+The accepted report is
+`.local/p2-rootmotion/revision2/headless-root-20260907.json`; root's independent
+binding is `.local/p2-rootmotion/revision2/root-headless-acceptance.json`.
+The initial 88-check report and its build remain preserved under
+`.local/p2-rootmotion/` as superseded historical evidence.
+
+The reviewed revision-2 test-probe Web and Linux packages contain 832 and 1,635
+paths, 226 exact-RGBA UI images, three actors, 40 animation clips, 20 Web world
+sections and both 11-frame target effects; their record is
+`.local/p2-rootmotion/revision2/exports-root-reviewed.json`. The matching
+instrumented Web/Linux run passed 297 checks in
+`.local/p2-rootmotion/revision2/browser-root-lifecycle-20260907/report.json`.
+Both clients observed `100 -> 65 -> 30 -> 0` health through all three actions,
+accepted both same-target renewals before their transitions, and kept public
+heading constant within each root-enabled action. Web queue receipts arrived
+271,275/237,314 microseconds after their source action starts and transitioned
+at 572,074/544,167 microseconds; native receipts arrived at
+310,395/196,039 microseconds and transitioned at 543,862/549,354 microseconds.
+All measured terminal root endpoints were within 0.452 mm of the trusted linear
+endpoint.
+
+The same run proves that accepted movement, ground click and target clear cancel
+only the queued link while the current 35-damage hit and root continue. An
+account disconnect/reconnect introduced no position jump. Both clients reached
+the same Yongan wall endpoint after 0.92199707 m of clipped travel, and both
+survived their real four-minute refresh timers. Across 54 refresh samples, Web
+had 52 valid positions and native had 51; every valid coordinate remained at
+zero drift, with the remaining samples transiently pending during lifecycle
+changes. Root's bounded acceptance record is
+`.local/p2-rootmotion/root-acceptance-review.json`.
+
+This accepts the bounded local protocol-8 Slice C path through instrumented Web
+and Linux clients. Public Slice C gameplay/deployment, normal exports without
+the fixed-input probe, Windows execution, current Godot MCP inspection, exact
+proprietary Granny within-cycle/blend behavior, terminal combo step 4, skills,
+full P2 and the full game remain unqualified.
 
 The P1 compiler produces a client presentation manifest and a separate trusted
 server action artifact from the same selected profile. The manifest identifies

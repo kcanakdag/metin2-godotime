@@ -29,7 +29,7 @@ signal command_feedback_changed(rows: Array)
 signal combat_target_changed(info: Dictionary)
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
-const EXPECTED_PROTOCOL_VERSION := 7
+const EXPECTED_PROTOCOL_VERSION := 8
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
 const TABLES := [

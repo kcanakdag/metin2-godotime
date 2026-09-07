@@ -8,6 +8,7 @@ mod content;
 mod inventory;
 mod movement;
 mod progression;
+mod root_motion;
 mod targeting;
 
 mod definitions {
@@ -117,7 +118,7 @@ pub struct Controller {
     pub combat_target_life_sequence: u32,
     pub combat_target_change_not_before_us: i64,
     pub combat_target_revision: u64,
-    /// 0: no combo, 1: first one-hand step, 2: bounded second step.
+    /// 0: no combo; 1..=3: the bounded common one-hand prefix.
     pub combo_step: u8,
     pub combo_chain_revision: u64,
     pub combo_action_started_at_us: i64,
@@ -129,6 +130,12 @@ pub struct Controller {
     pub combo_equipped_vnum: u32,
     pub combo_link_queued: bool,
     pub combo_transition_boundary_us: i64,
+    /// 0: no root displacement; otherwise one-based index in the selected combo prefix.
+    pub root_motion_step: u8,
+    pub root_motion_action_revision: u64,
+    pub root_motion_started_at_us: i64,
+    pub root_motion_consumed_elapsed_us: i64,
+    pub root_motion_heading: f32,
     pub next_chat_us: i64,
 }
 
@@ -150,7 +157,7 @@ pub struct TickSchedule {
 fn compiled_world_info() -> WorldInfo {
     WorldInfo {
         id: 1,
-        protocol_version: 7,
+        protocol_version: 8,
         map_name: if content::YONGAN {
             "Yongan"
         } else {
@@ -326,6 +333,7 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
         controller.mode = 0;
         controller.last_input_us = now_us(ctx);
         combo::clear_chain(&mut controller);
+        root_motion::clear(&mut controller);
         targeting::clear_character_target(ctx, &mut controller)
             .unwrap_or_else(|error| panic!("cannot clear re-entered character target: {error}"));
         ctx.db.controller().identity().update(controller);
@@ -366,6 +374,11 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
             combo_equipped_vnum: 0,
             combo_link_queued: false,
             combo_transition_boundary_us: 0,
+            root_motion_step: 0,
+            root_motion_action_revision: 0,
+            root_motion_started_at_us: 0,
+            root_motion_consumed_elapsed_us: 0,
+            root_motion_heading: 0.0,
             next_chat_us: 0,
         });
     }
@@ -428,6 +441,7 @@ pub fn perform_attack(ctx: &ReducerContext) -> Result<(), String> {
         ctx.db.controller().identity().update(controller);
         return Ok(());
     }
+    root_motion::advance_for_replacement(ctx, &mut controller, now)?;
     if now < controller.next_attack_us {
         return Err("Attack is cooling down.".into());
     }
@@ -508,11 +522,14 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
         .id()
         .find(1)
         .ok_or("Simulation clock is missing.")?;
-    let elapsed = (now_us(ctx) - clock.last_tick.to_micros_since_unix_epoch()) as f32 / 1_000_000.0;
+    let previous_tick_us = clock.last_tick.to_micros_since_unix_epoch();
+    let now = now_us(ctx);
+    let elapsed = now.saturating_sub(previous_tick_us).max(0) as f32 / 1_000_000.0;
     clock.last_tick = ctx.timestamp;
     ctx.db.simulation_clock().id().update(clock);
-    combat::resolve_due_hits(ctx, now_us(ctx));
-    combo::resolve_due_transitions(ctx, now_us(ctx));
+    root_motion::advance_all(ctx, now)?;
+    combat::resolve_due_hits(ctx, now);
+    combo::resolve_due_transitions(ctx, now);
     let bounds = collision_bounds(ctx);
     for mut controller in ctx.db.controller().iter() {
         let Some(mut player) = ctx.db.player().identity().find(controller.identity) else {
@@ -522,22 +539,28 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
             continue;
         }
         let before = (player.x, player.z, player.heading, player.activity);
-        if now_us(ctx) < controller.attack_until_us {
+        if now < controller.attack_until_us {
             player.activity = 2;
         } else {
             player.action_started_at_us = 0;
             player.action_ends_at_us = 0;
-            if controller.mode == 1 && now_us(ctx) - controller.last_input_us > INPUT_TIMEOUT_US {
+            if controller.mode == 1 && now - controller.last_input_us > INPUT_TIMEOUT_US {
                 controller.mode = 0;
             }
+            let movement_elapsed =
+                movement_elapsed_after_attack(previous_tick_us, now, controller.attack_until_us);
             let (dx, dz) = match controller.mode {
-                1 => step(controller.direction_x, controller.direction_z, elapsed)?,
+                1 => step(
+                    controller.direction_x,
+                    controller.direction_z,
+                    movement_elapsed,
+                )?,
                 2 => movement::target_step(
                     player.x,
                     player.z,
                     controller.target_x,
                     controller.target_z,
-                    elapsed,
+                    movement_elapsed,
                 ),
                 _ => (0.0, 0.0),
             };
@@ -572,6 +595,11 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
 
 fn now_us(ctx: &ReducerContext) -> i64 {
     ctx.timestamp.to_micros_since_unix_epoch()
+}
+
+fn movement_elapsed_after_attack(previous_tick_us: i64, now: i64, attack_until_us: i64) -> f32 {
+    let movement_started_at_us = previous_tick_us.max(attack_until_us);
+    now.saturating_sub(movement_started_at_us).max(0) as f32 / 1_000_000.0
 }
 
 fn active_session(ctx: &ReducerContext) -> Result<ConnectionId, String> {
@@ -674,5 +702,31 @@ mod tests {
         }
         assert!(valid_chat(&"x".repeat(161)).is_err());
         assert!(valid_chat(&"ş".repeat(160)).is_ok());
+    }
+
+    #[test]
+    fn ordinary_movement_uses_only_the_tick_remainder_after_attack() {
+        let previous = 1_000_000;
+        let now = previous + 50_000;
+        assert_eq!(movement_elapsed_after_attack(previous, now, previous), 0.05);
+        assert_eq!(
+            movement_elapsed_after_attack(previous, now, previous + 25_000),
+            0.025
+        );
+        assert_eq!(movement_elapsed_after_attack(previous, now, now), 0.0);
+        assert_eq!(
+            movement_elapsed_after_attack(previous, now, now + 25_000),
+            0.0
+        );
+        assert_eq!(movement_elapsed_after_attack(now, previous, previous), 0.0);
+        assert_eq!(
+            step(
+                1.0,
+                0.0,
+                movement_elapsed_after_attack(previous, previous + 1_000_000, previous),
+            )
+            .unwrap(),
+            (0.5, 0.0)
+        );
     }
 }

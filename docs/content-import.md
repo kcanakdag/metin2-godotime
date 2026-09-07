@@ -37,32 +37,53 @@ raw Granny/Blender asset to the player fixture.
 The server consumes the separate, ignored
 `server/content/p0-warrior-dog/actions.v1.json`. The filename is retained for
 its stable runtime path, but its payload is now
-`mt2spacetime.trusted-action-definitions` **schema 3**. Schema 3 retains the
-source-derived Warrior progression definitions added in schema 2 and adds the
-selected two-action Sword+0 base-combo prefix. The trusted payload contains
-exactly four attacks: the player general attack, `combo_1`, `combo_2`, and the
-Wild Dog attack. Only the two ordered combo actions carry exact integer
+`mt2spacetime.trusted-action-definitions` **schema 4**. Schema 4 retains the
+source-derived Warrior progression definitions and selects the common
+`combo_1`, `combo_2`, `combo_3` Sword+0 prefix. The trusted payload contains
+exactly five attacks: the player general attack, those three combo actions, and
+the Wild Dog attack. Only the three ordered combo actions carry exact integer
 `pre_input_us`, `direct_input_us`, `input_limit_us`, and `link_us` fields.
-Later declared presentation actions stay outside this bounded trusted prefix.
-The file is server input, not an exported client resource. Its
+Later declared presentation actions, including the terminal `combo_4` record
+whose source timing fields are inverted, stay outside this bounded trusted
+prefix. The file is server input, not an exported client resource. Its
 `gameplay_definition_hash` must exactly equal the client presentation
 manifest's value.
 
-The compiler requires every declared one-hand chain to start with distinct
-`combo_1`, `combo_2` entries, resolves each selected motion exactly once, and
-requires `0 <= pre < direct < limit <= duration`. It rejects duplicate action
-IDs, missing or reordered prefix data, non-integer timing, multiple hit windows,
-and wrong actor, mode, or Sword+0 requirements. The Rust build repeats this
-validation before emitting `ComboInputDefinition`,
-`PLAYER_ONEHAND_COMBO: [AttackDefinition; 2]`, and the existing
-`PLAYER_ONEHAND_ATTACK` compatibility alias. `link_us` remains source evidence;
-it does not independently schedule gameplay.
+The compiler requires every declared one-hand chain to share the distinct
+three-action prefix, resolves each selected motion exactly once, and requires
+`0 <= pre < direct < limit <= duration`. It reads the pinned raw GR2 metadata
+with the pinned Carbon reader before the higher-level animation graph drops the
+accumulation fields. Each selected file must have one animation, one `Bip01`
+track group, `AccumulationFlags = 3`, a finite bounded `LoopTranslation`, zero
+vertical output displacement, and explicit null `PeriodicLoop` and
+`RootMotion`. Its raw duration must round to the MSA/action duration. The MSA
+`Accumulation` value is a corroborating two-decimal-centimetre value and may
+differ by at most 50 micrometres per component.
 
-The compiler version is `content-compiler-v1.2.0`. The verified local rebuild
-records content hash
-`3ca0f6030efafd89498923b951ac31d6dde72166f7a1a45cd1b8d375bef2b129` and
+The fixed policy is `linear-endpoint-approx-v1`. Source centimetres `(x,y,z)`
+map to Godot metres `(x,z,-y)/100`, followed by the fixture's 180-degree yaw
+exactly once. The resulting actor-local `(x,z)` endpoints are
+`(0,-1.317569580078125)`, `(0,-0.852515640258789)`, and
+`(0,-1.4301394653320312)` over `1,000,000`, `933,333`, and `1,066,667`
+microseconds. The compiler derives these values from the three pinned GR2
+inputs. Raw evidence is stored as bounded decimal strings so Python and Rust
+hash the same canonical JSON; runtime endpoint fields remain `f64`. Selected
+root durations are limited to 1,600,000 microseconds and endpoint components to
+2 metres, matching the bounded server integrator.
+
+The Rust build repeats the prefix, timing, policy, provenance, raw metadata,
+coordinate, duration, and bound checks before emitting `ComboInputDefinition`,
+`RootMotionDefinition`, `PLAYER_ONEHAND_COMBO: [AttackDefinition; 3]`, and the
+existing `PLAYER_ONEHAND_ATTACK` compatibility alias. General and Wild Dog
+attacks have no root definition. `link_us` remains source evidence; it does not
+independently schedule gameplay. Original GR2/MSA files and the Carbon runtime
+remain development inputs and are not shipped in the server or client.
+
+The compiler version is `content-compiler-v1.3.0`. The verified repeat local
+rebuild records content hash
+`c31bf7b0bf6afbf79d54f70d5bd20e8047cd39ce3ea14783ae8df79441a61e9f` and
 gameplay-definition hash
-`958671d126376e06f827d90066dec6f78b343a90b52f3fe0dd91e4a1985c34b7`.
+`2f096ae82998eeecb839df391a7350f8309e477a7004ef4c2e333167bc4ada8d`.
 The presentation-output hash remains
 `2bcd691596bfb76f90359955a6469eda9a5a2d65045d00452f3b66fcc699c839`,
 and all three GLB hashes remain byte-for-byte unchanged from the accepted Slice
@@ -71,15 +92,19 @@ A inputs. Rebuild and validate the compiler/build boundary with:
 ```sh
 .local/venv-dev/bin/python tools/content_compile.py build --offline \
   --profile content/profiles/p0-warrior-dog.json --blender /path/to/blender
-.local/venv-dev/bin/python -m unittest tests.test_combo_content tests.test_content_formats
-CARGO_TARGET_DIR=.local/p2-combo/compiler-target \
+.local/venv-dev/bin/python -m unittest tests.test_metin_root_motion \
+  tests.test_combo_content tests.test_content_formats
+CARGO_TARGET_DIR=.local/p2-rootmotion/compiler-target \
   cargo test --manifest-path server/Cargo.toml --test build_combo \
   --test generated_definitions
 ```
 
-These checks prove the selected normalized data, generated Rust constants, and
-presentation artifact hashes agree. They do not prove a server publish, the
-combo state machine, player export behavior, or full original-client parity.
+These checks prove the selected normalized data, generated Rust constants, raw
+endpoint provenance, and presentation artifact hashes agree. The endpoint is
+source-exact, while its linear within-action use is an explicit approximation:
+the proprietary Granny within-cycle curve and 100-millisecond transition blend
+were not measured. These checks do not prove a server publish, runtime root
+integration, player export behavior, or full original-client parity.
 
 P2's Status page reuses selected converted UI textures already in the ignored
 UI import output. Missing original status-window artwork remains out of scope:
