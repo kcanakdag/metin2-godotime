@@ -63,6 +63,26 @@ input, and screenshots. The previous temporary `MT2 Dev Bridge` is no longer use
 | `execute_game_script` | Evaluate an expression against the running game |
 | `stop_scene` | Stop the client |
 
+`play_scene` also accepts an optional `user_args` string for one editor launch,
+for example `"-- --profile qa"`. The add-on holds those as Godot's temporary
+`editor/run/main_run_args`, disables save-before-running, and restores the
+previous in-memory settings after launch. It does not save the project or any
+open scene. A launch is rejected while the editor is already running a scene or
+another MCP launch is still being accepted.
+
+Run the isolated editor lifecycle regression without connecting to the active
+MCP bridge:
+
+```sh
+python3 tools/test_godot_scene_commands.py --godot /path/to/godot
+```
+
+It copies only the patched command and its local dependencies into a temporary
+project, starts a temporary headless editor, and checks launch arguments,
+settings restoration, invalid input, timeout, concurrent launch, teardown, and
+`uid://` main-scene validation. The command reports the child arguments and
+before/after hashes for the source files it reads.
+
 For structured runtime observations use this expression:
 
 ```gdscript

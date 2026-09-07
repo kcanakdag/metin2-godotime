@@ -30,7 +30,7 @@ export const TOOL_DEFINITIONS: ToolDef[] = [
   { name: "open_scene", description: "Open scene in editor", method: "open_scene", params: [{ name: "scene_path", type: "string", required: true }] },
   { name: "delete_scene", description: "Delete scene file", method: "delete_scene", params: [{ name: "scene_path", type: "string", required: true }] },
   { name: "add_scene_instance", description: "Instance scene as child node", method: "add_scene_instance", params: [{ name: "scene_path", type: "string", required: true }, { name: "parent_path", type: "string" }, { name: "name", type: "string" }] },
-  { name: "play_scene", description: "Run scene (main/current/custom)", method: "play_scene", params: [{ name: "mode", type: "string", enum: ["current", "main", "custom"] }, { name: "scene_path", type: "string" }] },
+  { name: "play_scene", description: "Run a main, current, or custom scene; optional user_args are temporary Godot run arguments", method: "play_scene", params: [{ name: "mode", type: "string", enum: ["current", "main", "custom"] }, { name: "scene_path", type: "string" }, { name: "user_args", type: "string", description: "Optional, space-separated Godot run arguments for this launch only (max 4096 characters)" }] },
   { name: "stop_scene", description: "Stop running scene", method: "stop_scene" },
   { name: "save_scene", description: "Save current scene to disk", method: "save_scene" },
   { name: "get_scene_exports", description: "List @export variables in a scene", method: "get_scene_exports", params: [{ name: "scene_path", type: "string" }, { name: "path", type: "string" }] },

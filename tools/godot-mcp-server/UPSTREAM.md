@@ -19,6 +19,11 @@ held mouse buttons while preserving the single-click tool's behavior.
 Mouse clicks use distinct press/release event objects. Reusing and mutating a
 queued press erased it before Godot consumed the event, breaking ground clicks,
 UI buttons, and scroll input; the real-client controls audit covers all three.
+`play_scene.user_args` temporarily sets Godot's `editor/run/main_run_args` for
+one launch, while editor autosave is disabled. The add-on restores the exact
+previous in-memory values (or absence) after Godot has consumed the launch or
+when the command node leaves the tree. It never saves `ProjectSettings` or an
+open scene, and rejects concurrent launches.
 `services/scene_backup.gd` and `MCPResourceUtils.backup_scene` preserve the edited
 scene and open text-script buffers in unique `.local/editor-backups` directories,
 with a manifest and SHA-256 hashes, before a targeted scene reload is considered.

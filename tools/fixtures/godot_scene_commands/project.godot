@@ -1,0 +1,15 @@
+; Isolated editor-only test project for MCP SceneCommands.
+config_version=5
+
+[application]
+
+config/name="Mcp Scene Commands QA"
+run/main_scene="res://qa_scene.tscn"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/scene_commands_qa/plugin.cfg")
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
