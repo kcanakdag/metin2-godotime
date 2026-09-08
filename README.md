@@ -19,8 +19,10 @@ fresh test database for this local change; do not overwrite the public world.
 The protocol-26 state passes 35 authenticated Sword Spin checks and 15 real combat checks.
 Three-Way Cut is now enabled locally alongside Sword Spin. Its two-client dummy
 replay passes 25 checks, including three replicated hits, target validation and
-cooldown rejection. Original icons pass native UI QA. Real-mob reaction and
-exported browser qualification remain pending; the public build is unchanged.
+cooldown rejection. Original icons pass native UI QA. Another 28 two-client checks verify original
+Grey Wolf flinch, knockdown, 0.392 m push and recovery. Equipped animation samples
+pass native QA for both Warriors. Exported browser qualification remains pending;
+the public build is unchanged.
 
 Local mob threat behavior now has a reusable two-account passive
 retaliation and target-switching scenario (42 checks passed). See the

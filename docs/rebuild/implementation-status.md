@@ -5,6 +5,33 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Original mob skill reactions and reusable authored layouts — 2026-09-08
+
+Authored population overrides now validate against all vnums in the selected
+verified mob package. Default builds retain their single-mob registry, and existing
+named combat fixtures retain their exact contracts. Added the explicit training
+layout `content/worlds/training.skill-reactions.population.json`, placing original
+Grey Wolf 106 without altering its 412 HP, defense, animations or AI. Building this
+layout without its selected package correctly rejects the unavailable definition.
+Three population-parser checks and strict selected-registry library Clippy pass.
+
+The new `skill_reactions` progression replay runs a specialized script through the
+shared authenticated setup. Fresh database `mt2-p2-mob-skill-v26-r2-20260908` passes
+28 two-client checks. Both clients observe health 412→411→410→409 on the same
+surviving life, original front damage/knockdown/standup actions, a maximum push of
+0.3919997215271 m, and return to idle. These are minimum-damage hits against the
+higher-level creature, not a broad damage-formula qualification. First replay
+observed both reaction phases but ended before recovery: original knockdown is
+1.2 s plus standup 2 s, following the third hit. The test now waits for recovery
+within an 8-second bound; no gameplay timing was shortened. Both test databases
+remain intact. Evidence: `.local/p6-mob-skill-r1/acceptance.json` and `replay-r2.json`.
+
+No public update or exported/browser qualification. Local frozen/default WASM is
+QA-authorized and must not be deployed publicly. The negative-build assertion first
+looked for the wrong error wording; inspection confirms the expected rejection
+`Spawn 1 refers to an unavailable monster definition`. Next: matching browser/full
+world export and public development rollout with appropriate endpoint QA.
+
 ## Equipped skill animation review — 2026-09-08
 
 Added the focused `equipped_skills` native fixture, selecting Warrior skills

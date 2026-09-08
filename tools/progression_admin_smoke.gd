@@ -64,6 +64,8 @@ func _run() -> void:
 		await _verify_skills(first, second)
 	elif str(_config.mode) == "training_dummy":
 		await _verify_training_dummy(first, second)
+	elif str(_config.mode) == "skill_reactions":
+		await _verify_skill_reactions(first, second)
 	elif str(_config.mode) == "three_way_cut":
 		await _verify_three_way_cut(first, second)
 	elif str(_config.mode) == "skill_combat":
@@ -934,3 +936,7 @@ func _has_equipped_item(connection: GameConnection, item_id: int) -> bool:
 		if int(item.id) == item_id and bool(item.equipped):
 			return true
 	return false
+
+
+func _verify_skill_reactions(_first: GameConnection, _second: GameConnection) -> void:
+	_check("specialized_reaction_fixture_loaded", false)

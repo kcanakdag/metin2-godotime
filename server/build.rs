@@ -334,7 +334,10 @@ fn rust_string(value: &str) -> String {
     format!("{value:?}")
 }
 
-fn selected_monster_spawns(mob_vnum: u32) -> (Vec<MonsterSpawn>, &'static str) {
+fn selected_monster_spawns(
+    mob_vnum: u32,
+    available_vnums: &[u32],
+) -> (Vec<MonsterSpawn>, &'static str) {
     let selector = std::env::var(TARGET_FIXTURE_ENV).unwrap_or_default();
     if selector.is_empty() {
         let (map_id, default_path) = if std::env::var_os("CARGO_FEATURE_YONGAN").is_some() {
@@ -350,7 +353,7 @@ fn selected_monster_spawns(mob_vnum: u32) -> (Vec<MonsterSpawn>, &'static str) {
         )
         .unwrap_or_else(|error| fail(format!("Invalid population JSON: {error}")));
         return (
-            build_population::parse(&value, map_id, &[mob_vnum])
+            build_population::parse(&value, map_id, available_vnums)
                 .unwrap_or_else(|error| fail(error)),
             "",
         );
@@ -1090,7 +1093,11 @@ fn main() {
     let (monster_spawns, combat_fixture_content_hash) = if original_population.is_some() {
         (Vec::new(), "")
     } else {
-        selected_monster_spawns(mob_vnum)
+        let available_vnums: Vec<u32> = selected_mobs
+            .as_ref()
+            .map(|package| package.vnums.iter().copied().collect())
+            .unwrap_or_else(|| vec![mob_vnum]);
+        selected_monster_spawns(mob_vnum, &available_vnums)
     };
 
     let item = items

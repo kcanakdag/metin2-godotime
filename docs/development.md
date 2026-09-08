@@ -2001,3 +2001,21 @@ seeks and freezes four source-time poses per clip, checks skeleton/equipment bou
 and captures each pose with a camera centered on the deformed skeleton. It reuses the shared actor fixture’s scene, camera and validation helpers. It covers selected live skills without rerunning
 the entire 88-motion candidate suite. It does not qualify browser rendering or
 server hit reactions.
+
+## Original mob skill-reaction replay
+
+Authored `MT2_POPULATION_PROFILE` layouts can reference any vnum supplied by the
+verified `MT2_MOB_CONTENT` package. Without that package they retain the default
+single-mob registry. Unknown definitions reject; selecting a layout never changes
+creature stats. `content/worlds/training.skill-reactions.population.json` places
+original Grey Wolf 106 on the training map for surviving three-hit reaction QA.
+
+Build a fresh QA module using that profile plus the original mob package (without
+`--features yongan`), the existing local auth issuer and the authorized QA operator
+identity. Freeze the module, publish to a fresh `mt2-p2-` database, then run
+`tools/test_progression_admin.py skill_reactions` with the usual server/database/
+Godot/private-fixture/report arguments. It learns Three-Way Cut on fresh characters,
+walks to the mob, and records independent damage/reaction/force/recovery observations
+from both clients. The original clips can outlast the skill action: the fixture
+waits for actual recovery within eight seconds instead of imposing a shorter clip.
+No server inspection reducer or mutable creature-stat override is added.

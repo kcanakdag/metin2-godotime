@@ -59,6 +59,7 @@ def stage_project(stage: Path) -> None:
     for source, destination in (
         (ROOT / "client/scripts/net/game_connection.gd", stage / "scripts/net/game_connection.gd"),
         (ROOT / "tools/progression_admin_smoke.gd", stage / "tests/progression_admin_smoke.gd"),
+        (ROOT / "tools/skill_reaction_smoke.gd", stage / "tests/skill_reaction_smoke.gd"),
     ):
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
@@ -100,7 +101,9 @@ def run_godot(
         "--path",
         str(stage),
         "--script",
-        "res://tests/progression_admin_smoke.gd",
+        "res://tests/skill_reaction_smoke.gd"
+        if config["mode"] == "skill_reactions"
+        else "res://tests/progression_admin_smoke.gd",
         "--",
         "--admin-smoke-config",
         str(config_path),
@@ -164,7 +167,15 @@ def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "phase",
-        choices=("prepare", "verify", "skills", "skill_combat", "training_dummy", "three_way_cut"),
+        choices=(
+            "prepare",
+            "verify",
+            "skills",
+            "skill_combat",
+            "training_dummy",
+            "three_way_cut",
+            "skill_reactions",
+        ),
     )
     parser.add_argument("--server", default="http://127.0.0.1:8186")
     parser.add_argument("--game-server", default="http://127.0.0.1:13223")

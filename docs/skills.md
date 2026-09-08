@@ -398,3 +398,10 @@ Warrior appearances. Four Three-Way Cut poses were reviewed with attached origin
 swords and intact hair/textures. Use the focused `equipped_skills` actor scenario
 for selected-skill animation/attachment work. Browser and live mob reaction evidence
 remain separate requirements.
+
+Original Grey Wolf reaction acceptance now passes 28 real two-client checks on a
+fresh training world using the full selected mob registry. Both observe three
+minimum-damage hits, normal flinch, GREAT front knockdown/standup, 0.392 m force and
+recovery on a surviving exact life. The original 1.2 s knockdown plus 2 s standup
+are retained. This complements the dummy and equipped-native checks; exported
+browser/full-world behavior and exact original physics parity remain unproven.
