@@ -5,6 +5,35 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Original regeneration compiler and entry policy — 2026-09-08
+
+`server/examples/regeneration_compile.rs` verifies the original inventory hash,
+map and selected regeneration-policy assumptions, then uses the shared catalog
+parser to emit candidate `ORIGINAL_REGENERATION_DEFINITIONS`. It preserves source
+line IDs, intervals, capacity, rectangles, equal-weight group choices and forced
+aggression. Current Yongan output has 945 entries covering 44 species; its input
+contains no forced-aggressive entries. The candidate is not automatically linked
+into a server build.
+
+Definitions now use `startup_jitter_max_seconds`: the server samples one integer
+in 0..=maximum at initial enabled scheduling, then persists the resulting deadline.
+Restoring a started entry uses its saved deadline and never resamples startup
+jitter. Disabled entries consume no startup draw. Optional boolean
+`force_aggressive` defaults false; entry aggression applies to retained followers
+as well as leaders through their private group/entry membership. Protocol 23 and
+bindings are unchanged. The training fixture retains maximum zero/false; live
+nonzero-jitter and forced-aggression behavior remains separately unqualified.
+
+
+Evidence: `.local/mobs/regeneration-policy-r1/acceptance.json`. Candidate emission
+is byte-identical on repeat; its 945 entries compile against the actual generated
+server structures and reference 44 species. The typed harness passes its registry
+check plus seven included damage checks. Four focused settings tests and strict
+Clippy pass. The fresh training database `mt2-p2-regeneration-policy-r1-20260908`
+passes all 67 real two-account regeneration checks, including replacement and
+reconnect, with its existing zero-jitter/passive policy. Public protocol 19 remains
+unchanged; candidate installation and nonzero entry-policy live tests are pending.
+
 ## Group-area regeneration placement — 2026-09-08
 
 Compiled regeneration definitions now optionally contain a rectangle in centimeters

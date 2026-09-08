@@ -993,3 +993,18 @@ followers remain. Two focused allocator tests cover non-reuse, partial placement
 invalid counts and exact u32 exhaustion. Strict example/test Clippy passes and a
 legacy checkpoint rejects. This is offline evidence, not live group spawning.
 Protocol 21 and the public protocol-19 build remain unchanged.
+
+## Compile original regeneration candidates
+
+```sh
+cargo run --manifest-path server/Cargo.toml --locked --offline \
+  --example regeneration_compile -- /path/to/population.v1.json \
+  > /new/output/original-regeneration.rs
+```
+
+The command verifies the inventory and emits typed Rust candidate entries using
+the server’s regeneration structures. It does not install them, select a gameplay
+registry, publish a database or export a client. Complete species/assets and
+matching world qualification are required before installation. Source line IDs,
+equal-weight choices, rectangles and entry policies are preserved. See the
+implementation ledger for the 945-entry/44-species type-compilation evidence.

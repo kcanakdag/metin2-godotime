@@ -1325,7 +1325,9 @@ fn select_monster_victim(
         return Some(player);
     }
     crate::mob_aggro::clear_monster(ctx, monster.id);
-    if !definition.aggressive {
+    if !definition.aggressive
+        && !crate::mob_regeneration::forces_aggression(ctx, monster.id).ok()?
+    {
         return None;
     }
     let selected = ctx

@@ -1697,7 +1697,7 @@ each replay because successful runs advance the population. Never deploy this
 training fixture over the public map.
 
 The regeneration fixture’s JSON `regeneration` object now supplies `id`,
-`interval_us`, `capacity` and `startup_jitter_seconds`. Rebuild after editing it;
+`interval_us`, `capacity` and `startup_jitter_max_seconds`. Rebuild after editing it;
 the generated server definition owns those settings and its member-template slice.
 Do not edit generated Rust output. Existing replay expectations target the checked-in
 five-second, capacity-one configuration; altered content needs matching QA.
@@ -1708,3 +1708,7 @@ leader first). Only installed species are accepted. The selected fixture uses
 passive dogs and checks initial leader placement inside its area before testing
 replacement/reconnect. Template IDs are replaced by fresh allocated IDs. The
 current explicit fixture marker is `training-v7-regenerating-area-wild-dog-v1`.
+
+The startup jitter setting is a maximum, sampled once when enabled scheduling
+starts. Optional `force_aggressive` is a boolean (default false), applied to all
+members of the entry’s groups.

@@ -4,18 +4,30 @@ use serde_json::Value;
 #[derive(Debug, PartialEq, Eq)]
 pub struct Settings {
     pub id: u32,
+    pub force_aggressive: bool,
     pub interval_us: u64,
     pub capacity: u64,
-    pub startup_jitter_seconds: u64,
+    pub startup_jitter_max_seconds: u64,
 }
 
 pub fn parse(value: &Value) -> Result<Settings, String> {
     let row = value
         .as_object()
         .ok_or("Regeneration settings must be an object")?;
-    let fields = ["id", "interval_us", "capacity", "startup_jitter_seconds"];
-    if row.len() != fields.len() || fields.iter().any(|key| !row.contains_key(*key)) {
-        return Err("Expected exactly id, interval_us, capacity and startup_jitter_seconds".into());
+    let fields = [
+        "id",
+        "interval_us",
+        "capacity",
+        "startup_jitter_max_seconds",
+    ];
+    if fields.iter().any(|key| !row.contains_key(*key))
+        || row
+            .keys()
+            .any(|key| !fields.contains(&key.as_str()) && key != "force_aggressive")
+    {
+        return Err(
+            "Expected exactly id, interval_us, capacity and startup_jitter_max_seconds".into(),
+        );
     }
     let read = |key: &str, max: u64| {
         row[key]
@@ -27,11 +39,16 @@ pub fn parse(value: &Value) -> Result<Settings, String> {
     if id == 0 {
         return Err("Regeneration entry ID must be positive".into());
     }
+    let force_aggressive = match row.get("force_aggressive") {
+        None => false,
+        Some(value) => value.as_bool().ok_or("force_aggressive must be boolean")?,
+    };
     Ok(Settings {
         id,
+        force_aggressive,
         interval_us: read("interval_us", 86_400_000_000)?,
         capacity: read("capacity", 1000)?,
-        startup_jitter_seconds: read("startup_jitter_seconds", 16)?,
+        startup_jitter_max_seconds: read("startup_jitter_max_seconds", 16)?,
     })
 }
 

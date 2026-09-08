@@ -21,7 +21,7 @@
     "id": 1,
     "interval_us": 5000000,
     "capacity": 1,
-    "startup_jitter_seconds": 0
+    "startup_jitter_max_seconds": 0
   },
   "group_area": {
     "bounds_cm": [

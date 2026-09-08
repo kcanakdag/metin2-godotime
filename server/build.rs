@@ -1509,7 +1509,7 @@ pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
     }
     writeln!(output, "];").unwrap();
 
-    output.push_str("#[derive(Clone, Copy, Debug)]\npub struct RegenerationGroupArea { pub bounds_cm: [i32; 4], pub groups: &'static [&'static [u32]] }\n#[derive(Clone, Copy, Debug)]\npub struct RegenerationDefinition { pub area: Option<RegenerationGroupArea>, pub id: u32, pub interval_us: i64, pub capacity: usize, pub startup_jitter_seconds: u8, pub templates: &'static [MonsterSpawnDefinition] }\n");
+    output.push_str("#[derive(Clone, Copy, Debug)]\npub struct RegenerationGroupArea { pub bounds_cm: [i32; 4], pub groups: &'static [&'static [u32]] }\n#[derive(Clone, Copy, Debug)]\npub struct RegenerationDefinition { pub force_aggressive: bool, pub area: Option<RegenerationGroupArea>, pub id: u32, pub interval_us: i64, pub capacity: usize, pub startup_jitter_max_seconds: u8, pub templates: &'static [MonsterSpawnDefinition] }\n");
     if std::env::var(TARGET_FIXTURE_ENV).unwrap_or_default() == "regenerating-wild-dog-v1" {
         let payload: Value = serde_json::from_slice(
             &fs::read(REGENERATING_TARGET_FIXTURE).expect("regeneration fixture must exist"),
@@ -1517,11 +1517,12 @@ pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
         .expect("valid fixture JSON");
         let settings =
             build_regeneration::parse(&payload["regeneration"]).unwrap_or_else(|error| fail(error));
-        let (id, interval, capacity, jitter) = (
+        let (id, interval, capacity, jitter, force_aggressive) = (
             settings.id,
             settings.interval_us,
             settings.capacity,
-            settings.startup_jitter_seconds,
+            settings.startup_jitter_max_seconds,
+            settings.force_aggressive,
         );
         let area = if let Some(value) = payload.get("group_area") {
             let area = build_regeneration::parse_area(value, &[mob_vnum])
@@ -1539,7 +1540,7 @@ pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
         } else {
             "None".into()
         };
-        writeln!(output, "pub const REGENERATION_DEFINITIONS: &[RegenerationDefinition] = &[RegenerationDefinition {{ area: {area}, id: {id}, interval_us: {interval}, capacity: {capacity}, startup_jitter_seconds: {jitter}, templates: MONSTER_SPAWNS }}];").unwrap();
+        writeln!(output, "pub const REGENERATION_DEFINITIONS: &[RegenerationDefinition] = &[RegenerationDefinition {{ force_aggressive: {force_aggressive}, area: {area}, id: {id}, interval_us: {interval}, capacity: {capacity}, startup_jitter_max_seconds: {jitter}, templates: MONSTER_SPAWNS }}];").unwrap();
     } else {
         output.push_str("pub const REGENERATION_DEFINITIONS: &[RegenerationDefinition] = &[];\n");
     }

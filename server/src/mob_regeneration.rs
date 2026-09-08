@@ -26,7 +26,7 @@ fn restore(row: &MonsterRegeneration) -> Result<EntryState, String> {
     EntryState::restore(
         definition.interval_us,
         definition.capacity,
-        definition.startup_jitter_seconds,
+        0, // Saved deadlines already include the one-time sampled jitter.
         EntrySnapshot {
             next_tick_us: row.next_tick_us,
             initial: row.initial,
@@ -49,10 +49,9 @@ fn row(id: u32, state: &EntryState) -> MonsterRegeneration {
 
 pub fn initialize(ctx: &ReducerContext) -> Result<(), String> {
     for d in crate::definitions::REGENERATION_DEFINITIONS {
-        ctx.db.monster_regeneration().insert(row(
-            d.id,
-            &EntryState::new(d.interval_us, d.capacity, d.startup_jitter_seconds)?,
-        ));
+        ctx.db
+            .monster_regeneration()
+            .insert(row(d.id, &EntryState::new(d.interval_us, d.capacity, 0)?));
     }
     tick(ctx)?;
     Ok(())
@@ -60,7 +59,14 @@ pub fn initialize(ctx: &ReducerContext) -> Result<(), String> {
 
 pub fn tick(ctx: &ReducerContext) -> Result<(), String> {
     for saved in ctx.db.monster_regeneration().iter() {
-        let state = restore(&saved)?;
+        let mut state = restore(&saved)?;
+        if saved.initial {
+            let d = definition(saved.id)?;
+            if d.interval_us > 0 {
+                let jitter = ctx.rng().gen_range(0..=d.startup_jitter_max_seconds);
+                state = EntryState::new(d.interval_us, d.capacity, jitter)?;
+            }
+        }
         let next = state.plan_tick(crate::now_us(ctx), || {
             let definition = definition(saved.id)?;
             let (templates, headings) = if let Some(area) = definition.area {
@@ -161,4 +167,27 @@ pub fn destroy(ctx: &ReducerContext, monster_id: u32) -> Result<bool, String> {
         ctx.db.monster_spawn_group().owner().delete(group.owner);
     }
     Ok(true)
+}
+
+/// Entry aggression applies to followers as well as their original leader.
+pub fn forces_aggression(ctx: &ReducerContext, monster_id: u32) -> Result<bool, String> {
+    let origin = ctx
+        .db
+        .monster_origin()
+        .monster_id()
+        .find(monster_id)
+        .ok_or("Monster has no origin")?;
+    if origin.group_owner == 0 {
+        return Ok(false);
+    }
+    let group = ctx
+        .db
+        .monster_spawn_group()
+        .owner()
+        .find(origin.group_owner)
+        .ok_or("Monster has no group")?;
+    if group.regeneration_entry == 0 {
+        return Ok(false);
+    }
+    Ok(definition(group.regeneration_entry)?.force_aggressive)
 }
