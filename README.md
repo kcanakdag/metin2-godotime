@@ -11,6 +11,11 @@ The current [public development build](https://kcanakdag.com:8443/) uses protoco
 open tab before signing in. Existing login accounts are retained; this new
 world database has a separate character roster. See [deployment evidence](docs/distribution.md).
 
+Local protocol-20 mob threat behavior now has a reusable two-account passive
+retaliation and target-switching scenario (42 checks passed). See the
+[development replay instructions](docs/development.md#test-scope-and-passive-mob-replay).
+The public build remains protocol 19.
+
 Items, future quests, mobs and classes follow the
 [data-based content authoring contract](docs/rebuild/content-authoring.md):
 versioned definitions select shared mechanics, with server-owned progress and

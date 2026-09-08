@@ -5,6 +5,17 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Passive retaliation qualification — 2026-09-08
+
+Dedicated live passive retaliation and higher-threat switching now pass 42
+checks in `.local/mobs/passive-runtime-r1/acceptance.json`, database
+`mt2-p2-passive-runtime-r1-20260908`. Two real accounts use ordinary unarmed
+attacks: the passive dog ignores proximity, retaliates, switches to the higher
+threat while both players live, and stops attacking after that victim disconnects.
+This training-only fixture is explicitly selected at build time and rejected for
+Yongan builds. It does not install the original population or qualify restart,
+party behavior or wandering. See `docs/development.md` for the replay command.
+
 ## Public progress deployment — 2026-09-08
 
 The public development endpoint is now `https://kcanakdag.com:8443`, protocol 19,

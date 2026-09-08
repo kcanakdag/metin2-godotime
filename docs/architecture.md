@@ -1329,4 +1329,11 @@ in either subscription, XP rewards, death/respawn and disconnect/reconnect.
 All-target Rust tests (152 library tests) and full `tools/dev.py lint` pass.
 The r1 protocol fixture passes six checks rejecting 19 and accepting 20; candidate
 Rust table fixture passes 11 checks including three aggressive species out of 44.
-Dedicated live higher-threat switching and passive retaliation tests remain next.
+Dedicated live passive retaliation and higher-threat switching now pass 42
+checks in `.local/mobs/passive-runtime-r1/acceptance.json`, database
+`mt2-p2-passive-runtime-r1-20260908`. Two real accounts use ordinary unarmed
+attacks: the passive dog ignores proximity, retaliates, switches to the higher
+threat while both players live, and stops attacking after that victim disconnects.
+This training-only fixture is explicitly selected at build time and rejected for
+Yongan builds. It does not install the original population or qualify restart,
+party behavior or wandering. See `docs/development.md` for the replay command.

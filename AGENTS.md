@@ -75,7 +75,9 @@ and visual inspection; live admin actions still require server authorization.
    replacement for the feature. Batch closely related changes into one milestone.
 3. Agree on shared action IDs, schema fields, units, timing and lifecycle rules
    before parallel code depends on them. Keep interfaces small and source-backed.
-4. Run focused checks while implementing. Review and integrate the complete slice,
+4. Follow the user’s testing preference: run checks for touched behavior and its
+   affected dependencies; reserve full suites for major milestone completion or
+   evidenced broad impact. Run focused checks while implementing. Review and integrate the complete slice,
    then run the relevant two-client/exported qualification once it is ready.
 5. Fix demonstrated failures at their cause. Repeat affected checks after fixes;
    avoid restarting the entire suite after every small edit when a focused replay
@@ -623,4 +625,11 @@ in either subscription, XP rewards, death/respawn and disconnect/reconnect.
 All-target Rust tests (152 library tests) and full `tools/dev.py lint` pass.
 The r1 protocol fixture passes six checks rejecting 19 and accepting 20; candidate
 Rust table fixture passes 11 checks including three aggressive species out of 44.
-Dedicated live higher-threat switching and passive retaliation tests remain next.
+Dedicated live passive retaliation and higher-threat switching now pass 42
+checks in `.local/mobs/passive-runtime-r1/acceptance.json`, database
+`mt2-p2-passive-runtime-r1-20260908`. Two real accounts use ordinary unarmed
+attacks: the passive dog ignores proximity, retaliates, switches to the higher
+threat while both players live, and stops attacking after that victim disconnects.
+This training-only fixture is explicitly selected at build time and rejected for
+Yongan builds. It does not install the original population or qualify restart,
+party behavior or wandering. See `docs/development.md` for the replay command.

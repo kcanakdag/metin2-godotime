@@ -111,6 +111,7 @@ def main() -> None:
         "--scenario",
         choices=[
             "melee",
+            "aggro",
             "finisher",
             "growth",
             "lifecycle",
@@ -216,7 +217,7 @@ def main() -> None:
                 )
             if options.scenario == "lifecycle":
                 scripts.append(Path("tests/physical_finisher_smoke.gd"))
-            if options.scenario in ("recovery", "security"):
+            if options.scenario in ("recovery", "security", "aggro"):
                 scripts.append(Path("tests/physical_combat_smoke.gd"))
             if options.scenario == "security":
                 scripts.append(Path("tests/physical_recovery_smoke.gd"))

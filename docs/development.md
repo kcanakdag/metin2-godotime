@@ -1,5 +1,37 @@
 # Development workflow
 
+## Test scope and passive mob replay
+
+Use targeted checks for changed code and affected behavior during implementation.
+Reserve full-suite runs for major milestone completion or demonstrated broad
+impact. Repeat a passing check only after a relevant change or unresolved finding;
+required multiplayer/export checks still apply to their corresponding changes.
+
+The training-only passive mob fixture exercises normal authoritative combat with
+two authenticated clients. Build without `--features yongan`, freeze the module,
+and publish to a fresh `mt2-p2-` database (never reset an existing database):
+
+```sh
+MT2_COMBAT_TEST_FIXTURE=passive-wild-dog-v1 \
+MT2_AUTH_ISSUER=http://127.0.0.1:8186/auth MT2_ALLOW_GUESTS=0 \
+cargo build --manifest-path server/Cargo.toml --locked --offline \
+  --target wasm32-unknown-unknown --release
+# Copy the resulting module.wasm and publish it to a new disposable database.
+.local/venv-dev/bin/python tools/test_physical_combat.py \
+  --server http://127.0.0.1:8186 --game-server http://127.0.0.1:13223 \
+  --database mt2-p2-<fresh-name> --scenario aggro \
+  --godot /path/to/godot --report .local/<fresh-report>.json
+```
+
+The build rejects this fixture combined with Yongan or a population override.
+Do not deploy its training module to the public endpoint. The scenario checks the
+explicit fixture marker before exercising passive proximity, retaliation,
+higher-threat switching and victim disconnect. Evidence is recorded in
+`.local/mobs/passive-runtime-r1/acceptance.json`: 42 live checks passed. The
+previously started all-target Rust run (152 library tests) and full development
+lint also passed; these are not a requirement to repeat after each small edit.
+
+
 The shared combo smoke helper validates attack duration against the public action's
 captured speed using ceiling-rounded source timing. Sword+0's +22 bonus must not
 be tested as a one-second unscaled animation. The population scenario uses this

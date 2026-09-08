@@ -20,6 +20,7 @@ const PROFILE: &str = "p0-warrior-dog";
 const DEFINITIONS: &str = "content/p0-warrior-dog/actions.v1.json";
 const COMBO_VALIDATOR: &str = "build_combo.rs";
 const DUAL_TARGET_FIXTURE: &str = "fixtures/p2-target-dual-wild-dog.v1.json";
+const PASSIVE_TARGET_FIXTURE: &str = "fixtures/p2-passive-wild-dog.v1.json";
 const FINISHER_TARGET_FIXTURE: &str = "fixtures/p2-finisher-triple-wild-dog.v1.json";
 const TARGET_FIXTURE_ENV: &str = "MT2_COMBAT_TEST_FIXTURE";
 
@@ -352,9 +353,12 @@ fn selected_monster_spawns(mob_vnum: u32) -> (Vec<MonsterSpawn>, &'static str) {
     if std::env::var_os("MT2_POPULATION_PROFILE").is_some() {
         fail("Population overrides cannot be combined with combat test fixtures");
     }
-    if selector != "dual-wild-dog-v1" && selector != "triple-wild-dog-finisher-v1" {
+    if selector != "dual-wild-dog-v1"
+        && selector != "triple-wild-dog-finisher-v1"
+        && selector != "passive-wild-dog-v1"
+    {
         fail(format!(
-            "{TARGET_FIXTURE_ENV} must be empty, dual-wild-dog-v1, or triple-wild-dog-finisher-v1"
+            "{TARGET_FIXTURE_ENV} must be empty, dual-wild-dog-v1, triple-wild-dog-finisher-v1, or passive-wild-dog-v1"
         ));
     }
     if std::env::var_os("CARGO_FEATURE_YONGAN").is_some() {
@@ -362,6 +366,8 @@ fn selected_monster_spawns(mob_vnum: u32) -> (Vec<MonsterSpawn>, &'static str) {
     }
     let (fixture_path, expected): (&str, &[(u32, f32, f32)]) = if selector == "dual-wild-dog-v1" {
         (DUAL_TARGET_FIXTURE, &[(1, 3.0, 3.0), (2, 10.0, 3.0)])
+    } else if selector == "passive-wild-dog-v1" {
+        (PASSIVE_TARGET_FIXTURE, &[(1, 3.0, 3.0)])
     } else {
         (
             FINISHER_TARGET_FIXTURE,
@@ -413,6 +419,8 @@ fn selected_monster_spawns(mob_vnum: u32) -> (Vec<MonsterSpawn>, &'static str) {
     }
     let content_hash = if selector == "dual-wild-dog-v1" {
         "training-v2-dual-wild-dog-v1"
+    } else if selector == "passive-wild-dog-v1" {
+        "training-v4-passive-wild-dog-v1"
     } else {
         "training-v3-triple-wild-dog-finisher-v1"
     };
@@ -476,6 +484,7 @@ fn main() {
     println!("cargo:rerun-if-changed=build_population.rs");
     println!("cargo:rerun-if-env-changed=MT2_POPULATION_PROFILE");
     println!("cargo:rerun-if-changed={DUAL_TARGET_FIXTURE}");
+    println!("cargo:rerun-if-changed={PASSIVE_TARGET_FIXTURE}");
     println!("cargo:rerun-if-changed={FINISHER_TARGET_FIXTURE}");
     println!("cargo:rerun-if-env-changed=MT2_PROGRESSION_BOOTSTRAP_IDENTITIES");
     println!("cargo:rerun-if-env-changed={TARGET_FIXTURE_ENV}");
@@ -1371,6 +1380,12 @@ fn main() {
     )
     .unwrap();
     emit_attack(&mut output, "MOB_ATTACK", mob_attack);
+    writeln!(
+        output,
+        "pub const MOB_PROXIMITY_AGGRESSION: bool = {};",
+        std::env::var(TARGET_FIXTURE_ENV).unwrap_or_default() != "passive-wild-dog-v1"
+    )
+    .unwrap();
     output.push_str(
         r#"
 #[derive(Clone, Copy, Debug)]
@@ -1410,7 +1425,7 @@ impl std::ops::Deref for MobDefinition {
 }
 pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
     species: MobSpeciesDefinition {
-        aggressive: true, // Existing authored development dog policy.
+        aggressive: MOB_PROXIMITY_AGGRESSION,
         vnum: MOB_VNUM, actor_id: MOB_ACTOR_ID, name: MOB_NAME,
         model_key: MOB_MODEL_KEY, motion_set: MOB_MOTION_SET,
         level: MOB_LEVEL, health: MOB_MAX_HEALTH,
