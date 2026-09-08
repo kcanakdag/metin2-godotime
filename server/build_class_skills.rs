@@ -245,6 +245,7 @@ pub fn generate(root: &Value) -> Result<String, String> {
     validate(root)?;
     let mut out = String::from("use crate::skill_formula::Op;\n");
     out.push_str(geometry::TYPES);
+    out.push_str(geometry::RESOLVER);
     out.push_str("#[derive(Clone,Copy,Debug,PartialEq,Eq)] pub enum SkillHandler { Damage, PeriodicDamage, Buff, Healing }\n");
     out.push_str("#[derive(Clone,Copy,Debug,PartialEq,Eq)] pub enum SkillTarget { SelfOnly, Monster, Friendly }\n");
     out.push_str("#[derive(Clone,Copy,Debug,PartialEq,Eq)] pub enum SkillAttribute { Normal, Melee, Range, Magic }\n");

@@ -3,6 +3,38 @@ use serde_json::Value;
 
 pub const TYPES: &str = "#[derive(Clone,Copy,Debug,PartialEq)] pub struct SkillHitSphere {pub position_m:[f32;3],pub radius_m:f32}\n#[derive(Clone,Copy,Debug,PartialEq)] pub enum SkillHitGeometry { Area {spheres:&'static [SkillHitSphere]}, Weapon {bone:&'static str,length_m:f32} }\n";
 
+pub const RESOLVER: &str = r#"
+impl SkillHitGeometry {
+    /// Resolve fixed authored areas; weapon windows require separate bone sampling.
+    pub fn intersects_fixed_area(
+        &self, origin: [f64; 3], heading: f32,
+        previous: [f64; 3], current: [f64; 3], defending_radius: f64,
+    ) -> Result<bool, &'static str> {
+        let Self::Area { spheres } = self else {
+            return Err("Weapon skill window requires sampled attachment geometry");
+        };
+        if !origin.into_iter().chain(previous).chain(current).all(f64::is_finite)
+            || !heading.is_finite() || !defending_radius.is_finite() || defending_radius < 0.0 {
+            return Err("Invalid skill area placement or defending geometry");
+        }
+        let mut intersects = false;
+        for sphere in *spheres {
+            let [x,y,z] = sphere.position_m;
+            if !y.is_finite() || !sphere.radius_m.is_finite() || sphere.radius_m <= 0.0 {
+                return Err("Invalid skill attack sphere");
+            }
+            let (dx,dz) = crate::combat_geometry::rotate(f64::from(x),f64::from(z),heading)
+                .ok_or("Invalid skill attack sphere rotation")?;
+            let center = [origin[0]+f64::from(dx), origin[1]+f64::from(y), origin[2]+f64::from(dz)];
+            intersects |= crate::combat_geometry::swept_sphere_intersects(
+                center, previous, current, f64::from(sphere.radius_m)+defending_radius,
+            );
+        }
+        Ok(intersects)
+    }
+}
+"#;
+
 fn number(value: &Value, low: f64, high: f64) -> Result<f32, String> {
     value
         .as_f64()

@@ -212,3 +212,13 @@ late invalid intervals and clock overflow. Full multi-event persistence, activat
 positions and collision dispatch remain pending. The installed actor package lacks
 `skill_1`; its two motions exist in the separate candidate character package and
 must be installed with matching client/server content hashes for the live rollout.
+
+The candidate generated `SkillHitGeometry` now resolves fixed attack areas through
+the shared server rotation and full-3D sphere sweep. It validates placement and
+returns an error for weapon windows, which require sampled attachment geometry.
+The qualification executable combines the compiled Three-Way Cut shapes, captured
+clock, event selection and exact-life ledger for both appearances at two headings.
+Front targets yield three distinct receipts; rear/elevated targets miss and repeated
+ticks do not add hits. This is an offline collision/admission replay: it does not
+run server subscriptions, damage, knockback, activation capture or the client.
+Evidence: `.local/p6-skill-area-r1/`. Six compiler tests also pass.

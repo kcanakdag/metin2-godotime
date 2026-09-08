@@ -5,6 +5,19 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Compiled skill area resolution — 2026-09-08
+
+Candidate fixed-area geometry now calls the shared server rotation/sphere sweep.
+The generated resolver validates placement and rejects weapon-window dispatch
+until sampled attachment geometry exists. Four Three-Way Cut replays combine both
+appearances/two headings with actual compiled shapes, captured clocks, event masks
+and hit receipts. Front targets get three distinct receipts; rear/elevated targets
+miss and repeated ticks do not add hits. Six compiler tests and all prior formula/
+metadata/geometry checks pass. Evidence: `.local/p6-skill-area-r1/`. This is offline
+geometry/admission evidence, not damage or two-client cast acceptance. Persistence,
+activation placement and original hit/reaction policies remain pending; public
+server and installed content are unchanged.
+
 ## Accepted skill event clocks — 2026-09-08
 
 The accepted cast path now captures validated absolute event deadlines before

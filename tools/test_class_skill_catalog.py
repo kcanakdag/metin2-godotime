@@ -42,6 +42,7 @@ def main():
         "compiler": ROOT / "server/build_class_skills.rs",
         "geometry_compiler": ROOT / "server/build_skill_geometry.rs",
         "hit_runtime": ROOT / "server/src/skill_hits.rs",
+        "combat_geometry": ROOT / "server/src/combat_geometry.rs",
         "harness": Path(__file__).resolve(),
     }
     hashes = {name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in inputs.items()}
@@ -136,6 +137,9 @@ def main():
         + "#[path="
         + json.dumps(str(ROOT / "server/src/skill_hits.rs"))
         + "] pub mod skill_hits;\n"
+        + "#[path="
+        + json.dumps(str(ROOT / "server/src/combat_geometry.rs"))
+        + "] pub mod combat_geometry;\n"
         + "pub mod definitions { include!("
         + json.dumps(str(generated))
         + "); }\n"
@@ -159,6 +163,32 @@ def main():
         }
         assert_eq!(receipts, vec!["10:1", "10:1:1", "10:1:2"]);
     }
+    for motion in definitions::CLASS_SKILL_MOTIONS.iter().filter(|m| m.skill_vnum == 1) {
+        for heading in [0.0f32, -std::f32::consts::FRAC_PI_2] {
+            let (dx,dz) = combat_geometry::rotate(0.0,-2.0,heading).unwrap();
+            let front = [10.0+f64::from(dx), 1.0, 20.0+f64::from(dz)];
+            let back = [10.0-f64::from(dx), 1.0, 20.0-f64::from(dz)];
+            let high = [front[0], 5.0, front[2]];
+            let mut receipts = Vec::new();
+            let captured = skill_hits::capture_events(motion.hit_windows_us, 1_000_000).unwrap();
+            for now in [162206,200000,434712,500000,849959,900000] {
+                let active = skill_hits::active_events(&captured, now+1_000_000).unwrap();
+                for (event,shape) in motion.hit_geometry.iter().enumerate() {
+                    if active & (1 << event) == 0 { continue; }
+                    assert!(!shape.intersects_fixed_area([10.0,0.0,20.0],heading,back,back,0.4).unwrap());
+                    assert!(!shape.intersects_fixed_area([10.0,0.0,20.0],heading,high,high,0.4).unwrap());
+                    assert!(shape.intersects_fixed_area([10.0,0.0,20.0],heading,front,front,0.4).unwrap());
+                    assert!(shape.intersects_fixed_area([10.0,0.0,20.0],f32::NAN,front,front,0.4).is_err());
+                    if skill_hits::admits(&receipts,10,1,event as u8,3,5).unwrap() {
+                        receipts.push(skill_hits::receipt(10,1,event as u8));
+                    }
+                }
+            }
+            assert_eq!(receipts, vec!["10:1","10:1:1","10:1:2"]);
+        }
+    }
+    let unsupported = definitions::SkillHitGeometry::Weapon {bone:"equip_right_hand",length_m:1.3};
+    assert!(unsupported.intersects_fixed_area([0.0;3],0.0,[0.0;3],[0.0;3],0.4).is_err());
     let powers = definitions::CLASS_SKILL_RANK_POWERS;
     let mut checks = 0;
     for skill in definitions::CLASS_SKILLS {
@@ -196,11 +226,13 @@ def main():
         "motion_window_checks": len(window_checks),
         "motion_geometry_checks": len(window_checks),
         "three_way_cut_timing_replays": 2,
+        "three_way_cut_area_replays": 4,
         "catalog_sha256": initial,
         "runtime_sha256": hashes["runtime"],
         "compiler_sha256": hashes["compiler"],
         "geometry_compiler_sha256": hashes["geometry_compiler"],
         "hit_runtime_sha256": hashes["hit_runtime"],
+        "combat_geometry_sha256": hashes["combat_geometry"],
         "harness_sha256": hashes["harness"],
     }
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
