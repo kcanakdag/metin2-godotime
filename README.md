@@ -8,12 +8,13 @@ connect to this game's new protocol.
 
 The current [public development build](https://kcanakdag.com:8443/) uses protocol
 26 with the original population package and four Warrior skills: Three-Way Cut,
-Sword Spin, Spirit Strike and Bash. Release `20260908T212416762304Z` preserves
-existing login accounts and keys; its new world has a separate character roster.
-Previous world databases remain intact. Refresh older tabs before signing in.
-Both matching Web/Linux exports passed package audits. Local hardware-rendered
-Chrome/Linux passed 76 account/world checks; public Chrome/Linux checks also passed all 76 checks.
-See [deployment evidence](docs/distribution.md).
+Sword Spin, Spirit Strike and Bash. Release `20260908T220207351930Z` fixes world
+play loading the older male Warrior model without the new skill motions. It
+preserves the existing world, characters, login accounts and keys. Refresh older
+tabs before signing in. Both matching Web/Linux exports passed package audits;
+all 76 public Chrome/Linux checks passed, with no browser engine errors. A focused two-browser local replay
+passes 32 checks for skill points, dragging, quickslot casting and matching damage,
+with no browser engine errors. See [deployment evidence](docs/distribution.md).
 
 The four-skill replay passes 52 two-client dummy checks; equipped animation QA
 passes 132 checks and the scrollable skill panel passes 18 native checks.

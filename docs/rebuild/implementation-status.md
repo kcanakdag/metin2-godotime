@@ -5,6 +5,24 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Expanded world actors deployed without a world reset — 2026-09-09
+
+Public release `20260908T220207351930Z` deploys the corrected world actor loading
+and scroll-aware skill inspection. Existing protocol-26 database
+`mt2-public-skills-v26-20260908`, character roster, auth accounts and issuer keys
+are preserved. The public module is byte-identical to the preceding release
+(SHA-256 `750f0c44bb4784dcc6d53eb35387ff07b8efe0932fc0907bc5bd12676f00279e`).
+Both public exports pass package audits and deployment verified its served manifest.
+
+Public Chrome/Linux QA passes 76 checks: account entry, matching 2,859-mob/
+44-species subscriptions, mutual rendering, skill-panel input, movement, rejected
+invalid actions, character switching, saved position, reconnect, reload and
+logout/login. Browser engine errors are empty. Evidence:
+`.local/public-skill-actors-r1/acceptance.json` and `browser-qa/report.json`.
+The two-Chrome skill-casting qualification below is local evidence, separate from
+this public account/world replay. Exact original skill effects, specialization
+selection and broader combat balance remain incomplete.
+
 ## Exported skill replay exposed and fixed world actor selection — 2026-09-09
 
 Added `tools/test_browser_skills.py`, a focused two-Chrome replay using existing
@@ -30,7 +48,7 @@ failed predecessor retained in `.local/p6-browser-skills-r1/replay/`. Actual Web
 export/package audits and targeted Python/GDScript lint pass. No claim of original
 skill effect/physics parity or native/exported all-rank balance. Public Web/Linux
 exports for the existing protocol-26 world are being prepared in
-`.local/public-skill-actors-r1/`; public rollout/endpoint qualification pending.
+`.local/public-skill-actors-r1/`; public rollout and endpoint qualification are recorded above.
 
 ## Scroll-aware skill control inspection and real mouse QA — 2026-09-08
 

@@ -1,5 +1,11 @@
 # Architecture
 
+World presentation now selects the installed expanded character catalog at startup
+and reload, matching character previews. The legacy base Warrior remains a fixture
+input; using it for live world actors omitted imported skill motions despite
+correct server actions and damage. Expanded equipped native samples and a focused
+two-browser world replay now qualify the new skill lookup path.
+
 Protocol 26 adds optional per-event placement records to private pending skills,
 including activation origin, heading, tick and exact-life target sample storage.
 Activation captures the owner at the event boundary before normal root-motion

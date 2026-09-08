@@ -5,7 +5,20 @@ Players do not install Blender, Rust, Python, Node or the SDK. The current
 development endpoint is [https://kcanakdag.com:8443](https://kcanakdag.com:8443/),
 on `159.195.213.9`. It may restart during updates.
 
-The current release is `20260908T212416762304Z`, using protocol 26 and database
+The current release is `20260908T220207351930Z`, fixing world play to use the
+expanded male Warrior character package, including imported skill motions.
+It preserves protocol 26, database `mt2-public-skills-v26-20260908`, current
+characters, auth accounts and issuer keys. The server module is unchanged, SHA-256
+`750f0c44bb4784dcc6d53eb35387ff07b8efe0932fc0907bc5bd12676f00279e`.
+Web/Linux package audits and the served-manifest check pass. Public Chrome/Linux
+QA passes 76 checks, including matching 2,859-mob/44-species subscriptions,
+movement, character switching, saved position, reconnect, reload and logout/login.
+Browser engine errors are empty. Artifacts and evidence are in
+`.local/public-skill-actors-r1/`.
+The local focused two-Chrome skill replay passed 32 checks with fresh replicated
+casts and no engine errors; this is separate from public casting qualification.
+
+The preceding release is `20260908T212416762304Z`, using protocol 26 and database
 `mt2-public-skills-v26-20260908`. It includes the four selected Warrior skills and
 original Yongan population. Both public Web/Linux exports pass package audits;
 local matching exports passed 76 hardware-rendered Chrome/Linux account/world
