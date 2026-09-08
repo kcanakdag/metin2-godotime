@@ -5,6 +5,32 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## World skill-effect wiring and lifecycle — 2026-09-09
+
+Main now prepares the installed motion-effect package against character/skill hashes
+before entering the world, advances its effects while connected, and clears them
+on connection/lobby transitions. PlayerActor announces each created presentation
+before applying its first subscribed action; WorldSkillEffects attaches the package
+and binds its effect signals. ActorPresentation joins effects during normal
+`play_action` playback without changing immutable motion definitions. A new prepare
+rebinds any surviving presentation after cleanup. No server authority changed.
+
+The verified 18-resource package is installed at
+`client/assets/imported/motion_effects/`; source receipts remain outside the client.
+Native normal-playback checks passed 115 assertions at
+`.local/p6-skill-effects-r19/world-playback/report.json`; the final package prepare,
+cleanup and surviving-presentation rebind run passed 123 at
+`.local/p6-skill-effects-r20/world-lifecycle/report.json`, with 26 captures.
+Full-project Godot headless import completed with no reported script errors at
+`.local/p6-skill-effects-r19/import.log`. Touched format/lint checks pass.
+The identical progression/skills HUD callbacks were consolidated, and projectile
+node creation moved into the scene while adding the skill-effect world node.
+
+These checks exercise native actors and the world controller, not actual network
+subscriptions. Export validation, two-client browser casting and public deployment
+are still pending; the public endpoint remains unchanged. Connected-editor MCP
+inspection remains unavailable.
+
 ## Packaged Godot motion-effect loader — 2026-09-09
 
 The Godot loader checks the installed character/skill hashes, resolves only hashed

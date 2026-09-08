@@ -2194,3 +2194,13 @@ This verifies declared file/import-setting hashes before staging and loads asset
 through Godot ResourceLoader. The fixture exercises copy-safe motion event joins,
 matching catalog hashes and equipped effects. It does not install the package or
 prove normal world subscriptions/browser rendering.
+
+
+World entry now requires the matching runtime motion-effect catalog at
+`client/assets/imported/motion_effects/catalog.v1.json`. Install only the generated
+runtime directory (catalog, declared hashed assets and import settings), after
+checking character/skill hashes; keep its receipt outside the client. The current
+local installation is from `.local/p6-skill-effects-r16/package-r2/runtime`.
+The packaged actor scenario now exercises the actual `play_action` event join and
+world-controller prepare/clear/rebind lifecycle. Browser/subscription acceptance
+remains a separate check.

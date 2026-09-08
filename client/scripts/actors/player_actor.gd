@@ -2,6 +2,8 @@ class_name PlayerActor
 extends Node3D
 ## Render one subscribed character. This node never owns gameplay coordinates or hit timing.
 
+signal presentation_created(presentation: Node3D)
+
 const ActorPresentationScript := preload("res://scripts/actors/actor_presentation.gd")
 
 var identity := ""
@@ -187,5 +189,6 @@ func _apply_appearance(value: Dictionary) -> bool:
 		if not _presentation.configure(_catalog, next_actor_id):
 			return false
 		add_child(_presentation)
+		presentation_created.emit(_presentation)
 	appearance = value.duplicate()
 	return true

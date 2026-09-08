@@ -13,6 +13,19 @@ var _instances: Array[Dictionary] = []
 var _next_seed := 0
 
 
+func clear() -> void:
+	for identity: int in _bindings.keys():
+		var actor: Node3D = _bindings[identity].actor.get_ref()
+		if actor != null:
+			var callback := _actor_exiting.bind(identity)
+			if actor.tree_exiting.is_connected(callback):
+				actor.tree_exiting.disconnect(callback)
+		_actor_exiting(identity)
+	for index: int in range(_instances.size() - 1, -1, -1):
+		_remove(index)
+	error_message = ""
+
+
 func configure(
 	recipes: Array, textures: Dictionary, mixed: Array = [], scenes: Dictionary = {}
 ) -> bool:

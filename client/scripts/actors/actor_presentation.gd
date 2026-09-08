@@ -7,6 +7,7 @@ signal motion_effect_requested(definition: Dictionary)
 signal projectile_launched(definition: Dictionary, origin: Vector3)
 
 var catalog: RefCounted
+var motion_effect_catalog: RefCounted
 var actor_id := ""
 var error_message := ""
 var model: Node3D
@@ -119,7 +120,9 @@ func _play_motion(
 	if not same:
 		_consumed_launches.clear()
 		_consumed_effects.clear()
-	current_motion = motion
+	current_motion = (
+		motion_effect_catalog.with_effects(motion) if motion_effect_catalog != null else motion
+	)
 	current_mode = resolved_mode
 	current_sequence = sequence
 	animation_player.speed_scale = playback_rate

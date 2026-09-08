@@ -9,7 +9,6 @@ const ActorCatalogScript := preload("res://scripts/content/actor_catalog.gd")
 const TargetEffectCatalogScript := preload("res://scripts/content/target_effect_catalog.gd")
 const WorldPickerScript := preload("res://scripts/world/world_picker.gd")
 const WorldNpcsScript := preload("res://scripts/world/world_npcs.gd")
-const WorldProjectilesScript := preload("res://scripts/world/world_projectiles.gd")
 const PROJECTILE_CATALOG_PATH := "res://assets/imported/projectiles/catalog.v1.json"
 const PveVisibility := preload("res://scripts/world/pve_visibility.gd")
 const PVE_REFRESH_SECONDS := 0.25
@@ -30,7 +29,6 @@ var _stream: WorldStream
 var _npcs: WorldNpcs
 var _pve: Dictionary = {}
 var _pve_refresh_elapsed := 0.0
-var _projectiles: Node3D
 var _original_map := false
 var _content_generation := 0
 var _account_flow: AccountScreens
@@ -52,12 +50,11 @@ var _attack_input := preload("res://scripts/actors/attack_input.gd").new()
 @onready var world: DevMap = $DevMap
 @onready var camera_rig: OrbitCamera = $OrbitCamera
 @onready var hud: DevHud = $DevHud
+@onready var _projectiles: Node3D = $WorldProjectiles
+@onready var _skill_effects: Node3D = $WorldSkillEffects
 
 
 func _ready() -> void:
-	_projectiles = WorldProjectilesScript.new()
-	_projectiles.name = "WorldProjectiles"
-	add_child(_projectiles)
 	_stream = WorldStream.new()
 	_stream.name = "WorldStream"
 	add_child(_stream)
@@ -87,7 +84,7 @@ func _ready() -> void:
 	connection.appearances_changed.connect(_on_appearances)
 	connection.server_clock_changed.connect(_on_server_clock)
 	connection.progression_changed.connect(_on_progression)
-	connection.skills_changed.connect(_on_skills)
+	connection.skills_changed.connect(_on_progression)
 	connection.combat_target_changed.connect(_on_combat_target)
 	connection.command_feedback_changed.connect(hud.set_command_feedback)
 	connection.obstacles_changed.connect(world.set_obstacles)
@@ -171,6 +168,7 @@ func _update_held_attack() -> void:
 func _process(delta: float) -> void:
 	if connection.state == "connected" and is_instance_valid(_projectiles):
 		_projectiles.advance(delta, get_viewport().get_camera_3d())
+		_skill_effects.advance(delta, get_viewport().get_camera_3d())
 	_update_held_attack()
 	if is_instance_valid(_local_actor):
 		_stream.focus(_local_actor.server_position)
@@ -418,6 +416,7 @@ func _on_connection_state(state: String, message: String) -> void:
 		_npcs.clear()
 		if is_instance_valid(_projectiles):
 			_projectiles.clear()
+		_skill_effects.clear()
 	if state == "connected":
 		_npcs.set_active(true)
 	if state != "connected":
@@ -483,6 +482,7 @@ func _reconcile_players() -> void:
 			var actor := PlayerActor.new()
 			actor.name = "Player_" + identity.left(12)
 			actor.configure(_actor_catalog)
+			_skill_effects.watch_player(actor)
 			$Players.add_child(actor)
 			_actors[identity] = actor
 		var player: PlayerActor = _actors[identity]
@@ -583,6 +583,9 @@ func _prepare_world(info: Dictionary) -> void:
 			_actor_catalog.manifest, PROJECTILE_CATALOG_PATH, _resolve_projectile_target
 		)
 		content_error = _projectiles.error_message
+	if valid_content:
+		valid_content = _skill_effects.prepare_catalog(_actor_catalog)
+		content_error = _skill_effects.error_message
 	if not valid_content:
 		connection.disconnect_game()
 		hud.show_notice(content_error)
@@ -991,9 +994,3 @@ func _merge_config(path: String) -> void:
 		and not str(parsed.default_player_name).is_empty()
 	):
 		_settings.player_name = parsed.default_player_name
-
-
-func _on_skills(_rows: Array) -> void:
-	hud.set_progression(
-		connection.selected_progression(), connection.selected_skills(), connection.server_time_us
-	)

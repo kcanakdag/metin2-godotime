@@ -1709,3 +1709,19 @@ combat/regeneration replay passes 74 checks; the original-population exported re
 passes 110. The same 2,835-mob database was retained for the exported comparison.
 Instrumented FPS remained low (Chrome median 24; Xvfb native 7), so this is not a
 claim that rendering performance is solved.
+
+
+## World motion effects
+
+WorldSkillEffects owns the imported motion-effect package and shared renderer
+instances. Main checks character/skill package hashes during world preparation;
+missing content prevents world entry. PlayerActor announces a newly built visual
+before playing subscribed state, allowing its presentation to receive the package
+and renderer bindings. ActorPresentation decorates a private motion copy at playback
+and emits source-timed events. Effects never grant hits or alter authoritative state.
+
+Connection transitions clear captured and following instances and signal bindings.
+Preparing again rebinds surviving presentations; destroyed actors remain weak
+references only. Ordinary actor removal retains the original distinction between
+following effects and captured effects that finish independently. Main supplies the
+render clock only while connected.

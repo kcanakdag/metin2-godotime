@@ -2,6 +2,7 @@ extends "res://tests/actor_smoke.gd"
 ## Original equipped clips with candidate type-1 effect links, never installed by QA.
 
 const EffectCatalog = preload("res://scripts/content/motion_effect_catalog.gd")
+const WorldSkills = preload("res://scripts/world/world_skill_effects.gd")
 const WorldEffects = preload("res://scripts/world/world_motion_effects.gd")
 var _requests := 0
 var _mixed: Array = []
@@ -59,19 +60,24 @@ func _exercise(link: Dictionary, recipes: Array, textures: Dictionary) -> void:
 	actor.animation_player.callback_mode_process = (
 		AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 	)
-	var manager := WorldEffects.new()
+	var manager: Node3D = WorldSkills.new() if _package != null else WorldEffects.new()
 	_stage.add_child(manager)
-	_check(manager.configure(recipes, textures, _mixed, _scenes), "effect resources configure")
-	_check(manager.bind_actor(actor, 180), "actor effect signal binds")
+	if _package != null:
+		_check(_prepare_manager(manager), "world package prepares")
+		manager.bind_presentation(actor)
+		_check(manager.error_message.is_empty(), "world presentation binds package")
+	else:
+		_check(manager.configure(recipes, textures, _mixed, _scenes), "effect resources configure")
+		_check(manager.bind_actor(actor, 180), "actor effect signal binds")
 	_requests = 0
 	actor.motion_effect_requested.connect(func(_event: Dictionary) -> void: _requests += 1)
 	var action := str(link.actor_id) + ".general.skill_" + str(int(link.skill_vnum))
 	var motion: Dictionary = _catalog.motion(link.actor_id, "general", action).duplicate(true)
 	if _package != null:
-		motion = _package.with_effects(motion)
+		_check(actor.play_action("general", action, "", 1), "world skill playback starts")
 	else:
 		motion.effects = link.effects
-	_check(actor._play_motion(motion, "general", 1, 0, 0, false, 1.0), "original skill starts")
+		_check(actor._play_motion(motion, "general", 1, 0, 0, false, 1.0), "original skill starts")
 	var peak := 0
 	var sane := true
 	var clean := true
@@ -106,6 +112,15 @@ func _exercise(link: Dictionary, recipes: Array, textures: Dictionary) -> void:
 	if not manager.error_message.is_empty():
 		print("EFFECT_ERROR " + manager.error_message)
 	_check(sane, "equipped skill deformation remains bounded")
+	manager.clear()
+	_check(
+		manager._instances.is_empty() and manager._bindings.is_empty(), "world clear resets effects"
+	)
+	if _package != null:
+		_check(_prepare_manager(manager), "world package prepares after disconnect")
+		_check(manager._bindings.size() == 1, "surviving presentation rebinds after prepare")
+	else:
+		_check(manager.bind_actor(actor, 180), "cleared actor can bind again")
 	actor.queue_free()
 	await actor.tree_exited
 	manager.queue_free()
@@ -152,3 +167,11 @@ func _packaged_run() -> void:
 			}
 			await _exercise(link, package.document.effects.values(), package.textures)
 	_finish()
+
+
+func _prepare_manager(manager: Node3D) -> bool:
+	return manager.prepare(
+		_package.document.character_catalog_sha256,
+		_package.document.skill_catalog_sha256,
+		"res://effect-package/catalog.v1.json"
+	)

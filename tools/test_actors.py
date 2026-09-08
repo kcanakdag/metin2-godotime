@@ -142,6 +142,10 @@ def main() -> None:
                 ROOT / "client/scripts/world/world_motion_effects.gd",
                 stage / "scripts/world/world_motion_effects.gd",
             )
+            shutil.copy2(
+                ROOT / "client/scripts/world/world_skill_effects.gd",
+                stage / "scripts/world/world_skill_effects.gd",
+            )
         if options.scenario == "skill_effects" and not options.effect_package:
             effects = stage / "effect-candidate"
             effects.mkdir()
