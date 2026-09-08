@@ -237,6 +237,19 @@ func _test_population_visibility(main: Node3D, gameplay: Dictionary, target: Dic
 		"malformed position excluded",
 		not Policy.includes({"x": NAN, "y": 0, "z": 0}, Vector3.ZERO, func(_point): return true)
 	)
+	var readiness_calls := [0]
+	var ready_probe := func(_point):
+		readiness_calls[0] += 1
+		return true
+	var included := 0
+	for row: Dictionary in rows:
+		if Policy.includes(row, Vector3.ZERO, ready_probe):
+			included += 1
+	_check("distant population skips terrain lookups", included == 1 and readiness_calls[0] == 1)
+	_check(
+		"nearby unloaded terrain still excluded",
+		not Policy.includes(rows[0], Vector3.ZERO, func(_point): return false)
+	)
 	player.server_position = Vector3(1001, 0, 0)
 	main.call("_process", 0.3)
 	var visible: Dictionary = main.get("_pve")

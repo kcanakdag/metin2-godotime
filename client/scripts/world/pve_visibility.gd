@@ -9,12 +9,12 @@ static func includes(row: Dictionary, viewer: Variant, ready_at: Callable) -> bo
 	if not viewer is Vector3 or not viewer.is_finite():
 		return false
 	var point: Variant = position_for(row)
-	if not point is Vector3 or not ready_at.call(point):
+	if not point is Vector3:
 		return false
 	var dx := absi(int(point.x * 100.0) - int(viewer.x * 100.0))
 	var dz := absi(int(point.z * 100.0) - int(viewer.z * 100.0))
 	var distance_cm := (246 * maxi(dx, dz) + 102 * mini(dx, dz)) >> 8
-	return distance_cm <= RANGE_CM
+	return distance_cm <= RANGE_CM and ready_at.call(point)
 
 
 static func position_for(row: Dictionary) -> Variant:

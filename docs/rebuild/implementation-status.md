@@ -5,6 +5,21 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Reject distant rows before terrain lookup — 2026-09-08
+
+The shared presentation filter now performs the original distance calculation
+before terrain readiness. Main captures the viewer once per pass and constructs
+actor keys only for included rows. NPCs no longer query readiness twice. Range,
+terrain, server authority and subscription contracts remain unchanged.
+
+The focused native Main fixture passed 43 checks, including 2,800 rows producing
+only one terrain lookup when one row is nearby, distance edges, invalid position,
+terrain unload and latest-life re-entry. The NPC fixture passed all 56 checks.
+Both used isolated copies of already imported assets, avoiding another asset
+conversion/import cycle. Evidence: `.local/mobs/visibility-cost-r1/acceptance.json`.
+This is work-count evidence, not a measured FPS gain. No export, public deployment
+or connected-editor inspection was repeated for this behavior-preserving change.
+
 ## Nearby NPCs and measured debug overhead — 2026-09-08
 
 Main now supplies the local player position to the NPC layer, applying the same

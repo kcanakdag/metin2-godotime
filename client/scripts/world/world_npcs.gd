@@ -135,11 +135,13 @@ func refresh() -> void:
 	for spawn: Dictionary in placements:
 		wanted[spawn.id] = true
 		var point := Vector3(spawn.position[0], spawn.position[1], spawn.position[2])
-		var in_view: bool = _ready_at.call(point)
+		var in_view: bool
 		if _viewer.is_valid():
 			in_view = Visibility.includes(
 				{"x": point.x, "y": point.y, "z": point.z}, _viewer.call(), _ready_at
 			)
+		else:
+			in_view = _ready_at.call(point)
 		if not in_view:
 			if actors.has(spawn.id):
 				_dispose(actors[spawn.id])

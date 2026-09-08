@@ -654,17 +654,11 @@ func _on_command_requested(command: String, request_id: String, argument: String
 func _sync_pve(rows: Array, loot_mode: bool, item_mode: bool = false) -> void:
 	var prefix := "Item_" if item_mode else ("Loot_" if loot_mode else "Monster_")
 	var present: Dictionary = {}
+	var viewer: Variant = _local_actor.server_position if is_instance_valid(_local_actor) else null
 	for row: Dictionary in rows:
-		var id := prefix + str(row.id)
-		if (
-			_original_map
-			and not PveVisibility.includes(
-				row,
-				_local_actor.server_position if is_instance_valid(_local_actor) else null,
-				_stream.ready_at
-			)
-		):
+		if _original_map and not PveVisibility.includes(row, viewer, _stream.ready_at):
 			continue
+		var id := prefix + str(row.id)
 		present[id] = true
 		if not _pve.has(id):
 			var actor := PveActor.new()

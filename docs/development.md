@@ -1846,3 +1846,11 @@ checks. Field samples were Chrome 18 FPS / Xvfb native 7 FPS with snapshots, the
 client remained running. These short sequential samples establish probe overhead,
 not a controlled release benchmark. Both packaged mob audits passed; reviewed
 browser/native captures show textured terrain and original field mobs.
+
+The shared visibility predicate rejects out-of-range rows before querying terrain
+readiness. Main resolves the viewer once per pass and allocates actor keys only
+for included rows; NPCs avoid a duplicate readiness lookup. The original integer
+centimetre distance calculation and loaded-terrain requirement are unchanged.
+The focused 2,800-row regression verifies one readiness call when one row is near,
+alongside range edges, malformed coordinates, terrain unload and latest-life
+re-entry. This is deterministic work-count evidence, not an FPS claim.
