@@ -81,7 +81,10 @@ flights and rejection of a missing mesh resource. Use `--scenario mesh --catalog
 MESH_CATALOG` for the arrow animation/color-ramp checks. These native scenarios
 use isolated Linux/Xvfb projects, verify copied asset hashes and preserve reports;
 timed-out gallery runs terminate their isolated process group. See
-[combined projectiles](mobs.md#combined-particle-projectiles).
+[combined projectiles](mobs.md#combined-particle-projectiles). The same gallery
+now checks the world component
+[against controlled target replicas](mobs.md#world-projectile-lifecycle-component),
+including exact-life tracking and lost-target behavior.
 
 `python3 tools/import_particle_effects.py --effect VIRTUAL_MSE --output NEW_DIR`
 converts explicitly selected particle recipes and their referenced textures.

@@ -22,6 +22,16 @@ evidence. No server or public deployment changed in this recheck.
 
 ### Original wildlife definitions in progress
 
+World projectile lifecycle checkpoint: `world_projectiles.gd` resolves the exact
+protocol-19 target identity/life, creates the shared particle/mesh flights and
+consumes each source event once. Lost/replaced targets become fixed positions
+without reacquisition, following the original target-object lifecycle. Source
+removal preserves existing flights; world disconnect removes them all.
+`projectile-world-r2` passes 125 native checks with 16 hashed captures; paired-effect
+and arrow captures were reviewed. Scoped lint passes. This uses injected resources
+and controlled replicas. It does not establish main-scene loading, live launch
+signals, exported clients, original target-center parity or server damage.
+
 Protocol 19 attack-target checkpoint: public Monster rows now capture the accepted
 character identity and life sequence. That snapshot survives private hit
 consumption and clears with idle/movement, death/new life and recovery. Bindings

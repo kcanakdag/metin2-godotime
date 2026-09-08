@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Projectile = preload("res://scripts/actors/projectile_effect.gd")
+const WorldProjectiles = preload("res://scripts/world/world_projectiles.gd")
 const Trail = preload("res://scripts/actors/projectile_trail.gd")
 var _checks := 0
 var _failures: Array[String] = []
@@ -105,6 +106,7 @@ func _run() -> void:
 		_check("impact drains to completion", done)
 		projectile.queue_free()
 		await process_frame
+	await _test_world_targets(world, camera, inventory, effects, textures, meshes)
 	var arrow := Projectile.new()
 	world.add_child(arrow)
 	_check(
@@ -150,3 +152,99 @@ func _run() -> void:
 	await process_frame
 	print(JSON.stringify({"checks": _checks, "failures": _failures}))
 	quit(0 if _failures.is_empty() else 1)
+
+
+func _test_world_targets(
+	world: Node3D,
+	camera: Camera3D,
+	inventory: Dictionary,
+	effects: Dictionary,
+	textures: Dictionary,
+	meshes: Dictionary
+) -> void:
+	var targets := {
+		"near": {"identity": "near", "life_sequence": 3, "position": Vector3(-2, 0, 0)},
+		"selected": {"identity": "selected", "life_sequence": 3, "position": Vector3(3, 0, 0)}
+	}
+	var flights := {}
+	for definition: Dictionary in inventory.flight_definitions:
+		flights[definition.path] = definition
+	for index: int in range(4 if not meshes.is_empty() else 3):
+		var manager := WorldProjectiles.new()
+		world.add_child(manager)
+		_check(
+			"world resources configure",
+			manager.configure(
+				flights, effects, textures, meshes, func(id: String): return targets.get(id, {})
+			)
+		)
+		var row := {
+			"id": 10,
+			"life_sequence": 0,
+			"attack_sequence": index + 1,
+			"attack_action_id": "selected.attack",
+			"action_started_at_us": 1000,
+			"activity": 2,
+			"attack_target": "selected",
+			"attack_target_life_sequence": 3
+		}
+		var event := {
+			"source_event": "Event00", "fly_definition": inventory.flight_definitions[index].path
+		}
+		targets.selected = {
+			"identity": "selected", "life_sequence": 4, "position": Vector3(3, 0, 0)
+		}
+		_check(
+			"new target life cannot receive old launch",
+			not manager.launch(row, event, Vector3(-3, 0, 0), 0)
+		)
+		targets.selected.life_sequence = 3
+		_check("matching target launch accepted", manager.launch(row, event, Vector3(-3, 0, 0), 0))
+		_check("duplicate launch rejected", not manager.launch(row, event, Vector3(-3, 0, 0), 0))
+		_check("world first step", manager.advance(1.0 / 60, camera))
+		_check(
+			"server selected target beats nearer player",
+			manager.snapshot()[0].target_position == Vector3(3, 0, 0)
+		)
+		var before := manager.snapshot()
+		_check("invalid step rejects", not manager.advance(NAN, camera))
+		_check("invalid step preserves flights", manager.snapshot() == before)
+		targets.selected.position = Vector3(3, 0.1, 0)
+		manager.advance(1.0 / 60, camera)
+		_check(
+			"same target life moves", manager.snapshot()[0].target_position == Vector3(3, 0.1, 0)
+		)
+		if index % 2 == 0:
+			targets.erase("selected")
+		else:
+			targets.selected.life_sequence = 4
+		manager.advance(1.0 / 60, camera)
+		_check("lost target becomes position", not manager.snapshot()[0].object_target)
+		targets.selected = {
+			"identity": "selected", "life_sequence": 3, "position": Vector3(20, 5, 0)
+		}
+		manager.advance(1.0 / 60, camera)
+		_check(
+			"returning identity cannot reacquire flight",
+			(
+				not manager.snapshot()[0].object_target
+				and manager.snapshot()[0].target_position == Vector3(3, 0.1, 0)
+			)
+		)
+		manager.forget_actor(10)
+		_check("flight outlives source removal", manager.snapshot().size() == 1)
+		await _capture("world-flight-%d" % index)
+		for frame: int in range(600):
+			if manager.snapshot().is_empty():
+				break
+			if not manager.advance(1.0 / 60, camera):
+				_check("world flight update", false)
+				break
+		_check("world flight and impact clean up", manager.snapshot().is_empty())
+		targets.selected.position = Vector3(3, 0, 0)
+		row.attack_sequence += 10
+		_check("later attack can launch", manager.launch(row, event, Vector3(-3, 0, 0), 0))
+		manager.clear()
+		_check("disconnect clears every flight", manager.snapshot().is_empty())
+		manager.queue_free()
+		await process_frame

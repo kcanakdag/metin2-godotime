@@ -367,8 +367,19 @@ build without the yongan feature; earlier formatting/wrong-map attempts failed.
 The served local/public artifacts below remain unchanged. Never infer their
 protocol from the newer worktree.
 
-Next connect the actor signals and exact public target life to flight creation,
-then original magic/projectile damage and live population integration.
+The world projectile lifecycle component now exists at
+`client/scripts/world/world_projectiles.gd`: trusted resource maps plus an exact
+identity/life/position resolver create and track the existing renderer. Original
+lost-object behavior retains its last position and permanently disables homing,
+including after reconnect/respawn. A source removal only retires deduplication;
+world clear removes flights/impacts/cache. `projectile-world-r2/report.json` passes
+125 native checks and 16 captures; paired-effect and arrow captures were reviewed.
+Scoped lint passes. These are controlled replicas, not live scene integration.
+
+Next package/load the resource catalogs, connect PveActor launch signals in Main
+and resolve actual transformed target bounding-sphere centers (original
+`ActorInstanceFly.cpp`), then original magic/projectile damage and live population
+integration. Do not claim a controlled resolver proves live subscriptions.
 Do not keep substituting inventory reports for integration.
 The interrupted investigation inspected pinned primary files under
 `.cache/full-game-research/client/source/src/EffectLib/`:

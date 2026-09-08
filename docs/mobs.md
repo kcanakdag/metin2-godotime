@@ -831,3 +831,38 @@ row. The 104-check two-client training test verifies both replicas and death
 clearing; private hit state still owns damage. Connect that exact target life
 rather than guessing the nearest player. Magic/ranged damage, live population installation, browser and
 exported client qualification remain unfinished.
+
+
+### World projectile lifecycle component
+
+`client/scripts/world/world_projectiles.gd` connects source launch declarations
+and protocol-19 target snapshots to the existing shared flight renderer. Configure
+it with trusted flight/particle/mesh resources and a target resolver. The resolver
+returns the exact identity, life sequence and a finite world-space target position;
+a missing or different-life replica cannot receive a new launch. The original
+`ActorInstanceFly::OnGetFlyTargetPosition` uses the transformed bounding-sphere
+center, so live integration must resolve that center rather than invent a fixed
+height above the player.
+
+The component consumes a source event once per actor life/action sequence and
+start time. Failed configuration can retry; duplicate successful launches reject.
+Flights track only the captured target life. Original `CFlyTarget::NotifyTargetClear`
+turns a destroyed object into its last sampled position; the component preserves
+that transition and disables homing permanently, even if the identity reappears.
+A source actor's removal retires its event cache without destroying existing
+flights. World disconnect clears all flights, impacts and cached event identities.
+These are presentation rules; no reducer or damage state is modified.
+
+The existing `--scenario projectile` runner now exercises this component as well
+as the four effect definitions. `.local/mobs/projectile-world-r2/report.json`
+passes 125 native Compatibility checks with 16 hashed captures. Checks include
+server-selected versus nearer targets, wrong-life rejection, exact-life movement,
+invalid-step preservation, in-flight disappearance/life replacement, no
+reacquisition, duplicate prevention, source removal and final cleanup. The
+paired-effect and arrow world-flight captures were visually reviewed. Scoped
+Python/GDScript lint passes; X11/VSync warnings remain but no engine errors.
+
+This fixture injects resources and controlled target replicas. Main-scene resource
+loading, actor-signal connection, actual rendered target centers, exported-client
+qualification and live projectile damage remain pending. The separate protocol-19
+two-client check proves target replication, not this renderer's live integration.

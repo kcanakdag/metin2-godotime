@@ -56,6 +56,7 @@ def main():
             "scripts/actors/projectile_effect.gd",
             "scripts/actors/projectile_trail.gd",
             "scripts/actors/projectile_mesh_effect.gd",
+            "scripts/world/world_projectiles.gd",
         ]
     if args.scenario == "flight":
         files += ["scripts/actors/particle_motion.gd", "scripts/actors/projectile_flight.gd"]

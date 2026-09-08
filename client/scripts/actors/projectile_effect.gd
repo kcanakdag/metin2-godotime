@@ -98,10 +98,12 @@ func _discard_attachments() -> void:
 	_attachments.clear()
 
 
-func advance(delta: float, target: Vector3, camera: Camera3D) -> Dictionary:
+func advance(
+	delta: float, target: Vector3, camera: Camera3D, object_target: bool = true
+) -> Dictionary:
 	if flight == null or camera == null:
 		return {"error": "Projectile effect is not configured"}
-	var result: Dictionary = flight.advance(delta, target)
+	var result: Dictionary = flight.advance(delta, target, object_target)
 	if result.has("error"):
 		return result
 	if result.event != "inactive":
