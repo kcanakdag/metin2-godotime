@@ -1,5 +1,35 @@
 # Original mob pipeline
 
+## Full candidate attacks and projectile declarations
+
+`build_mob_catalog.py` now compiles all 44 converted definitions into 78 ordinary
+attack variants: 52 melee and 26 projectile variants. Each attack declares
+`delivery` and `damage_kind`. Melee retains its existing hit windows; projectile
+attacks retain an empty window list and explicit `projectile_launches` instead.
+The source definition still preserves the original stats and battle dispatch.
+
+`mob_projectiles.py` validates type-6 events against their exact actor/action/MSA
+identity, timestamp, source fields, attachment flag/bone and safe MSF path. Source
+positions remain explicitly in centimetres; they are not silently reinterpreted as
+Godot local coordinates. Launch records preserve source and speed-adjusted timing.
+Unknown events, duplicate declarations, mismatched MAGIC/RANGE dispatch and missing
+launches reject. MSF effects and their dependencies are not imported by this linker.
+
+These are visual launch declarations, not server damage authorization. The pinned
+`CHARACTER::Attack` dispatches MAGIC/RANGE through `Shoot`; `CFuncShoot` applies
+the appropriate damage type/resistance. `CalcMagicDamage` derives NPC base damage
+through `CalcMeleeDamage`, but that does not make its final damage type melee or
+justify ignoring magic resistance. The authoritative implementation remains
+pending. Catalogs/receipts explicitly list unimplemented runtime requirements.
+
+`.local/mobs/population-gameplay-r2` links all models and actions; the original
+five-species melee records are unchanged after removing the new descriptive fields.
+Twenty-eight focused Python tests and Python lint pass. Evidence:
+`.local/mobs/projectile-linker-acceptance-r1.json`. The melee timing fixture rejects
+projectile catalogs until its gameplay scenario supports them; the separate full
+asset gallery remains valid conversion evidence. No runtime, export or deployment
+claim is made from this candidate compilation.
+
 ## Original regeneration runtime contract
 
 Population discovery now emits a `runtime_policy` for persistent overworld

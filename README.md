@@ -45,6 +45,9 @@ followers and replacement leaders. Live database integration remains pending.
 The companion `population_placement` developer command checks original group
 placement against the real server map; seed 42 places 2,853 members across all
 945 groups, covering all 44 definitions. This is an offline placement report.
+The full candidate gameplay catalog now links 78 attacks: 52 melee variants and
+26 original projectile launches. Projectile presentation and magic damage still
+need runtime integration; no additional enemy is live yet.
 Yongan's six authored Wild Dog homes pass **107 two-client checks** on a fresh
 local database. The original City Guard is installed in the playable map layer,
 with original placement, weighted idle animations and its attached weapon.

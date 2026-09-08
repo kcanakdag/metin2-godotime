@@ -22,6 +22,20 @@ evidence. No server or public deployment changed in this recheck.
 
 ### Original wildlife definitions in progress
 
+Full gameplay linker checkpoint: all 44 definitions now compile with 78 attacks
+(52 melee, 26 projectile). Type-6 source launch declarations retain identity,
+timing, source position, attachment and MSF effect reference separately from melee
+windows. Delivery/damage kinds preserve the original MAGIC dispatch; visual launch
+time is not treated as damage authorization. Unknown/duplicate events and mismatched
+dispatch reject. Runtime requirements remain explicit in the catalog and receipt.
+
+`population-gameplay-r2` binds the full catalog to the converted models. The old
+five-species gameplay records compare identically after removing new descriptive
+fields. Twenty-eight Python tests and Python lint pass; evidence is
+`.local/mobs/projectile-linker-acceptance-r1.json`. The shared projectile renderer,
+MSF asset import, original magic/ranged damage and transactional live population
+integration remain pending. No new enemy or ability was deployed.
+
 Group placement checkpoint: the shared server range sampler now supports original
 leader-first group chains, independent offsets, failed-leader abort and skipped
 followers. Derived rectangles may cross map edges while individual positions still

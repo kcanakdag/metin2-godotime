@@ -3,6 +3,13 @@
 These are the source revisions used by the current project. Code licenses and
 original game asset rights remain separate.
 
+The ordinary mob projectile linker preserves selected original MSA type-6 launch
+declarations and references their MSF paths without fetching additional effect
+assets. Damage-type interpretation was checked against the pinned server's
+`char_battle.cpp` (`CHARACTER::Attack`, `CFuncShoot`) and `battle.cpp`
+(`CalcMagicDamage`). This metadata adapter is independently authored; no original
+combat implementation was copied into the project.
+
 The mob motion-registration adapter was independently implemented from the pinned
 client's `GameLib/RaceManager.cpp::__LoadRaceMotionList` contract. Unregistered
 rows are retained as ignored metadata. The actor mesh selector follows

@@ -141,6 +141,12 @@ def main() -> None:
                 check=True,
             )
             public = json.loads((generated / "presentation.v1.json").read_text())
+            gameplay = json.loads((generated / "gameplay.v1.json").read_text())
+            if any(a["delivery"] != "melee" for mob in gameplay["mobs"] for a in mob["attacks"]):
+                raise ValueError(
+                    "This PvE timing fixture covers melee attacks; use test_npc_content.py "
+                    "for the full asset gallery until projectile gameplay is integrated"
+                )
             ids = {a["id"] for a in public["actors"]}
             base_manifest = stage / "assets/imported/content/p0-warrior-dog/manifest.v1.json"
             document = json.loads(base_manifest.read_text())

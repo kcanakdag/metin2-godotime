@@ -26,9 +26,11 @@ def main():
         ROOT / "tools" / name
         for name in (
             "mob_gameplay.py",
+            "mob_projectiles.py",
             "mob_presentation.py",
             "build_mob_catalog.py",
             "content_compile.py",
+            "content_formats.py",
         )
     )
     frozen = {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
@@ -82,6 +84,7 @@ def main():
         "content_hash": catalog["content_hash"],
         "mob_count": len(catalog["mobs"]),
         "attack_variant_count": sum(len(m["attacks"]) for m in catalog["mobs"]),
+        "unimplemented_runtime_requirements": catalog["unimplemented_runtime_requirements"],
     }
     (output / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
     print(json.dumps({k: v for k, v in receipt.items() if k != "inputs"}))

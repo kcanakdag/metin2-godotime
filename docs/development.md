@@ -17,6 +17,11 @@ After wildlife conversion, `tools/build_mob_catalog.py --content CONVERTED_DIR
 against the conversion receipt and exact Blender animation report. See
 [mob tooling](mobs.md) for its source timing policies and remaining runtime work.
 The command is offline and does not install content or restart services.
+The full selection now compiles projectile launch declarations separately from
+melee windows. Catalogs and receipts expose `unimplemented_runtime_requirements`;
+successful compilation does not establish that those mechanics are playable.
+The existing `test_actors.py --scenario mobs` timing fixture accepts melee-only
+selections; the full converted asset gallery remains `test_npc_content.py`.
 It also writes `presentation.v1.json`. Use `tools/test_actors.py --scenario mobs
 --mob-content CONVERTED_DIR --native --godot GODOT --output NEW_DIR` to check the
 candidate through the real PvE actor in an isolated project. This runner merges

@@ -5,6 +5,7 @@ import hashlib
 import math
 
 from content_compile import canonical_bytes
+from mob_projectiles import compile_launches
 
 SERVER_REVISION = "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318"
 
@@ -72,7 +73,7 @@ def motion_record(motion, actor_id):
     }
 
 
-def compile_mob(source, actor):
+def compile_mob(source, actor, projectiles=None):
     actor_id = source["id"]
     if (actor["id"], actor["vnum"], actor["kind"], actor["model_key"]) != (
         actor_id,
@@ -106,7 +107,11 @@ def compile_mob(source, actor):
         if motion["loop"] or motion["combo"] is not None:
             raise ValueError("Ordinary mob attack must be a nonlooping independent motion")
         events = motion["events"]
-        if not events or any(e["kind"] != "attack_window" for e in events):
+        launches = (projectiles or {}).get(motion["action_id"], [])
+        projectile_kind = {"MAGIC": "magic", "RANGE": "normal_range"}.get(source.get("battle_type"))
+        if bool(launches) != bool(projectile_kind) or (launches and events):
+            raise ValueError("Projectile attacks require the original MAGIC/RANGE dispatch")
+        if (not events and not launches) or any(e["kind"] != "attack_window" for e in events):
             raise ValueError("Mob attack requires supported explicit hit windows")
         windows = []
         for event in events:
@@ -142,6 +147,12 @@ def compile_mob(source, actor):
                 "playback_duration_us": playback_duration(speed, record["duration_us"]),
                 "server_cooldown_us": legacy_duration(speed, 2_000_000),
                 "windows": windows,
+                "delivery": "projectile" if launches else "melee",
+                "damage_kind": projectile_kind or "normal_melee",
+                "projectile_launches": [
+                    {**launch, "playback_start_us": playback_duration(speed, launch["start_us"])}
+                    for launch in launches
+                ],
             }
         )
     runs = group("run")
@@ -209,8 +220,7 @@ def compile_catalog(normalized):
     payload = {k: v for k, v in normalized.items() if k != "content_hash"}
     if hashlib.sha256(canonical_bytes(payload)).hexdigest() != normalized.get("content_hash"):
         raise ValueError("Normalized content hash does not match payload")
-    if normalized["deferred_motion_events"]:
-        raise ValueError("Resolve deferred motion events before compiling gameplay")
+    projectiles = compile_launches(normalized)
     actors = normalized["actors"]
     sources = normalized["mob_catalog"]
     if not 1 <= len(sources) <= 128 or len(sources) != len(actors):
@@ -223,13 +233,19 @@ def compile_catalog(normalized):
     indexed = {a["id"]: a for a in actors}
     if set(indexed) != {r["id"] for r in sources}:
         raise ValueError("Converted actor catalog differs from mob catalog")
-    rows = [compile_mob(source, indexed[source["id"]]) for source in sources]
+    rows = [compile_mob(source, indexed[source["id"]], projectiles) for source in sources]
     result = {
         "schema": "mt2spacetime.mob-gameplay-candidate",
         "version": 1,
         "source_content_hash": normalized["content_hash"],
         "runtime_status": "candidate-not-installed",
         "timing_policy": "original-server-cadence-and-precise-client-playback-v1",
+        "unimplemented_runtime_requirements": [
+            "projectile-asset-presentation",
+            "original-magic-and-ranged-normal-damage",
+        ]
+        if projectiles
+        else [],
         "server_rules": {
             "revision": SERVER_REVISION,
             "references": [
@@ -237,6 +253,8 @@ def compile_catalog(normalized):
                 "src/game/src/char.cpp:CHARACTER::GetMoveMotionSpeed",
                 "src/game/src/char.cpp:CHARACTER::GetMoveSpeed",
                 "src/game/src/char_state.cpp:CHARACTER::StateBattle",
+                "src/game/src/char_battle.cpp:CHARACTER::Attack/CFuncShoot",
+                "src/game/src/battle.cpp:CalcMagicDamage",
             ],
         },
         "mobs": rows,
