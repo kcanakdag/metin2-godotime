@@ -52,6 +52,27 @@ def polynomial(text: str) -> dict[tuple[str, ...], float]:
     return visit(ast.parse(text, mode="eval").body)
 
 
+def motion_hits(motion: dict, handler: str) -> dict:
+    """Link ordered source collision events without inventing a radial replacement."""
+    kind = "attack_area" if handler == "physical_area_v1" else "attack_window"
+    hits = [event for event in motion["events"] if event["kind"] == kind]
+    if not hits or len(hits) > 32 or (kind == "attack_window" and len(hits) != 1):
+        raise ValueError("Skill requires a bounded matching collision event list")
+    for hit in hits:
+        if not 0 < hit["start_us"] < hit["end_us"] <= motion["duration_us"]:
+            raise ValueError("Invalid skill collision event bounds")
+    if any(a["start_us"] >= b["start_us"] for a, b in zip(hits, hits[1:], strict=False)):
+        raise ValueError("Skill collision events must have ordered unique starts")
+    result = {
+        "hit_start_us": min(hit["start_us"] for hit in hits),
+        "hit_end_us": max(hit["end_us"] for hit in hits),
+    }
+    if kind == "attack_area":
+        result["hit_windows_us"] = [[hit["start_us"], hit["end_us"]] for hit in hits]
+        result["hit_geometry"] = hits
+    return result
+
+
 def compile_catalog(profile: dict, *, offline: bool) -> dict:
     if set(profile) != {"schema_version", "skills"} or profile["schema_version"] != 1:
         raise ValueError("Invalid skill profile")
@@ -95,7 +116,7 @@ def compile_catalog(profile: dict, *, offline: bool) -> dict:
         }
         if (
             set(selected) - {"hits_per_life"} != fields
-            or selected["handler"] != "physical_splash_v1"
+            or selected["handler"] not in {"physical_splash_v1", "physical_area_v1"}
             or selected["weapon_class"] != "sword"
         ):
             raise ValueError("Unsupported skill selection or handler")
@@ -157,12 +178,7 @@ def compile_catalog(profile: dict, *, offline: bool) -> dict:
             if len(matches) != 1:
                 raise ValueError("Import each selected skill motion before compiling skills")
             motion = matches[0]
-            hits = [e for e in motion["events"] if e["kind"] == "attack_window"]
-            if (
-                len(hits) != 1
-                or not 0 < hits[0]["start_us"] < hits[0]["end_us"] <= motion["duration_us"]
-            ):
-                raise ValueError("Skill requires one bounded hit window")
+            hit_fields = motion_hits(motion, selected["handler"])
             root = motion["accumulation_m"]
             if (
                 len(root) != 3
@@ -175,8 +191,7 @@ def compile_catalog(profile: dict, *, offline: bool) -> dict:
                     "actor_id": actor["id"],
                     "action_id": motion["action_id"],
                     "duration_us": motion["duration_us"],
-                    "hit_start_us": hits[0]["start_us"],
-                    "hit_end_us": hits[0]["end_us"],
+                    **hit_fields,
                     "root_x_m": root[0],
                     "root_z_m": root[2],
                 }

@@ -359,7 +359,10 @@ fn trusted_victim(ctx: &ReducerContext, monster: &crate::combat::Monster) -> boo
     monster.health > 0 && crate::combat::validate_monster(ctx, monster).is_ok()
 }
 
-fn victim_center(ctx: &ReducerContext, monster: &crate::combat::Monster) -> Option<[f64; 3]> {
+pub(crate) fn victim_center(
+    ctx: &ReducerContext,
+    monster: &crate::combat::Monster,
+) -> Option<[f64; 3]> {
     let sphere = crate::combat::defending_sphere(ctx, monster);
     if !sphere.local_center_y_m.is_finite()
         || !sphere.radius_m.is_finite()

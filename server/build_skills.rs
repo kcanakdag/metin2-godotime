@@ -1,4 +1,6 @@
 //! Compile bounded skill definitions shared with the exported client.
+#[path = "build_skill_geometry.rs"]
+mod geometry;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::{collections::BTreeSet, fmt::Write, fs};
@@ -84,12 +86,23 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
     )
     .unwrap();
     writeln!(out, "pub const SKILL_POWERS:[u16;21]={values:?};").unwrap();
+    // Selected catalogs may omit either geometry kind while sharing the strict resolver.
+    out.push_str(&geometry::TYPES.replace(
+        "pub enum SkillHitGeometry",
+        "#[allow(dead_code)] pub enum SkillHitGeometry",
+    ));
+    out.push_str(geometry::RESOLVER);
+    let mut geometries = Vec::new();
     let mut definitions = Vec::new();
     let mut actions = Vec::new();
     let mut event_lists = Vec::new();
     let mut ids = BTreeSet::new();
     for row in rows {
-        if row["handler"] != "physical_splash_v1" || row["weapon_class"] != "sword" {
+        if !matches!(
+            row["handler"].as_str(),
+            Some("physical_splash_v1" | "physical_area_v1")
+        ) || row["weapon_class"] != "sword"
+        {
             return Err("Unsupported skill handler".into());
         }
         let id = n(row, "vnum", 1, 255)?;
@@ -146,6 +159,22 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
             let end = n(v, "hit_end_us", start + 1, duration)?;
             let events = windows(v, duration, start, end)?;
             event_lists.push(format!("({id},{actor:?},&{events:?})"));
+            if row["handler"] == "physical_area_v1" {
+                let hits = v["hit_geometry"]
+                    .as_array()
+                    .filter(|hits| hits.len() == events.len())
+                    .ok_or("Skill areas must match their event list")?;
+                let mut shapes = Vec::new();
+                for hit in hits {
+                    if hit["kind"] != "attack_area" {
+                        return Err("Fixed-area handler requires attack-area geometry".into());
+                    }
+                    shapes.push(geometry::generate(hit)?);
+                }
+                geometries.push(format!("({id},{actor:?},&[{}])", shapes.join(",")));
+            } else if v.get("hit_geometry").is_some() {
+                return Err("Radial handler cannot silently ignore authored geometry".into());
+            }
             let x = f(v, "root_x_m", 4.0)?;
             let z = f(v, "root_z_m", 4.0)?;
             actions.push(format!("({id},{actor:?},AttackDefinition{{id:{action:?},duration_us:{duration},cooldown_us:{duration},ordinary_hit_invulnerability_us:200000,hit_start_us:{start},hit_end_us:{end},range_m:{radius:?},combo_input:None,root_motion:Some(RootMotionDefinition{{endpoint_x_m:{x:?},endpoint_z_m:{z:?},duration_us:{duration}}}),special_area:None,screen_wave:None,ordinary_knockback:None}})"));
@@ -167,6 +196,12 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
         out,
         "pub const SKILL_EVENT_WINDOWS:&[(u16,&str,&[[i64;2]])]=&[{}];",
         event_lists.join(",")
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "pub const SKILL_EVENT_GEOMETRY:&[(u16,&str,&[SkillHitGeometry])]=&[{}];",
+        geometries.join(",")
     )
     .unwrap();
     Ok(out)

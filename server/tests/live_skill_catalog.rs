@@ -30,3 +30,32 @@ fn live_repeat_limits_are_bounded_and_emitted() {
         assert!(compiler::generate(&catalog.to_string().into_bytes()).is_err());
     }
 }
+
+#[test]
+fn fixed_areas_require_one_valid_shape_per_event() {
+    use serde_json::{Value, json};
+    let mut catalog: Value = serde_json::from_slice(include_bytes!(
+        "../../client/assets/imported/skills/catalog.v1.json"
+    ))
+    .unwrap();
+    catalog["skills"][0]["handler"] = json!("physical_area_v1");
+    let area = json!({"kind":"attack_area", "coordinate_space":"output_actor_local_godot",
+        "spheres":[{"position_m":[0,1,-2],"radius_m":1.2}]});
+    for variant in catalog["skills"][0]["variants"].as_array_mut().unwrap() {
+        variant["hit_geometry"] = json!([area.clone()]);
+    }
+    let generated = compiler::generate(catalog.to_string().as_bytes()).unwrap();
+    assert!(generated.contains("position_m:[0.0, 1.0, -2.0],radius_m:1.2"));
+    for invalid in [
+        json!([]),
+        json!([area.clone(), area.clone()]),
+        json!([{"kind":"attack_window","coordinate_space":"output_actor_local_godot",
+            "bone":"", "weapon_length_m":0}]),
+    ] {
+        let mut bad = catalog.clone();
+        bad["skills"][0]["variants"][0]["hit_geometry"] = invalid;
+        assert!(compiler::generate(bad.to_string().as_bytes()).is_err());
+    }
+    catalog["skills"][0]["handler"] = json!("physical_splash_v1");
+    assert!(compiler::generate(catalog.to_string().as_bytes()).is_err());
+}

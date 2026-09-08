@@ -346,6 +346,17 @@ fn controlling_owner(
         })
 }
 
+fn area_geometry(
+    ctx: &ReducerContext,
+    cast: &PendingSkill,
+) -> Result<Option<&'static [definitions::SkillHitGeometry]>, String> {
+    let appearance = crate::characters::owned_appearance(ctx, cast.character_id)?;
+    Ok(definitions::SKILL_EVENT_GEOMETRY
+        .iter()
+        .find(|(id, actor, _)| *id == cast.skill_vnum && *actor == appearance.actor_id)
+        .map(|(_, _, shapes)| *shapes))
+}
+
 /// Capture at event boundaries before the normal root-motion advance for this tick.
 pub fn activate_due(ctx: &ReducerContext, now: i64) -> Result<(), String> {
     let casts: Vec<_> = ctx.db.pending_skill().iter().collect();
@@ -354,6 +365,7 @@ pub fn activate_due(ctx: &ReducerContext, now: i64) -> Result<(), String> {
             clear(ctx, cast.character_id);
             continue;
         };
+        let has_areas = area_geometry(ctx, &cast)?.is_some();
         let mut changed = false;
         for event in &mut cast.events {
             if event.placement.is_some() || now < event.starts_at_us || now >= event.ends_at_us {
@@ -377,7 +389,11 @@ pub fn activate_due(ctx: &ReducerContext, now: i64) -> Result<(), String> {
                 origin_z: placement.origin[2],
                 heading: placement.heading,
                 activated_at_us: placement.activated_at_us,
-                victims: Vec::new(),
+                victims: if has_areas {
+                    crate::skill_area::seed(ctx)
+                } else {
+                    Vec::new()
+                },
             });
             changed = true;
         }
@@ -410,23 +426,30 @@ pub fn simulate(ctx: &ReducerContext, now: i64) -> Result<(), String> {
             continue;
         }
         let d = definition(cast.skill_vnum)?;
+        let geometry = area_geometry(ctx, &cast)?;
         let bounds = crate::collision_bounds(ctx);
         for event_index in 0..windows.len() {
             if active & (1 << event_index) == 0 {
                 continue;
             }
-            let mut victims: Vec<_> = ctx
-                .db
-                .monster()
-                .iter()
-                .filter(|m| {
-                    m.health > 0
-                        && m.x.is_finite()
-                        && m.z.is_finite()
-                        && (m.x - owner.x).hypot(m.z - owner.z) <= d.radius_m
-                        && crate::content::clear_path(owner.x, owner.z, m.x, m.z, &bounds)
-                })
-                .collect();
+            let mut victims: Vec<_> = if let Some(shapes) = geometry {
+                let shape = shapes
+                    .get(event_index)
+                    .ok_or("Skill event geometry is missing")?;
+                crate::skill_area::candidates(ctx, &mut cast.events[event_index], shape, now)?
+            } else {
+                ctx.db
+                    .monster()
+                    .iter()
+                    .filter(|m| {
+                        m.health > 0
+                            && m.x.is_finite()
+                            && m.z.is_finite()
+                            && (m.x - owner.x).hypot(m.z - owner.z) <= d.radius_m
+                            && crate::content::clear_path(owner.x, owner.z, m.x, m.z, &bounds)
+                    })
+                    .collect()
+            };
             victims.sort_by_key(|m| m.id);
             for mut victim in victims {
                 if cast.hit_lives.len() >= usize::from(d.max_targets) {

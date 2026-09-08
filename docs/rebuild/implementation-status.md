@@ -5,6 +5,26 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Live compiler and fixed-area resolver — 2026-09-08
+
+The live skill compiler/linker now supports catalog-selected fixed areas and
+preserves original ordered geometry per event. A candidate with Three-Way Cut and
+Sword Spin compiles without replacing the installed catalog; the legacy catalog
+rebuild remains byte-identical. A reusable `compile_live_skills` example validates
+candidates without installation. The runtime seeds validated exact-life defending
+centers on activation, skips that tick, resolves swept spheres at frozen placement,
+and refreshes samples with removed lives discarded. It shares the existing combo
+victim-center computation. Per-event receipts remain downstream of geometry.
+
+Nine focused skill tests, eleven area tests (overlapping scope), seven compiler
+checks, two Python linker checks, strict library/example Clippy and formatting
+pass. Fresh local database `mt2-p2-live-area-v26-r1-20260908` passes 35 skill and
+15 combat checks with two authenticated clients for the unchanged installed Sword
+Spin catalog. Evidence: `.local/p6-live-area-r1/`. These checks do not exercise
+Three-Way Cut on the live server. Its required-target semantics, original reactions/
+knockback, dispatch quantization and icon integration remain pending before enabling
+it. No schema change or public deployment; local WASM remains QA-authorized only.
+
 ## Persisted skill-area placement — 2026-09-08
 
 Protocol 26 stores optional activation origin, heading, tick and exact-life target

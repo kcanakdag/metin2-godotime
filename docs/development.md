@@ -1949,3 +1949,11 @@ assets automatically.
 Selected ground models can now be installed with `tools/install_ground_items.py`;
 see the [installation and runtime checks](ground-items.md#install-and-render-the-selected-package).
 The installer and runtime do not change item ownership, quantities or pickup rules.
+
+## Candidate live skill compilation
+
+`server/examples/compile_live_skills.rs` validates a candidate schema-v1 skill
+catalog through the actual live compiler without swapping imported client files.
+It emits Rust definitions for inspection; it does not install or publish content.
+See [skill authoring](skills.md#fixed-area-authoring-and-runtime) for the command,
+current area-handler coverage and remaining Three-Way Cut fidelity requirements.

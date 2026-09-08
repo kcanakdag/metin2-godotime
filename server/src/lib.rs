@@ -29,6 +29,7 @@ mod physical_damage;
 mod progression;
 pub mod regeneration;
 mod root_motion;
+mod skill_area;
 mod skill_hits;
 mod skills;
 mod training_targets;

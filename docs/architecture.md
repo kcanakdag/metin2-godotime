@@ -4,9 +4,12 @@ Protocol 26 adds optional per-event placement records to private pending skills,
 including activation origin, heading, tick and exact-life target sample storage.
 Activation captures the owner at the event boundary before normal root-motion
 advancement and rejects stale controllers through the shared ownership check.
-Bindings are regenerated from a fresh local database. The current radial Sword
-Spin resolver does not consume these placements; fixed-area skill resolution and
-initial target sampling remain pending. Public protocol 24 is unchanged.
+Bindings are regenerated from a fresh local database. The radial Sword Spin resolver does not consume these placements. Catalog-selected
+fixed areas seed exact-life defending centers at activation, skip that tick, and
+scan swept three-dimensional spheres until exclusive expiry. Samples refresh each
+scan and omit removed lives; new lives start at their current center. Source hit
+reactions and target requirements remain pending before enabling Three-Way Cut.
+Public protocol 24 is unchanged.
 
 Protocol 25 replaces the private pending skill's single deadline pair with an
 ordered list of `SkillEventTiming` records and a captured per-life hit limit.

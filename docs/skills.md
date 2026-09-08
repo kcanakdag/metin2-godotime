@@ -281,10 +281,39 @@ can be enabled; the existing combo uses the shared lifecycle now.
 Each persisted skill event now carries an optional activation placement and a
 list of exact-life target samples. Activation captures origin and heading before
 the tick's normal root-motion advancement, once per event, after verifying the
-controller lease, connection, action revision and owner life. The target list is
-currently empty: live area sampling and geometry dispatch are the next step.
+controller lease, connection, action revision and owner life. Catalog-selected fixed areas now seed and refresh the target list and resolve
+sweeps against frozen per-event placement; activation ticks do not deal area hits.
 Sword Spin retains its radial resolver. The fresh local database
 `mt2-p2-area-state-v26-r1-20260908` passes 35 skill and 15 combat checks with two
 authenticated clients; this does not establish Three-Way Cut or browser fidelity.
 The module in `.local/p6-area-state-r1/module.wasm` embeds local QA authorization
 and must not be deployed publicly.
+
+### Fixed-area authoring and runtime
+
+The live linker accepts `physical_area_v1` alongside the existing radial handler.
+It preserves ordered source `attack_area` events, windows and full event metadata.
+The Rust compiler requires exactly one valid geometry record per event and rejects
+weapon windows in this handler, missing shapes and geometry silently attached to
+radial skills. The resolver samples validated defending spheres, uses exact-life
+identity for previous centers, skips activation ticks and expires areas exclusively.
+Samples are sorted for binary lookup and removed lives are discarded each scan.
+The existing damage receipt limits apply after collision qualification.
+
+Candidate Three-Way Cut plus Sword Spin compiles at
+`.local/p6-live-area-r1/catalog.v1.json`; the installed catalog remains Sword Spin
+only. Required-target acceptance, source hit reactions/knockback, event dispatch
+quantization and original icon integration remain unfinished. Geometry compilation
+and pure resolver tests do not establish live Three-Way Cut or visual fidelity.
+
+To check a candidate without changing the installed catalog:
+
+```sh
+cargo run --manifest-path server/Cargo.toml --locked --offline \
+  --example compile_live_skills -- candidate.json /tmp/live-skill-definitions.rs
+```
+
+Use `--installed` in place of the input path to compile the installed catalog.
+The geometry enum has a narrow generated `dead_code` allowance because selected
+catalogs can omit either kind; the compiler and runtime still reject unsupported
+weapon windows for the fixed-area handler. No checks are disabled globally.
