@@ -36,7 +36,11 @@ fn target_change_allowed(same_target: bool, now: i64, deadline: i64) -> bool {
     same_target || now >= deadline
 }
 
-fn valid_target(ctx: &ReducerContext, target_id: u32, life: u32) -> Result<Monster, String> {
+pub(crate) fn valid_target(
+    ctx: &ReducerContext,
+    target_id: u32,
+    life: u32,
+) -> Result<Monster, String> {
     let target = ctx
         .db
         .monster()

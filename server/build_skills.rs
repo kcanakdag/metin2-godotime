@@ -50,6 +50,27 @@ fn windows(variant: &Value, duration: u64, start: u64, end: u64) -> Result<Vec<[
     Ok(result)
 }
 
+fn area_dispatch(windows: &[[u64; 2]]) -> Result<Vec<[u64; 2]>, String> {
+    windows
+        .iter()
+        .map(|&[start, end]| {
+            // Same source 60-Hz event bucket policy used by original combo areas.
+            let frame = start.checked_mul(60).ok_or("Skill dispatch overflow")? / 1_000_000;
+            let activation = (frame + 1)
+                .checked_mul(1_000_000)
+                .ok_or("Skill dispatch overflow")?
+                .div_ceil(60);
+            let expiry = activation
+                .checked_add(end.checked_sub(start).ok_or("Reversed skill area")?)
+                .ok_or("Skill expiry overflow")?;
+            if activation > 3_200_000 || expiry > 13_200_000 {
+                return Err("Skill area dispatch exceeds runtime bounds".into());
+            }
+            Ok([activation, expiry])
+        })
+        .collect()
+}
+
 pub fn generate(bytes: &[u8]) -> Result<String, String> {
     let root: Value = serde_json::from_slice(bytes).map_err(|e| e.to_string())?;
     if root["schema"] != "mt2spacetime.skills" || root["version"] != 1 {
@@ -77,7 +98,7 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
         .filter(|r| !r.is_empty() && r.len() <= 64)
         .ok_or("Invalid skills")?;
     let mut out = String::from(
-        "#[derive(Clone,Copy,Debug)]\npub struct SkillDefinition {pub vnum:u16,pub class_id:u8,pub minimum_level:u8,pub maximum_rank:u8,pub cooldown_us:i64,pub radius_m:f32,pub max_targets:u8,pub hits_per_life:u8,pub sp_base:u16,pub sp_per_power:u16,pub damage_milli:[i64;6]}\n",
+        "#[derive(Clone,Copy,Debug)]\npub struct SkillDefinition {pub vnum:u16,pub class_id:u8,pub minimum_level:u8,pub maximum_rank:u8,pub cooldown_us:i64,pub radius_m:f32,pub max_targets:u8,pub hits_per_life:u8,pub requires_target:bool,pub target_range_m:f32,pub sp_base:u16,pub sp_per_power:u16,pub damage_milli:[i64;6]}\n",
     );
     writeln!(
         out,
@@ -125,6 +146,18 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
         } else {
             1
         };
+        let requires_target = match row.get("requires_target") {
+            None => false,
+            Some(value) => value.as_bool().ok_or("Invalid skill target requirement")?,
+        };
+        let target_range = if row.get("target_range_m").is_some() {
+            f(row, "target_range_m", 100.0)?
+        } else {
+            0.0
+        };
+        if target_range < 0.0 || (!requires_target && target_range != 0.0) {
+            return Err("Invalid skill target range policy".into());
+        }
         let sp = n(row, "sp_base", 0, 1000)?;
         let per = n(row, "sp_per_power", 0, 1000)?;
         let coefficients = row["damage_milli"]
@@ -138,7 +171,7 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
                     .ok_or("Invalid skill coefficient")
             })
             .collect::<Result<Vec<_>, _>>()?;
-        definitions.push(format!("SkillDefinition{{vnum:{id},class_id:{class},minimum_level:{level},maximum_rank:{rank},cooldown_us:{cooldown},radius_m:{radius:?},max_targets:{targets},hits_per_life:{hits_per_life},sp_base:{sp},sp_per_power:{per},damage_milli:{coefficients:?}}}"));
+        definitions.push(format!("SkillDefinition{{vnum:{id},class_id:{class},minimum_level:{level},maximum_rank:{rank},cooldown_us:{cooldown},radius_m:{radius:?},max_targets:{targets},hits_per_life:{hits_per_life},requires_target:{requires_target},target_range_m:{target_range:?},sp_base:{sp},sp_per_power:{per},damage_milli:{coefficients:?}}}"));
         let variants = row["variants"]
             .as_array()
             .filter(|r| r.len() == 2)
@@ -160,7 +193,12 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
             let start = n(v, "hit_start_us", 1, duration)?;
             let end = n(v, "hit_end_us", start + 1, duration)?;
             let events = windows(v, duration, start, end)?;
-            event_lists.push(format!("({id},{actor:?},&{events:?})"));
+            let dispatch = if row["handler"] == "physical_area_v1" {
+                area_dispatch(&events)?
+            } else {
+                events.clone()
+            };
+            event_lists.push(format!("({id},{actor:?},&{dispatch:?})"));
             if row["handler"] == "physical_area_v1" {
                 let hits = v["hit_geometry"]
                     .as_array()
@@ -239,6 +277,20 @@ pub fn build() -> String {
 mod event_tests {
     use super::*;
     use serde_json::json;
+    #[test]
+    fn original_area_frames_preserve_duration_and_exact_boundary_policy() {
+        assert_eq!(
+            area_dispatch(&[[162206, 362206], [434712, 634712], [849959, 1049959]]).unwrap(),
+            vec![[166667, 366667], [450000, 650000], [850000, 1050000]]
+        );
+        assert_eq!(
+            area_dispatch(&[[100000, 300000]]).unwrap(),
+            vec![[116667, 316667]]
+        );
+        assert!(area_dispatch(&[[20, 10]]).is_err());
+        assert!(area_dispatch(&[[u64::MAX, u64::MAX]]).is_err());
+    }
+
     #[test]
     fn legacy_and_multiple_windows_preserve_envelopes() {
         assert_eq!(windows(&json!({}), 100, 10, 90).unwrap(), vec![[10, 90]]);

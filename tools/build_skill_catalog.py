@@ -205,9 +205,19 @@ def compile_catalog(profile: dict, *, offline: bool) -> dict:
             or not 1 <= targets <= 32
         ):
             raise ValueError("Invalid cooldown/range/target count")
+        targeting = {}
+        if selected["handler"] == "physical_area_v1":
+            flags = set(desc[10].split("|"))
+            requires_target = "NEED_TARGET" in flags
+            target_range_cm = 170 if flags & {"MELEE_ATTACK", "CHARGE_ATTACK"} else int(row[25])
+            targeting = {
+                "requires_target": requires_target,
+                "target_range_m": target_range_cm / 100 if requires_target else 0.0,
+            }
         skills.append(
             {
                 **selected,
+                **targeting,
                 "name": desc[2],
                 "description": desc[5],
                 "icon": "skill/warrior/" + desc[12] + "_01",

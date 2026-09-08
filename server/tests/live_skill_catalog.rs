@@ -91,3 +91,31 @@ fn fixed_areas_require_one_valid_shape_per_event() {
     catalog["skills"][0]["handler"] = json!("physical_splash_v1");
     assert!(compiler::generate(catalog.to_string().as_bytes()).is_err());
 }
+
+#[test]
+fn target_policy_is_typed_and_bounded() {
+    use serde_json::{Value, json};
+    let mut catalog: Value = serde_json::from_slice(include_bytes!(
+        "../../client/assets/imported/skills/catalog.v1.json"
+    ))
+    .unwrap();
+    catalog["skills"][0]["requires_target"] = json!(true);
+    catalog["skills"][0]["target_range_m"] = json!(0);
+    assert!(
+        compiler::generate(catalog.to_string().as_bytes())
+            .unwrap()
+            .contains("requires_target:true,target_range_m:0.0")
+    );
+    for (key, value) in [
+        ("requires_target", json!(1)),
+        ("target_range_m", json!(-1)),
+        ("target_range_m", json!(101)),
+    ] {
+        let mut bad = catalog.clone();
+        bad["skills"][0][key] = value;
+        assert!(compiler::generate(bad.to_string().as_bytes()).is_err());
+    }
+    catalog["skills"][0]["requires_target"] = json!(false);
+    catalog["skills"][0]["target_range_m"] = json!(2);
+    assert!(compiler::generate(catalog.to_string().as_bytes()).is_err());
+}

@@ -32,6 +32,7 @@ mod root_motion;
 mod skill_area;
 mod skill_hits;
 mod skill_reactions;
+mod skill_target;
 mod skills;
 mod training_targets;
 

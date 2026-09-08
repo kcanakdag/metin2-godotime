@@ -358,3 +358,27 @@ an active flinch. No protocol columns changed. Native Godot actor QA includes al
 front/back damage variants and passed 1,622 checks across 44 mobs; it uses controlled
 state, not actual multiplayer flinch acceptance. Exact physics, targeting and
 Three-Way Cut casting/visual integration remain pending.
+
+### Required targets and source event dispatch
+
+The live linker derives `requires_target` and `target_range_m` for area skills from
+the pinned client flags and skill table. Three-Way Cut requires a living selected
+monster but has zero authored cast range: this means no distance restriction,
+not a guessed melee radius. Damage still requires collision with its local areas.
+Server acceptance validates the selected monster's exact life and trusted state,
+then derives facing from current authoritative positions after root advancement.
+It preserves heading for coincident centers. Positive ranges reject at their
+exclusive boundary; invalid numbers and range policies reject. Rejected reducer
+transactions do not spend SP or persist cooldown changes. The action plan leaves
+ordinary target damage disabled, avoiding an extra basic attack alongside the skill.
+Client approach/target-picking conveniences remain separate work.
+
+Fixed-area windows use the same 60-Hz bucket policy as combo areas: activation is
+the next boundary after the authored frame bucket, and expiry preserves authored
+area duration. Three-Way Cut dispatches at 166667/450000/850000 microseconds for
+200000 microseconds each. Raw source geometry and windows remain in the catalog;
+only compiled runtime deadlines are normalized. Radial Sword Spin keeps its raw
+single window and unchanged catalog bytes. Nine live-compiler and eleven focused
+skill checks pass, along with strict library Clippy and Ruff. The full candidate
+compiles; target reducer acceptance and Three-Way Cut multiplayer/exported behavior
+still require the next live integration run. No public update is included.

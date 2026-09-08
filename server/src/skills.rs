@@ -278,6 +278,27 @@ pub fn cast_skill(
         .ok_or("Skill clock overflow.")?;
     state.revision = revision(state.revision)?;
     crate::root_motion::advance_for_replacement(ctx, &mut control, now)?;
+    let heading = if d.requires_target {
+        let target = crate::targeting::valid_target(
+            ctx,
+            control.combat_target_id,
+            control.combat_target_life_sequence,
+        )?;
+        let owner = ctx
+            .db
+            .player()
+            .identity()
+            .find(character)
+            .ok_or("Skill owner disappeared")?;
+        Some(crate::skill_target::heading(
+            [owner.x, owner.z],
+            [target.x, target.z],
+            d.target_range_m,
+            owner.heading,
+        )?)
+    } else {
+        None
+    };
     crate::combo::clear_chain(&mut control);
     crate::combat::cancel_player_attack(&mut control);
     crate::npcs::clear(ctx, character);
@@ -288,7 +309,7 @@ pub fn cast_skill(
             definition: action,
             target_id: 0,
             target_generation: 0,
-            heading: None,
+            heading,
             can_select_target: false,
         },
         now,

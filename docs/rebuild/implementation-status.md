@@ -5,6 +5,24 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Required skill targets and normalized area clocks — 2026-09-08
+
+Area skill targeting now compiles from original flags/range data. Three-Way Cut
+requires a live selected target but has zero authored cast range; local geometry
+still controls damage. Cast acceptance verifies the exact selected monster life,
+uses server positions to derive facing, preserves coincident-center heading and
+keeps the ordinary-hit action plan disabled. Invalid target transactions roll back
+without SP/cooldown changes. Positive authored ranges use exclusive boundaries.
+
+The compiler normalizes area activation to the source next-60-Hz-bucket boundary
+and retains duration: Three-Way Cut 166667/450000/850000 us plus 200000 us each.
+Raw imported source metadata is preserved; Sword Spin's catalog is byte-identical.
+Eleven focused skill checks, nine compiler checks, strict library Clippy and Ruff
+pass. The two-skill candidate compiles at `.local/p6-skill-target-r1/`. These are
+not real target-reducer or Three-Way Cut multiplayer acceptance. No schema, public
+world or installed skill-catalog change. Next: original icon/content installation
+and the actual two-client Three-Way Cut target, damage and reaction replay.
+
 ## Original GOOD flinch catalog and runtime — 2026-09-08
 
 Verified mob presentation packages now compile front/back weighted damage clips
