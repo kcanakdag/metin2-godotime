@@ -62,6 +62,8 @@ func _run() -> void:
 		await _prepare_default_deny(first, second)
 	elif str(_config.mode) == "skills":
 		await _verify_skills(first, second)
+	elif str(_config.mode) == "training_dummy":
+		await _verify_training_dummy(first, second)
 	elif str(_config.mode) == "skill_combat":
 		await _verify_skill_combat(first, second)
 	else:
@@ -440,7 +442,7 @@ func _verify_skill_combat(first: GameConnection, second: GameConnection) -> void
 		"mobs_subscribed", await _wait_until(func(): return not second.monsters.is_empty())
 	):
 		return
-	var dog_id := int(second.monsters[0].id)
+	var dog_id := int(second.monsters_for_definition(101)[0].id)
 	var start := _xz(_player_row(second, first.local_identity))
 	for _attempt in 120:
 		var dog := _dog(second, dog_id)
@@ -494,6 +496,194 @@ func _verify_skill_combat(first: GameConnection, second: GameConnection) -> void
 		)
 	)
 	first.stop_moving()
+
+
+func _verify_training_dummy(first: GameConnection, second: GameConnection) -> void:
+	var dummy_id := 900001
+	if not _check(
+		"dummy_subscribed_to_both",
+		await _wait_until(
+			func():
+				return (
+					not _dog(first, dummy_id).is_empty() and not _dog(second, dummy_id).is_empty()
+				),
+			8.0
+		)
+	):
+		return
+	var before := _dog(second, dummy_id).duplicate(true)
+	_check("bounded_training_fixture", int(before.max_health) == 600)
+	if int(first.selected_progression().get("level", 0)) < 5:
+		first.admin_raise_progression_level(_request_id(), "5")
+	if not _check(
+		"dummy_skill_fixture_level_five",
+		await _wait_until(func(): return int(first.selected_progression().get("level", 0)) == 5)
+	):
+		return
+	if first.skill_revision(2) == 0:
+		_check(
+			"learn_skill_for_dummy",
+			await _raw_success(first, "learn_skill", [2, 0], [&"U16", &"U32"])
+		)
+	_check(
+		"dummy_skill_rank_subscribed", await _wait_until(func(): return first.skill_revision(2) > 0)
+	)
+	var cast_revision := first.skill_revision(2)
+	var swords := first.inventory.filter(func(item): return int(item.vnum) == 10)
+	if not _check("dummy_starter_sword_available", swords.size() == 1):
+		return
+	var sword_id := int(swords[0].id)
+	first.equip_item(sword_id)
+	if not _check(
+		"dummy_sword_equipped",
+		await _wait_until(
+			func():
+				return first.inventory.any(
+					func(item): return int(item.id) == sword_id and bool(item.equipped)
+				),
+			8.0
+		)
+	):
+		return
+	var observer_start := _xz(_player_row(first, second.local_identity))
+	second.move_to(observer_start.x - 1.0, observer_start.y)
+	_check(
+		"dummy_observer_movement_replicates",
+		await _wait_until(
+			func():
+				return (
+					_xz(_player_row(first, second.local_identity)).distance_to(observer_start) > 0.5
+				),
+			8.0
+		)
+	)
+	second.stop_moving()
+	var destination := _xz(before) + Vector2(-1.0, 0.0)
+	first.move_to(destination.x, destination.y)
+	if not _check(
+		"dummy_caster_movement_replicates",
+		await _wait_until(
+			func():
+				return _xz(_player_row(second, first.local_identity)).distance_to(destination) < 0.2,
+			8.0
+		)
+	):
+		return
+	first.stop_moving()
+	_check(
+		"dummy_exact_life_target_accepted",
+		await _raw_success(
+			first, "select_combat_target", [dummy_id, before.life_sequence], [&"U32", &"U32"]
+		)
+	)
+	_check(
+		"dummy_forged_life_rejected",
+		not await _raw_success(
+			first,
+			"select_combat_target",
+			[dummy_id, int(before.life_sequence) + 1],
+			[&"U32", &"U32"]
+		)
+	)
+	var experience := int(first.selected_progression().experience)
+	var gold := int(_player_row(first, first.local_identity).gold)
+	var potions := _potion_count(first, 27001)
+	var loot_count := second.loot.size()
+	var item_count := second.item_drops.size()
+	_check(
+		"dummy_skill_cast_accepted",
+		await _raw_success(first, "cast_skill", [2, cast_revision], [&"U16", &"U32"])
+	)
+	_check(
+		"dummy_skill_damage_replicates",
+		await _wait_until(
+			func():
+				return (
+					int(_dog(second, dummy_id).health) < int(before.health)
+					and _dog(first, dummy_id).health == _dog(second, dummy_id).health
+				),
+			8.0
+		)
+	)
+	_check(
+		"dummy_cast_replay_rejected",
+		not await _raw_success(first, "cast_skill", [2, cast_revision], [&"U16", &"U32"])
+	)
+	await create_timer(2.1).timeout
+	var after_skill := int(_dog(second, dummy_id).health)
+	first.move_to(destination.x, destination.y)
+	await _wait_until(
+		func():
+			return _xz(_player_row(second, first.local_identity)).distance_to(destination) < 0.2,
+		8.0
+	)
+	first.stop_moving()
+	for _attempt in 60:
+		if int(_dog(second, dummy_id).health) == 0:
+			break
+		_check(
+			"dummy_melee_action_accepted_%d" % _attempt,
+			await _raw_success(first, "perform_attack", [], [])
+		)
+		await create_timer(1.4).timeout
+	var defeated := _dog(second, dummy_id).duplicate(true)
+	_check("dummy_melee_damage_replicates", int(defeated.health) < after_skill)
+	_check("dummy_can_be_defeated", int(defeated.health) == 0)
+	_check("dummy_stays_anchored", _xz(defeated) == _xz(before))
+	_check("dummy_does_not_attack", int(defeated.attack_sequence) == 0)
+	_check("dummy_has_no_xp_reward", int(first.selected_progression().experience) == experience)
+	_check("dummy_has_no_gold_reward", int(_player_row(first, first.local_identity).gold) == gold)
+	_check(
+		"dummy_has_no_item_reward",
+		(
+			_potion_count(first, 27001) == potions
+			and second.loot.size() == loot_count
+			and second.item_drops.size() == item_count
+		)
+	)
+	_check(
+		"dummy_respawns_new_life",
+		await _wait_until(
+			func():
+				return (
+					int(_dog(second, dummy_id).life_sequence) == int(before.life_sequence) + 1
+					and int(_dog(second, dummy_id).health) == 600
+				),
+			8.0
+		)
+	)
+	_check(
+		"dummy_previous_life_rejected",
+		not await _raw_success(
+			first, "select_combat_target", [dummy_id, before.life_sequence], [&"U32", &"U32"]
+		)
+	)
+	var identity := first.local_identity
+	first.disconnect_game()
+	_check(
+		"dummy_observer_sees_disconnect",
+		await _wait_until(
+			func(): return not bool(_player_row(second, identity).get("online", false)), 8.0
+		)
+	)
+	first.connect_account(
+		str(_config.server), str(_config.database), str(_config.tokens[0]), "dummy-reconnect"
+	)
+	if not _check(
+		"dummy_account_reconnects", await _wait_until(func(): return first.state == "lobby", 20.0)
+	):
+		return
+	first.select_character(identity)
+	await _wait_until(func(): return first.local_identity == identity)
+	first.enter_selected()
+	_check(
+		"dummy_reconnect_resubscribes",
+		await _wait_until(
+			func(): return first.state == "connected" and not _dog(first, dummy_id).is_empty(), 8.0
+		)
+	)
+	await create_timer(2.1).timeout
+	_check("dummy_reconnect_does_not_replay_damage", int(_dog(second, dummy_id).health) == 600)
 
 
 func _xz(row: Dictionary) -> Vector2:
@@ -578,6 +768,8 @@ func _raw_success(client: GameConnection, reducer: String, args: Array, types: A
 		func(response: ReducerResultMessage):
 			observed.done = true
 			observed.success = response.reducer_result.value == ReducerOutcomeEnum.Options.ok
+			if response.reducer_result.value == ReducerOutcomeEnum.Options.err:
+				print("REDUCER_REJECTION ", reducer, " ", response.reducer_result.get_err())
 	)
 	return await _wait_until(func(): return observed.done) and bool(observed.success)
 
@@ -609,6 +801,8 @@ func _finish() -> void:
 	var identities: Array[String] = []
 	for client: GameConnection in _clients:
 		identities.append(client.account_identity)
+	for error in _errors:
+		printerr("SMOKE_ERROR ", error)
 	var report := {
 		"passed": _errors.is_empty(),
 		"mode": str(_config.mode),

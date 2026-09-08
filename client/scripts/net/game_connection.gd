@@ -31,7 +31,7 @@ signal combat_target_changed(info: Dictionary)
 signal npc_interaction_changed(info: Dictionary)
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
-const EXPECTED_PROTOCOL_VERSION := 16
+const EXPECTED_PROTOCOL_VERSION := 17
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
 const TABLES := [
@@ -354,6 +354,10 @@ func progression_for(character_id: String) -> Dictionary:
 
 func selected_progression() -> Dictionary:
 	return progression_for(local_identity)
+
+
+func monsters_for_definition(vnum: int) -> Array:
+	return monsters.filter(func(row: Dictionary): return int(row.get("definition_vnum", 0)) == vnum)
 
 
 func selected_combat_target() -> Dictionary:

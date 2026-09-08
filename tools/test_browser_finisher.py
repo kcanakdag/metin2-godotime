@@ -1098,7 +1098,7 @@ def exercise_finisher(
             and int(snapshot.get("obstacles", -1)) == 5
             and snapshot.get("map_chunks") == []
         ), "Finisher export QA requires the exact protocol-9 Training fixture"
-        assert len(snapshot.get("monsters", [])) == 3
+        assert sum(row.get("definition_vnum") == 101 for row in snapshot.get("monsters", [])) == 3
         for target_id, _home in DOG_HOMES.items():
             dog = _monster(snapshot, target_id)
             assert (

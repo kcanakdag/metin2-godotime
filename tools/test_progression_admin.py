@@ -126,6 +126,11 @@ def run_godot(
         output = auth.redact(output)
     log_path.write_text(output)
     result_path = stage / "admin-smoke-result.json"
+    if result_path.is_file():
+        retained = result_path.read_text()
+        for auth in auths:
+            retained = auth.redact(retained)
+        log_path.with_suffix(".result.json").write_text(retained)
     if process.returncode or not result_path.is_file():
         raise OperatorError(f"Admin smoke failed; sanitized log: {log_path}")
     result = json.loads(result_path.read_text())
@@ -157,7 +162,9 @@ def write_private_text(path: Path, value: str) -> None:
 
 def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("phase", choices=("prepare", "verify", "skills", "skill_combat"))
+    parser.add_argument(
+        "phase", choices=("prepare", "verify", "skills", "skill_combat", "training_dummy")
+    )
     parser.add_argument("--server", default="http://127.0.0.1:8186")
     parser.add_argument("--game-server", default="http://127.0.0.1:13223")
     parser.add_argument("--database", required=True)

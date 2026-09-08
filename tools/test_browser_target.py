@@ -17,7 +17,7 @@ PLAYER_NORMAL_ATTACK_ID = "actor.player.warrior-male.general.normal_attack.v1"
 
 
 def _monster(snapshot: dict) -> dict:
-    rows = snapshot.get("monsters", [])
+    rows = [row for row in snapshot.get("monsters", []) if row.get("definition_vnum") == 101]
     assert isinstance(rows, list) and len(rows) == 1, (
         "Targeting export QA requires the normal one-Wild-Dog Yongan fixture"
     )

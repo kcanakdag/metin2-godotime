@@ -263,8 +263,12 @@ func _ensure_presentation() -> bool:
 		push_error("Monster actor has no content catalog.")
 		return false
 	var actor_id := str(row.get("actor_id", ""))
-	if actor_id != ActorCatalogScript.WILD_DOG_ID or int(row.get("definition_vnum", 0)) != 101:
-		push_error("Subscribed monster has no matching P1 actor definition.")
+	var definition: Dictionary = _catalog.actor(actor_id)
+	if (
+		definition.is_empty()
+		or int(definition.get("vnum", 0)) != int(row.get("definition_vnum", -1))
+	):
+		push_error("Subscribed monster has no matching actor definition.")
 		return false
 	_presentation = ActorPresentationScript.new()
 	_presentation.name = "Presentation"
@@ -283,6 +287,7 @@ func _ensure_pick_proxy() -> void:
 		return
 	var minimum: Vector3 = bounds.minimum
 	var maximum: Vector3 = bounds.maximum
+	_label.position.y = maxf(1.45, maximum.y + 0.3)
 	var shape := BoxShape3D.new()
 	shape.size = maximum - minimum
 	_pick_body = StaticBody3D.new()

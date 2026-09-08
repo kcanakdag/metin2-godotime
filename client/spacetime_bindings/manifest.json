@@ -1,6 +1,6 @@
 {
   "sdk_commit": "f6c59d7068e5dacbde0559906746d0a6c5933ffb",
-  "schema_sha256": "5578b148ca43f81e686b7990f9270a70742c4a36db514980fad754dfc3d3abbf",
+  "schema_sha256": "a3a611977b4a62e06d31a5c4b795830f0febac1e928572ca7b8ecabae23e6620",
   "files": {
     "module_game_client.gd": "c9d3757018e019696b9078291df089f22e51c59d7264a456d5dcce62e8304177",
     "module_game_db.gd": "9eb075ed05d651aec7acef8aa450a58f84201f2913a959820bc034b62f392566",
@@ -83,6 +83,6 @@
     "types/game_special_area.gd": "ad95ba1dd53394f53e6c726572b0b8ac6596c605bcf5ab75093ca149fd09341f",
     "types/game_special_area_victim.gd": "e1667e62199551a3f3faa5235a9daf19832dbf4139e9280d038f5ef51e98a083",
     "types/game_tick_schedule.gd": "0d19e056e6ab8c8968b2cf45f1ca5114d41b6fbdf30a021ca13da6ce771a9716",
-    "types/game_world_info.gd": "9b43d38bb7f9038f1df9450ba6e62db0e50b8e473dbd0096b049d4b7b6c95687"
+    "types/game_world_info.gd": "2be97fced577362419b6eae2ea52e9c4bb104015b5d6bcf1d3f7c0aec40e8aeb"
   }
 }

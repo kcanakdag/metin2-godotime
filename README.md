@@ -26,7 +26,7 @@ fixture is simulated. A separate **103-check authenticated Web/Linux run**
 qualifies approach, dialogue, Close/Escape, WASD and account lifecycle. Another
 59 live checks cover private sessions, rejection, expiry and reconnect.
 The updated development build is served at **http://127.0.0.1:8186** against
-`mt2-p2-skills-dev-r1-20260908`. Click the City Guard to approach and talk;
+`mt2-p2-dummy-dev-r1-20260908`. Click the City Guard to approach and talk;
 Close or Escape dismisses the dialogue, and movement resumes normally.
 Character creation shows Warrior, Ninja, Sura and Shaman together, with the
 selected class in front, original intro idle animations, hair, titles and
@@ -57,7 +57,13 @@ Trees, new mob types, additional weapon modes and further abilities remain pendi
 character database; previous databases and auth accounts are preserved. The public
 endpoint remains unchanged.
 
-The current worktree is protocol 16 / trusted content schema 8 (item registry schema 2). Item actions
+The protocol-17 [training dummy](docs/training-dummy.md) is available near the
+Yongan entry point in the local build. Its authored Blender model and passive,
+reward-free behavior are profile driven. It passes 16 native presentation checks,
+45 live two-client checks and 82 actual Chrome/Linux checks, with matching exports. All 44 classic abilities have been discovered and
+converted for both appearances, but their full server mechanics are not yet live.
+
+The current worktree is protocol 17 / trusted content schema 8 (item registry schema 2). Item actions
 carry the server item's revision, rejecting stale/replayed mutations. Quantity
 changes have a private transactional audit history and an offline reconciliation
 tool. See the [item security contract](docs/architecture.md#item-integrity-and-replay-protection).

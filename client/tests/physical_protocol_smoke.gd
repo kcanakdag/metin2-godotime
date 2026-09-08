@@ -1,5 +1,5 @@
 extends SceneTree
-## Isolated protocol-16 gate check; no generated schema or server is required.
+## Isolated protocol-17 gate check; no generated schema or server is required.
 
 var _checks := 0
 var _failed := false
@@ -10,23 +10,31 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 16, "client expects protocol 16")
+	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 17, "client expects protocol 17")
 	var legacy := GameConnection.new()
 	legacy._session = 1
-	legacy.world_info = {"protocol_version": 15}
+	legacy.world_info = {"protocol_version": 16}
 	legacy._on_subscription_applied(1)
-	_check(legacy.state == "error", "protocol 15 is rejected before joining")
+	_check(legacy.state == "error", "protocol 16 is rejected before joining")
 	_check(
 		legacy.state_message.contains("protocol mismatch"),
-		"protocol-15 rejection explains the incompatible client/server contract"
+		"protocol-16 rejection explains the incompatible client/server contract"
 	)
 	legacy.queue_free()
 
 	var current := GameConnection.new()
 	current._session = 1
-	current.world_info = {"protocol_version": 16}
+	current.world_info = {"protocol_version": 17}
 	current._on_subscription_applied(1)
-	_check(current.state != "error", "protocol 16 clears the protocol gate")
+	_check(current.state != "error", "protocol 17 clears the protocol gate")
+	current.monsters = [
+		{"id": 1, "definition_vnum": 101}, {"id": 900001, "definition_vnum": 900001}
+	]
+	_check(
+		current.monsters_for_definition(101).size() == 1,
+		"definition queries separate combat fixtures from practice targets"
+	)
+	_check(current.monsters.size() == 2, "definition query preserves the complete subscription")
 	current.queue_free()
 	if not _failed:
 		print("PHYSICAL_PROTOCOL_SMOKE PASS ", _checks, " checks")

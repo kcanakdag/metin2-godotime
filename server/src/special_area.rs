@@ -408,21 +408,11 @@ pub fn activate_due(ctx: &ReducerContext, now: i64) -> Result<(), String> {
 }
 
 fn trusted_victim(monster: &crate::combat::Monster) -> bool {
-    monster.health > 0
-        && monster.definition_vnum == definitions::MOB_VNUM
-        && monster.actor_id == definitions::MOB_ACTOR_ID
-        && monster.model_key == definitions::MOB_MODEL_KEY
-        && monster.motion_set == definitions::MOB_MOTION_SET
-        && monster.max_health == definitions::MOB_MAX_HEALTH
-        && crate::combat::trusted_spawn(monster.id).is_some()
-        && monster.x.is_finite()
-        && monster.y.is_finite()
-        && monster.z.is_finite()
-        && monster.heading.is_finite()
+    monster.health > 0 && crate::combat::validate_monster(monster).is_ok()
 }
 
 fn victim_center(monster: &crate::combat::Monster) -> Option<[f64; 3]> {
-    let sphere = definitions::MOB_STATIC_DEFENDING_SPHERE;
+    let sphere = crate::combat::defending_sphere(monster);
     if !sphere.local_center_y_m.is_finite()
         || !sphere.radius_m.is_finite()
         || sphere.radius_m <= 0.0
@@ -458,11 +448,16 @@ fn matching_victim_row(
         })
 }
 
-fn area_hits(area: &SpecialArea, previous: [f64; 3], current: [f64; 3]) -> bool {
+fn area_hits(
+    area: &SpecialArea,
+    previous: [f64; 3],
+    current: [f64; 3],
+    victim_radius: f64,
+) -> bool {
     let definition = definitions::PLAYER_ONEHAND_COMBO[3]
         .special_area
         .expect("selected combo4 has a validated special area");
-    let radius = definition.radius_m + definitions::MOB_STATIC_DEFENDING_SPHERE.radius_m;
+    let radius = definition.radius_m + victim_radius;
     squared_distance_to_segment(
         [
             f64::from(area.center_x),
@@ -593,7 +588,12 @@ pub fn scan(ctx: &ReducerContext, now: i64) -> Result<(), String> {
                     f64::from(row.previous_center_z),
                 ]
             });
-            let intersects = area_hits(&area, previous, current);
+            let intersects = area_hits(
+                &area,
+                previous,
+                current,
+                crate::combat::defending_sphere(&monster).radius_m,
+            );
             let decision = victim_scan_decision(
                 area.hit_count,
                 definition.max_targets,

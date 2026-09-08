@@ -199,12 +199,16 @@ func _prepare_fresh_life(
 	if not _check(
 		"shared_second_life_is_fresh",
 		await _wait_until(
-			func(): return not first.monsters.is_empty() and int(first.monsters[0].health) == 100,
+			func():
+				return (
+					not first.monsters_for_definition(101).is_empty()
+					and int(first.monsters_for_definition(101)[0].health) == 100
+				),
 			16.0
 		)
 	):
 		return false
-	var dog: Dictionary = first.monsters[0]
+	var dog: Dictionary = first.monsters_for_definition(101)[0]
 	first.move_to(float(dog.x) - 2.35, float(dog.z))
 	second.move_to(float(dog.x), float(dog.z) - 2.35)
 	if not _check(
@@ -238,14 +242,18 @@ func _prepare_contributors(
 	if not _check(
 		"shared_dog_is_fresh",
 		await _wait_until(
-			func(): return not first.monsters.is_empty() and int(first.monsters[0].health) == 100,
+			func():
+				return (
+					not first.monsters_for_definition(101).is_empty()
+					and int(first.monsters_for_definition(101)[0].health) == 100
+				),
 			16.0
 		)
 	):
 		return false
 	if not await _equip_sword(first, first_id) or not await _equip_sword(second, second_id):
 		return false
-	var dog: Dictionary = first.monsters[0]
+	var dog: Dictionary = first.monsters_for_definition(101)[0]
 	first.move_to(float(dog.x) - 2.35, float(dog.z))
 	second.move_to(float(dog.x), float(dog.z) - 2.35)
 	if not _check(
@@ -276,7 +284,12 @@ func _unequip_sword(client: GameConnection, character_id: String) -> bool:
 			var destination := _free_sword_cell(client, character_id)
 			var snapshot := {
 				"destination": destination,
-				"dog": client.monsters[0] if not client.monsters.is_empty() else {},
+				"dog":
+				(
+					client.monsters_for_definition(101)[0]
+					if not client.monsters_for_definition(101).is_empty()
+					else {}
+				),
 				"player": _player(client, character_id),
 				"sword": row,
 			}
@@ -318,9 +331,9 @@ func _sword_is_equipped(client: GameConnection, character_id: String) -> bool:
 
 
 func _both_in_range(client: GameConnection, first_id: String, second_id: String) -> bool:
-	if client.monsters.is_empty():
+	if client.monsters_for_definition(101).is_empty():
 		return false
-	var dog_position := _position(client.monsters[0])
+	var dog_position := _position(client.monsters_for_definition(101)[0])
 	return (
 		_position(_player(client, first_id)).distance_to(dog_position) <= 2.6
 		and _position(_player(client, second_id)).distance_to(dog_position) <= 2.6
@@ -334,5 +347,8 @@ func _shared_attack(
 	attacker.perform_attack()
 	return _check(
 		label,
-		await _wait_until(func(): return int(observer.monsters[0].health) == expected_health, 2.0)
+		await _wait_until(
+			func(): return int(observer.monsters_for_definition(101)[0].health) == expected_health,
+			2.0
+		)
 	)

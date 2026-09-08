@@ -91,25 +91,31 @@ func _kill_one_dog(client: GameConnection, character_id: String, index: int) -> 
 	if not _check(
 		"dog_%d_is_alive" % index,
 		await _wait_until(
-			func(): return not client.monsters.is_empty() and int(client.monsters[0].health) > 0,
+			func():
+				return (
+					not client.monsters_for_definition(101).is_empty()
+					and int(client.monsters_for_definition(101)[0].health) > 0
+				),
 			16.0
 		)
 	):
 		return false
-	var dog: Dictionary = client.monsters[0]
+	var dog: Dictionary = client.monsters_for_definition(101)[0]
 	client.move_to(float(dog.x) - 2.35, float(dog.z))
 	if not _check(
 		"dog_%d_reached" % index, await _wait_until(_in_dog_reach.bind(client, character_id), 10.0)
 	):
 		return false
 	client.stop_moving()
-	while int(client.monsters[0].health) > 0:
-		var health := int(client.monsters[0].health)
+	while int(client.monsters_for_definition(101)[0].health) > 0:
+		var health := int(client.monsters_for_definition(101)[0].health)
 		await create_timer(0.9).timeout
 		client.perform_attack()
 		if not _check(
 			"dog_%d_hit_%d" % [index, health],
-			await _wait_until(func(): return int(client.monsters[0].health) < health, 2.0)
+			await _wait_until(
+				func(): return int(client.monsters_for_definition(101)[0].health) < health, 2.0
+			)
 		):
 			return false
 	var expected_kills := _target_kills - 4 + index
@@ -136,7 +142,7 @@ func _allocation_checks(client: GameConnection, character_id: String) -> void:
 		await _wait_until(func(): return _has_live_dog(client), 16.0)
 	):
 		return
-	var dog: Dictionary = client.monsters[0]
+	var dog: Dictionary = client.monsters_for_definition(101)[0]
 	client.move_to(float(dog.x) - 2.35, float(dog.z))
 	await _wait_until(_in_dog_reach.bind(client, character_id), 10.0)
 	client.stop_moving()
@@ -239,9 +245,11 @@ func _prepare_sword(client: GameConnection, character_id: String) -> bool:
 
 func _in_dog_reach(client: GameConnection, character_id: String) -> bool:
 	return (
-		not client.monsters.is_empty()
+		not client.monsters_for_definition(101).is_empty()
 		and (
-			_position(_player(client, character_id)).distance_to(_position(client.monsters[0]))
+			_position(_player(client, character_id)).distance_to(
+				_position(client.monsters_for_definition(101)[0])
+			)
 			<= 2.6
 		)
 	)
@@ -253,12 +261,15 @@ func _has_partial_health(client: GameConnection, character_id: String) -> bool:
 
 
 func _has_live_dog(client: GameConnection) -> bool:
-	return not client.monsters.is_empty() and int(client.monsters[0].get("health", 0)) > 0
+	return (
+		not client.monsters_for_definition(101).is_empty()
+		and int(client.monsters_for_definition(101)[0].get("health", 0)) > 0
+	)
 
 
 func _retreat_from_dog(client: GameConnection, character_id: String) -> bool:
 	var player_position := _position(_player(client, character_id))
-	var dog_position := _position(client.monsters[0])
+	var dog_position := _position(client.monsters_for_definition(101)[0])
 	var away := player_position - dog_position
 	if away.is_zero_approx():
 		away = Vector2.LEFT
@@ -279,7 +290,9 @@ func _retreat_from_dog(client: GameConnection, character_id: String) -> bool:
 
 
 func _dog_distance(client: GameConnection, character_id: String) -> float:
-	return _position(_player(client, character_id)).distance_to(_position(client.monsters[0]))
+	return _position(_player(client, character_id)).distance_to(
+		_position(client.monsters_for_definition(101)[0])
+	)
 
 
 func _allocation_matches(

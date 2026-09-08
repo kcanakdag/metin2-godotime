@@ -22,7 +22,9 @@ func _run() -> void:
 	if ready:
 		ready = _check(
 			"combo_single_training_dog_subscribes",
-			await _wait_until(func(): return observer.monsters.size() == 1, 16.0)
+			await _wait_until(
+				func(): return observer.monsters_for_definition(101).size() == 1, 16.0
+			)
 		)
 	if ready:
 		ready = await _park_observer(observer, actor, observer_id)
@@ -830,7 +832,7 @@ func _prove_two_way_movement(
 func _restore_dog(actor: GameConnection, observer: GameConnection, actor_id: String) -> bool:
 	if not _check(
 		"combo_dog_available",
-		await _wait_until(func(): return not observer.monsters.is_empty(), 16.0)
+		await _wait_until(func(): return not observer.monsters_for_definition(101).is_empty(), 16.0)
 	):
 		return false
 	var dog := _monster(observer)
@@ -870,7 +872,11 @@ func _restore_dog(actor: GameConnection, observer: GameConnection, actor_id: Str
 
 
 func _monster(client: GameConnection) -> Dictionary:
-	return client.monsters[0] if not client.monsters.is_empty() else {}
+	return (
+		client.monsters_for_definition(101)[0]
+		if not client.monsters_for_definition(101).is_empty()
+		else {}
+	)
 
 
 func _finish() -> void:
@@ -886,7 +892,7 @@ func _finish() -> void:
 					"state": client.state,
 					"identity": client.local_identity,
 					"players": client.players,
-					"monsters": client.monsters,
+					"monsters": client.monsters_for_definition(101),
 					"target": client.selected_combat_target(),
 					"server_time_us": client.server_time_us,
 					"last_reducer_rtt_ms": client.last_reducer_rtt_ms,

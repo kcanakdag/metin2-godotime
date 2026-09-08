@@ -162,7 +162,10 @@ fn visit_due_hits(events: &mut [DueHitEvent], mut visit: impl FnMut(DueHitEvent)
 
 pub fn initialize(ctx: &ReducerContext) {
     let bounds = collision_bounds(ctx);
-    for spawn in definitions::MONSTER_SPAWNS {
+    for spawn in definitions::MONSTER_SPAWNS
+        .iter()
+        .chain(definitions::TRAINING_TARGET_SPAWNS)
+    {
         content::valid_spawn(spawn.home_x, spawn.home_z)
             .expect("Authored monster home must be traversable on the compiled map");
         assert!(
@@ -179,8 +182,43 @@ pub fn initialize(ctx: &ReducerContext) {
 pub(crate) fn trusted_spawn(id: u32) -> Option<MonsterSpawnDefinition> {
     definitions::MONSTER_SPAWNS
         .iter()
+        .chain(definitions::TRAINING_TARGET_SPAWNS)
         .copied()
         .find(|spawn| spawn.id == id)
+}
+
+/// All combat consumers validate the same persisted actor identity and placement.
+pub(crate) fn validate_monster(monster: &Monster) -> Result<(), String> {
+    let authored = crate::training_targets::validate(monster)?;
+    let supported = authored.is_some()
+        || (monster.definition_vnum == definitions::MOB_VNUM
+            && monster.actor_id == definitions::MOB_ACTOR_ID
+            && monster.level == definitions::MOB_LEVEL
+            && monster.max_health == definitions::MOB_MAX_HEALTH);
+    if !supported
+        || trusted_spawn(monster.id).is_none()
+        || monster.health > monster.max_health
+        || !monster.x.is_finite()
+        || !monster.y.is_finite()
+        || !monster.z.is_finite()
+        || !monster.heading.is_finite()
+    {
+        return Err("Combat actor differs from its trusted world definition".into());
+    }
+    Ok(())
+}
+
+pub(crate) fn defending_sphere(monster: &Monster) -> definitions::DefendingSphereDefinition {
+    if let Some(d) = crate::training_targets::definition(monster.id) {
+        definitions::DefendingSphereDefinition {
+            local_center_x_m: 0.0,
+            local_center_y_m: d.hit_center_y_m,
+            local_center_z_m: 0.0,
+            radius_m: d.hit_radius_m,
+        }
+    } else {
+        definitions::MOB_STATIC_DEFENDING_SPHERE
+    }
 }
 
 fn fresh_monster(
@@ -190,21 +228,28 @@ fn fresh_monster(
 ) -> Monster {
     let x = spawn.home_x;
     let z = spawn.home_z;
+    let training = crate::training_targets::definition(spawn.id);
     Monster {
         id: spawn.id,
-        definition_vnum: definitions::MOB_VNUM,
-        actor_id: definitions::MOB_ACTOR_ID.into(),
-        name: definitions::MOB_NAME.into(),
-        level: definitions::MOB_LEVEL,
-        model_key: definitions::MOB_MODEL_KEY.into(),
-        motion_set: definitions::MOB_MOTION_SET.into(),
-        attack_action_id: definitions::MOB_ATTACK.id.into(),
+        definition_vnum: training.map_or(definitions::MOB_VNUM, |d| d.vnum),
+        actor_id: training
+            .map_or(definitions::MOB_ACTOR_ID, |d| d.actor_id)
+            .into(),
+        name: training.map_or(definitions::MOB_NAME, |d| d.name).into(),
+        level: training.map_or(definitions::MOB_LEVEL, |d| d.level),
+        model_key: training
+            .map_or(definitions::MOB_MODEL_KEY, |d| d.actor_id)
+            .into(),
+        motion_set: training
+            .map_or(definitions::MOB_MOTION_SET, |_| "general")
+            .into(),
+        attack_action_id: training.map_or(definitions::MOB_ATTACK.id, |_| "").into(),
         x,
         y: content::height(x, z),
         z,
         heading: 0.0,
-        health: definitions::MOB_MAX_HEALTH,
-        max_health: definitions::MOB_MAX_HEALTH,
+        health: training.map_or(definitions::MOB_MAX_HEALTH, |d| d.health),
+        max_health: training.map_or(definitions::MOB_MAX_HEALTH, |d| d.health),
         activity: 0,
         attack_sequence,
         life_sequence,
@@ -741,7 +786,10 @@ pub(crate) fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, characte
     crate::combo::clear_chains_targeting(ctx, monster.id, monster.life_sequence);
     monster.activity = 3;
     monster.action_started_at_us = now;
-    monster.respawn_at_us = now.saturating_add(definitions::MOB_RESPAWN_US);
+    monster.respawn_at_us = now.saturating_add(
+        crate::training_targets::definition(monster.id)
+            .map_or(definitions::MOB_RESPAWN_US, |d| d.respawn_us),
+    );
     monster.action_ends_at_us = monster.respawn_at_us;
     crate::targeting::clear_monster_targets(ctx, monster.id, monster.life_sequence)
         .unwrap_or_else(|error| panic!("cannot clear defeated monster targets: {error}"));
@@ -751,6 +799,10 @@ pub(crate) fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, characte
         ctx.db.monster_clock().id().update(clock);
     }
     crate::knockback::clear(ctx, monster.id);
+    if crate::training_targets::definition(monster.id).is_some() {
+        clear_monster_damage(ctx, monster.id, monster.life_sequence);
+        return;
+    }
     award_monster_experience(ctx, monster);
     inventory::drop_potion(ctx, character, monster.x, monster.y, monster.z);
     ctx.db.loot().insert(Loot {
@@ -777,7 +829,7 @@ pub(crate) fn record_damage(
     controller_connection_id: ConnectionId,
     damage: u32,
 ) -> Result<(), String> {
-    if damage == 0 {
+    if damage == 0 || crate::training_targets::definition(monster_id).is_some() {
         return Ok(());
     }
     let mut matching: Vec<_> = ctx
@@ -1076,7 +1128,9 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
         }
     }
     for mut monster in ctx.db.monster().iter() {
-        if monster.level != definitions::MOB_LEVEL {
+        if crate::training_targets::definition(monster.id).is_none()
+            && monster.level != definitions::MOB_LEVEL
+        {
             monster.level = definitions::MOB_LEVEL;
             let monster_id = monster.id;
             ctx.db.monster().id().update(monster);
@@ -1103,6 +1157,9 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
                     .id()
                     .update(fresh_monster_clock(spawn));
             }
+            continue;
+        }
+        if crate::training_targets::validate(&monster)?.is_some() {
             continue;
         }
         if crate::knockback::locks_ai(ctx, monster.id, monster.life_sequence) {

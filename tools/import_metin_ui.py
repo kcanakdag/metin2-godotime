@@ -3,6 +3,8 @@
 
 import argparse
 import hashlib
+import json
+import re
 import shlex
 from pathlib import Path, PurePosixPath
 
@@ -240,7 +242,8 @@ def save_png(image, output):
     return hashlib.sha256(output.read_bytes()).hexdigest()
 
 
-def stitch_yongan(archive):
+def stitch_yongan(archive, output_root=None):
+    output_root = OUTPUT if output_root is None else output_root
     tiles = {
         (x, z): f"bin/pack/OutdoorA1/metin2_map_a1/{x:03}{z:03}/minimap.dds"
         for x in range(4)
@@ -258,7 +261,7 @@ def stitch_yongan(archive):
         elif tile.size != tile_size:
             raise ValueError(f"Inconsistent minimap tile dimensions: {source}: {tile.size}")
         canvas.paste(tile, (x * tile.width, z * tile.height))
-    output = OUTPUT / "maps/metin2_map_a1.png"
+    output = output_root / "maps/metin2_map_a1.png"
     sha256 = save_png(canvas, output)
     return {
         "resource": "res://assets/imported/ui/maps/metin2_map_a1.png",
@@ -275,9 +278,16 @@ def stitch_yongan(archive):
     }
 
 
-def convert(archive):
-    names = selected_assets()
-    paths = {name: archive.resolve(name) for name in names}
+def convert(archive, *, skill_icons=(), output_root=None):
+    output_root = OUTPUT if output_root is None else output_root
+    names = set(selected_assets())
+    for icon in skill_icons:
+        if not isinstance(icon, str) or not re.fullmatch(
+            r"skill/(warrior|assassin|sura|shaman)/[a-z0-9_]+", icon
+        ):
+            raise ValueError("Invalid selected class skill icon")
+        names.add(UI_ROOT + icon + ".sub")
+    paths = {name: archive.resolve(name) for name in sorted(names)}
     archive.fetch_many([*paths.values(), *REFERENCES])
     prepared = {}
     for name, source in paths.items():
@@ -306,7 +316,7 @@ def convert(archive):
         with Image.open(source) as original:
             converted = crop_image(original, entry["crop"])
             original_size = list(original.size)
-        output = OUTPUT / relative
+        output = output_root / relative
         sha256 = save_png(converted, output)
         manifest["assets"][name] = {
             **entry,
@@ -317,11 +327,11 @@ def convert(archive):
             "sha256": sha256,
             "rgba_sha256": hashlib.sha256(converted.tobytes()).hexdigest(),
         }
-    manifest["maps"] = {"metin2_map_a1": stitch_yongan(archive)}
+    manifest["maps"] = {"metin2_map_a1": stitch_yongan(archive, output_root)}
     manifest["sources"] = dict(sorted(archive.used.items()))
-    write_json(OUTPUT / "manifest.json", manifest)
+    write_json(output_root / "manifest.json", manifest)
     print(f"Converted {len(prepared)} UI images from {len(archive.used)} pinned source files")
-    print(f"Manifest: {OUTPUT / 'manifest.json'}")
+    print(f"Manifest: {output_root / 'manifest.json'}")
     return manifest
 
 
@@ -330,10 +340,25 @@ def main():
     parser.add_argument(
         "--offline", action="store_true", help="Require all pinned sources in cache"
     )
+    parser.add_argument(
+        "--skill-inventory",
+        type=Path,
+        help="Include the explicitly discovered classic class skill icons",
+    )
+    parser.add_argument("--output", type=Path, default=OUTPUT)
     args = parser.parse_args()
     archive = Archive(offline=args.offline)
     archive.inventory()
-    convert(archive)
+    icons = []
+    if args.skill_inventory:
+        inventory = json.loads(args.skill_inventory.read_text())
+        if (
+            inventory.get("schema") != "mt2spacetime.skill-source-inventory"
+            or inventory.get("source_revision") != METIN_COMMIT
+        ):
+            raise ValueError("Expected pinned class skill inventory")
+        icons = [skill["icon"] for skill in inventory["skills"]]
+    convert(archive, skill_icons=icons, output_root=args.output)
 
 
 if __name__ == "__main__":

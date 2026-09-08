@@ -160,7 +160,12 @@ def compile_profile(path: Path, *, offline: bool) -> dict:
     # Some source LinkTime fields contain an uninitialized float. They never drive
     # the original client, and must not become a Godot/server timestamp either.
     actors, unsupported = _normalise_motions(
-        {"actors": declarations, "ignore_legacy_link_time": True, "allow_post_clip_combo": True},
+        {
+            "actors": declarations,
+            "ignore_legacy_link_time": True,
+            "allow_post_clip_combo": True,
+            "allow_post_clip_area": True,
+        },
         archive,
     )
     payload = {
@@ -174,6 +179,8 @@ def compile_profile(path: Path, *, offline: bool) -> dict:
         "motion_adapter": {
             "ignored_field": "ComboInputData.LinkTime",
             "evidence": "src/GameLib/RaceMotionData.cpp",
+            "post_clip_area_lifetime": "bounded-to-10-seconds-after-activation",
+            "area_evidence": "src/GameLib/ActorInstanceMotionEvent.cpp:ProcessMotionEventSpecialAttacking",
         },
         "sources": [
             {"path": path, "revision": METIN_COMMIT, **record}

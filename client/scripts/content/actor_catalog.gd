@@ -11,11 +11,13 @@ const SWORD_ID := "item.weapon.sword-10"
 const SWORD_POWER_MIN := 13
 const SWORD_POWER_MAX := 15
 const SWORD_REFINE_ATTACK := 0
+const AUTHORED_PATH := "res://assets/imported/authored/training-dummy/manifest.v1.json"
 const CharacterCatalogScript := preload("res://scripts/content/character_catalog.gd")
 
 var manifest: Dictionary = {}
 var error_message := ""
 var report_errors := true
+var training_target_hash := ""
 var characters := CharacterCatalogScript.new()
 var skills := SkillCatalog.new()
 var _actors: Dictionary = {}
@@ -37,11 +39,20 @@ func load_required(path := MANIFEST_PATH, intro_models := false) -> bool:
 		return _fail(skills.error_message)
 	if not characters.load_required():
 		return _fail(characters.error_message)
-	return load_document(document, characters.document, intro_models)
+	var authored: Dictionary = {}
+	if FileAccess.file_exists(AUTHORED_PATH):
+		var extra: Variant = JSON.parse_string(FileAccess.get_file_as_string(AUTHORED_PATH))
+		if not extra is Dictionary or extra.get("schema_version") != 1:
+			return _fail("Invalid authored actor manifest")
+		authored = extra
+	return load_document(document, characters.document, intro_models, authored)
 
 
 func load_document(
-	document: Dictionary, character_document: Dictionary = {}, intro_models := false
+	document: Dictionary,
+	character_document: Dictionary = {},
+	intro_models := false,
+	authored: Dictionary = {}
 ) -> bool:
 	_clear()
 	var indexed_document: Dictionary = document.duplicate(true)
@@ -63,7 +74,11 @@ func load_document(
 	for value: Variant in items:
 		if not _index_item(value):
 			return false
-	if not _index_characters(character_document, intro_models) or not _validate_required_slice():
+	if (
+		not _index_characters(character_document, intro_models)
+		or not _validate_required_slice()
+		or not _index_authored(authored)
+	):
 		return false
 	_freeze_variant(indexed_document)
 	_freeze_variant(_actors)
@@ -75,6 +90,15 @@ func load_document(
 	_freeze_variant(_motions_by_action)
 	manifest = indexed_document
 	return true
+
+
+func _index_authored(document: Dictionary) -> bool:
+	if document.is_empty():
+		return true
+	if not _is_sha256(document.get("definition_hash")):
+		return _fail("Authored actor manifest has no definition hash")
+	training_target_hash = document.definition_hash
+	return _index_characters(document, false)
 
 
 func _index_characters(document: Dictionary, intro_models: bool) -> bool:
@@ -144,10 +168,15 @@ func validate_world(info: Dictionary) -> bool:
 	if manifest.is_empty():
 		return _fail("The required actor profile has not loaded.")
 	if (
-		not skills.content_hash.is_empty()
-		and str(info.get("skill_catalog_hash", "")) != skills.content_hash
+		(
+			not skills.content_hash.is_empty()
+			and str(info.get("skill_catalog_hash", "")) != skills.content_hash
+		)
+		or str(info.get("training_target_hash", "")) != training_target_hash
 	):
-		return _fail("Server and client skill catalogs differ. Rebuild and republish together.")
+		return _fail(
+			"Server and client skill or training catalogs differ. Rebuild and republish together."
+		)
 	if str(info.get("definition_profile", "")) != PROFILE_ID:
 		return _fail("Server and client actor profiles differ. Rebuild the client content.")
 	if str(info.get("definition_hash", "")) != gameplay_definition_hash():
@@ -431,6 +460,7 @@ func _valid_resource_path(path: String) -> bool:
 		(
 			path.begins_with("res://assets/imported/content/%s/" % PROFILE_ID)
 			or path.begins_with("res://assets/imported/characters/actors/")
+			or path.begins_with("res://assets/imported/authored/")
 		)
 		and path.ends_with(".glb")
 		and not ".." in path
@@ -471,6 +501,7 @@ func _is_sha256(value: Variant) -> bool:
 
 func _clear() -> void:
 	manifest = {}
+	training_target_hash = ""
 	error_message = ""
 	_actors = {}
 	_items = {}

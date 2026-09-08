@@ -46,16 +46,7 @@ fn valid_target(ctx: &ReducerContext, target_id: u32, life: u32) -> Result<Monst
     if target.life_sequence != life || target.health == 0 {
         return Err("That combat target life is no longer active.".into());
     }
-    if target.definition_vnum != crate::definitions::MOB_VNUM
-        || target.actor_id != crate::definitions::MOB_ACTOR_ID
-        || target.level != crate::definitions::MOB_LEVEL
-        || target.max_health != crate::definitions::MOB_MAX_HEALTH
-        || !target.x.is_finite()
-        || !target.y.is_finite()
-        || !target.z.is_finite()
-    {
-        return Err("That combat target is not supported by this world definition.".into());
-    }
+    crate::combat::validate_monster(&target)?;
     Ok(target)
 }
 

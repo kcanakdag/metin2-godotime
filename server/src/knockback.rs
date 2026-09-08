@@ -206,6 +206,9 @@ pub fn start(
     monster: &mut crate::combat::Monster,
     start: ForceStart,
 ) -> Result<(), String> {
+    if crate::training_targets::validate(monster)?.is_some() {
+        return Ok(());
+    }
     let (direction_x, direction_z) = start.direction;
     let distance_m = start.distance_m;
     let duration_us = start.duration_us;

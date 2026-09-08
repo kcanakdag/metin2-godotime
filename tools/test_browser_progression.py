@@ -56,7 +56,7 @@ def _player(snapshot: dict, identity: str) -> dict:
 
 
 def _monster(snapshot: dict) -> dict:
-    rows = snapshot.get("monsters", [])
+    rows = [row for row in snapshot.get("monsters", []) if row.get("definition_vnum") == 101]
     assert len(rows) == 1, "Progression combat requires exactly one subscribed Wild Dog"
     row = rows[0]
     assert row.get("definition_vnum") == 101 and row.get("name") == "Wild Dog"

@@ -23,10 +23,10 @@ func _run() -> void:
 		await _wait_until(
 			func():
 				return (
-					not first.monsters.is_empty()
+					not first.monsters_for_definition(101).is_empty()
 					and (
 						_position(_player(first, first_id)).distance_to(
-							_position(first.monsters[0])
+							_position(first.monsters_for_definition(101)[0])
 						)
 						< 2.6
 					)
@@ -43,14 +43,14 @@ func _run() -> void:
 	_check("attack_cooldown_rejected", await _wait_until(func(): return _errors.size() > before))
 	_check(
 		"damage_replicates_to_witness",
-		await _wait_until(func(): return int(second.monsters[0].health) == 75)
+		await _wait_until(func(): return int(second.monsters_for_definition(101)[0].health) == 75)
 	)
 	for i in 3:
 		await create_timer(0.95).timeout
 		first.perform_attack()
 	_check(
 		"monster_death_replicates",
-		await _wait_until(func(): return int(second.monsters[0].health) == 0)
+		await _wait_until(func(): return int(second.monsters_for_definition(101)[0].health) == 0)
 	)
 	if not _check("one_reward_created", await _wait_until(func(): return second.loot.size() == 1)):
 		_finish()
@@ -84,7 +84,9 @@ func _run() -> void:
 	_check("duplicate_pickup_rejected", await _wait_until(func(): return _errors.size() > before))
 	_check(
 		"monster_respawns",
-		await _wait_until(func(): return int(second.monsters[0].health) == 100, 15)
+		await _wait_until(
+			func(): return int(second.monsters_for_definition(101)[0].health) == 100, 15
+		)
 	)
 	_check(
 		"monster_can_defeat_player",

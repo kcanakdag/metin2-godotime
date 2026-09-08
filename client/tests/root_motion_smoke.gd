@@ -36,7 +36,9 @@ func _run() -> void:
 	if ready:
 		ready = _check(
 			"root_single_training_dog_subscribes",
-			await _wait_until(func(): return observer.monsters.size() == 1, 16.0)
+			await _wait_until(
+				func(): return observer.monsters_for_definition(101).size() == 1, 16.0
+			)
 		)
 	if ready:
 		ready = await _park_observer(observer, actor, observer_id)

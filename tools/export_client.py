@@ -714,6 +714,8 @@ def audit_pack(godot, pck, output, env, *, allow_test_probe=False, p1_requiremen
     character_hash = digest(character_path) if character_path.is_file() else ""
     skill_path = ROOT / "client/assets/imported/skills/catalog.v1.json"
     skill_hash = digest(skill_path) if skill_path.is_file() else ""
+    authored_path = ROOT / "client/assets/imported/authored/training-dummy/manifest.v1.json"
+    authored_hash = digest(authored_path) if authored_path.is_file() else ""
     probe = output / "audit_pack.gd"
     probe.write_text("""extends SceneTree
 
@@ -807,6 +809,11 @@ func _initialize() -> void:
             quit(1)
             return
         p1_audit["skill_catalog_sha256"] = skill_hash
+        var authored = audit_authored(OS.get_cmdline_user_args()[7])
+        if authored == null:
+            quit(1)
+            return
+        p1_audit["authored_training"] = authored
         var license_file := FileAccess.open(OS.get_cmdline_user_args()[0], FileAccess.WRITE)
         if not license_file:
             push_error("Could not write engine notices")
@@ -1257,6 +1264,28 @@ func audit_characters(expected_hash: String) -> Variant:
     return {"catalog_sha256": expected_hash, "classes": document.classes.size(), "actors": result}
 
 
+func audit_authored(expected_hash: String) -> Variant:
+    var path := "res://assets/imported/authored/training-dummy/manifest.v1.json"
+    if expected_hash.is_empty() or not FileAccess.file_exists(path) or FileAccess.get_sha256(path) != expected_hash:
+        push_error("Packaged training target differs from the installed catalog")
+        return null
+    var document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
+    var result := []
+    for actor: Dictionary in document.actors:
+        var packed := load(str(actor.model.path)) as PackedScene
+        if packed == null:
+            push_error("Packaged training target model is missing")
+            return null
+        var model := packed.instantiate()
+        var summary := inspect_model(model)
+        model.free()
+        if summary.mesh_count == 0 or not verify_actor_metadata(actor, summary, actor.model.path):
+            push_error("Packaged training target lost its geometry or motion clips")
+            return null
+        result.append({"id": actor.id, "summary": summary})
+    return {"manifest_sha256": expected_hash, "definition_hash": document.definition_hash, "actors": result}
+
+
 func audit_npcs(expected_hash: String) -> Variant:
     var path := "res://assets/imported/npcs/catalog.v1.json"
     if expected_hash.is_empty():
@@ -1339,6 +1368,7 @@ func has_required_entities(manifest: Dictionary, artifacts: Dictionary) -> bool:
             npc_hash,
             character_hash,
             skill_hash,
+            authored_hash,
         ],
         output / "pack-audit.log",
         env,

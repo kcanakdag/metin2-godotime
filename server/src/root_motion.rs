@@ -410,10 +410,14 @@ mod tests {
                         .unwrap(),
                     ..original
                 };
-                let end =
-                    advance_position(root, 0.0, 600.0, 575.0, 0, root.duration_us, &[]).unwrap();
-                assert!((f64::from(end.x - 600.0) - original.endpoint_x_m).abs() < 0.002);
-                assert!((f64::from(end.z - 575.0) - original.endpoint_z_m).abs() < 0.002);
+                let (x, z) = if crate::content::YONGAN {
+                    (600.0, 575.0)
+                } else {
+                    (0.0, 0.0)
+                };
+                let end = advance_position(root, 0.0, x, z, 0, root.duration_us, &[]).unwrap();
+                assert!((f64::from(end.x - x) - original.endpoint_x_m).abs() < 0.002);
+                assert!((f64::from(end.z - z) - original.endpoint_z_m).abs() < 0.002);
                 assert_eq!(end.consumed_elapsed_us, root.duration_us);
             }
         }

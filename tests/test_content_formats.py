@@ -57,6 +57,52 @@ Group AttackingData
 
 
 class ContentFormatTests(unittest.TestCase):
+    def test_opted_in_area_lifetime_can_outlast_clip_but_not_start_after_it(self):
+        text = """ScriptType MotionData
+MotionFileName "d:/ymir work/pc2/shaman/skill/shoot.gr2"
+MotionDuration 1.5
+Group MotionEventData
+{
+    MotionEventDataCount 1
+    Group Event00
+    {
+        MotionEventType 4
+        StartingTime 1.445256
+        DuringTime 0.2
+        HittingType 1
+        SphereDataCount 0
+    }
+}
+"""
+        with self.assertRaisesRegex(ValueError, "exceeds clip"):
+            parse_msa(text)
+        event = parse_msa(text, allow_post_clip_area=True)["events"][0]
+        self.assertEqual(event["end_us"], 1_645_256)
+        for changed in (
+            text.replace("1.445256", "1.500001"),
+            text.replace("DuringTime 0.2", "DuringTime 10.1"),
+        ):
+            with self.assertRaisesRegex(ValueError, "exceeds clip"):
+                parse_msa(changed, allow_post_clip_area=True)
+
+    def test_projectile_motion_may_declare_no_melee_hit_records(self):
+        text = """ScriptType MotionData
+MotionFileName "d:/ymir work/pc/sura/skill/swaeryeong.gr2"
+MotionDuration 1.533333
+Group AttackingData
+{
+    AttackType 1
+    HitDataCount 0
+}
+"""
+        self.assertEqual(parse_msa(text)["events"], [])
+        with self.assertRaisesRegex(ValueError, "Zero HitDataCount"):
+            parse_msa(
+                text.replace(
+                    "HitDataCount 0", "HitDataCount 0\nAttackingStartTime 0.1\nAttackingEndTime 0.2"
+                )
+            )
+
     def test_selected_actor_texture_policy_is_lossless_and_deterministic(self):
         with tempfile.TemporaryDirectory() as directory:
             actors = Path(directory) / "actors"

@@ -191,8 +191,15 @@ def _source_to_godot_m(values: list[float]) -> list[float]:
 
 
 def _attack_windows(group: LegacyNode, duration_us: int) -> list[dict]:
-    records = group.groups_with_prefix("HitData") or [group]
+    records = group.groups_with_prefix("HitData")
     declared_count = one(group, "HitDataCount", required=False)
+    if not records and declared_count != "0":
+        records = [group]
+    if declared_count == "0" and any(
+        one(group, key, required=False) is not None
+        for key in ("AttackingStartTime", "AttackingEndTime")
+    ):
+        raise ValueError("Zero HitDataCount cannot contain an inline attack window")
     if declared_count is not None and integer(declared_count) != len(records):
         raise ValueError(f"HitDataCount says {declared_count}, found {len(records)}")
     source_parameters = {
@@ -252,7 +259,9 @@ def _attack_windows(group: LegacyNode, duration_us: int) -> list[dict]:
     return windows
 
 
-def _motion_events(group: LegacyNode, duration_us: int) -> tuple[list[dict], list[dict]]:
+def _motion_events(
+    group: LegacyNode, duration_us: int, *, allow_post_clip_area: bool = False
+) -> tuple[list[dict], list[dict]]:
     count = integer(one(group, "MotionEventDataCount") or "0")
     records = group.groups_with_prefix("Event")
     if len(records) != count:
@@ -263,7 +272,11 @@ def _motion_events(group: LegacyNode, duration_us: int) -> tuple[list[dict], lis
         start_us = seconds_to_us(one(record, "StartingTime") or "")
         during = one(record, "DuringTime", required=False)
         end_us = start_us + (seconds_to_us(during) if during is not None else 0)
-        if start_us > duration_us or end_us > duration_us:
+        end_limit = duration_us
+        if allow_post_clip_area and event_type == 4:
+            # Original splash lifetime is measured from event activation, not clip end.
+            end_limit = start_us + 10_000_000
+        if start_us > duration_us or end_us > end_limit:
             raise ValueError(f"Motion event {record.name} exceeds clip duration")
         if event_type == 4:
             spheres = []
@@ -312,7 +325,11 @@ def _motion_events(group: LegacyNode, duration_us: int) -> tuple[list[dict], lis
 
 
 def parse_msa(
-    text: str, *, ignore_legacy_link_time: bool = False, allow_post_clip_combo: bool = False
+    text: str,
+    *,
+    ignore_legacy_link_time: bool = False,
+    allow_post_clip_combo: bool = False,
+    allow_post_clip_area: bool = False,
 ) -> dict:
     root = parse_legacy_script(text)
     if one(root, "ScriptType") != "MotionData":
@@ -374,7 +391,9 @@ def parse_msa(
             )
     motion_events = root.group("MotionEventData")
     if motion_events is not None:
-        events, omitted = _motion_events(motion_events, duration_us)
+        events, omitted = _motion_events(
+            motion_events, duration_us, allow_post_clip_area=allow_post_clip_area
+        )
         result["events"].extend(events)
         result["unsupported"].extend(omitted)
     return result

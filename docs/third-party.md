@@ -254,3 +254,12 @@ array are read as data by `tools/build_skill_catalog.py`; the compiler records
 source revision and hashes. Locale differences, formula selection and unsupported
 skill particles are documented in [skills](skills.md). No legacy runtime or
 additional external project is bundled.
+
+## Authored training model
+
+`tools/blender_training_dummy.py` generates project-authored geometry/materials
+from `content/profiles/training-dummy.json`; the model contains no third-party game
+assets. Its editable Blender source and conversion receipt stay under `.local/`;
+only its generated GLB and runtime manifest are installed/exported. The selected
+full-class motion/UI expansion uses the same pinned client revision above; it adds
+88 normal-grade skill motions and their selected icons, not the complete archive.

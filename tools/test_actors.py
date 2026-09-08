@@ -71,7 +71,13 @@ def editor_scene_use(godot: str, project: Path, environment: dict[str, str], log
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
-    parser.add_argument("--scenario", choices=["actors", "fan"], default="actors")
+    parser.add_argument(
+        "--scenario", choices=["actors", "fan", "class_skills", "training_dummy"], default="actors"
+    )
+    parser.add_argument(
+        "--character-package", type=Path, default=ROOT / "client/assets/imported/characters"
+    )
+    parser.add_argument("--authored-package", type=Path)
     parser.add_argument("--native", action="store_true", help="Render under Xvfb and save a PNG.")
     parser.add_argument(
         "--texture-editor-check",
@@ -91,7 +97,9 @@ def main() -> None:
         raise SystemExit(
             "Missing target-effect catalog; run import_target_effects.py --install first."
         )
-    texture_editor_check = options.native or options.texture_editor_check
+    texture_editor_check = options.texture_editor_check or (
+        options.native and options.scenario != "training_dummy"
+    )
     if texture_editor_check and not shutil.which("xvfb-run"):
         raise SystemExit("Actor texture editor import verification requires xvfb-run.")
     with tempfile.TemporaryDirectory(prefix="project-", dir=options.output) as scratch:
@@ -106,12 +114,27 @@ def main() -> None:
             ROOT / "client/scripts/world/world_picker.gd", stage / "scripts/world/world_picker.gd"
         )
         shutil.copytree(ACTOR_PROFILE, stage / "assets/imported/content/p0-warrior-dog")
-        shutil.copytree(
-            ROOT / "client/assets/imported/characters", stage / "assets/imported/characters"
-        )
+        shutil.copytree(options.character_package, stage / "assets/imported/characters")
         shutil.copytree(TARGET_EFFECT_PROFILE, stage / "assets/imported/content/p2-target-effects")
-        selected_smoke = "fan_actor_smoke.gd" if options.scenario == "fan" else "actor_smoke.gd"
+        if options.authored_package:
+            authored = stage / "assets/imported/authored/training-dummy"
+            authored.mkdir(parents=True)
+            for name in ("training-dummy.glb", "manifest.v1.json"):
+                shutil.copy2(options.authored_package / name, authored / name)
         (stage / "tests").mkdir()
+        selected_smoke = {
+            "actors": "actor_smoke.gd",
+            "fan": "fan_actor_smoke.gd",
+            "class_skills": "class_skill_actor_smoke.gd",
+            "training_dummy": "training_dummy_smoke.gd",
+        }[options.scenario]
+        shutil.copy2(
+            ROOT / "client/tests/training_dummy_smoke.gd", stage / "tests/training_dummy_smoke.gd"
+        )
+        shutil.copy2(
+            ROOT / "client/tests/class_skill_actor_smoke.gd",
+            stage / "tests/class_skill_actor_smoke.gd",
+        )
         shutil.copy2(ROOT / "client/tests/fan_actor_smoke.gd", stage / "tests/fan_actor_smoke.gd")
         shutil.copy2(ROOT / "client/tests/actor_smoke.gd", stage / "tests/actor_smoke.gd")
         shutil.copy2(
@@ -191,6 +214,9 @@ def main() -> None:
                 else {}
             ),
         }
+        if options.authored_package:
+            tested_files["authored_manifest"] = sha256(authored / "manifest.v1.json")
+            tested_files["authored_model"] = sha256(authored / "training-dummy.glb")
         environment = {
             **os.environ,
             "XDG_DATA_HOME": str(stage / ".data"),
@@ -358,7 +384,8 @@ def main() -> None:
         capture_directory = stage / ".data/godot/app_userdata/MT2 Actor Test"
         if options.native:
             screenshots = sorted(capture_directory.glob("actors-*.png"))
-            if len(screenshots) < 6:
+            required_captures = 2 if options.scenario == "training_dummy" else 6
+            if len(screenshots) < required_captures:
                 raise SystemExit("Native actor smoke did not produce its staged screenshots.")
             for screenshot in screenshots:
                 shutil.copy2(screenshot, options.output / screenshot.name)

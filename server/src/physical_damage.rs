@@ -262,7 +262,7 @@ fn wild_dog_victim() -> PhysicalVictimSnapshot {
 ///
 /// The calculation helpers admit bounded synthetic modifiers so ordering can be unit-tested.
 /// The selected integration remains limited to the classic classes, selected weapons/unarmed, and Wild Dog 101
-/// rows, with every currently excluded bonus stage at zero and both multipliers at binary32 one.
+/// rows, with excluded bonus stages at zero, bounded authored resistances, and unit multipliers.
 pub fn validate_selected_policy(
     attacker: PhysicalAttackerSnapshot,
     victim: PhysicalVictimSnapshot,
@@ -285,8 +285,6 @@ pub fn validate_selected_policy(
         || victim.party_defender_bonus != 0
         || victim.defense_percent != 0
         || victim.npc_attacker_marriage_defense_bonus != 0
-        || victim.sword_resistance_percent != 0
-        || victim.fan_resistance_percent != 0
         || zero_stages != SelectedZeroStages::default()
     {
         return Err(PhysicalDamageError::UnsupportedSelectedPolicy);
@@ -827,6 +825,17 @@ fn policy_victim(
 
 fn dog_victim(monster: &Monster) -> Result<PhysicalVictimSnapshot, String> {
     validate_generated_policy()?;
+    if let Some(d) = crate::training_targets::validate(monster)? {
+        return Ok(policy_victim(
+            CombatantKind::Npc,
+            d.level,
+            d.vitality,
+            d.dexterity,
+            d.defense,
+            d.sword_resistance,
+            d.fan_resistance,
+        ));
+    }
     let dog = definitions::WILD_DOG_101_PHYSICAL;
     if monster.definition_vnum != dog.vnum
         || monster.actor_id != dog.actor_id
@@ -1412,6 +1421,19 @@ mod tests {
                 .defense,
             5
         );
+    }
+
+    #[test]
+    fn authored_resistances_flow_through_runtime_validation_and_damage() {
+        let attacker = initial_warrior(SWORD_10_POWER);
+        let mut victim = wild_dog_victim();
+        let unresisted = calculate_with_rolls(attacker, victim, |lo, _| lo, || 3).unwrap();
+        victim.sword_resistance_percent = 50;
+        let resisted = calculate_with_rolls(attacker, victim, |lo, _| lo, || 3).unwrap();
+        assert!(resisted < unresisted);
+        assert_eq!(resisted, unresisted / 2);
+        victim.sword_resistance_percent = 101;
+        assert!(calculate_with_rolls(attacker, victim, |lo, _| lo, || 3).is_err());
     }
 
     #[test]

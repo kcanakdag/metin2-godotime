@@ -730,6 +730,7 @@ def _normalise_motions(profile: dict, archive: Archive) -> tuple[list[dict], lis
                             _get_text(archive, msa_path),
                             ignore_legacy_link_time=profile.get("ignore_legacy_link_time", False),
                             allow_post_clip_combo=profile.get("allow_post_clip_combo", False),
+                            allow_post_clip_area=profile.get("allow_post_clip_area", False),
                         )
                     except ValueError as error:
                         raise ValueError(f"{msa_path}: {error}") from error

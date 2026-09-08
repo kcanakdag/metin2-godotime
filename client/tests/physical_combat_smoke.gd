@@ -74,8 +74,8 @@ func _enter_physical_world(
 					and observer.state == "connected"
 					and not _player(actor, observer_id).is_empty()
 					and not _player(observer, actor_id).is_empty()
-					and actor.monsters.size() == 1
-					and observer.monsters.size() == 1
+					and actor.monsters_for_definition(101).size() == 1
+					and observer.monsters_for_definition(101).size() == 1
 				),
 			20.0
 		)

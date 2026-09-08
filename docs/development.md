@@ -32,7 +32,7 @@ Use separate `--work-dir` and `--output-dir` values when running Web/Linux expor
 concurrently. Each `tools/export_playable.py` invocation also supplies its own
 `TMPDIR`, since Godot uses a fixed `tmpproject.binary` name while exporting packs.
 
-The current application protocol is 14. Class-aware creation and progression
+The current application protocol is 17. Class-aware creation and progression
 require regenerated bindings and the same installed character catalog used for
 the server build. Publish incompatible schemas to a fresh database and preserve
 existing data. A local auth issuer build must stay on its matching local endpoint.
@@ -1480,3 +1480,13 @@ these notes when the tested workflow changes.
 Protocol 16 adds owner-private learned skills and a shared catalog hash. See
 [the skill contract and build/test workflow](skills.md) for level-5 learning,
 validated casting, developer commands, selected source policy and current limits.
+
+## Authored practice target
+
+Run `make dummy-build BLENDER=/path/to/blender` before exporting protocol-17 clients.
+See [training-dummy.md](training-dummy.md) for configurable stats/placements,
+background Blender generation, multiplayer fixtures and content-hash matching.
+The exported browser scenario adds `--training-dummy` to
+`tools/test_browser_accounts.py` and checks actual pointer/Space input against
+the normal authored target. The qualified dummy build is served locally on
+`mt2-p2-dummy-dev-r1-20260908`; previous databases and exports remain preserved.

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "actor.training.straw-dummy",
+  "vnum": 900001,
+  "name": "Training Dummy",
+  "health": 30000,
+  "level": 1,
+  "vitality": 0,
+  "dexterity": 0,
+  "defense": 0,
+  "sword_resistance_percent": 0,
+  "fan_resistance_percent": 0,
+  "respawn_ms": 2000,
+  "hit_radius_m": 0.65,
+  "hit_center_y_m": 1.0,
+  "height_m": 1.85,
+  "body_radius_m": 0.27,
+  "colors": {
+    "wood": [0.22, 0.105, 0.045, 1.0],
+    "straw": [0.58, 0.39, 0.15, 1.0],
+    "rope": [0.25, 0.17, 0.08, 1.0],
+    "target": [0.42, 0.06, 0.035, 1.0]
+  },
+  "placements": [
+    {"map_id": "metin2_map_a1", "id": 900001, "home_x": 662.0, "home_z": 580.0},
+    {"map_id": "training", "id": 900001, "home_x": -1.0, "home_z": 6.0}
+  ]
+}

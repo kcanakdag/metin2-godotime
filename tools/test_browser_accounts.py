@@ -43,6 +43,7 @@ from test_browser_panels import exercise_panels
 from test_browser_physical import exercise_physical
 from test_browser_progression import exercise_progression, exercise_progression_combat
 from test_browser_target import exercise_targeting
+from test_browser_training import exercise_training_dummy
 
 ROOT = Path(__file__).resolve().parents[1]
 RENEWAL_INPUT_AUDIT = """() => {
@@ -201,6 +202,11 @@ def main() -> None:
         "--warrior-effects",
         action="store_true",
         help="With --classes, exercise female Warrior finisher waves as the second character",
+    )
+    parser.add_argument(
+        "--training-dummy",
+        action="store_true",
+        help="Exercise the authored dummy with real browser pointer and Space input",
     )
     args = parser.parse_args()
     if args.warrior_effects and not args.classes:
@@ -657,6 +663,10 @@ def main() -> None:
                         page, web, wait, web_id
                     )
             samples["initial_web"], samples["initial_native"] = web(), desktop()
+            if args.training_dummy:
+                samples["training_dummy"] = exercise_training_dummy(
+                    page, web, desktop, web_command, wait, web_id, output
+                )
             if args.skills:
                 page.keyboard.press("k")
                 wait(

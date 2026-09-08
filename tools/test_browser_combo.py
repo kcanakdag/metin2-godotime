@@ -38,7 +38,7 @@ TIMING_POLL_SECONDS = 0.01
 
 
 def _monster(snapshot: dict) -> dict:
-    rows = snapshot.get("monsters", [])
+    rows = [row for row in snapshot.get("monsters", []) if row.get("definition_vnum") == 101]
     assert isinstance(rows, list) and len(rows) == 1, (
         "Combo export QA requires the normal one-Wild-Dog Yongan fixture"
     )

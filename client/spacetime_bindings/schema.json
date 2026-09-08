@@ -3802,6 +3802,14 @@
                     "String": []
                   },
                   "name": {
+                    "some": "training_target_hash"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "String": []
+                  },
+                  "name": {
                     "some": "map_name"
                   }
                 },

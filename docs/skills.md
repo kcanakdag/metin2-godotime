@@ -81,3 +81,37 @@ state as though it were a fresh fixture; preserve the database and use a new nam
 Native UI checks: `tools/test_target_client.py --suite skills_ui --native`.
 Actor checks: `tools/test_actors.py --native`, including both Warrior skill clips.
 These component checks are distinct from exported browser input evidence.
+
+## Full classic ability pipeline in progress
+
+The candidate pipeline discovers 44 skills across four classes/eight trees and
+selects 88 normal-grade motions for both appearances. `tools/discover_skills.py`
+reads pinned registrations/table/descriptions without executing legacy scripts;
+`tools/import_character_content.py` converts that explicit selection in Blender.
+`tools/build_class_skills.py` links the converted motion metadata to skill data,
+and `tools/test_class_skill_catalog.py` compiles and evaluates restricted formulas
+through Rust. The candidate schema is version 2; the live Sword Spin catalog is
+still version 1. Do not install the candidate as if every mechanic were supported.
+
+The converted package passed 625 native motion checks. The formula compiler passed
+21,120 evaluations, covering all skills/ranks with bounded random extrema. These
+are asset/compiler checks, not evidence that all abilities can be cast in game.
+Shared gameplay handlers, specialization selection, bow/dagger equipment, timed
+buffs/status effects, friendly targeting, UI integration and multiplayer acceptance
+are still required. The requested scope remains all classic abilities.
+
+Five Shaman normal registrations reference missing filenames in the pinned pack.
+The discovery tool explicitly selects the available `_me.msa` self-cast variant
+for Blessing, Reflect, Dragon Strength, Cure and Swiftness and records the original
+registration separately. This does not establish targeted-cast animation parity.
+MSA import also preserves source attack-area lifetime after the clip, bounded to
+ten seconds after activation, following `ProcessMotionEventSpecialAttacking`.
+
+Candidate skill balance changes belong in `content/profiles/classic-skill-tuning.json`,
+not edited archives or generated Rust. An override such as
+`{"vnum":2,"values":{"sp_cost":"40+100*k","splash_radius_cm":300}}` goes in its
+`overrides` list. The linker accepts `--tuning PATH`, recompiles changed formulas,
+and records the selected tuning in the catalog hash. Names/descriptions, damage,
+cost/duration/cooldown/upkeep formulas, ranges and target limits are bounded;
+mechanic/identity changes are rejected and need a shared handler. This tuning is
+for the candidate full-class schema and does not silently alter live Sword Spin.

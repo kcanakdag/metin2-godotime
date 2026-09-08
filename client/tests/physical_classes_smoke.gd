@@ -460,7 +460,8 @@ func _class_mob_hit(
 	_active_dog_id = class_id + 1 + (2 if class_id >= 2 and sex == 1 else 0)
 	# Population homes are actual server rows. No admin teleport or damage fixture.
 	if not _check(
-		"class_mobs_subscribe", await _wait_until(func(): return observer.monsters.size() == 6)
+		"class_mobs_subscribe",
+		await _wait_until(func(): return observer.monsters_for_definition(101).size() == 6)
 	):
 		return false
 	var start := _position(_player(observer, client.local_identity))
@@ -507,7 +508,7 @@ func _class_mob_hit(
 
 func _monster(client: GameConnection) -> Dictionary:
 	# Separate dogs avoid a respawn dependency across the eight character checks.
-	for row: Dictionary in client.monsters:
+	for row: Dictionary in client.monsters_for_definition(101):
 		if int(row.id) == _active_dog_id:
 			return row
 	return {}

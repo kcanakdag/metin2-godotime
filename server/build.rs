@@ -10,6 +10,7 @@ mod build_items;
 mod build_npcs;
 mod build_population;
 mod build_skills;
+mod build_training;
 use build_combo::{
     ComboInput, MOB_ACTION_ID, PLAYER_COMBO_ACTION_IDS, PLAYER_GENERAL_ACTION_ID, RootMotion,
 };
@@ -1412,6 +1413,7 @@ fn main() {
     output.push_str(&build_npcs::build());
     output.push_str(&build_classes::build());
     output.push_str(&build_skills::build());
+    output.push_str(&build_training::build());
     fs::write(out_dir.join("trusted_definitions.rs"), output)
         .unwrap_or_else(|error| fail(format!("cannot write generated Rust definitions ({error})")));
 }

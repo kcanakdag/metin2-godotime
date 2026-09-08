@@ -39,7 +39,7 @@ func _run() -> void:
 
 func _monster(client: GameConnection) -> Dictionary:
 	var id := int(_population.spawns[0].id)
-	for row: Dictionary in client.monsters:
+	for row: Dictionary in client.monsters_for_definition(101):
 		if int(row.id) == id:
 			return row
 	return {}
@@ -47,11 +47,12 @@ func _monster(client: GameConnection) -> Dictionary:
 
 func _homes_match(client: GameConnection, label: String) -> bool:
 	if not _check(
-		label + "_exact_spawn_count", client.monsters.size() == _population.spawns.size()
+		label + "_exact_spawn_count",
+		client.monsters_for_definition(101).size() == _population.spawns.size()
 	):
 		return false
 	for expected: Dictionary in _population.spawns:
-		var rows := client.monsters.filter(
+		var rows := client.monsters_for_definition(101).filter(
 			func(row: Dictionary): return int(row.id) == int(expected.id)
 		)
 		if not _check(label + "_unique_id_%d" % int(expected.id), rows.size() == 1):
@@ -93,8 +94,8 @@ func _enter_population(
 				and observer.state == "connected"
 				and not _player(actor, observer_id).is_empty()
 				and not _player(observer, actor_id).is_empty()
-				and actor.monsters.size() == _population.spawns.size()
-				and observer.monsters.size() == _population.spawns.size()
+				and actor.monsters_for_definition(101).size() == _population.spawns.size()
+				and observer.monsters_for_definition(101).size() == _population.spawns.size()
 			),
 		20.0
 	)
@@ -156,7 +157,7 @@ func _hunt_first_spawn(actor: GameConnection, observer: GameConnection, actor_id
 	)
 	if not _check("population_kill_seen_by_both_and_rewarded_once", rewarded):
 		return false
-	for row: Dictionary in observer.monsters:
+	for row: Dictionary in observer.monsters_for_definition(101):
 		if int(row.id) != int(dog.id):
 			_check(
 				"population_other_life_unchanged_%d" % int(row.id),

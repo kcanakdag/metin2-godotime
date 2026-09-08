@@ -18,7 +18,9 @@ def exercise_npcs(page, web, desktop, web_command, native_command, wait, route, 
             "map_id": route["map_id"],
             "content_hash": route["map_hash"],
         }, "NPC walking fixture differs from the subscribed server map"
-        assert len(snapshot["monsters"]) == 6, "Expected the six-dog population database"
+        assert sum(row.get("definition_vnum") == 101 for row in snapshot["monsters"]) == 6, (
+            "Expected the six-dog population database"
+        )
     wait(
         "both_exports_render_one_guard_at_original_position",
         lambda: all(

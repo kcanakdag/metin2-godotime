@@ -18,8 +18,9 @@ mod physical_damage;
 mod progression;
 mod root_motion;
 mod skills;
+mod training_targets;
 
-const PROTOCOL_VERSION: u32 = 16;
+const PROTOCOL_VERSION: u32 = 17;
 mod special_area;
 mod targeting;
 
@@ -78,6 +79,7 @@ pub struct WorldInfo {
     pub npc_catalog_hash: String,
     pub character_catalog_hash: String,
     pub skill_catalog_hash: String,
+    pub training_target_hash: String,
     pub map_name: String,
     pub map_id: String,
     pub content_hash: String,
@@ -180,6 +182,7 @@ fn compiled_world_info() -> WorldInfo {
         npc_catalog_hash: definitions::NPC_CATALOG_HASH.into(),
         character_catalog_hash: definitions::CHARACTER_CATALOG_HASH.into(),
         skill_catalog_hash: definitions::SKILL_CATALOG_HASH.into(),
+        training_target_hash: definitions::TRAINING_TARGET_HASH.into(),
         map_name: if content::YONGAN {
             "Yongan"
         } else {

@@ -1098,3 +1098,12 @@ renewal with unchanged identities/positions and no browser engine errors.
 Protocol 16 adds owner-private learned skills and a shared catalog hash. See
 [the skill contract and build/test workflow](skills.md) for level-5 learning,
 validated casting, developer commands, selected source policy and current limits.
+
+## Authored training actors (protocol 17)
+
+Training targets use the existing Monster table, target-life validation, physical
+victim calculation, area intersection and death/respawn paths. A compiled trusted
+profile supplies their identity, stats, collision sphere and map homes. Passive AI
+and anchored reactions are shared target behavior; all kill reward/credit paths
+exclude practice targets. The public `training_target_hash` binds the client model
+profile to the server rules. See [the workflow](training-dummy.md).

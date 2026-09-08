@@ -5,6 +5,78 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## P6: all-class abilities requested; training target delivered locally
+
+The requested scope remains **all 44 classic abilities**, data-driven and
+customizable. It is not complete: the running skill implementation remains
+Warrior Sword Spin. Do not equate converted motions or compiled formulas with
+playable abilities or original-game parity.
+
+The candidate importer discovers all four classes/eight trees and converts 88
+normal-grade skill motions. `.local/p6-class-skills/actors-r3/report.json` passes
+625 native checks, including finite bone transforms and changing poses across
+sampled times. These checks do not cover bow/dagger attachments or skill particles.
+`formulas-r2/report.json` passes 21,120 evaluations of all skill/rank formula
+programs. Catalog SHA-256 is
+`eaacb2e1e224afd151f298b282f1e899fce9a9f4e1afc2b0f1d9c0d179aecb6b`.
+The candidate accepts bounded overrides through
+`content/profiles/classic-skill-tuning.json`, preserving pinned originals.
+Shared server handlers, skill-tree selection, new weapon modes, timed buffs and
+status effects, friendly targeting and matching UI/multiplayer acceptance remain.
+
+The [authored training dummy](../training-dummy.md) is implemented independently
+as a real combat target. Its default profile has 30,000 HP, no AI/knockback and
+no rewards, with a two-second respawn. It stands near the Yongan spawn at
+`(662, 580)` and has a separate Training Grounds placement. Blender generates its
+original straw-and-wood model; only a 230,672-byte GLB and its manifest ship.
+All three clips (idle/impact/defeat) are verified in Godot and actual exported packs.
+Protocol 17 adds `WorldInfo.training_target_hash`; client/server mismatch fails
+before world entry. Normal local developer permissions remain default-deny.
+
+Evidence under `.local/p6-class-skills/`:
+
+- `dummy-actors-r4/report.json`: 16 native presentation, picking and life checks.
+- `dummy-live-r4.json`: 45 actual two-account checks on the preserved isolated
+  600-HP `mt2-p2-dummy-qa-r2-20260908` fixture, including Sword Spin/melee damage,
+  no rewards, anchoring, respawn, stale revisions/lives and reconnect.
+- `dummy-resistance-live-r1.json`: 65 checks with a custom 600-HP/50%-resistance
+  profile on `mt2-p2-dummy-resistance-r1-20260908`. A focused Rust regression
+  verifies that resistance reaches the runtime calculation and halves its result.
+- `dummy-browser-r4/report.json`: 82 actual Chrome/Linux checks with no browser
+  engine errors; pointer-select/held-Space damage, mutual model presentation,
+  K/Escape and account lifecycle on normal `mt2-p2-dummy-dev-r1-20260908`.
+  The final `exports/dummy-web-r3` and `exports/dummy-linux-r3` packs pass their
+  content audits: 1,018/1,821 paths, 239 exact UI images and all three dummy clips.
+  The served module is `dummy-module-default-r2.wasm`, with normal permissions.
+- `dummy-fan-r1.json`: 144 live Shaman/fan regression checks with practice actors
+  present; dog-specific fixture queries select the intended definition.
+- `python-r4.log`: 223 Python tests. `server-r4.log`: 144 Yongan Rust tests before
+  the additional resistance regression; `server-r5.log` passes 145 including it.
+  `server-training-r2.log`: Training Grounds
+  passes after correcting an older root-motion test's hardcoded Yongan coordinate.
+
+Failures are retained. Early dummy conversion omitted exported actions; explicit
+NLA tracks fixed it. Native checks exposed the previous Wild-Dog-only presentation
+branch and missing fixture screenshot expectations. Live attempts exposed a parser
+issue and a test character without an equipped sword; the final fixture also waits
+for and acknowledges melee actions. The resistance review found a legacy policy
+that rejected nonzero resistance despite configurable data; runtime validation now
+accepts bounded resistances. The UI tool tests found a default-argument capture
+that ignored the temporary output root: the generator is fixed, and the accidentally
+replaced local atlas PNG was restored from the validated original import. The
+complete Python suite then passed. Historical dog-specific smoke queries now select
+vnum 101 so an additional practice target does not change their intended fixture.
+The final export's first browser run timed out waiting for world entry; the next
+attempt hit the real signup rate limit. No watchdog or auth limits were relaxed.
+After the signup window expired, r4 passed all 82 checks without engine errors.
+The earlier timeout is retained as an unresolved intermittent observation.
+
+The public endpoint and Windows execution are unchanged/unverified for this slice.
+Blender MCP was unreachable; background Blender and isolated native/exported Godot
+were used. No connected-editor claim is made. Prior databases and exports remain
+stored; no database was wiped. Continue full skill gameplay integration next,
+reusing the already converted package rather than repeating all motion conversion.
+
 ## Current project overview
 
 The current local build is a playable, bounded shared-Yongan vertical slice.
@@ -32,7 +104,7 @@ meaningful percentage-complete claim.
 
 ## First Warrior skill — protocol 16
 
-The local endpoint **http://127.0.0.1:8186** serves
+At this earlier protocol-16 checkpoint, **http://127.0.0.1:8186** served
 `mt2-p2-skills-dev-r1-20260908` with matched audited Web/Linux test exports.
 Previous databases and auth accounts are preserved. The public endpoint is unchanged.
 [Sword Spin](../skills.md) adds level-5 learning, point spending, rank upgrades,
