@@ -5,6 +5,26 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## All-class effect resource coverage — 2026-09-09
+
+`audit_skill_effect_resources.py` checks every distinct MSE referenced by the
+resolved class-skill inventory, recording source hashes, layer kinds, references
+and exact parser rejections. Selected definition files were fetched from the pinned
+archive; textures/models were not fetched. Final offline evidence:
+`.local/p6-all-skill-effects-r1/resource-audit-final.json`.
+
+Of 59 MSEs, 53 parse (50 particle-only, three mixed); six remain unsupported:
+Ninja `gyeonggong_start`, Sura `pabeopsul_making` and `yonggwonpa` contain a
+-0.005714 particle time; Shaman `yongpa_a` uses mesh BillboardType 3; Sura
+`muyeong_make` uses mesh ColorOperationType 3; Warrior `tanhwan` declares 24 mesh
+elements. Numeric particle errors now include the actual value and bounds.
+Parser acceptance is not conversion/runtime qualification. These are the next
+explicit adapter gaps; no layers are silently removed.
+
+Two focused resource-audit tests and six existing particle parser tests pass;
+Ruff checks pass. The earlier offline-missing and fetched reports are preserved.
+No gameplay, installed runtime package or public deployment changed.
+
 ## All-class effect attachment resolution — 2026-09-09
 
 `resolve_skill_effects.py` joins the discovered events to pinned original GR2

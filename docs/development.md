@@ -2247,3 +2247,17 @@ reader and counts only GLB skin joints as converted bones. A bone lost in conver
 rejects the batch; an originally absent bone follows the existing source-aware
 fallback rules. The output retains unresolved non-type-1 metadata and source
 provenance. It does not modify models, convert effects or enable gameplay.
+
+
+Audit the distinct referenced MSE definitions before scheduling conversions:
+
+```sh
+python3 tools/audit_skill_effect_resources.py --offline \
+  --inventory NEW_RESOLVED_JSON --output NEW_AUDIT_JSON
+```
+
+Omit `--offline` to fetch only the selected MSE definitions through the pinned
+archive. The audit preserves every layer kind and parser failure with source hashes
+and links to affected skill events. `parsed-not-converted` means syntax/subset
+acceptance only: textures, geometry conversion and runtime rendering remain
+unqualified. Unknown layers are not discarded to make a partial effect pass.

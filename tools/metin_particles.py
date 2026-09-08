@@ -62,7 +62,7 @@ PARTICLE_CURVES = (
 def number(token, low=-100000.0, high=100000.0):
     value = finite_number(token)
     if not low <= value <= high:
-        raise ValueError("Particle value exceeds supported bounds")
+        raise ValueError(f"Particle value {value} exceeds supported bounds [{low}, {high}]")
     return value
 
 
