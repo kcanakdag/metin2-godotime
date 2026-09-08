@@ -4,6 +4,7 @@
 import argparse
 import json
 import os
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -27,6 +28,9 @@ def check_world_packs(godot, world, output, env):
             'config_version=5\n[application]\nconfig/name="World Pack Audit"\n'
             '[rendering]\nrenderer/rendering_method="gl_compatibility"\n'
         )
+        helper = project / "scripts/world/stream_resource_uids.gd"
+        helper.parent.mkdir(parents=True)
+        shutil.copy2(ROOT / "client/scripts/world/stream_resource_uids.gd", helper)
         for chunk in sorted(manifest["chunks"]):
             stdout = run(
                 [
@@ -44,6 +48,8 @@ def check_world_packs(godot, world, output, env):
                 output / ("world-check-" + chunk + ".log"),
                 audit_env,
             )
+            if "invalid UID:" in stdout:
+                raise ValueError(f"Unresolved streamed resource UID in chunk {chunk}")
             line = next(
                 line for line in stdout.splitlines() if line.startswith("WORLD_PACK_CHECK ")
             )

@@ -18,6 +18,13 @@ func _initialize() -> void:
 			failures.append("Stream pack hash mismatch")
 		elif not ProjectSettings.load_resource_pack(path, false):
 			failures.append("Could not mount stream pack")
+	var identities = preload("res://scripts/world/stream_resource_uids.gd").new()
+	if not identities.register_dependencies(
+		"res://assets/imported/maps/metin2_map_a1/chunks/" + id + ".tscn"
+	):
+		failures.append(identities.last_error)
+		finish({})
+		return
 	var packed := (
 		load("res://assets/imported/maps/metin2_map_a1/chunks/" + id + ".tscn") as PackedScene
 	)

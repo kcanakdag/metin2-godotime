@@ -8,6 +8,7 @@ const DIRECTORY := "res://assets/imported/maps/metin2_map_a1/chunks/"
 var loaded: Dictionary = {}
 var last_error := ""
 var failure_message := "Scenery could not load. Reconnect to retry."
+var _resource_uids = preload("res://scripts/world/stream_resource_uids.gd").new()
 var _manifest: Dictionary = {}
 var _mounted: Dictionary = {}
 var _busy := false
@@ -150,6 +151,9 @@ func _load_chunk(id: String) -> bool:
 	var path := DIRECTORY + id + ".tscn"
 	if not ResourceLoader.exists(path):
 		progress.emit("Map data is missing. Rebuild the map assets.")
+		return false
+	if OS.has_feature("web") and not _resource_uids.register_dependencies(path):
+		last_error = _resource_uids.last_error
 		return false
 	var packed := load(path) as PackedScene
 	if packed == null:

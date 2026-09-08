@@ -9,6 +9,23 @@ editor's generated files; do not delete them or bypass package validation to mak
 exports pass. Export staging reapplies the standard actor texture import policy
 to both canonical and alias PNGs.
 
+## Streamed resource identities
+
+`StreamResourceUids` (`client/scripts/world/stream_resource_uids.gd`) restores
+saved dependency UID mappings after verified scenery packs are mounted and before
+loading a chunk. It reads the actual mounted resource dependency graph, validates
+all mappings before registration, rejects existing-ID conflicts, and only permits
+map resources plus the shared terrain shader. Completed graphs are cached per
+stream instance. This avoids relying on the full export's UID cache after splitting
+world resources away from the browser startup pack.
+
+`tools/check_world_packs.py` stages this same helper and rejects invalid-UID
+warnings while checking each of the 20 chunks in a fresh loader. The focused
+`client/tests/stream_resource_uids_smoke.gd` takes an exported world directory and
+must run in a clean project containing the helper, without an imported map UID
+cache. It covers namespace/missing-resource rejection, collision preservation,
+successful registration, repeat calls and actual chunk instantiation.
+
 ## Test scope and passive mob replay
 
 The original-population browser replay distinguishes installed catalog species

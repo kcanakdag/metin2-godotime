@@ -5,6 +5,24 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Streamed-map UID restoration — 2026-09-08
+
+The local streaming loader now registers dependency UIDs from hash-verified mounted
+packs before loading a map section. The full export's UID registry is not available
+in the separate core client/isolated pack loader; path fallback previously produced
+876 warning/location messages during ordinary public play. A clean-loader experiment
+registered 169 IDs for entry section 002002 and removed its warnings without
+changing the asset packs. The reusable helper validates the graph before writing
+IDs and refuses namespace violations, missing resources and existing-ID conflicts.
+
+Evidence: `.local/performance/world-uids-r1/`. All 20 existing public map packs pass
+the updated isolated audit, including original terrain data texels and prop textures,
+with no invalid-UID warnings. The native focused regression reports ten checks;
+GDScript formatting/lint and touched Python Ruff checks pass. These checks exercise
+real Godot resource loading, but not a rendered browser export or the connected
+editor. The public endpoint remains release `20260908T180128789164Z`; this loader
+change is local and awaits export/browser QA. No FPS improvement is claimed.
+
 ## Opt-in export diagnostics — 2026-09-08
 
 New test exports remove the probe at startup unless browser automation explicitly
