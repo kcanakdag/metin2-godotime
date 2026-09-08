@@ -578,3 +578,18 @@ were reviewed. Chrome MCP new_page timed out; the separate automated Chrome
 runner completed. Windows execution and full original-client parity are not
 qualified. All 44 candidate mobs and the remaining abilities are still not live.
 The localhost area endpoint remains separate and was not replaced by this rollout.
+
+`mob_threat.rs` now implements the original damage-type/current-victim threat
+multipliers as separately truncated f32 stages, negative-total clamping, checked
+overflow, leader/member party sharing, SPECIAL exclusion from party sharing,
+and the exact three-second victim-change gate. It is a calculation component,
+not yet connected to persisted AI or the damage ledger. The XP ledger must retain
+actual damage; never replace its values with boosted threat.
+152 library tests and strict all-target/all-feature Clippy pass; source-bound
+evidence is `.local/mobs/threat-core-r1`. No database or deployment changed.
+The reviewed original `StateIdle` only proximity-acquires for AGGR, while existing
+victims persist; 41 selected species have no AGGR flag and three do. Integrating
+passive retaliation requires a separate persisted current victim/threat state,
+including source/target lifecycle cleanup and original ChangeVictimByAggro
+arbitration. Do not implement passivity by simply disabling attacks, or retarget
+by the nearest player on every tick. The current authored dog AI is unchanged.

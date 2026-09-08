@@ -1284,3 +1284,18 @@ pass. Source mismatch, invalid movement and reversed reward ranges reject.
 The full population remains uninstalled; original AI/regen/drop integration is
 still required. Public deployment was requested after this slice and is in progress
 under `.local/public-progress-r1`; do not report it deployed until verified.
+
+`mob_threat.rs` now implements the original damage-type/current-victim threat
+multipliers as separately truncated f32 stages, negative-total clamping, checked
+overflow, leader/member party sharing, SPECIAL exclusion from party sharing,
+and the exact three-second victim-change gate. It is a calculation component,
+not yet connected to persisted AI or the damage ledger. The XP ledger must retain
+actual damage; never replace its values with boosted threat.
+152 library tests and strict all-target/all-feature Clippy pass; source-bound
+evidence is `.local/mobs/threat-core-r1`. No database or deployment changed.
+The reviewed original `StateIdle` only proximity-acquires for AGGR, while existing
+victims persist; 41 selected species have no AGGR flag and three do. Integrating
+passive retaliation requires a separate persisted current victim/threat state,
+including source/target lifecycle cleanup and original ChangeVictimByAggro
+arbitration. Do not implement passivity by simply disabling attacks, or retarget
+by the nearest player on every tick. The current authored dog AI is unchanged.

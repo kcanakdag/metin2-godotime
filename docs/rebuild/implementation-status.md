@@ -44,6 +44,21 @@ evidence. No server or public deployment changed in this recheck.
 
 ### Original wildlife definitions in progress
 
+`mob_threat.rs` now implements the original damage-type/current-victim threat
+multipliers as separately truncated f32 stages, negative-total clamping, checked
+overflow, leader/member party sharing, SPECIAL exclusion from party sharing,
+and the exact three-second victim-change gate. It is a calculation component,
+not yet connected to persisted AI or the damage ledger. The XP ledger must retain
+actual damage; never replace its values with boosted threat.
+152 library tests and strict all-target/all-feature Clippy pass; source-bound
+evidence is `.local/mobs/threat-core-r1`. No database or deployment changed.
+The reviewed original `StateIdle` only proximity-acquires for AGGR, while existing
+victims persist; 41 selected species have no AGGR flag and three do. Integrating
+passive retaliation requires a separate persisted current victim/threat state,
+including source/target lifecycle cleanup and original ChangeVictimByAggro
+arbitration. Do not implement passivity by simply disabling attacks, or retarget
+by the nearest player on every tick. The current authored dog AI is unchanged.
+
 Species data is now separated from world lifecycle policy in the actual server
 MobDefinition. The installed dog uses the same values through MobSpeciesDefinition;
 acquisition/leash and respawn remain explicit world policy. The generated candidate
