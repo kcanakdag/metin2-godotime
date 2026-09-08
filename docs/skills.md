@@ -258,3 +258,11 @@ capture these exact lists into pending state. This does not imply that radial
 handlers support source-faithful multi-hit geometry; the new area handler must
 still be integrated before enabling Three-Way Cut. Eight runtime and three live
 compiler tests pass; no additional multiplayer run accompanied this local change.
+
+Live skill profiles may specify `hits_per_life` (integer 1–32); omission retains
+one. The Python linker and Rust compiler both validate the bound, and acceptance
+captures the generated value in pending state. Later definition/rank changes do
+not rewrite a saved cast's repeat limit. Event deduplication and the total hit
+budget still apply independently. The installed Sword Spin catalog remains
+byte-identical with a limit of one. Four live compiler and eight runtime tests pass;
+this local change has not enabled Three-Way Cut or been published.

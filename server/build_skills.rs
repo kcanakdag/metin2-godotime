@@ -75,7 +75,7 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
         .filter(|r| !r.is_empty() && r.len() <= 64)
         .ok_or("Invalid skills")?;
     let mut out = String::from(
-        "#[derive(Clone,Copy,Debug)]\npub struct SkillDefinition {pub vnum:u16,pub class_id:u8,pub minimum_level:u8,pub maximum_rank:u8,pub cooldown_us:i64,pub radius_m:f32,pub max_targets:u8,pub sp_base:u16,pub sp_per_power:u16,pub damage_milli:[i64;6]}\n",
+        "#[derive(Clone,Copy,Debug)]\npub struct SkillDefinition {pub vnum:u16,pub class_id:u8,pub minimum_level:u8,pub maximum_rank:u8,pub cooldown_us:i64,pub radius_m:f32,pub max_targets:u8,pub hits_per_life:u8,pub sp_base:u16,pub sp_per_power:u16,pub damage_milli:[i64;6]}\n",
     );
     writeln!(
         out,
@@ -105,6 +105,11 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
             return Err("Invalid skill radius".into());
         }
         let targets = n(row, "max_targets", 1, 32)?;
+        let hits_per_life = if row.get("hits_per_life").is_some() {
+            n(row, "hits_per_life", 1, 32)?
+        } else {
+            1
+        };
         let sp = n(row, "sp_base", 0, 1000)?;
         let per = n(row, "sp_per_power", 0, 1000)?;
         let coefficients = row["damage_milli"]
@@ -118,7 +123,7 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
                     .ok_or("Invalid skill coefficient")
             })
             .collect::<Result<Vec<_>, _>>()?;
-        definitions.push(format!("SkillDefinition{{vnum:{id},class_id:{class},minimum_level:{level},maximum_rank:{rank},cooldown_us:{cooldown},radius_m:{radius:?},max_targets:{targets},sp_base:{sp},sp_per_power:{per},damage_milli:{coefficients:?}}}"));
+        definitions.push(format!("SkillDefinition{{vnum:{id},class_id:{class},minimum_level:{level},maximum_rank:{rank},cooldown_us:{cooldown},radius_m:{radius:?},max_targets:{targets},hits_per_life:{hits_per_life},sp_base:{sp},sp_per_power:{per},damage_milli:{coefficients:?}}}"));
         let variants = row["variants"]
             .as_array()
             .filter(|r| r.len() == 2)

@@ -293,7 +293,7 @@ pub fn cast_skill(
                 ends_at_us,
             })
             .collect(),
-        per_life_limit: 1,
+        per_life_limit: d.hits_per_life,
         attacker,
         vitality: p.vitality,
         hit_lives: Vec::new(),
@@ -436,6 +436,7 @@ mod tests {
     #[test]
     fn progression_budget_and_rank_boundaries() {
         let d = definition(2).unwrap();
+        assert_eq!(d.hits_per_life, 1);
         assert_eq!(available_points(4, 0), 0);
         assert_eq!(available_points(5, 0), 1);
         assert_eq!(available_points(8, 3), 1);

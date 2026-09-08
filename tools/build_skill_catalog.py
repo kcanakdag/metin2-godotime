@@ -94,11 +94,14 @@ def compile_catalog(profile: dict, *, offline: bool) -> dict:
             "weapon_class",
         }
         if (
-            set(selected) != fields
+            set(selected) - {"hits_per_life"} != fields
             or selected["handler"] != "physical_splash_v1"
             or selected["weapon_class"] != "sword"
         ):
             raise ValueError("Unsupported skill selection or handler")
+        limit = selected.get("hits_per_life", 1)
+        if type(limit) is not int or not 1 <= limit <= 32:
+            raise ValueError("Invalid per-life skill hit limit")
         for key, lo, hi in [
             ("vnum", 1, 255),
             ("class_id", 0, 3),

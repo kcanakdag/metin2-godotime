@@ -5,6 +5,17 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Catalog-driven skill repeat limits — 2026-09-08
+
+The live profile/linker/compiler now accept an optional bounded `hits_per_life`,
+defaulting to one. Accepted casts capture this generated value into the existing
+protocol-25 pending state instead of fixing the value in runtime code. Total hit
+budgets and per-event deduplication remain separate. Four live compiler tests and
+eight runtime tests pass; the current Sword Spin catalog rebuild is byte-identical.
+No schema or live content change is included. Strict library Clippy passes.
+This remains local preparation for Three-Way Cut's area handler; no new multiplayer
+casting acceptance is claimed for this change.
+
 ## Live-catalog event dispatch — 2026-09-08
 
 The live schema-v1 compiler now emits event lists keyed by skill and appearance,
