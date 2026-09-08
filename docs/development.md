@@ -1567,8 +1567,13 @@ run as functionally exercised with a failed clean-engine-log gate.
 
 ## Deploying an update
 
-Build the production-issuer server, export a normal Web client with
-`DB=mt2-p1-v4` and run `make deploy DB=mt2-p1-v4`. This changes only
+The current public release is `20260908T121524155504Z`, database
+`mt2-public-progress-v19-20260908` (protocol 19). Its matching Web/Linux test-probe
+exports passed 114 actual public checks; see [distribution](distribution.md).
+Build with `MT2_AUTH_ISSUER=https://kcanakdag.com:8443/auth MT2_ALLOW_GUESTS=0`
+and `--features yongan`, export for that same database and origin, then deploy
+with the matching `DB`/`WEB_DIR`. Use a new database for incompatible schema
+changes; preserve existing databases. This changes only
 `/opt/metin2-godotime` and Compose project
 `metin2-godotime`. HTTPS/WSS uses 8443; database administration stays on remote
 loopback 13210. Auth has a private container and separate persistent `accounts`

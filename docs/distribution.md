@@ -3,15 +3,27 @@
 The Web client runs in a browser; desktop exports bundle their own Godot runtime.
 Players do not install Blender, Rust, Python, Node or the SDK. The current
 development endpoint is [https://kcanakdag.com:8443](https://kcanakdag.com:8443/),
-on `159.195.213.9`. It may restart during updates. P1 release
-`20260906T204513591109Z` serves `mt2-p1-v4` at that public origin. Its publish
-preserved account, issuer-key, and game data and verified the served manifest.
-The public credentialed gameplay qualification is still pending explicit user
-approval. The preceding `mt2-accounts-v3` and `mt2-yongan-v2` databases remain
-stored without public routes. The account milestone adds original entry screens,
-login, four character slots, and server-owned private roster/inventory access.
-The fixed test probe is authorized only in a development test build; normal
-player export commands omit it.
+on `159.195.213.9`. It may restart during updates.
+
+The public development endpoint is now `https://kcanakdag.com:8443`, protocol 19,
+database `mt2-public-progress-v19-20260908`, release `20260908T121524155504Z`.
+This supersedes the older public protocol-4 deployment. The user explicitly
+requested this update. Existing auth accounts, issuer keys and prior databases
+were retained; the new world has a separate character roster.
+Artifacts and hashed acceptance are under `.local/public-progress-r1`: frozen
+`module.wasm`, matched `web/` and `linux/` exports, export audits, `deploy.log`
+and `acceptance.json`. The module was built with the public auth issuer and guests
+disabled. Both exports use the explicitly authorized development test probe;
+editor MCP bridges, private state and source archives remain excluded.
+`browser-qa/report.json` passes 114 actual public Chrome/Linux checks using two
+independent accounts: registration/login, private roster, replicated movement,
+21 entry NPCs and City Guard, independent dialogue, dummy selection/damage,
+skill-panel input, character switching, disconnect/reentry, reload and logout.
+Browser engine errors are empty. The browser world and guard-dialogue captures
+were reviewed. Chrome MCP new_page timed out; the separate automated Chrome
+runner completed. Windows execution and full original-client parity are not
+qualified. All 44 candidate mobs and the remaining abilities are still not live.
+The localhost area endpoint remains separate and was not replaced by this rollout.
 
 The preceding guest release `20260906T154235134255Z` passed 45 public Chrome/Linux
 checks for map/chat panels, inventory and multiplayer. Earlier Yongan gameplay,

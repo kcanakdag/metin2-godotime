@@ -556,3 +556,25 @@ pass. Source mismatch, invalid movement and reversed reward ranges reject.
 The full population remains uninstalled; original AI/regen/drop integration is
 still required. Public deployment was requested after this slice and is in progress
 under `.local/public-progress-r1`; do not report it deployed until verified.
+
+### Current public deployment — 2026-09-08
+
+The public development endpoint is now `https://kcanakdag.com:8443`, protocol 19,
+database `mt2-public-progress-v19-20260908`, release `20260908T121524155504Z`.
+This supersedes the older public protocol-4 deployment. The user explicitly
+requested this update. Existing auth accounts, issuer keys and prior databases
+were retained; the new world has a separate character roster.
+Artifacts and hashed acceptance are under `.local/public-progress-r1`: frozen
+`module.wasm`, matched `web/` and `linux/` exports, export audits, `deploy.log`
+and `acceptance.json`. The module was built with the public auth issuer and guests
+disabled. Both exports use the explicitly authorized development test probe;
+editor MCP bridges, private state and source archives remain excluded.
+`browser-qa/report.json` passes 114 actual public Chrome/Linux checks using two
+independent accounts: registration/login, private roster, replicated movement,
+21 entry NPCs and City Guard, independent dialogue, dummy selection/damage,
+skill-panel input, character switching, disconnect/reentry, reload and logout.
+Browser engine errors are empty. The browser world and guard-dialogue captures
+were reviewed. Chrome MCP new_page timed out; the separate automated Chrome
+runner completed. Windows execution and full original-client parity are not
+qualified. All 44 candidate mobs and the remaining abilities are still not live.
+The localhost area endpoint remains separate and was not replaced by this rollout.

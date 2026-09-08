@@ -6,6 +6,11 @@ building collision, presence, combat and rewards. Blender converts selected
 original character and Yongan assets. The original Metin2 executable cannot
 connect to this game's new protocol.
 
+The current [public development build](https://kcanakdag.com:8443/) uses protocol
+19 and passed 114 public browser/Linux checks on 2026-09-08. Refresh an older
+open tab before signing in. Existing login accounts are retained; this new
+world database has a separate character roster. See [deployment evidence](docs/distribution.md).
+
 Items, future quests, mobs and classes follow the
 [data-based content authoring contract](docs/rebuild/content-authoring.md):
 versioned definitions select shared mechanics, with server-owned progress and
