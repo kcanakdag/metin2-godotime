@@ -86,6 +86,13 @@ now checks the world component
 [against controlled target replicas](mobs.md#world-projectile-lifecycle-component),
 including exact-life tracking and lost-target behavior.
 
+`tools/build_projectile_catalog.py --particles PARTICLES --flights FLIGHTS
+--meshes MESH_CATALOG --output NEW_DIR` assembles verified converted dependencies
+into a portable runtime package. Test it with `test_particle_emission.py
+--scenario package --catalog NEW_DIR/catalog.v1.json --godot GODOT --output QA_DIR`.
+Copy the generated texture import sidecars with its assets; default Godot import
+changed a source texture during QA. See [portable package](mobs.md#portable-projectile-package).
+
 `python3 tools/import_particle_effects.py --effect VIRTUAL_MSE --output NEW_DIR`
 converts explicitly selected particle recipes and their referenced textures.
 Repeat `--effect` for a bounded selection; use `--offline` after caching the

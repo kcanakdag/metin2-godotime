@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Projectile = preload("res://scripts/actors/projectile_effect.gd")
+const Catalog = preload("res://scripts/content/projectile_catalog.gd")
 const WorldProjectiles = preload("res://scripts/world/world_projectiles.gd")
 const Trail = preload("res://scripts/actors/projectile_trail.gd")
 var _checks := 0
@@ -29,28 +30,42 @@ func _capture(name: String) -> void:
 
 func _run() -> void:
 	var args := OS.get_cmdline_user_args()
-	if args.size() not in [2, 3]:
+	if args.size() not in [1, 2, 3]:
 		quit(1)
 		return
-	var catalog: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(args[0]))
-	var inventory: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(args[1]))
+	var inventory: Dictionary
 	var effects: Dictionary = {}
-	for effect: Dictionary in catalog.effects:
-		effects[effect.effect_path] = effect
 	var textures: Dictionary = {}
-	for path: String in catalog.textures:
-		textures[path] = ImageTexture.create_from_image(
-			Image.load_from_file(args[0].get_base_dir().path_join(catalog.textures[path].path))
-		)
 	var meshes: Dictionary = {}
-	if args.size() == 3:
-		var mesh_catalog: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(args[2]))
-		for definition: Dictionary in mesh_catalog.meshes:
-			meshes[mesh_catalog.source_effect] = {
-				"definition": definition,
-				"scene": load("res://" + str(definition.model)) as PackedScene,
-				"texture": load("res://" + str(definition.geometries[0].texture)) as Texture2D
-			}
+	if args.size() == 1:
+		var loaded := Catalog.new()
+		_check("unified runtime catalog loads", loaded.load_required(args[0]))
+		if not loaded.loaded:
+			print(loaded.error_message)
+			quit(1)
+			return
+		_test_catalog(args[0], loaded)
+		inventory = {"flight_definitions": loaded.flights.values()}
+		effects = loaded.effects
+		textures = loaded.textures
+		meshes = loaded.meshes
+	else:
+		var catalog: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(args[0]))
+		inventory = JSON.parse_string(FileAccess.get_file_as_string(args[1]))
+		for effect: Dictionary in catalog.effects:
+			effects[effect.effect_path] = effect
+		for path: String in catalog.textures:
+			textures[path] = ImageTexture.create_from_image(
+				Image.load_from_file(args[0].get_base_dir().path_join(catalog.textures[path].path))
+			)
+		if args.size() == 3:
+			var mesh_catalog: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(args[2]))
+			for definition: Dictionary in mesh_catalog.meshes:
+				meshes[mesh_catalog.source_effect] = {
+					"definition": definition,
+					"scene": load("res://" + str(definition.model)) as PackedScene,
+					"texture": load("res://" + str(definition.geometries[0].texture)) as Texture2D
+				}
 	root.size = Vector2i(800, 480)
 	var world := Node3D.new()
 	root.add_child(world)
@@ -248,3 +263,35 @@ func _test_world_targets(
 		_check("disconnect clears every flight", manager.snapshot().is_empty())
 		manager.queue_free()
 		await process_frame
+
+
+func _test_catalog(path: String, loaded: RefCounted) -> void:
+	var document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
+	for key: String in document.textures:
+		var image: Image = loaded.textures[key].get_image()
+		image.convert(Image.FORMAT_RGBA8)
+		var hash_context := HashingContext.new()
+		hash_context.start(HashingContext.HASH_SHA256)
+		hash_context.update(image.get_data())
+		_check(
+			"imported particle texture retains source pixels",
+			hash_context.finish().hex_encode() == document.textures[key].rgba_sha256
+		)
+	var invalid_path := path.get_base_dir().path_join("invalid-catalog.json")
+	for variant: int in range(3):
+		var invalid := document.duplicate(true)
+		if variant == 0:
+			invalid.version = 2
+		elif variant == 1:
+			invalid.files["../escape.png"] = "0".repeat(64)
+		else:
+			invalid.effects.erase(invalid.flights.values()[0].bomb_effect)
+		var file := FileAccess.open(invalid_path, FileAccess.WRITE)
+		file.store_string(JSON.stringify(invalid))
+		file.close()
+		_check("invalid runtime package rejects", not loaded.load_required(invalid_path))
+		_check(
+			"failed runtime load has no partial catalog",
+			not loaded.loaded and loaded.flights.is_empty() and loaded.meshes.is_empty()
+		)
+	_check("valid package can reload after failure", loaded.load_required(path))

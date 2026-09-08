@@ -22,6 +22,16 @@ evidence. No server or public deployment changed in this recheck.
 
 ### Original wildlife definitions in progress
 
+Portable projectile package checkpoint: `build_projectile_catalog.py` now
+assembles the converted dependencies and `projectile_catalog.gd` loads them through
+Godot ResourceLoader. `projectile-package-r2/r3` are byte-identical catalogs with
+four flights and 14 resource files. The initial import changed one particle
+texture; generated import sidecars now preserve exact decoded pixels.
+`projectile-package-render-r3` passes 145 native checks, including 12 texture
+RGBA hashes, malformed-load rejection and the four flight lifecycles. Three
+Python packager tests and scoped lint pass. The package is not installed;
+main-scene hookup, exported/browser QA and live projectile damage remain pending.
+
 World projectile lifecycle checkpoint: `world_projectiles.gd` resolves the exact
 protocol-19 target identity/life, creates the shared particle/mesh flights and
 consumes each source event once. Lost/replaced targets become fixed positions

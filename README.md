@@ -67,8 +67,10 @@ now connect to rendered particle/mesh attachments, trails and impacts, passing
 61 native checks with reviewed arrow captures. The full mob presentation gallery
 now passes 1,440 checks, including all 26 bone-based launch declarations, source
 timing and resync deduplication. A world projectile component now resolves the captured target life and passes
-125 native checks, including lost-target and cleanup behavior. Main-scene resource
-loading, actor-signal connection and server damage integration remain pending.
+125 native checks, including lost-target and cleanup behavior. A portable
+projectile package and Godot loader now pass 145 native checks, including exact
+particle texture pixels. Main-scene loading, actor-signal connection and server
+damage integration remain pending.
 Yongan's six authored Wild Dog homes pass **107 two-client checks** on a fresh
 local database. The original City Guard is installed in the playable map layer,
 with original placement, weighted idle animations and its attached weapon.

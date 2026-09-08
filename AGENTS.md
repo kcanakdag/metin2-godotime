@@ -376,7 +376,19 @@ world clear removes flights/impacts/cache. `projectile-world-r2/report.json` pas
 125 native checks and 16 captures; paired-effect and arrow captures were reviewed.
 Scoped lint passes. These are controlled replicas, not live scene integration.
 
-Next package/load the resource catalogs, connect PveActor launch signals in Main
+The portable package/loader now exists: `tools/build_projectile_catalog.py` and
+`client/scripts/content/projectile_catalog.gd`. `projectile-package-r2/r3` under
+`.local/mobs` have identical catalog bytes/hash
+`90ca48025f36e774a8fcde7aa664740ed013671b647f54119474c8c840d8138b`.
+Four flights share 14 source assets plus 13 generated PNG import sidecars.
+Default Godot import altered one texture; the generator now pins lossless/no-mip/
+no-3D-compression/no-alpha-border settings. `projectile-package-render-r3` passes
+145 native checks, including all 12 particle texture RGBA hashes, malformed-load
+rejection and world flight lifecycles. Three Python tests and scoped lint pass.
+Reproduce via `test_particle_emission.py --scenario package --catalog PACKAGE/catalog.v1.json`.
+The package is not installed and has no main-scene/export/browser qualification.
+
+Next load this package and connect PveActor launch signals in Main,
 and resolve actual transformed target bounding-sphere centers (original
 `ActorInstanceFly.cpp`), then original magic/projectile damage and live population
 integration. Do not claim a controlled resolver proves live subscriptions.

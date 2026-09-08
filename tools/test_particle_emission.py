@@ -24,7 +24,7 @@ def main():
     parser.add_argument("--godot", required=True)
     parser.add_argument(
         "--scenario",
-        choices=("emission", "motion", "render", "flight", "projectile", "mesh"),
+        choices=("emission", "motion", "render", "flight", "projectile", "mesh", "package"),
         default="emission",
     )
     parser.add_argument("--flights", type=Path)
@@ -38,25 +38,26 @@ def main():
         scene = "tests/projectile_flight_smoke.gd"
     if args.scenario == "mesh":
         scene = "tests/projectile_mesh_smoke.gd"
-    if args.scenario == "projectile":
-        if args.flights is None:
+    if args.scenario in ("projectile", "package"):
+        if args.scenario == "projectile" and args.flights is None:
             parser.error("--scenario projectile requires --flights")
         scene = "tests/projectile_effect_smoke.gd"
     files = ["scripts/actors/particle_emission.gd", scene]
     if args.scenario == "mesh":
         files = ["scripts/actors/projectile_mesh_effect.gd", scene]
-    if args.scenario in ("motion", "render", "projectile"):
+    if args.scenario in ("motion", "render", "projectile", "package"):
         files += ["scripts/actors/particle_motion.gd", "scripts/actors/particle_simulation.gd"]
         files += ["scripts/actors/particle_style.gd"]
-    if args.scenario in ("render", "projectile"):
+    if args.scenario in ("render", "projectile", "package"):
         files += ["scripts/actors/particle_effect.gd"]
-    if args.scenario == "projectile":
+    if args.scenario in ("projectile", "package"):
         files += [
             "scripts/actors/projectile_flight.gd",
             "scripts/actors/projectile_effect.gd",
             "scripts/actors/projectile_trail.gd",
             "scripts/actors/projectile_mesh_effect.gd",
             "scripts/world/world_projectiles.gd",
+            "scripts/content/projectile_catalog.gd",
         ]
     if args.scenario == "flight":
         files += ["scripts/actors/particle_motion.gd", "scripts/actors/projectile_flight.gd"]
@@ -97,13 +98,16 @@ def main():
             if digest(destination) != texture["sha256"]:
                 raise ValueError("Particle texture changed while copying")
     env = {**os.environ, "XDG_DATA_HOME": str(output / "userdata")}
-    mesh_catalog = args.catalog if args.scenario == "mesh" else args.meshes
+    mesh_catalog = args.catalog if args.scenario in ("mesh", "package") else args.meshes
     if mesh_catalog is not None:
         catalog = json.loads(mesh_catalog.read_text())
         assets = []
-        for mesh in catalog["meshes"]:
-            assets.append((mesh["model"], mesh["model_sha256"]))
-            assets.extend((g["texture"], g["texture_sha256"]) for g in mesh["geometries"])
+        if args.scenario == "package":
+            assets = list(catalog["files"].items()) + list(catalog["import_sidecars"].items())
+        else:
+            for mesh in catalog["meshes"]:
+                assets.append((mesh["model"], mesh["model_sha256"]))
+                assets.extend((g["texture"], g["texture_sha256"]) for g in mesh["geometries"])
         for path, expected in assets:
             relative = Path(path)
             if relative.is_absolute() or ".." in relative.parts:
@@ -139,7 +143,7 @@ def main():
         if imported.returncode or "ERROR:" in (output / "import.log").read_text():
             raise RuntimeError(f"Mesh fixture import failed: {output / 'import.log'}")
     prefix = [args.godot, "--headless"]
-    if args.scenario in ("render", "projectile", "mesh"):
+    if args.scenario in ("render", "projectile", "mesh", "package"):
         prefix = ["xvfb-run", "-a", args.godot, "--rendering-method", "gl_compatibility"]
     with (output / "run.log").open("w") as log:
         process = subprocess.Popen(
@@ -180,7 +184,7 @@ def main():
         "scenario": args.scenario,
         "inputs": frozen,
         "engine_log_sha256": digest(output / "run.log"),
-        "rendering_verified": args.scenario in ("render", "projectile", "mesh"),
+        "rendering_verified": args.scenario in ("render", "projectile", "mesh", "package"),
         "server_integration_verified": False,
         "captures": {p.name: digest(p) for p in sorted(output.glob("effect-*.png"))},
     }

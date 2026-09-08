@@ -866,3 +866,47 @@ This fixture injects resources and controlled target replicas. Main-scene resour
 loading, actor-signal connection, actual rendered target centers, exported-client
 qualification and live projectile damage remain pending. The separate protocol-19
 two-client check proves target replication, not this renderer's live integration.
+
+
+### Portable projectile package
+
+```sh
+python3 tools/build_projectile_catalog.py \
+  --particles .local/mobs/particle-effects-r2/effects.v1.json \
+  --flights .local/mobs/projectile-sources-r5/inventory.v1.json \
+  --meshes .local/mobs/arrow-mesh-r3/mesh-effects.v1.json \
+  --output /path/to/new-projectile-package
+python3 tools/test_particle_emission.py --scenario package --godot /path/to/godot \
+  --catalog /path/to/new-projectile-package/catalog.v1.json \
+  --output /path/to/new-package-gallery
+```
+
+The packager verifies source catalog hashes/revisions, the mesh conversion receipt,
+resource hashes and all attachment/impact/texture links. It copies converted bytes
+into content-addressed `assets/` paths and emits one portable `catalog.v1.json`
+plus a build receipt. Repeat `--meshes` for separately reviewed mesh packages;
+unsupported multi-mesh effects reject instead of selecting only one mesh.
+Original source archives and conversion tools do not enter this package.
+
+`projectile_catalog.gd` loads the imported resources with Godot's ResourceLoader,
+which supports export remapping. It returns the four maps consumed by the world
+component and rejects wrong versions, unsafe paths, missing resources and
+missing/ambiguous flight links. Failed loads expose no partial runtime catalog.
+The catalog hash is a build fingerprint; raw source-file hashes are verified by
+the packager, not incorrectly compared against Godot's imported resource bytes.
+
+`.local/mobs/projectile-package-r2/r3` have identical catalog bytes and hash
+`90ca48025f36e774a8fcde7aa664740ed013671b647f54119474c8c840d8138b`.
+They contain four flights, seven particle definitions, one mesh definition and
+14 source resource files. Thirteen PNG import sidecars pin lossless compression,
+no mipmaps, no automatic 3D compression and no alpha-border correction. The
+initial default import changed one particle texture's pixels; the generator was
+fixed and `projectile-package-render-r3/report.json` passes 145 native checks,
+including exact RGBA hashes for all 12 particle textures, malformed-load rejection
+and all four flight lifecycles. Flame and arrow captures were reviewed. Three
+Python packager tests cover deterministic output, byte preservation, tampering,
+missing links, unsafe paths and revision mismatch; scoped lint passes.
+
+The package remains an ignored candidate. Main-scene loading and launch-signal
+connection, actual target bounding centers, installation/export audits, browser
+rendering and authoritative projectile damage are not established by this gallery.
