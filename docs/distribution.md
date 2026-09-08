@@ -5,7 +5,19 @@ Players do not install Blender, Rust, Python, Node or the SDK. The current
 development endpoint is [https://kcanakdag.com:8443](https://kcanakdag.com:8443/),
 on `159.195.213.9`. It may restart during updates.
 
-The public development endpoint now serves protocol 24, database
+The current release is `20260908T180128789164Z`, source `4102a94`, on the same
+protocol-24 database `mt2-public-population-v24-20260908`. The opt-in diagnostics
+update preserved the module, accounts and characters. Frozen exports, deployment
+log, served manifest and hashed acceptance are in `.local/public-probe-opt-in-r1/`.
+Public activation QA passed both startup modes and reloads with no console errors.
+The focused `field-qa/report.json` passed 52 checks, including all eight previews,
+replicated field mobs and ordinary browser reentry/WASD observed by a native peer.
+Browser errors were empty; 876 map UID warning/location messages remain. Short
+browser cadence samples were 37.2 frames/sec instrumented and 58.9 ordinary;
+these are not engine FPS or a controlled benchmark. This run does not repeat the
+previous release's full 114-check combat/lifecycle qualification below.
+
+The preceding population rollout deployed protocol 24, database
 `mt2-public-population-v24-20260908`, release `20260908T170855056942Z`.
 The selected original population package contains 945 regeneration entries and
 44 possible species, with converted mob models, current held-attack handling and
@@ -301,7 +313,7 @@ signals, collecting histories, allocating snapshots or exposing the browser comm
 bridge. This is a performance switch, not a permission boundary; server actions
 retain normal authorization. Normal release exports still omit the probe entirely.
 Previously exported/published builds retain their old activation behavior until
-rebuilt. The current public release predates this optimization.
+rebuilt. The current public release includes this optimization.
 
 `tools/test_probe_activation.py --url <test-endpoint> --output <fresh-directory>`
 checks both browser startup modes with captures. The account runner's

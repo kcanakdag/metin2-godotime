@@ -34,9 +34,18 @@ and unknown console errors. The earlier run was stopped to correct missing
 IndexedDB transfer; another completed movement checks but failed the initial
 overbroad console-error collector. Those reports are retained.
 
-The local endpoint serves the new exports. Public release
-`20260908T170855056942Z` predates this optimization. Next: public rollout and
-continued performance/fidelity work. No connected editor inspection was available.
+Public release `20260908T180128789164Z` now includes the optimization (source
+`4102a94`). `.local/public-probe-opt-in-r1/acceptance.json` records frozen export
+and module hashes. The module and database are unchanged; accounts and characters
+were preserved. Public activation startup/reload checks and 52 focused two-client
+checks pass, including eight previews, field mobs and ordinary reentry/WASD.
+Public browser cadence measured 37.2 with capture and 58.9 without in short
+sequential samples; no engine-FPS claim. Browser errors are empty; 876 map UID
+warning/location messages remain. This does not repeat the previous 114-check
+combat/lifecycle run or establish all-class combat. Character export validation
+also accepts only pixel-verified Godot DDS PNG aliases (seven focused tests).
+Next: map resource warnings and continued performance/fidelity work.
+No connected editor inspection was available.
 
 ## Public original-population rollout — 2026-09-08
 

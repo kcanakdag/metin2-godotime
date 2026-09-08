@@ -43,10 +43,11 @@ nearby names in native fixtures (21 layout and 30 item checks) and reviewed brow
 Linux field captures. The updated local two-client replay passes 49 checks. This
 slice is now deployed and verified publicly; original drop effects remain pending.
 
-New local test exports make diagnostics opt-in. A 45-check exported replay verifies
-ordinary browser reentry and peer-observed movement without the probe. Short browser
-frame-cadence samples measured about 29 with capture and 60 without; this is not a
-controlled release benchmark. This optimization is not on the public endpoint yet.
+Public test exports now make diagnostics opt-in. The latest focused public replay
+passes 52 checks, including all eight character previews, field mobs, ordinary
+browser reentry and peer-observed movement without the probe. Short browser
+frame-cadence samples measured about 37 with capture and 59 without; this is not
+engine FPS or a controlled release benchmark. Accounts and characters were preserved.
 
 Items, future quests, mobs and classes follow the
 [data-based content authoring contract](docs/rebuild/content-authoring.md):
