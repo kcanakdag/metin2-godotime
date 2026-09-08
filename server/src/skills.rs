@@ -242,8 +242,12 @@ pub fn cast_skill(
         .find(|(id, actor, _)| *id == skill_vnum && *actor == appearance.actor_id)
         .ok_or("Skill animation is unavailable.")?
         .2;
-    let events =
-        crate::skill_hits::capture_events(&[[action.hit_start_us, action.hit_end_us]], now)?;
+    let windows = definitions::SKILL_EVENT_WINDOWS
+        .iter()
+        .find(|(id, actor, _)| *id == skill_vnum && *actor == appearance.actor_id)
+        .ok_or("Skill event definitions are unavailable.")?
+        .2;
+    let events = crate::skill_hits::capture_events(windows, now)?;
     let cost = sp_cost(d, state.rank)?;
     if p.current_sp < cost {
         return Err("Not enough SP.".into());

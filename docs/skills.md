@@ -248,3 +248,13 @@ now prefers installed character definitions over the legacy base actor, matching
 the client; an offline rebuild proves Sword Spin's current skill catalog unchanged.
 Evidence: `.local/p6-skill-install-r1/acceptance.json`. The character catalog hash
 changed and needs a matching module/export rollout; this does not enable skills.
+
+Live schema-v1 motion variants may now provide `hit_windows_us` as an ordered
+list of `[start,end]` microsecond pairs. Omission preserves the existing single
+`hit_start_us`/`hit_end_us` interval. The compiler rejects empty/oversized lists,
+invalid pairs, duplicate/unordered starts and a list whose bounds differ from the
+action envelope. It emits per-skill/per-appearance event lists, and accepted casts
+capture these exact lists into pending state. This does not imply that radial
+handlers support source-faithful multi-hit geometry; the new area handler must
+still be integrated before enabling Three-Way Cut. Eight runtime and three live
+compiler tests pass; no additional multiplayer run accompanied this local change.

@@ -5,6 +5,18 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Live-catalog event dispatch — 2026-09-08
+
+The live schema-v1 compiler now emits event lists keyed by skill and appearance,
+with legacy single-window fallback. Optional multi-window lists must have ordered
+unique starts and match the action's overall bounds. The accepted cast path reads
+these generated lists rather than constructing a single event from the action.
+Eight focused skill tests, three live compiler tests, formatting and strict library
+Clippy pass. No new ability/catalog or schema is enabled, and the previous 50 live
+Sword Spin checks apply to the preceding runtime. The new local change still needs
+casting qualification with the next content integration. Three-Way Cut's area
+handler and source-specific reaction/target semantics remain pending.
+
 ## Installed full skill motions — 2026-09-08
 
 Rebuilt the verified `.local/p6-class-skills/characters-r4` conversion with the

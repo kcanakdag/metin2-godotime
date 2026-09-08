@@ -15,6 +15,39 @@ fn f(row: &Value, key: &str, max: f64) -> Result<f64, String> {
         .filter(|v| v.is_finite() && v.abs() <= max)
         .ok_or_else(|| format!("Invalid skill {key}"))
 }
+fn windows(variant: &Value, duration: u64, start: u64, end: u64) -> Result<Vec<[u64; 2]>, String> {
+    let Some(value) = variant.get("hit_windows_us") else {
+        return Ok(vec![[start, end]]);
+    };
+    let rows = value
+        .as_array()
+        .filter(|r| !r.is_empty() && r.len() <= 32)
+        .ok_or("Invalid live skill event list")?;
+    let mut result = Vec::new();
+    for row in rows {
+        let pair = row
+            .as_array()
+            .filter(|r| r.len() == 2)
+            .ok_or("Invalid live skill event pair")?;
+        let a = pair[0]
+            .as_u64()
+            .filter(|v| *v <= duration)
+            .ok_or("Invalid live skill event start")?;
+        let b = pair[1]
+            .as_u64()
+            .filter(|v| *v >= a && *v <= duration + 10_000_000)
+            .ok_or("Invalid live skill event end")?;
+        result.push([a, b]);
+    }
+    if result.windows(2).any(|w| w[0][0] >= w[1][0])
+        || result.iter().map(|w| w[0]).min() != Some(start)
+        || result.iter().map(|w| w[1]).max() != Some(end)
+    {
+        return Err("Live skill events differ from their ordered action envelope".into());
+    }
+    Ok(result)
+}
+
 pub fn generate(bytes: &[u8]) -> Result<String, String> {
     let root: Value = serde_json::from_slice(bytes).map_err(|e| e.to_string())?;
     if root["schema"] != "mt2spacetime.skills" || root["version"] != 1 {
@@ -53,6 +86,7 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
     writeln!(out, "pub const SKILL_POWERS:[u16;21]={values:?};").unwrap();
     let mut definitions = Vec::new();
     let mut actions = Vec::new();
+    let mut event_lists = Vec::new();
     let mut ids = BTreeSet::new();
     for row in rows {
         if row["handler"] != "physical_splash_v1" || row["weapon_class"] != "sword" {
@@ -105,6 +139,8 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
             let duration = n(v, "duration_us", 1, 3_200_000)?;
             let start = n(v, "hit_start_us", 1, duration)?;
             let end = n(v, "hit_end_us", start + 1, duration)?;
+            let events = windows(v, duration, start, end)?;
+            event_lists.push(format!("({id},{actor:?},&{events:?})"));
             let x = f(v, "root_x_m", 4.0)?;
             let z = f(v, "root_z_m", 4.0)?;
             actions.push(format!("({id},{actor:?},AttackDefinition{{id:{action:?},duration_us:{duration},cooldown_us:{duration},ordinary_hit_invulnerability_us:200000,hit_start_us:{start},hit_end_us:{end},range_m:{radius:?},combo_input:None,root_motion:Some(RootMotionDefinition{{endpoint_x_m:{x:?},endpoint_z_m:{z:?},duration_us:{duration}}}),special_area:None,screen_wave:None,ordinary_knockback:None}})"));
@@ -122,6 +158,12 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
         actions.join(",")
     )
     .unwrap();
+    writeln!(
+        out,
+        "pub const SKILL_EVENT_WINDOWS:&[(u16,&str,&[[i64;2]])]=&[{}];",
+        event_lists.join(",")
+    )
+    .unwrap();
     Ok(out)
 }
 pub fn build() -> String {
@@ -129,4 +171,39 @@ pub fn build() -> String {
     println!("cargo:rerun-if-changed={path}");
     generate(&fs::read(path).expect("Run tools/build_skill_catalog.py before building skills"))
         .expect("Invalid skill catalog")
+}
+
+#[cfg(test)]
+mod event_tests {
+    use super::*;
+    use serde_json::json;
+    #[test]
+    fn legacy_and_multiple_windows_preserve_envelopes() {
+        assert_eq!(windows(&json!({}), 100, 10, 90).unwrap(), vec![[10, 90]]);
+        assert_eq!(
+            windows(
+                &json!({"hit_windows_us":[[10,20],[30,40],[50,90]]}),
+                100,
+                10,
+                90
+            )
+            .unwrap(),
+            vec![[10, 20], [30, 40], [50, 90]]
+        );
+    }
+    #[test]
+    fn malformed_or_mismatched_windows_reject() {
+        for value in [
+            json!([]),
+            json!([[10, 9]]),
+            json!([[11, 90]]),
+            json!([[10, 89]]),
+            json!([[30, 40], [10, 90]]),
+            json!([[10, 90], [10, 90]]),
+            json!([[true, 90]]),
+            json!([[10, 90, 100]]),
+        ] {
+            assert!(windows(&json!({"hit_windows_us":value}), 100, 10, 90).is_err());
+        }
+    }
 }
