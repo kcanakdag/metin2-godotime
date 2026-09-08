@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "profile_id": "yongan-wildlife",
+  "source": {
+    "client_revision": "bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7",
+    "server_reference": {
+      "repository": "https://git.old-metin2.com/metin2/server",
+      "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+      "files": [
+        {
+          "path": "gamefiles/conf/mob_proto.txt",
+          "git_sha": "002c00106dec10dcde3e8e292d6f1e242bf1c4d9",
+          "sha256": "9aeb98db989ed64ec51dcd1e0df844d7cbd52004779747156017b1617c6be3fa"
+        },
+        {
+          "path": "gamefiles/conf/mob_names_en.txt",
+          "git_sha": "5e832ca9ac25ce6227f140e41b55224e7a485b68",
+          "sha256": "171a1f706d6e7471138cab38f4101a059cb4d0803e62a7c4e044f154902e2ec3"
+        }
+      ]
+    }
+  },
+  "mobs": [
+    {
+      "id": "actor.mob.wild-dog-101",
+      "vnum": 101,
+      "source_root": "ymir work/monster/stray_dog"
+    },
+    {
+      "id": "actor.mob.wolf-102",
+      "vnum": 102,
+      "source_root": "ymir work/monster/wolf"
+    },
+    {
+      "id": "actor.mob.wild-boar-108",
+      "vnum": 108,
+      "source_root": "ymir work/monster/wild_boar"
+    },
+    {
+      "id": "actor.mob.bear-110",
+      "vnum": 110,
+      "source_root": "ymir work/monster/bear"
+    },
+    {
+      "id": "actor.mob.tiger-114",
+      "vnum": 114,
+      "source_root": "ymir work/monster/tiger"
+    }
+  ]
+}

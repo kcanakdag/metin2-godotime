@@ -18,6 +18,8 @@ the four classes, both sexes, starting stats and model/animation selection.
 Quests are deferred while development prioritizes gameplay, mobs, map NPCs,
 scenery, classes and abilities. The new [world-content workflow](docs/world-content.md)
 adds validated population profiles and an isolated Godot development preview.
+The [next mob pipeline](docs/mobs.md) now discovers selected original wildlife
+stats, model references and motion lists; additional enemy gameplay is not live yet.
 Yongan's six authored Wild Dog homes pass **107 two-client checks** on a fresh
 local database. The original City Guard is installed in the playable map layer,
 with original placement, weighted idle animations and its attached weapon.

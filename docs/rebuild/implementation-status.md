@@ -7,6 +7,23 @@ or reclassify that scope.
 
 ## P6: all-class abilities requested; training target delivered locally
 
+### Original wildlife definitions in progress
+
+The [mob source pipeline](../mobs.md) selects Wild Dog, Wolf, Wild Boar, Bear and
+Tiger using explicit vnums and pinned server/client metadata. It preserves stats,
+rewards, resistances, enchantments, flags and special fields without assigning
+unimplemented mechanics to a default physical handler. Original blank skill slots
+remain null. It resolves model paths, collision metadata and 69 motion-list entries.
+
+`.local/mobs/yongan-wildlife-r3` reproduces five definitions offline, with hashed
+inputs and source provenance. Three regression tests and Python lint pass.
+The first offline attempt lacked Wolf metadata; the selected metadata was fetched
+from the pinned archive and the complete command then passed offline. Original
+Wild Dog HP is 126, distinct from the current 100-HP development fixture. Runtime
+integration must preserve that distinction explicitly. Assets have not been
+converted by this slice; no extra mob is deployed. The next step is conversion
+and a shared runtime registry replacing ordinary-mob lookups fixed to vnum 101.
+
 
 ### Area NPC exports accepted locally
 
