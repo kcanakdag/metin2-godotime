@@ -22,6 +22,11 @@ func _run() -> void:
 		return
 	var catalog: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(args[0]))
 	var definition: Dictionary = catalog.meshes[0]
+	var stationary: Dictionary = definition.duplicate(true)
+	stationary.recipe.elements[0].billboard_type = 3
+	_check("stationary MOVE billboard supported", MeshEffect._supported(stationary))
+	stationary.recipe.position_events.append(stationary.recipe.position_events[0].duplicate(true))
+	_check("moving MOVE tracks remain unqualified", not MeshEffect._supported(stationary))
 	var scene := load("res://" + str(definition.model)) as PackedScene
 	var texture := load("res://" + str(definition.geometries[0].texture)) as Texture2D
 	root.size = Vector2i(800, 480)
@@ -96,7 +101,9 @@ func _run() -> void:
 	swatch.queue_free()
 	await process_frame
 	for index: int in range(catalog.meshes.size()):
-		definition = catalog.meshes[index]
+		definition = catalog.meshes[index].duplicate(true)
+		if index == 1:
+			definition.recipe.elements[0].billboard_type = 3
 		scene = load("res://" + str(definition.model)) as PackedScene
 		texture = load("res://" + str(definition.geometries[0].texture)) as Texture2D
 		var effect := MeshEffect.new()

@@ -361,7 +361,7 @@ def _parse_element(node: LegacyNode, blend_pairs) -> MeshElement:
     if len(alpha_groups) != 1:
         raise EffectMeshFormatError(f"{node.name} needs one TimeEventAlpha list")
     billboard = _integer(_field(node, "BillboardType")[0], "BillboardType", 0, 255)
-    if billboard != 0:
+    if billboard not in (0, 3):
         raise EffectMeshFormatError(f"Unsupported BillboardType {billboard}")
     source = _integer(_field(node, "BlendingSrcType")[0], "BlendingSrcType", 0, 255)
     destination = _integer(_field(node, "BlendingDestType")[0], "BlendingDestType", 0, 255)

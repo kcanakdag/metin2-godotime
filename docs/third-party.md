@@ -480,3 +480,11 @@ currently accepted white factor, the first two use texture RGB unchanged; operat
 6 clamps four times texture RGB before source-color blending. The independent
 Godot shader retains encoded-RGB blending and the existing engine transfer fix.
 No original renderer code was copied.
+
+
+The selected Shaman `yongpa_a.mse` mesh uses MOVE billboard type 3 with one fixed
+position key. Pinned `EffectLib/EffectMeshInstance.cpp::OnRender` initializes the
+mesh rotation to identity, compares consecutive position samples, and rotates only
+for nonzero displacement above its threshold. The independent renderer accepts
+the constant direct-key case without introducing camera-facing rotation. Moving
+tracks remain rejected until their source rotation is implemented and qualified.

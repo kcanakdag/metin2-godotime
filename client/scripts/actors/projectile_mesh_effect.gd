@@ -132,7 +132,7 @@ static func _supported(definition: Dictionary) -> bool:
 	):
 		return false
 	return (
-		int(element.billboard_type) == 0
+		_billboard_supported(element, recipe)
 		and element.blending_enabled
 		and int(element.blending_source) == 3
 		and int(element.blending_destination) in [2, 8]
@@ -147,3 +147,19 @@ static func _supported(definition: Dictionary) -> bool:
 
 static func additive_shader() -> String:
 	return SHADER.replace("blend_mix", "blend_add")
+
+
+static func _billboard_supported(element: Dictionary, recipe: Dictionary) -> bool:
+	var kind := int(element.billboard_type)
+	if kind == 0:
+		return true
+	# Source MOVE compares successive position samples. A singleton has zero
+	# displacement and retains identity orientation, including under a moving actor.
+	var keys: Variant = recipe.get("position_events")
+	return (
+		kind == 3
+		and keys is Array
+		and keys.size() == 1
+		and keys[0] is Dictionary
+		and keys[0].get("movement_type") == "MOVING_TYPE_DIRECT"
+	)

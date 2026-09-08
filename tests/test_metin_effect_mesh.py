@@ -145,6 +145,12 @@ class MdeTests(unittest.TestCase):
 
 
 class MseTests(unittest.TestCase):
+    def test_movement_billboard_metadata_preserved(self):
+        parsed = parse_mse(MSE_FIXTURE.replace("BillboardType 0", "BillboardType 3"))
+        self.assertEqual(parsed.meshes[0].elements[0].billboard_type, 3)
+        with self.assertRaises(ValueError):
+            parse_mse(MSE_FIXTURE.replace("BillboardType 0", "BillboardType 2"))
+
     def test_selected_color_operations_are_preserved(self):
         for operation in (3, 4, 6):
             parsed = parse_mse(

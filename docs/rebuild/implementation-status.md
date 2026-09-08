@@ -5,6 +5,25 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Stationary movement-facing mesh case — 2026-09-09
+
+The source audit found that Shaman `yongpa_a` uses MOVE billboard type 3, not
+camera-facing billboarding, with one fixed position key. The original renderer's
+successive position samples coincide, so it retains identity orientation. The
+MSE parser now preserves type 3; the Godot renderer accepts only its singleton
+DIRECT track case. Multiple-key movement tracks still reject rather than rendering
+with an invented orientation. Other material restrictions remain unchanged.
+
+Fifteen Python mesh tests pass. Native skill-mesh QA passes 1,571 checks,
+including stationary acceptance, multiple-key rejection, actual stationary-MOVE
+mesh construction and the existing color/animation checks. Evidence:
+`.local/p6-all-skill-effects-r1/stationary-mesh-billboard/report.json`.
+The resource audit now parses 58/59 selected definitions at
+`resource-audit-billboard.json`. Warrior `tanhwan`'s 24 mesh elements remain the
+last known parser gap. The complete Shaman effect's colored materials and asset
+conversion are still unqualified; this result does not make that ability playable.
+Public and installed assets unchanged. Touched lint passes.
+
 ## Selected mesh color operations — 2026-09-09
 
 The MSE parser now preserves ColorOperationType 3/4/6. The source-color Godot mesh

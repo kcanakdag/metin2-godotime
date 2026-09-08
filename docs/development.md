@@ -2274,3 +2274,9 @@ The native `skill_mesh` scenario now sweeps selected mesh color operations 3, 4
 and 6 against two framebuffer backgrounds. The renderer retains its white-factor,
 opaque-texture restrictions; parser acceptance alone does not imply other material
 combinations render. Preserve this distinction when selecting new effects.
+
+
+Mesh MOVE billboard type 3 is currently renderable only for a singleton direct
+position track, matching the original zero-displacement identity rotation. The
+parser preserves the type for discovery, but moving tracks require further runtime
+work. The native skill-mesh fixture exercises this distinction.
