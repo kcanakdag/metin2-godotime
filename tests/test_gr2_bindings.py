@@ -38,6 +38,25 @@ class RigidBindingsTests(unittest.TestCase):
         self.assertEqual(self.bindings.normalize_rigid_bindings(graph), [])
         self.assertEqual(graph, converted)
 
+    def test_model_binding_order_excludes_unused_file_meshes(self):
+        graph = {
+            "models": [{"meshBindings": [2, 0]}],
+            "meshes": [{"name": "body"}, {"name": "unused"}, {"name": "weapon"}],
+        }
+        indices, unused = self.bindings.select_model_meshes(graph)
+        self.assertEqual(indices, [2, 0])
+        self.assertEqual([mesh["name"] for mesh in graph["meshes"]], ["weapon", "body"])
+        self.assertEqual(graph["models"][0]["meshBindings"], [0, 1])
+        self.assertEqual(unused, [{"index": 1, "name": "unused", "reason": "not-bound-to-model"}])
+
+    def test_invalid_model_bindings_fail_before_mutating(self):
+        for indices in ([], [True], [-1], [1], [0, 0], None):
+            graph = {"models": [{"meshBindings": indices}], "meshes": [{"name": "body"}]}
+            before = copy.deepcopy(graph)
+            with self.subTest(indices=indices), self.assertRaises(ValueError):
+                self.bindings.select_model_meshes(graph)
+            self.assertEqual(graph, before)
+
     def test_ambiguous_missing_and_partial_bindings_fail(self):
         for bindings in ([], [{"name": "absent"}], [{"name": "prop"}] * 2):
             graph = self.graph()

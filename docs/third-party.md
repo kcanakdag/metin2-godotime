@@ -3,6 +3,13 @@
 These are the source revisions used by the current project. Code licenses and
 original game asset rights remain separate.
 
+The mob motion-registration adapter was independently implemented from the pinned
+client's `GameLib/RaceManager.cpp::__LoadRaceMotionList` contract. Unregistered
+rows are retained as ignored metadata. The actor mesh selector follows
+`EterGrnLib/Model.cpp`, which renders model-bound meshes rather than every mesh
+stored in the file. Unused source geometry is recorded in conversion reports;
+no source implementation or vendored Carbon code was copied or modified.
+
 The bounded `yongan-population.json` selection derives 44 monster definitions from
 the original map's audited regeneration/group dependencies. Metadata resolves 12
 GR2 models and 19 race scripts at the existing pins; this is not an import of every

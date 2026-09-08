@@ -58,6 +58,24 @@ runs in background Blender and leaves the open editor untouched. Output includes
 normalized source motion metadata, GLBs and hash-bound conversion receipts.
 Original GR2 is not a runtime dependency.
 
+For the full map selection, pass
+`--profile content/profiles/yongan-population.json` to the same importer. Identical
+render inputs share one GLB, selected deterministically by the lowest definition
+vnum; different textures, motions or attachment data prevent sharing. Each mob
+retains its own definition and action IDs, mapped to the shared file's actual
+clip names. `conversion-input.v1.json` is the unique-model subset of the full
+normalized manifest. `blender-unique-report.json` records physical conversions;
+`blender-report.json` expands that evidence to every definition with explicit
+`shared_model_actor_id` links. Both reports are hashed in the conversion receipt.
+
+Motion registration follows the pinned `RaceManager::__LoadRaceMotionList`:
+exact registrations take precedence over its one/two-character suffix fallback.
+Unregistered command/special-attack rows remain in
+`ignored_motion_registrations`; they are not invented as playable actions.
+Actor conversion selects the model's mesh bindings in their original order,
+recording file-level meshes that the model never references. This excludes the
+Archer's unused `Line01` geometry without guessing a bone attachment.
+
 `.local/mobs/wildlife-converted-r1` contains five textured models and 68 reachable
 motions. The original dog list's second back-damage registration follows a
 100-weight entry and is unreachable; the importer retains the original selection

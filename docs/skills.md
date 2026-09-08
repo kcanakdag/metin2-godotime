@@ -84,6 +84,16 @@ These component checks are distinct from exported browser input evidence.
 
 ## Full classic ability pipeline in progress
 
+The completion target is all 44 abilities playable across the four classes and
+eight trees. Converted animations and evaluated formulas alone do not satisfy
+that target. Each ability needs learning/upgrades, validated casting, its actual
+damage/healing/buff behavior, matching presentation and two-client evidence.
+The authored [training dummy](training-dummy.md) is available for repeatable
+hostile-target practice; friendly-target and healing abilities also need player
+fixtures. Definition changes should reuse shared handlers, with new code reserved
+for genuinely new mechanics. Balance customization must remain in reviewed
+profiles and participate in the client/server content hash.
+
 The candidate pipeline discovers 44 skills across four classes/eight trees and
 selects 88 normal-grade motions for both appearances. `tools/discover_skills.py`
 reads pinned registrations/table/descriptions without executing legacy scripts;

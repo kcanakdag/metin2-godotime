@@ -35,6 +35,14 @@ was generated this way; `tools/discover_mobs.py --profile PROFILE --offline
 --output NEW_DIR` verifies its cached model/race/motion metadata without installing
 assets. Omit `--offline` only when the selected pinned metadata needs fetching.
 
+Pass `--profile content/profiles/yongan-population.json` to
+`tools/import_mob_content.py` to convert the full selected population. Conversion
+deduplicates identical model inputs while retaining all definition IDs and hashes
+both the unique Blender report and its expanded per-definition report. The existing
+`tools/test_npc_content.py --content CONVERTED --native --godot GODOT --output NEW`
+gallery checks every alias against the actual shared GLB clips. See
+[mob conversion](mobs.md#convert-and-inspect-selected-wildlife) for report semantics.
+
 ## Classic character builds
 
 Use `make characters-build` for the selected four-class/eight-appearance pipeline,

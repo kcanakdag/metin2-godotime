@@ -465,7 +465,7 @@ def export_glb(path: Path, objects: list, *, animations: bool, skins: bool) -> N
 def convert_actor(actor: dict, source_root: Path, output: Path) -> dict:
     import carbon_gr2
     from carbon_granny import reader
-    from gr2_bindings import normalize_rigid_bindings
+    from gr2_bindings import normalize_rigid_bindings, select_model_meshes
     from gr2_importer import addon
     from metin_gr2_adapter import adapt_legacy_animation, adapt_model_placement
 
@@ -473,6 +473,7 @@ def convert_actor(actor: dict, source_root: Path, output: Path) -> dict:
     model_path = source_root / actor["source_model"]
     graph = carbon_gr2.read_gr2(model_path)
     adapt_model_placement(model_path, graph)
+    bound_mesh_indices, unused_meshes = select_model_meshes(graph)
     graph, hair_raw_meshes, hair_report = merge_default_hair(graph, actor, source_root)
     rigid_bindings = normalize_rigid_bindings(graph)
     motions = [motion for mode in actor["modes"] for motion in mode["motions"]]
@@ -511,7 +512,7 @@ def convert_actor(actor: dict, source_root: Path, output: Path) -> dict:
     if rig is None or not meshes:
         raise ValueError(f"Actor import incomplete: {actor['id']}")
     raw = reader.read_raw(model_path.read_bytes()).file_info
-    raw_meshes = [*raw["Meshes"], *hair_raw_meshes]
+    raw_meshes = [*(raw["Meshes"][i] for i in bound_mesh_indices), *hair_raw_meshes]
     textured_meshes = assign_materials(meshes, raw_meshes, texture_map(actor, source_root))
     samples_before_scale = vertex_samples(bpy.context.scene, rig, meshes, imported["actions"])
     apply_scale([rig, *meshes])
@@ -564,6 +565,8 @@ def convert_actor(actor: dict, source_root: Path, output: Path) -> dict:
         "sha256": file_sha256(target),
         "bytes": target.stat().st_size,
         "mesh_count": len(meshes),
+        "source_mesh_indices": bound_mesh_indices,
+        "unused_source_meshes": unused_meshes,
         "textured_mesh_count": textured_meshes,
         "vertices": vertices,
         "triangles": triangles,

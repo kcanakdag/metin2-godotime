@@ -50,7 +50,10 @@ def main():
     artifacts = report["artifacts"]
     validate_actor_reports(normalized["actors"], artifacts)
     expected = {a["output"] for a in normalized["actors"]}
-    if len(artifacts) != len(expected) or {a["relative_path"] for a in artifacts} != expected:
+    if (
+        len(artifacts) != len(normalized["actors"])
+        or {a["relative_path"] for a in artifacts} != expected
+    ):
         raise ValueError("Conversion report does not cover exact actor models")
     for artifact in artifacts:
         path = (content / "generated" / artifact["relative_path"]).resolve()

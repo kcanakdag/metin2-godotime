@@ -88,3 +88,13 @@ the rendered straw target was inspected. Three Python tests and three Rust
 tests cover valid custom profiles and malformed input. This follow-up changes
 authoring validation only; it does not add playable class skills or constitute
 a new multiplayer/export qualification.
+
+The latest installed-package recheck is
+`.local/p6-class-skills/dummy-request-recheck-r3/report.json`: all 16 native
+Godot checks pass, and the rendered model was inspected. It uses
+`--authored-package client/assets/imported/authored/training-dummy` and retains
+the installed GLB hash `807db0542cef65ee2ed02e4ce183f45d7e59d5ba473bd4c997fcf7a57d0f55c4`.
+The first attempt referenced a missing historical build directory; the second
+encountered the sandbox's local socket restriction. The third used the installed
+package with permitted display/socket access. These checks did not change or
+redeploy the game, and do not establish additional playable abilities.

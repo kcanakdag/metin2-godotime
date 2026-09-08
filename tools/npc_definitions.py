@@ -146,7 +146,7 @@ def _stationary_spawns(text: str, vnum: int, *, area: bool) -> list[dict]:
     return result
 
 
-def motion_groups(rows: list[dict]) -> list[dict]:
+def motion_groups(rows: list[dict], *, aliases: dict[str, str] | None = None) -> list[dict]:
     """Normalize idle variants while retaining every declared NPC motion/weight."""
     supported = {"wait": "wait", "wait1": "wait", "walk": "walk", "run": "run", "dead": "dead"}
     supported.update(
@@ -171,7 +171,11 @@ def motion_groups(rows: list[dict]) -> list[dict]:
     groups: dict[str, dict] = {}
     paths = set()
     for row in rows:
-        action = supported.get(re.sub(r"[0-9]{1,2}$", "", row["action"]))
+        action = (
+            supported.get(re.sub(r"[0-9]{1,2}$", "", row["action"]))
+            if aliases is None
+            else aliases.get(row["action"])
+        )
         if row["mode"] != "general" or action is None:
             raise ValueError("Unsupported or duplicate static NPC motion")
         group = groups.setdefault(

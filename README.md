@@ -35,6 +35,10 @@ The derived `yongan-population.json` profile now resolves all 44 definitions and
 covers every original entry's references. Skin-remap support preserves color
 variants; three additional variants pass 179 rendered asset checks. This is
 source/asset preparation, not an installed 44-mob population.
+The full selection is now converted: 44 definitions share 19 textured GLBs with
+271 clips, reducing model storage from 56 MB to 25 MB. The native Godot gallery
+passes 2,818 checks. Group spawning and combat integration, including the recorded
+projectile events, remain pending before these enemies can populate the live map.
 Yongan's six authored Wild Dog homes pass **107 two-client checks** on a fresh
 local database. The original City Guard is installed in the playable map layer,
 with original placement, weighted idle animations and its attached weapon.

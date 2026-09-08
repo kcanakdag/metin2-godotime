@@ -6,6 +6,31 @@ import math
 from collections import Counter
 
 
+def select_model_meshes(graph: dict) -> tuple[list[int], list[dict]]:
+    """Import the model's bound geometry, not unused file-level mesh records."""
+    models = graph.get("models", [])
+    if len(models) != 1:
+        raise ValueError("Actor conversion requires exactly one model")
+    meshes = graph["meshes"]
+    indices = models[0].get("meshBindings")
+    if (
+        not isinstance(indices, list)
+        or not indices
+        or any(type(i) is not int or not 0 <= i < len(meshes) for i in indices)
+        or len(set(indices)) != len(indices)
+    ):
+        raise ValueError("Actor model requires distinct resolved mesh bindings")
+    selected = list(indices)
+    unused = [
+        {"index": i, "name": mesh["name"], "reason": "not-bound-to-model"}
+        for i, mesh in enumerate(meshes)
+        if i not in selected
+    ]
+    graph["meshes"] = [meshes[i] for i in selected]
+    models[0]["meshBindings"] = list(range(len(selected)))
+    return selected, unused
+
+
 def unused_material_slot(raw_mesh: dict, index: int) -> bool:
     """An empty exporter slot is harmless only if topology proves no face uses it."""
     groups = raw_mesh.get("PrimaryTopology", {}).get("Groups")

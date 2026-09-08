@@ -12,14 +12,16 @@ from discover_mobs import compile_profile
 from fetch_test_assets import METIN_COMMIT
 from metin_archive import safe_path
 from metin_root_motion import _carbon_reader
+from mob_model_sharing import expand_report, share_models, unique_actors
+from mob_motions import compile_motion_groups
 from mob_shapes import apply_skin_remaps
-from npc_definitions import material_bindings, motion_groups
+from npc_definitions import material_bindings
 
 
 def normalize(profile, *, offline):
     inventory = compile_profile(profile, offline=offline)
     archive = source_archive(offline)
-    declarations, bindings = [], {}
+    declarations, bindings, ignored = [], {}, []
     for mob in inventory["mobs"]:
         model = mob["assets"]["model"]
         raw = _carbon_reader().read_raw(archive.get(model).read_bytes()).file_info
@@ -30,6 +32,8 @@ def normalize(profile, *, offline):
         textures = apply_skin_remaps(textures, mob["assets"]["default_shape"]["skin_remaps"])
         archive.fetch_many(sorted(set(textures.values())))
         bindings[mob["id"]] = textures
+        groups, skipped = compile_motion_groups(mob["assets"]["motions"])
+        ignored.extend({"actor_id": mob["id"], **row} for row in skipped)
         declarations.append(
             {
                 "id": mob["id"],
@@ -44,12 +48,13 @@ def normalize(profile, *, offline):
                 "output": f"actors/{mob['model_key']}-{mob['vnum']}.glb",
                 "attachment_bones": {},
                 "orientation": {"output_forward": "-Z", "yaw_correction_degrees": 180.0},
-                "modes": [{"id": "general", "motions": motion_groups(mob["assets"]["motions"])}],
+                "modes": [{"id": "general", "motions": groups}],
             }
         )
     actors, deferred = _normalise_motions({"actors": declarations}, archive)
     for actor in actors:
         actor["material_texture_bindings"] = bindings[actor["id"]]
+    actors = share_models(actors)
     result = {
         "schema_version": 1,
         "profile_id": inventory["profile_id"],
@@ -58,6 +63,7 @@ def normalize(profile, *, offline):
         "items": [],
         "mob_catalog": inventory["mobs"],
         "deferred_motion_events": deferred,
+        "ignored_motion_registrations": ignored,
         "sources": [
             {"path": path, "revision": METIN_COMMIT, **record}
             for path, record in sorted(archive.used.items())
@@ -83,7 +89,11 @@ def main():
     normalized = output / "normalized.v1.json"
     normalized.write_text(json.dumps(manifest, indent=2) + "\n")
     if args.blender:
-        files = [args.profile.resolve(), normalized]
+        unique = output / "conversion-input.v1.json"
+        unique.write_text(
+            json.dumps({**manifest, "actors": unique_actors(manifest["actors"])}, indent=2) + "\n"
+        )
+        files = [args.profile.resolve(), normalized, unique]
         files.extend(
             ROOT / "tools" / name
             for name in (
@@ -91,6 +101,8 @@ def main():
                 "discover_mobs.py",
                 "mob_definitions.py",
                 "mob_shapes.py",
+                "mob_model_sharing.py",
+                "mob_motions.py",
                 "npc_definitions.py",
                 "import_actor_content.py",
                 "gr2_bindings.py",
@@ -116,13 +128,13 @@ def main():
                     str(ROOT / "tools/import_actor_content.py"),
                     "--",
                     "--manifest",
-                    str(normalized),
+                    str(unique),
                     "--source-root",
                     str(ROOT / "assets/source/content" / METIN_COMMIT),
                     "--output",
                     str(output / "generated"),
                     "--report",
-                    str(output / "blender-report.json"),
+                    str(output / "blender-unique-report.json"),
                 ],
                 stdout=log,
                 stderr=subprocess.STDOUT,
@@ -131,7 +143,9 @@ def main():
             )
         if any(hashlib.sha256(p.read_bytes()).hexdigest() != frozen[str(p)] for p in files):
             raise ValueError("Mob conversion inputs changed during conversion")
-        report = json.loads((output / "blender-report.json").read_text())
+        original_report = json.loads((output / "blender-unique-report.json").read_text())
+        report = expand_report(manifest["actors"], original_report)
+        (output / "blender-report.json").write_text(json.dumps(report, indent=2) + "\n")
         if report.get("status") != "converted" or len(report["artifacts"]) != len(
             manifest["actors"]
         ):
@@ -146,6 +160,10 @@ def main():
                     "status": "converted",
                     "inputs": frozen,
                     "content_hash": manifest["content_hash"],
+                    "unique_model_count": report["unique_model_count"],
+                    "unique_report_sha256": hashlib.sha256(
+                        (output / "blender-unique-report.json").read_bytes()
+                    ).hexdigest(),
                     "report_sha256": hashlib.sha256(
                         (output / "blender-report.json").read_bytes()
                     ).hexdigest(),

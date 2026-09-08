@@ -7,7 +7,41 @@ or reclassify that scope.
 
 ## P6: all-class abilities requested; training target delivered locally
 
+The requested acceptance target remains **all 44 playable abilities**, with
+reusable shared handlers and customizable definitions. All four classes have
+basic combat, but Sword Spin is still the only live ability. Full skill mechanics,
+specialization/equipment prerequisites, UI and multiplayer qualification remain
+unfinished; the converted full-class candidate is not a playable release.
+
+The already installed Blender-authored training dummy was rechecked using the
+installed package: `dummy-request-recheck-r3` under `.local/p6-class-skills`
+passes **16 native Godot checks**, and its rendered model was inspected. The
+earlier attempts retain the missing-directory and sandbox socket diagnostics.
+See [training dummy](../training-dummy.md) for customization and existing live
+evidence. No server or public deployment changed in this recheck.
+
 ### Original wildlife definitions in progress
+
+Full selected asset conversion checkpoint: `population-converted-r3` now covers
+**44 definitions using 19 GLBs and 271 unique clips** (628 per-definition motion
+references). Identical inputs share files with explicit owner and action mappings;
+different appearances remain separate. Model bytes fall from 56,133,272 without
+sharing to 24,845,328. `population-actors-r1` passes **2,818 native Godot checks**
+across all 44 definitions. Eight four-angle White Oath captures were inspected,
+covering all seven new model types and the General/Commander alias.
+
+The first conversion failed on unregistered motion names; the second exposed an
+unused file-level Archer mesh with no model skeleton binding. The importer now
+follows pinned motion registration and model mesh membership instead of assigning
+invented actions or bones. Reports retain 40 ignored registrations and 26 deferred
+projectile events (type 6). All 19 selected models pass binding validation.
+Twenty-four mob, ten NPC and five binding tests pass, as does Python lint.
+Evidence: `.local/mobs/population-conversion-acceptance-r1.json`.
+
+This completes conversion of the selected population assets, not their gameplay.
+Original group lifecycle, MAGIC/projectile behavior, catalog gates, live spawning
+and exported two-client qualification are still required. The served build and
+public endpoint are unchanged. Godot QA used isolated processes, not editor MCP.
 
 Map selection and skin-variant checkpoint: `build_population_profile.py` derives
 the checked-in `yongan-population.json` from the audited source dependency closure,
