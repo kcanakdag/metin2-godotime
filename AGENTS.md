@@ -310,7 +310,13 @@ Original-client gamma/blend comparison, hardware/browser exports, occlusion and
 population performance remain unqualified. Motion regression passes 89 checks
 in `particle-motion-r2`. These are component effects, not new live mobs/skills.
 
-Next integrate flight definitions/trajectories and attach the rendered effects, then
+`projectile_flight.gd` now passes 80 actual-engine trajectory/homing checks across
+the four original definitions in `.local/mobs/projectile-flight-r1/report.json`.
+The same runner's `--scenario flight --catalog FLIGHT_INVENTORY` checks swept hits,
+range-before-hit ordering, force/homing order and state-preserving rejection.
+It emits presentation events only; it is not wired to effects or combat yet.
+
+Next attach the rendered effects to those trajectories, implement impact/trails, then
 flight attachment and authoritative magic/projectile combat so the prepared mobs
 can become playable. Do not keep substituting inventory reports for integration.
 The interrupted investigation inspected pinned primary files under

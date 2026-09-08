@@ -29,6 +29,10 @@ The selected Godot renderer adds independently authored interpretation of
 timing and `Type.h::DWORDCOLOR` packed interpolation. It reuses only the already
 selected converted textures and does not import original rendering code. Godot
 color-space/blend parity still needs direct original-client comparison.
+The independently authored `projectile_flight.gd` follows the selected trajectory,
+homing and collision-order contract in `GameLib/FlyingInstance.cpp` and quaternion/
+segment conventions in `EterLib/GrpMath.h`. It copies no original implementation
+and introduces no new asset downloads. Its hit output is presentation-only.
 
 The flight-discovery extension fetches only the four MSF definitions selected by
 the 26 White Oath launch declarations, at the existing client pin. It resolves

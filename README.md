@@ -62,7 +62,9 @@ The shared Godot emission/lifetime component passes 90 actual-engine checks acro
 all 22 systems. Particle motion now passes another 89 actual-engine checks,
 including moving emitters and original gravity/drag order. The seven effects now
 render in an isolated Godot gallery with 62 checks and reviewed captures; flight,
-live combat integration and browser qualification remain pending.
+live combat integration and browser qualification remain pending. The four original
+flight definitions now pass 80 Godot trajectory/homing checks; effect attachment
+and live launch integration are next.
 Yongan's six authored Wild Dog homes pass **107 two-client checks** on a fresh
 local database. The original City Guard is installed in the playable map layer,
 with original placement, weighted idle animations and its attached weapon.

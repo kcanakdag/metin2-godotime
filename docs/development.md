@@ -59,6 +59,9 @@ emitters and deterministic replay; this is still non-rendering QA.
 `--scenario render` instead runs a native Linux/Xvfb Compatibility gallery with
 the converted textures and hashed captures. See [particle rendering](mobs.md#selected-particle-rendering)
 for its observed driver and remaining original-client/browser comparison work.
+`--scenario flight --catalog FLIGHT_INVENTORY` exercises all four source trajectories
+and homing in headless Godot. This scenario consumes the flight inventory rather
+than particle recipes; see [flight trajectories](mobs.md#original-flight-trajectory-component).
 
 `python3 tools/import_particle_effects.py --effect VIRTUAL_MSE --output NEW_DIR`
 converts explicitly selected particle recipes and their referenced textures.

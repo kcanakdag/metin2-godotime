@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the actual Godot emission component in an isolated, non-rendering fixture."""
+"""Run isolated Godot particle/flight component checks or the native effect gallery."""
 
 import argparse
 import hashlib
@@ -21,16 +21,22 @@ def main():
     parser.add_argument("--catalog", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--godot", required=True)
-    parser.add_argument("--scenario", choices=("emission", "motion", "render"), default="emission")
+    parser.add_argument(
+        "--scenario", choices=("emission", "motion", "render", "flight"), default="emission"
+    )
     args = parser.parse_args()
     output = args.output.resolve()
     scene = f"tests/particle_{args.scenario}_smoke.gd"
+    if args.scenario == "flight":
+        scene = "tests/projectile_flight_smoke.gd"
     files = ["scripts/actors/particle_emission.gd", scene]
     if args.scenario in ("motion", "render"):
         files += ["scripts/actors/particle_motion.gd", "scripts/actors/particle_simulation.gd"]
         files += ["scripts/actors/particle_style.gd"]
     if args.scenario == "render":
         files += ["scripts/actors/particle_effect.gd"]
+    if args.scenario == "flight":
+        files += ["scripts/actors/particle_motion.gd", "scripts/actors/projectile_flight.gd"]
     inputs = [ROOT / "client" / f for f in files] + [args.catalog.resolve(), Path(__file__)]
     frozen = {str(p.resolve()): digest(p) for p in inputs}
     output.mkdir(parents=True, exist_ok=False)

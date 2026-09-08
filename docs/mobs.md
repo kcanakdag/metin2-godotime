@@ -679,3 +679,38 @@ compared against original-client reference captures. No hardware/browser/export,
 depth-occlusion fixture, large-population performance, flight trajectory, server
 combat or multiplayer acceptance is claimed. Next connect the effects to the
 original flight definitions and live mob actions, then qualify those paths.
+
+### Original flight trajectory component
+
+`client/scripts/actors/projectile_flight.gd` implements the selected original
+flight kinematics in Godot metres. It initializes velocity/acceleration from the
+source orientation, applies object-target homing after its strict start deadline,
+rotates both velocity and acceleration, then integrates acceleration and positive
+original-Z flight gravity. Travel consumes range before the swept-segment target
+check. Zero remaining range is valid; negative range expires first. The target
+radius comparison is strict, and a completed projectile cannot hit again.
+
+The returned `target_hit` is a **presentation event**, not permission to damage
+anything. Server combat must validate/schedule damage independently. Definitions
+are trusted imported content; nonfinite/invalid steps reject without state mutation.
+Source spreading and background/secondary-monster collision are explicitly
+unsupported and rejected; none of the four selected definitions enables them.
+Attachment angular spin is separate from the trajectory and remains to be wired.
+
+```sh
+python3 tools/test_particle_emission.py --scenario flight --godot /path/to/godot \
+  --catalog .local/mobs/projectile-sources-r5/inventory.v1.json \
+  --output .local/mobs/projectile-flight-new
+```
+
+This scenario takes the flight inventory, rather than the particle catalog.
+`.local/mobs/projectile-flight-r1/report.json` records 80 actual-engine checks with
+no engine errors. All four original definitions reach targets from three different
+directions; focused checks cover speed, swept hits, range-before-hit order, exact
+radius/range boundaries, gravity/acceleration, homing delay, rotated acceleration,
+duplicate-hit prevention and rejection without mutation. Owned Python/GDScript
+lint passes. These are non-rendering trajectory checks, not original random-stream
+or floating-point replay parity, multiplayer evidence or a new deployment.
+
+Next combine the flight component with particle/mesh attachment transforms, impact
+effects and trails, then connect the prepared launch declarations to live combat.
