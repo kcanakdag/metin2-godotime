@@ -41,6 +41,7 @@ def exercise_field(
     return_to_town=True,
     profile_probe=False,
     field_combat=False,
+    ground_items=False,
 ):
     for snapshot in (web(), desktop()):
         assert snapshot["world_info"] == {
@@ -124,6 +125,17 @@ def exercise_field(
         }
     if field_combat:
         result["combat"] = exercise_field_combat(page, web, desktop, wait, output)
+    if ground_items:
+        wait(
+            "original_ground_models_reach_both_exports",
+            lambda: matching_ground_drops(web(), desktop()),
+            20,
+        )
+        result["ground_items"] = {
+            "web": web()["drop_presentations"],
+            "native": desktop()["drop_presentations"],
+        }
+        page.screenshot(path=str(output / "ground-items-browser.png"))
     if return_to_town:
         walk(list(reversed(points[:-1])), "field_route_return")
     return result
@@ -250,4 +262,27 @@ def health_observed(snapshot, identity, life, health, after_ticks, *, dead=False
         and row.get("observed_at_ticks_ms", 0) > after_ticks
         and (row.get("health") == 0 if dead else 0 <= row.get("health", health) < health)
         for row in snapshot.get("monster_health_history", [])
+    )
+
+
+def matching_ground_drops(web, native):
+    """Match rendered original ground models to the browser player's public drops."""
+    owned = set()
+    for table, item_mode in (("loot", False), ("item_drops", True)):
+        for row in web.get(table, []):
+            if row.get("owner") == web.get("identity"):
+                owned.add((item_mode, int(row["id"])))
+    views = []
+    for snapshot in (web, native):
+        views.append(
+            {
+                (bool(row["item"]), int(row["row_id"])): (row["ground_model_path"], row["label"])
+                for row in snapshot.get("drop_presentations", [])
+                if row.get("ground_model_path", "").startswith(
+                    "res://assets/imported/ground_items/models/"
+                )
+            }
+        )
+    return bool(owned) and all(
+        key in views[0] and key in views[1] and views[0][key] == views[1][key] for key in owned
     )

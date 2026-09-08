@@ -34,6 +34,10 @@ stale idle row. Focused scheduler/actor checks and 74 exported lifecycle checks
 pass; cooldown/late-input notices and a combined field-return timeout remain under
 investigation. The public build remains protocol 19.
 
+Original coin-pile and red-potion ground models are now installed locally through
+[the reusable ground-item pipeline](docs/ground-items.md). The exported field/drop
+replay passes 48 checks; overlapping labels and original drop effects remain pending.
+
 Items, future quests, mobs and classes follow the
 [data-based content authoring contract](docs/rebuild/content-authoring.md):
 versioned definitions select shared mechanics, with server-owned progress and

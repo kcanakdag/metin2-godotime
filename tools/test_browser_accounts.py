@@ -152,6 +152,11 @@ def main() -> None:
     )
     parser.add_argument("--inventory", action="store_true")
     parser.add_argument("--actors", action="store_true")
+    parser.add_argument(
+        "--ground-items",
+        action="store_true",
+        help="Verify original ground models after field combat",
+    )
     parser.add_argument("--field-combat", action="store_true", help="Attack an original field mob")
     parser.add_argument(
         "--profile-probe",
@@ -225,6 +230,8 @@ def main() -> None:
         help="Exercise the authored dummy with real browser pointer and Space input",
     )
     args = parser.parse_args()
+    if args.ground_items and not args.field_combat:
+        parser.error("--ground-items requires --field-combat")
     if args.field_combat and not args.mob_route:
         parser.error("--field-combat requires --mob-route")
     if args.profile_probe and not args.mob_route:
@@ -702,6 +709,7 @@ def main() -> None:
                     return_to_town=not args.field_only,
                     profile_probe=args.profile_probe,
                     field_combat=args.field_combat,
+                    ground_items=args.ground_items,
                 )
                 if args.field_only:
                     assert not browser_errors, "Browser engine errors: " + "; ".join(

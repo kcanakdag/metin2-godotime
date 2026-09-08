@@ -5,6 +5,32 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Original ground models installed and exported — 2026-09-08
+
+`tools/install_ground_items.py` validates the normalized source identity and the
+converted artifact references, paths, hashes and byte counts, then uses the staged
+installer with a ground-content receipt. Matching repeats verify bytes; changed or
+unowned destinations reject. The mob installer's existing identity field remains
+the default, with an explicit optional field for this presentation package.
+
+The installed shared Godot catalog caches selected PackedScenes. `PveActor` now
+uses the original coin pile for Yang and the shared red bottle for the two selected
+potion sizes. These stay settled instead of spinning/bobbing. Unsupported item
+models retain the catalog-icon fallback; old fixtures without this optional package
+retain their fallback presentation. Server quantities/ownership/pickup are unchanged.
+
+Controlled native checks pass 23 cases. Six installer tests and three browser
+predicate tests pass. Actual web/Linux exports completed; the focused original
+field combat/drop run passed all 48 checks with no engine errors:
+`.local/items/ground-live-r1/report.json`. Both probes matched original model paths
+and labels for the owned Small Red Potion and 26-Yang drops (separate tables with
+matching numeric IDs). The reviewed browser capture shows bottles/coins on-map;
+a post-kill native screenshot was not captured. Hashes and scopes: `acceptance.json`.
+
+The package is installed in the working client. Public deployment remains unchanged.
+Labels still overlap, and original falling/landing/glow effects remain pending.
+Next: screen-space drop labels and the public progress update.
+
 ## Original ground-model conversion pipeline — 2026-09-08
 
 The new `tools/import_ground_items.py` resolves an explicit selected item-list set,

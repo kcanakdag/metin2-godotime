@@ -14,6 +14,9 @@ func _run() -> void:
 	root.add_child(world)
 	var camera := Camera3D.new()
 	world.add_child(camera)
+	var light := DirectionalLight3D.new()
+	light.rotation_degrees = Vector3(-45, -25, 0)
+	world.add_child(light)
 	camera.position = Vector3(0, 5, 8)
 	camera.look_at(Vector3(0, 0.5, 0))
 	camera.current = true
@@ -29,11 +32,23 @@ func _run() -> void:
 		actors.append(actor)
 		var state := actor.presentation_snapshot()
 		_check("catalog name %d" % vnums[index], state.label == names[index])
-		_check(
-			"catalog icon %d" % vnums[index],
-			str(state.icon_path).ends_with("%05d.png" % vnums[index])
+		var has_ground := (
+			index < 2
+			and FileAccess.file_exists("res://assets/imported/ground_items/catalog.v1.json")
 		)
-		_check("texture loaded %d" % vnums[index], actor.get("_loot_icon").texture != null)
+		if has_ground:
+			_check(
+				"original ground model %d" % vnums[index], not state.ground_model_path.is_empty()
+			)
+			_check("billboard replaced %d" % vnums[index], not actor.get("_loot_icon").visible)
+			actor.call("_process", 0.5)
+			_check("ground model stays settled", actor.get("_visual").position == Vector3.ZERO)
+		else:
+			_check(
+				"catalog icon %d" % vnums[index],
+				str(state.icon_path).ends_with("%05d.png" % vnums[index])
+			)
+			_check("texture loaded %d" % vnums[index], actor.get("_loot_icon").texture != null)
 	await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("user://item-drops.png")
@@ -41,7 +56,10 @@ func _run() -> void:
 	_check("changed definition replaces label", actors[0].presentation_snapshot().label == names[1])
 	_check(
 		"changed definition replaces icon",
-		actors[0].presentation_snapshot().icon_path.ends_with("27002.png")
+		(
+			actors[0].presentation_snapshot().icon_path.ends_with("27002.png")
+			or not actors[0].presentation_snapshot().ground_model_path.is_empty()
+		)
 	)
 	actors[0].apply_state({"id": 1, "vnum": 999999})
 	_check(
@@ -57,6 +75,24 @@ func _run() -> void:
 	_check(
 		"Yang label remains authoritative amount", gold.presentation_snapshot().label == "27 Yang"
 	)
+	if FileAccess.file_exists("res://assets/imported/ground_items/catalog.v1.json"):
+		_check(
+			"Yang uses original coin model",
+			not gold.presentation_snapshot().ground_model_path.is_empty()
+		)
+		_check("unknown item clears prior ground mesh", actors[0].get("_ground_model") == null)
+		var policy = load("res://scripts/content/ground_item_catalog.gd").new()
+		var document: Dictionary = JSON.parse_string(
+			FileAccess.get_file_as_string("res://assets/imported/ground_items/catalog.v1.json")
+		)
+		_check("ground catalog validates", policy.load_document(document))
+		var bad := document.duplicate(true)
+		bad.items.append(bad.items[0])
+		_check("duplicate ground vnum rejects", not policy.load_document(bad))
+		_check("invalid reload clears old mappings", policy.scene(1) == null)
+		bad = document.duplicate(true)
+		bad.models.values()[0].path = "res://scripts/main.gd"
+		_check("ground model cannot escape namespace", not policy.load_document(bad))
 	var report := {"checks": _checks, "failures": _failures}
 	FileAccess.open("user://item-drops.json", FileAccess.WRITE).store_string(JSON.stringify(report))
 	print(JSON.stringify(report))

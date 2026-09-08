@@ -68,6 +68,10 @@ func _process(delta: float) -> void:
 		return
 	_elapsed = 0
 	var snapshot: Dictionary = get_parent().dev_snapshot()
+	snapshot["drop_presentations"] = []
+	for actor: PveActor in get_parent().get("_pve").values():
+		if actor.loot_mode:
+			snapshot.drop_presentations.append(actor.presentation_snapshot())
 	snapshot["progression"] = _project_rows(
 		snapshot.get("progression", []),
 		[

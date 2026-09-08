@@ -9,6 +9,7 @@ const ActorPresentationScript := preload("res://scripts/actors/actor_presentatio
 const TargetEffectScript := preload("res://scripts/actors/target_effect.gd")
 const TargetEffectCatalogScript := preload("res://scripts/content/target_effect_catalog.gd")
 const ItemCatalogScript := preload("res://scripts/content/item_catalog.gd")
+const GroundItems := preload("res://scripts/content/ground_item_catalog.gd")
 const TARGET_PICK_LAYER := 2
 
 var row: Dictionary = {}
@@ -24,6 +25,8 @@ var _time := 0.0
 var _loot_icon: Sprite3D
 var _loot_vnum := -1
 var _loot_icon_path := ""
+var _ground_model: Node3D
+var _ground_model_path := ""
 var _last_health := -1
 var _damage_sequence := 0
 var _damage_until_ticks_us := 0
@@ -237,10 +240,12 @@ func presentation_snapshot() -> Dictionary:
 	if loot_mode:
 		return {
 			"loot": true,
+			"row_id": int(row.get("id", 0)),
 			"item": item_mode,
 			"vnum": int(row.get("vnum", 0)),
 			"label": _label.text,
 			"icon_path": _loot_icon_path,
+			"ground_model_path": _ground_model_path,
 		}
 	var result: Dictionary = _presentation.snapshot() if is_instance_valid(_presentation) else {}
 	result["row_id"] = int(row.get("id", 0))
@@ -260,6 +265,8 @@ func _process(delta: float) -> void:
 	_time += delta
 	position = position.lerp(_target, 1.0 - exp(-delta * 12.0))
 	if loot_mode:
+		if is_instance_valid(_ground_model):
+			return
 		if not item_mode:
 			_visual.rotation.y += delta
 		_visual.position.y = sin(_time * 3.0) * 0.1
@@ -400,7 +407,7 @@ func _build_loot() -> void:
 		_loot_icon.pixel_size = 0.018
 		_loot_icon.position.y = 0.35
 		_visual.add_child(_loot_icon)
-	else:
+	elif not _set_ground_model(1):
 		_part(Vector3(0, 0.35, 0), Vector3(0.35, 0.35, 0.35), Color("ffd26e"))
 
 
@@ -413,12 +420,31 @@ func _update_item_drop() -> void:
 	_label.text = str(definition.get("name", "Unknown item (%d)" % vnum))
 	_loot_icon_path = ""
 	_loot_icon.texture = null
+	_loot_icon.visible = false
+	if _set_ground_model(vnum):
+		return
 	if not definition.is_empty():
 		var path := "res://assets/imported/ui/%s.png" % str(definition.icon)
 		if ResourceLoader.exists(path):
 			_loot_icon.texture = load(path)
 			_loot_icon_path = path
 	_loot_icon.visible = _loot_icon.texture != null
+
+
+func _set_ground_model(vnum: int) -> bool:
+	if is_instance_valid(_ground_model):
+		_ground_model.free()
+	_ground_model = null
+	_ground_model_path = ""
+	_visual.position = Vector3.ZERO
+	_visual.rotation = Vector3.ZERO
+	var packed := GroundItems.model(vnum)
+	if packed == null:
+		return false
+	_ground_model = packed.instantiate()
+	_ground_model_path = packed.resource_path
+	_visual.add_child(_ground_model)
+	return true
 
 
 func _part(point: Vector3, size: Vector3, color: Color) -> void:

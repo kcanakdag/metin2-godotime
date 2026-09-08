@@ -1888,3 +1888,7 @@ The [ground-item pipeline](ground-items.md) resolves selected original drop mode
 deduplicates them and optionally runs Blender plus an isolated Godot preview.
 Its default is the existing Yang/two-potion fixture; it does not install gameplay
 assets automatically.
+
+Selected ground models can now be installed with `tools/install_ground_items.py`;
+see the [installation and runtime checks](ground-items.md#install-and-render-the-selected-package).
+The installer and runtime do not change item ownership, quantities or pickup rules.

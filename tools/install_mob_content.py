@@ -114,13 +114,13 @@ def check_installed(root, name, expected_bytes):
         raise ValueError(f"Installed import settings differ: {name}")
 
 
-def install(client, packages, gameplay_hash):
+def install(client, packages, gameplay_hash, *, identity_field="mob_gameplay_hash"):
     imported = client / "assets/imported"
     imported.mkdir(parents=True, exist_ok=True)
     manifests = {
         name: {
             "version": 1,
-            "mob_gameplay_hash": gameplay_hash,
+            identity_field: gameplay_hash,
             "files": {key: digest(data) for key, data in files.items()},
         }
         for name, files in packages.items()
@@ -137,7 +137,7 @@ def install(client, packages, gameplay_hash):
                 )
             for file, data in packages[name].items():
                 check_installed(destination, file, data)
-        return {"installed": False, "already_present": True, "mob_gameplay_hash": gameplay_hash}
+        return {"installed": False, "already_present": True, identity_field: gameplay_hash}
     with tempfile.TemporaryDirectory(prefix="mob-install-", dir=imported) as scratch:
         stage = Path(scratch)
         for name, files in packages.items():
@@ -159,7 +159,7 @@ def install(client, packages, gameplay_hash):
             raise
     return {
         "installed": True,
-        "mob_gameplay_hash": gameplay_hash,
+        identity_field: gameplay_hash,
         "files": {name: len(files) for name, files in packages.items()},
     }
 

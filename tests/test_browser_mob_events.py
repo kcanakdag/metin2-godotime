@@ -1,9 +1,10 @@
+import copy
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from test_browser_mobs import health_observed
+from test_browser_mobs import health_observed, matching_ground_drops
 
 
 class FieldCombatEvidenceTests(unittest.TestCase):
@@ -30,6 +31,38 @@ class FieldCombatEvidenceTests(unittest.TestCase):
         self.assertTrue(health_observed(snapshot, 900100, 3, 100, 100))
         self.assertFalse(health_observed(snapshot, 900100, 3, 100, 100, dead=True))
         self.assertFalse(health_observed(snapshot, 900100, 3, 80, 100))
+
+
+class GroundDropEvidenceTests(unittest.TestCase):
+    def test_all_owned_drop_kinds_need_matching_original_models(self):
+        state = {
+            "identity": "player",
+            "loot": [{"id": 1, "owner": "player"}],
+            "item_drops": [{"id": 1, "owner": "player"}],
+            "drop_presentations": [
+                {
+                    "row_id": 1,
+                    "item": item,
+                    "label": label,
+                    "ground_model_path": "res://assets/imported/ground_items/models/" + model,
+                }
+                for item, label, model in (
+                    (False, "2 Yang", "coins.glb"),
+                    (True, "Red Potion (S)", "bottle.glb"),
+                )
+            ],
+        }
+        self.assertTrue(matching_ground_drops(state, state))
+        peer = copy.deepcopy(state)
+        peer["drop_presentations"].pop()
+        self.assertFalse(matching_ground_drops(state, peer))
+        peer = copy.deepcopy(state)
+        peer["drop_presentations"][0]["label"] = "wrong"
+        self.assertFalse(matching_ground_drops(state, peer))
+        peer["drop_presentations"][0]["ground_model_path"] = "res://placeholder.glb"
+        self.assertFalse(matching_ground_drops(state, peer))
+        state["identity"] = "someone_else"
+        self.assertFalse(matching_ground_drops(state, peer))
 
 
 if __name__ == "__main__":
