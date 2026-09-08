@@ -10,8 +10,10 @@ scan swept three-dimensional spheres until exclusive expiry. Samples refresh eac
 scan and omit removed lives; new lives start at their current center. Authored cooldowns and GREAT force/recovery now resolve after area admission.
 GOOD flinches now use compiled weighted damage clips and existing private reaction
 state. Area skills now validate required target lives, derive server-owned facing and
-normalize source event clocks. Exact physics and live acceptance remain pending
-before enabling Three-Way Cut.
+normalize source event clocks. The selected profile enables Three-Way Cut, Sword
+Spin, Spirit Strike and Bash. Two-client dummy acceptance covers all four; original
+Grey Wolf reaction acceptance covers Three-Way Cut. Exact original physics,
+specialization selection and exported qualification of this batch remain pending.
 Public protocol 24 is unchanged.
 
 Protocol 25 replaces the private pending skill's single deadline pair with an

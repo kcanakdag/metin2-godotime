@@ -80,6 +80,17 @@ checks for map/chat panels, inventory and multiplayer. Earlier Yongan gameplay,
 terrain and normal-release checks remain historical evidence; they do not prove
 the new account flow. See the evidence table below.
 
+## Select a frozen deployment module
+
+`tools/deploy.py --module <frozen-release.wasm>` selects a specific server artifact
+and prints its SHA-256 before remote operations. Without this option, the existing
+`server/target/wasm32-unknown-unknown/release/mt2_server.wasm` default remains.
+Prefer an explicit frozen module when local QA builds use a different issuer,
+population or bootstrap permissions. Selecting a file does not verify those
+policies: build it for the intended public issuer with guests disabled and no QA
+bootstrap identities, and pair it with matching exported content/protocol.
+The command archives that file directly; it does not replace the local build.
+
 ## Export Web and Linux
 
 Prepare the warrior, imported Yongan and collision bake using the root README.

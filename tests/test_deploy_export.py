@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 from contextlib import redirect_stderr
@@ -114,6 +115,62 @@ class WebArtifactTests(unittest.TestCase):
             deploy.main()
         self.assertEqual(result.exception.code, 2)
         self.assertIn("Unreadable PCK", errors.getvalue())
+        remote_command.assert_not_called()
+
+    def test_explicit_frozen_module_is_archived_instead_of_latest_build(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        repository = Path(directory.name)
+        templates = repository / "deploy"
+        templates.mkdir(parents=True)
+        for name in [
+            "Dockerfile",
+            "compose.yaml",
+            ".dockerignore",
+            "apply.sh",
+            "reload-certificate.sh",
+            "nginx.conf.in",
+        ]:
+            (templates / name).write_bytes((deploy.ROOT / "deploy" / name).read_bytes())
+        frozen = repository / "frozen.wasm"
+        frozen.write_bytes(b"frozen release module")
+        latest = repository / "server/target/wasm32-unknown-unknown/release/mt2_server.wasm"
+        latest.parent.mkdir(parents=True)
+        latest.write_bytes(b"unrelated QA module")
+        arguments = ["deploy.py", "--web-dir", str(self.root), "--module", str(frozen)]
+        config = {"database": "mt2-yongan-v2", "server_url": "https://example.invalid:8443"}
+        with (
+            patch.object(sys, "argv", arguments),
+            patch.object(deploy, "ROOT", repository),
+            patch.object(deploy, "read_pack_config", return_value=config),
+            patch.object(deploy, "stage_auth"),
+            patch.object(deploy, "run"),
+        ):
+            deploy.main()
+        archives = list((repository / ".local/deploy").glob("*.tar.gz"))
+        self.assertEqual(len(archives), 1)
+        with tarfile.open(archives[0]) as archive:
+            self.assertEqual(archive.extractfile("mt2_server.wasm").read(), frozen.read_bytes())
+        self.assertEqual(latest.read_bytes(), b"unrelated QA module")
+
+    def test_missing_explicit_module_prevents_remote_commands(self):
+        arguments = [
+            "deploy.py",
+            "--web-dir",
+            str(self.root),
+            "--module",
+            str(self.root / "missing.wasm"),
+        ]
+        config = {"database": "mt2-yongan-v2", "server_url": "https://example.invalid:8443"}
+        with (
+            patch.object(sys, "argv", arguments),
+            patch.object(deploy, "read_pack_config", return_value=config),
+            patch.object(deploy, "run") as remote_command,
+            redirect_stderr(io.StringIO()),
+            self.assertRaises(SystemExit) as result,
+        ):
+            deploy.main()
+        self.assertEqual(result.exception.code, 2)
         remote_command.assert_not_called()
 
 

@@ -177,6 +177,12 @@ def main():
     parser.add_argument("--database", default="mt2-yongan-v2")
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument("--web-dir", type=Path, default=ROOT / "dist/web")
+    parser.add_argument(
+        "--module",
+        type=Path,
+        default=ROOT / "server/target/wasm32-unknown-unknown/release/mt2_server.wasm",
+        help="Deploy this frozen server WASM instead of the most recent local build",
+    )
     parser.add_argument("--allow-test-build", action="store_true")
     parser.add_argument(
         "--reset-database",
@@ -203,9 +209,10 @@ def main():
             )
     except (OSError, ValueError) as error:
         parser.error(str(error))
-    wasm = ROOT / "server/target/wasm32-unknown-unknown/release/mt2_server.wasm"
+    wasm = args.module.resolve()
     if not wasm.is_file():
-        parser.error("Build the server first: make server-build")
+        parser.error(f"Server module does not exist: {wasm}; build or select a frozen module")
+    print(f"Selected server module: {wasm} (sha256 {digest(wasm)})")
     ssh = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", args.host]
     release = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
     candidate = f"{REMOTE}/incoming/{release}"
