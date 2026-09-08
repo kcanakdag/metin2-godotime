@@ -704,3 +704,24 @@ pass. The touched Rust areas pass 37 targeted checks (identity/presentation 2,
 physical damage 21, special area 8, knockback 6), plus strict library Clippy.
 No full-suite rerun was used. Dynamic population spawning and a live multi-target
 finisher replay are not established by these checks. Public protocol 19 is unchanged.
+
+## Group member ID allocation — 2026-09-08
+
+`monster_allocation.rs` reserves an entire successfully placed group’s u32 IDs
+with checked arithmetic before any rows are inserted. The first ID is its owner
+token; followers receive distinct IDs. The persistent cursor must include every
+previously issued member ID, even after destruction, and must initially exceed
+all authored/reserved IDs. Exhaustion rejects the reservation without wraparound.
+The caller must commit the cursor and member rows in one database transaction;
+that database adapter is still pending.
+
+The offline regeneration stress command now consumes this allocator instead of
+incrementing one token per group. Its checkpoint format is version 2: version-1
+owner-only counters reject because they do not reserve member IDs. Commands are
+unchanged; create a fresh checkpoint. `.local/mobs/group-allocation-r2/acceptance.json`
+records a separate-process resume across 945 units: the first population consumes
+IDs through 2,963, replacement groups advance through 5,926, and counted surviving
+followers remain. Two focused allocator tests cover non-reuse, partial placement,
+invalid counts and exact u32 exhaustion. Strict example/test Clippy passes and a
+legacy checkpoint rejects. This is offline evidence, not live group spawning.
+Protocol 21 and the public protocol-19 build remain unchanged.

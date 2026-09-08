@@ -2,6 +2,8 @@
 #[path = "../src/regeneration.rs"]
 mod regeneration;
 use regeneration::{EntrySnapshot, EntryState};
+#[path = "../src/monster_allocation.rs"]
+mod monster_allocation;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 #[path = "../src/population_catalog.rs"]
@@ -74,7 +76,7 @@ fn run() -> Result<Value, String> {
             return Err("Checkpoint exceeds 16 MiB".into());
         }
         let saved: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-        if saved["version"] != 1 || saved["inventory_hash"] != hash {
+        if saved["version"] != 2 || saved["inventory_hash"] != hash {
             return Err("Checkpoint belongs to another inventory or schema".into());
         }
         Some(saved)
@@ -130,10 +132,12 @@ fn run() -> Result<Value, String> {
             EntryState::restore(interval, capacity, 16, restored)?
         } else {
             EntryState::new(interval, capacity, 16)?.plan_tick(0, || {
-                sequence = sequence
-                    .checked_add(1)
-                    .ok_or("Allocation counter overflow")?;
-                Ok(Some(sequence))
+                let allocation = monster_allocation::reserve(
+                    u32::try_from(sequence).map_err(|_| "Saved monster ID counter exceeds u32")?,
+                    members,
+                )?;
+                sequence = u64::from(allocation.last);
+                Ok(Some(allocation.owner()))
             })?
         };
         if state.owners().iter().any(|id| !all_owners.insert(*id)) {
@@ -148,7 +152,7 @@ fn run() -> Result<Value, String> {
         states.push((state, members));
     }
     if args.get(1).is_some_and(|s| s == "--checkpoint") {
-        let checkpoint = json!({"version":1,"inventory_hash":hash,"sequence":sequence,
+        let checkpoint = json!({"version":2,"inventory_hash":hash,"sequence":sequence,
             "entries":checkpoint_rows});
         let bytes = serde_json::to_vec(&checkpoint).map_err(|e| e.to_string())?;
         let mut file = std::fs::OpenOptions::new()
@@ -159,7 +163,8 @@ fn run() -> Result<Value, String> {
         file.write_all(&bytes).map_err(|e| e.to_string())?;
         file.sync_all().map_err(|e| e.to_string())?;
         return Ok(json!({"checkpoint_written":true,"entries":entries.len(),
-            "initial_units":initial_units,"initial_members":initial_members}));
+            "initial_units":initial_units,"initial_members":initial_members,
+            "last_allocated_monster_id":sequence}));
     }
     let survivors = initial_members - initial_units;
     let mut replacement_members = 0;
@@ -173,10 +178,12 @@ fn run() -> Result<Value, String> {
         }
         if let Some(due) = state.next_tick_us() {
             let state = state.plan_tick(due, || {
-                sequence = sequence
-                    .checked_add(1)
-                    .ok_or("Allocation counter overflow")?;
-                Ok(Some(sequence))
+                let allocation = monster_allocation::reserve(
+                    u32::try_from(sequence).map_err(|_| "Saved monster ID counter exceeds u32")?,
+                    members,
+                )?;
+                sequence = u64::from(allocation.last);
+                Ok(Some(allocation.owner()))
             })?;
             replacements += state.owners().len();
             replacement_members += state.owners().len() * members;
@@ -190,7 +197,7 @@ fn run() -> Result<Value, String> {
         "inventory_hash":hash,"entries":entries.len(),"initial_units":initial_units,
         "initial_members":initial_members,"surviving_followers":survivors,
         "replacement_units":replacements,"members_after_refill":survivors+replacement_members,
-        "restored_from_checkpoint":saved.is_some(),
+        "restored_from_checkpoint":saved.is_some(),"last_allocated_monster_id":sequence,
         "live_gameplay":false,"map_placement_tested":false}),
     )
 }
