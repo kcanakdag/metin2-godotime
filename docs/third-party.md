@@ -454,3 +454,10 @@ integer key spacing; this is an owned converter adaptation, not a vendor patch.
 and delayed activation in `EffectElementBaseInstance.cpp:Update` at the pinned
 client revision. It preserves exact-deadline behavior and the 20-frame catch-up
 bound without copying the original implementation.
+
+The mixed renderer follows `EffectLib/EffectInstance.cpp:OnRender` for particle-before-
+mesh grouping. Angular orbit independently follows `ParticleInstance.cpp:Update`
+and `ParticleSystemInstance.cpp:OnUpdate`; the clockwise detached rotation accounts
+for [D3DXQuaternionMultiply's reversed product order](https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dxquaternionmultiply).
+No original implementation was copied. Original per-update angular timing is retained;
+full visual/cadence parity remains unqualified.

@@ -32,6 +32,7 @@ def main():
             "projectile",
             "mesh",
             "skill_mesh",
+            "mixed",
             "package",
         ),
         default="emission",
@@ -51,6 +52,8 @@ def main():
         parser.error("--expected-systems must be positive")
     output = args.output.resolve()
     scene = f"tests/particle_{args.scenario}_smoke.gd"
+    if args.scenario == "mixed":
+        scene = "tests/mixed_effect_smoke.gd"
     if args.scenario == "flight":
         scene = "tests/projectile_flight_smoke.gd"
     if args.scenario in ("mesh", "skill_mesh"):
@@ -66,10 +69,10 @@ def main():
     files = ["scripts/actors/particle_emission.gd", scene]
     if args.scenario in ("mesh", "skill_mesh"):
         files = ["scripts/actors/projectile_mesh_effect.gd", scene]
-    if args.scenario in ("motion", "render", "projectile", "package"):
+    if args.scenario in ("motion", "render", "projectile", "package", "mixed"):
         files += ["scripts/actors/particle_motion.gd", "scripts/actors/particle_simulation.gd"]
         files += ["scripts/actors/particle_style.gd"]
-    if args.scenario in ("render", "projectile", "package"):
+    if args.scenario in ("render", "projectile", "package", "mixed"):
         files += ["scripts/actors/particle_effect.gd"]
     if args.scenario == "render":
         files += ["scripts/world/world_motion_effects.gd", "scripts/actors/actor_presentation.gd"]
@@ -84,6 +87,8 @@ def main():
         ]
     if args.scenario == "flight":
         files += ["scripts/actors/particle_motion.gd", "scripts/actors/projectile_flight.gd"]
+    if args.scenario == "mixed":
+        files += ["scripts/actors/mixed_effect.gd", "scripts/actors/projectile_mesh_effect.gd"]
     if "scripts/actors/projectile_mesh_effect.gd" in files:
         files.append("scripts/actors/mesh_frame_clock.gd")
     inputs = [ROOT / "client" / f for f in files] + [args.catalog.resolve(), Path(__file__)]
@@ -108,7 +113,7 @@ def main():
         if args.meshes is not None:
             shutil.copy2(args.meshes, output / "mesh-effects.v1.json")
             extra_args.append(str(output / "mesh-effects.v1.json"))
-    if args.scenario in ("render", "projectile"):
+    if args.scenario in ("render", "projectile", "mixed"):
         catalog = json.loads(args.catalog.read_text())
         for texture in catalog["textures"].values():
             relative = Path(texture["path"])
@@ -124,7 +129,7 @@ def main():
                 raise ValueError("Particle texture changed while copying")
     env = {**os.environ, "XDG_DATA_HOME": str(output / "userdata")}
     mesh_catalog = (
-        args.catalog if args.scenario in ("mesh", "skill_mesh", "package") else args.meshes
+        args.catalog if args.scenario in ("mesh", "skill_mesh", "package", "mixed") else args.meshes
     )
     if mesh_catalog is not None:
         catalog = json.loads(mesh_catalog.read_text())
@@ -170,7 +175,7 @@ def main():
         if imported.returncode or "ERROR:" in (output / "import.log").read_text():
             raise RuntimeError(f"Mesh fixture import failed: {output / 'import.log'}")
     prefix = [args.godot, "--headless"]
-    if args.scenario in ("render", "projectile", "mesh", "skill_mesh", "package"):
+    if args.scenario in ("render", "projectile", "mesh", "skill_mesh", "package", "mixed"):
         prefix = ["xvfb-run", "-a", args.godot, "--rendering-method", "gl_compatibility"]
     with (output / "run.log").open("w") as log:
         process = subprocess.Popen(
@@ -212,7 +217,7 @@ def main():
         "inputs": frozen,
         "engine_log_sha256": digest(output / "run.log"),
         "rendering_verified": args.scenario
-        in ("render", "projectile", "mesh", "skill_mesh", "package"),
+        in ("render", "projectile", "mesh", "skill_mesh", "package", "mixed"),
         "server_integration_verified": False,
         "captures": {p.name: digest(p) for p in sorted(output.glob("effect-*.png"))},
     }

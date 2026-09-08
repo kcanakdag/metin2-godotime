@@ -5,6 +5,33 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Complete mixed Bash renderer and original angular orbit — 2026-09-09
+
+`mixed_effect.gd` creates all particle and mesh layers, advances their common clock,
+and completes only when every layer finishes. Missing resources or rejected layers
+reject the whole effect; partial children are cleaned up. Material priorities
+preserve the original render grouping (particle systems first, mesh layers second),
+which differs from interleaved textual MSE declarations.
+
+The first combined run rejected three particle systems with nonzero angular orbit.
+The shared simulation now rotates existing particles clockwise around their spawn
+center after translation. Attached particles use the source horizontal plane;
+detached particles use the current emitter's transformed source Z axis. The source
+angle is applied per update, without delta scaling. Two axis-direction checks plus
+existing motion regression pass (104 checks). Render/update cadence parity with
+the original client remains unqualified.
+
+The complete Bash gallery passes 12 checks with all 12 systems/three meshes present,
+visible particle emission, natural combined completion and rejection of missing
+mesh resources. Evidence: `.local/p6-skill-effects-r14/mixed-r2/report.json` and
+captures; `motion/report.json` contains motion regression. The combined three-column
+burst was visually reviewed (the tallest flare clips the gallery's upper frame).
+The failed pre-orbit run is retained. Touched Python/GDScript lint passes.
+
+This remains an isolated native Compatibility effect, not an equipped Bash or
+networked world test. World manager support for mixed resources, package installation,
+all-four-skill equipped replay and two-browser/public qualification remain next.
+
 ## Bash finite mesh rendering and additive material — 2026-09-09
 
 The shared mesh renderer now accepts the selected source-color/additive (3/2)

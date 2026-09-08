@@ -12,11 +12,7 @@ var _rng := RandomNumberGenerator.new()
 
 
 func configure(recipe: Dictionary, random_seed: int) -> bool:
-	# Only trusted, importer-validated recipes belong here. Angular orbit is a
-	# separate original mechanic, absent from the currently selected 22 systems.
-	for key: Array in recipe.emitter.curves.EmittingAngularVelocity:
-		if float(key[1]) != 0.0:
-			return false
+	# Recipes are validated by the offline importer.
 	var candidate := Emission.new()
 	if not candidate.configure(recipe):
 		return false
@@ -40,9 +36,13 @@ func advance(delta: float, transform: Transform3D, emitting: bool = true) -> Dic
 		return result
 	for id: int in result.deaths:
 		particles.erase(id)
+	var angle := Emission.sample(
+		_recipe.emitter.curves.EmittingAngularVelocity, result.emitter_time
+	)
 	for particle: Dictionary in particles.values():
 		Style.advance(particle, _recipe, delta, _rng)
 		Motion.advance(particle, _recipe, delta)
+		Motion.orbit(particle, angle, transform.basis)
 	var rotation_speed := 0.0
 	var first := true
 	for birth: Dictionary in result.births:

@@ -116,6 +116,15 @@ static func advance(particle: Dictionary, recipe: Dictionary, delta: float) -> v
 	particle.position += velocity * delta
 
 
+static func orbit(particle: Dictionary, angle_degrees: float, emitter_basis: Basis) -> void:
+	if angle_degrees == 0:
+		return
+	# Original angular velocity is a clockwise angle per update, not per second.
+	var axis := Vector3.UP if particle.attached else emitter_basis.y.normalized()
+	var relative: Vector3 = particle.position - particle.center
+	particle.position = particle.center + relative.rotated(axis, -deg_to_rad(angle_degrees))
+
+
 static func world_position(particle: Dictionary, transform: Transform3D) -> Vector3:
 	return transform * particle.position if particle.attached else particle.position
 

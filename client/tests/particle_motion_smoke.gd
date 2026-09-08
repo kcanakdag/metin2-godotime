@@ -77,7 +77,7 @@ func _run() -> void:
 		Motion.world_position(system.particles[1], transform).x == 21
 	)
 	emitter.curves.EmittingAngularVelocity = [[0, 1]]
-	_check("unimplemented orbit rejected", not system.configure(recipe, 42))
+	_check("original orbit accepted", system.configure(recipe, 42))
 	emitter.curves.EmittingAngularVelocity = [[0, 0]]
 	emitter.curves.EmittingDirectionY = [[0, 0]]
 	emitter.EmitterAdvancedType = 1
@@ -142,6 +142,16 @@ func _run() -> void:
 		Motion.position_at([[0, 100, 0, 0]], 0.5, [[999, 999, 999]]).is_equal_approx(
 			Vector3(1, 0, 0)
 		)
+	)
+	var orbiting := {"position": Vector3(2, 2, 3), "center": Vector3(1, 2, 3), "attached": true}
+	Motion.orbit(orbiting, 90, Basis(Vector3.RIGHT, PI / 2))
+	_check("attached orbit uses source plane", orbiting.position.is_equal_approx(Vector3(1, 2, 4)))
+	orbiting.position = Vector3(2, 2, 3)
+	orbiting.attached = false
+	Motion.orbit(orbiting, 90, Basis(Vector3.RIGHT, PI / 2))
+	_check(
+		"detached orbit uses current emitter axis",
+		orbiting.position.is_equal_approx(Vector3(1, 1, 3))
 	)
 	_exercise_catalog(catalog)
 	print(JSON.stringify({"checks": _checks, "failures": _failures}))

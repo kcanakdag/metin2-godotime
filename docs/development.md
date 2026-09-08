@@ -2153,3 +2153,8 @@ Use `test_particle_emission.py --scenario skill_mesh --catalog MIXED_MESH_CATALO
 checks. It checks additive color ramps against measured framebuffer backgrounds,
 all original frames, staggered starts and finite completion, with saved captures.
 This scenario checks mesh layers individually, not the complete mixed effect.
+
+Use `test_particle_emission.py --scenario mixed --catalog MIXED_MESH_CATALOG
+--godot GODOT --output NEW_DIR` to run the complete Bash particle/mesh gallery.
+This checks the combined lifecycle and missing-resource rejection, with native
+captures. It does not install effect links or prove browser/world integration.
