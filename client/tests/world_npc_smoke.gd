@@ -29,6 +29,7 @@ var _failures: Array[String] = []
 
 
 func _initialize() -> void:
+	create_timer(60).timeout.connect(func(): quit(1))
 	_run.call_deferred()
 
 
@@ -54,19 +55,32 @@ func _run() -> void:
 		"content_hash": definition.content_hash,
 		"definition_profile": ActorCatalog.PROFILE_ID,
 		"definition_hash": actor_catalog.gameplay_definition_hash(),
+		"character_catalog_hash": actor_catalog.characters.content_hash,
+		"skill_catalog_hash": actor_catalog.skills.content_hash,
+		"training_target_hash": actor_catalog.training_target_hash,
 		"half_size": 640,
 	}
 	connection.state = "loading"
 	main.call("_on_world_info", info)
 	await main.call("_prepare_world", info)
 	_check(connection.entries == 1 and connection.disconnects == 0, "Main content gate enters")
-	_check(layer.actors.size() == 1, "Main connection activates exactly one original guard")
+	_check(
+		layer.actors.size() == _expected_count(definition, stream),
+		"Main connection activates all NPCs on loaded chunks"
+	)
 	if layer.actors.is_empty():
 		_finish(main)
 		return
 	# Keep the real stream but stop background neighbor loading during this bounded fixture.
 	stream.set_process(false)
-	var spawn: Dictionary = definition.placements[0]
+	var guards: Array = definition.placements.filter(
+		func(row: Dictionary) -> bool: return row.id == "spawn.yongan.city-guard-20354"
+	)
+	_check(guards.size() == 1, "fixture resolves the exact original guard")
+	if guards.size() != 1:
+		_finish(main)
+		return
+	var spawn: Dictionary = guards[0]
 	var actor: NpcActor = layer.actors[spawn.id]
 	_check(
 		actor.position.is_equal_approx(Vector3(605, 198.515, 663)),
@@ -97,7 +111,10 @@ func _run() -> void:
 	layer.refresh()
 	layer.refresh()
 	_check(
-		layer.actors.size() == 1 and layer.actors[spawn.id] == actor,
+		(
+			layer.actors.size() == _expected_count(definition, stream)
+			and layer.actors[spawn.id] == actor
+		),
 		"refresh preserves stable instance"
 	)
 	var chunk: Node = stream.loaded["002002"]
@@ -111,7 +128,10 @@ func _run() -> void:
 	)
 	_check(await stream.call("_load_chunk", "002002"), "real map chunk reloads")
 	layer.refresh()
-	_check(layer.actors.size() == 1, "chunk reload recreates one NPC")
+	_check(
+		layer.actors.size() == _expected_count(definition, stream),
+		"chunk reload recreates the loaded population"
+	)
 	for state: String in ["leaving", "lobby", "disconnected", "error", "connecting"]:
 		connection.state = state
 		main.call("_on_connection_state", state, "Offline lifecycle QA")
@@ -120,7 +140,10 @@ func _run() -> void:
 		)
 		connection.state = "loading"
 		await main.call("_prepare_world", info)
-		_check(layer.actors.size() == 1, state + " reentry restores one NPC")
+		_check(
+			layer.actors.size() == _expected_count(definition, stream),
+			state + " reentry restores the loaded population"
+		)
 	var wrong := info.duplicate(true)
 	wrong.content_hash = "0".repeat(64)
 	_check(not layer.prepare(wrong, stream.ready_at), "wrong terrain version rejects NPC layout")
@@ -161,9 +184,21 @@ func _run() -> void:
 	if DisplayServer.get_name() != "headless":
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("user://world-npc.png")
-	_check(layer.actors.size() == 1, "final Main scene holds one NPC after repeated transitions")
+	_check(
+		layer.actors.size() == _expected_count(definition, stream),
+		"final Main scene holds the loaded population after transitions"
+	)
 	_check_catalog_failures()
 	_finish(main)
+
+
+func _expected_count(definition: Dictionary, stream: WorldStream) -> int:
+	var result := 0
+	for spawn: Dictionary in definition.placements:
+		var chunk := "%03d%03d" % [int(spawn.position[0] / 256), int(spawn.position[2] / 256)]
+		if stream.loaded.has(chunk):
+			result += 1
+	return result
 
 
 func _check_catalog_failures() -> void:

@@ -10,6 +10,13 @@ no SDK implementation was copied. Runtime execution has not been approved or
 performed. The DLL is not a game dependency and must not enter exports. See
 [foliage conversion](foliage.md) for the bounded probe and current limitations.
 
+The selected Yongan town-NPC profile expands original NPC models, textures and
+reachable motions only for its 23 declared definitions and 32 pinned point spawns.
+Its source material/opacity interpretation follows `GameLib/ActorInstanceRender.cpp`
+and its idle selection follows `GameLib/ActorInstanceMotion.cpp` / `RaceManager.cpp`.
+Original sources and converted assets remain ignored; no source implementation
+is copied. NPC shops, combat and quests are not established by model conversion.
+
 | Source | Pinned revision/version | Use and license |
 | --- | --- | --- |
 | [Metin2 client archive](https://git.old-metin2.com/metin2/client) | `bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7` | Selected original bodies/default hair and general/intro/one-hand-or-fan motions for eight classic appearances, Yongan dependencies, UI/portraits/minimap tiles and two target-selection effects; originals and derivatives are ignored |

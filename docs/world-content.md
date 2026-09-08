@@ -47,6 +47,54 @@ use application protocol 13.
 
 ## Convert original stationary NPCs
 
+`content/profiles/yongan-town-npcs.json` selects 23 additional original definitions
+at 32 source point placements: merchants, teachers, blacksmith, fishermen and
+other stationary townspeople. It is a candidate batch, not an installed population
+or working shop system. Use it with the same importer and batch gallery commands
+below. The gallery checks every actor and saves `npc-preview-<vnum>.png` for each.
+The corrected batch `.local/npcs/yongan-town-r7` contains 190 reachable clips.
+Native gallery `.local/npcs/yongan-town-qa-r3/report.json` passes 936 checks,
+including all 23 screenshots. The combined candidate catalog at
+`.local/npcs/yongan-town-catalog-r2/runtime` adds the existing guard for 24
+definitions / 33 placements; it has not replaced the live catalog.
+The candidate's `yongan-town-world-r4/report.json` passes 39 real Main/map checks
+for activation, chunk reload, guard picking and lifecycle cleanup. Its connection
+is simulated; actual exported multiplayer verification is still required.
+
+To exercise a candidate in an isolated copy of the real map scene:
+
+```sh
+python3 tools/test_world_npcs.py --npc-package /path/to/candidate/runtime \
+  --native --godot /path/to/godot --output .local/npcs/candidate-map-check
+```
+
+NPC positions require finite, in-map coordinates and a terrain height, but are
+allowed on blocked terrain, matching original `CHARACTER_MANAGER::SpawnMob` for
+stationary NPCs. Mob homes and player movement still require walkable positions.
+The offline inspector exposes this distinction as `point_policy: "static_npc"`;
+its default remains `walkable`. The source fisherman at `(251, 874)` exercises
+the distinction. This is an offline authoring policy, not a player permission.
+
+Visual animation duration comes from the original GR2, matching
+`CActorInstance::GetMotionDuration`. If an event-free MSA disagrees, the importer
+retains `source_msa_duration_us` and uses GR2 timing; Soon's idle is 1.5 seconds
+despite its two-second MSA declaration. Event-bearing mismatches still fail.
+
+The shared converter preserves GR2 triangle-group material bindings when replacing
+Blender material slots. It supports an optional opacity map when it references
+the same texture as the diffuse map; separate opacity images remain unsupported.
+Original actor opacity rendering accepts alpha byte values above zero, represented
+as a glTF MASK cutoff of half an alpha byte. Materials with and without opacity
+remain separate even when sharing an image.
+
+NPC motion registration follows the source's ordered random selection over 0–99:
+trailing registrations after the first 100 weight points are unreachable. This
+matters for Octavio's duplicate WAIT1 and the guardians' reaction variants. The
+source files remain hash-bound; reachable clips keep their original probabilities.
+The town profile explicitly records the Battle Bailiff's deferred attack projectile
+event. It does not grant combat behavior to the static NPC layer. Unlisted events
+still reject compilation; shop transactions and NPC combat remain upcoming work.
+
 ```sh
 python3 tools/import_npc_content.py \
   --profile content/profiles/yongan-city-guard.json \

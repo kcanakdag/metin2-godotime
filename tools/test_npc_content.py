@@ -36,8 +36,8 @@ def main() -> None:
         str(ROOT / "tools" / name): sha256(ROOT / "tools" / name)
         for name in ("test_npc_content.py", "npc_content_probe.gd")
     }
-    if conversion["status"] != "converted" or len(manifest["actors"]) != 1:
-        raise ValueError("This NPC gallery requires one successfully converted actor")
+    if conversion["status"] != "converted" or not 1 <= len(manifest["actors"]) <= 128:
+        raise ValueError("NPC gallery requires successfully converted actors")
     for artifact in conversion["artifacts"]:
         if sha256(content / "generated" / artifact["relative_path"]) != artifact["sha256"]:
             raise ValueError("Converted NPC artifact hash differs from its report")
@@ -85,14 +85,23 @@ def main() -> None:
         try:
             run(command, env, output / "probe.log")
         finally:
-            for filename in ("npc-probe.json", "npc-preview.png"):
+            for filename in (
+                "npc-probe.json",
+                *(f"npc-preview-{actor['vnum']}.png" for actor in manifest["actors"]),
+            ):
                 found = list((stage / ".data").rglob(filename))
                 if found:
                     shutil.copy2(found[0], output / filename)
         report = json.loads((output / "npc-probe.json").read_text())
+        if args.native and any(
+            not (output / f"npc-preview-{actor['vnum']}.png").is_file()
+            for actor in manifest["actors"]
+        ):
+            raise ValueError("NPC gallery did not capture every selected actor")
         if any(sha256(Path(path)) != digest for path, digest in frozen_probe.items()):
             raise ValueError("NPC probe source changed during QA")
         report.update(
+            actors=len(manifest["actors"]),
             content_hash=manifest["content_hash"],
             native=args.native,
             sources={

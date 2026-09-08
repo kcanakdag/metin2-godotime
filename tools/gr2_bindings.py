@@ -3,6 +3,23 @@
 from __future__ import annotations
 
 import math
+from collections import Counter
+
+
+def material_slots(raw_mesh: dict, imported_groups: list[int]) -> list[int]:
+    """Resolve Carbon's per-face group indices before Blender clears its slots."""
+    groups = raw_mesh["PrimaryTopology"]["Groups"]
+    count = len(raw_mesh["MaterialBindings"])
+    actual = Counter(imported_groups)
+    if any(type(index) is not int or not 0 <= index < len(groups) for index in actual):
+        raise ValueError("Imported face references an unknown GR2 material group")
+    for index, group in enumerate(groups):
+        slot = group["MaterialIndex"]
+        if type(slot) is not int or not 0 <= slot < count:
+            raise ValueError("GR2 group references an unknown material binding")
+        if actual[index] != group["TriCount"]:
+            raise ValueError("Imported face count differs from its GR2 material group")
+    return [groups[index]["MaterialIndex"] for index in imported_groups]
 
 
 def validate_shared_skin_bones(actor: dict, part: dict, weighted: set[str]) -> dict:

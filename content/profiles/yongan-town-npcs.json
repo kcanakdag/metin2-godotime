@@ -1,0 +1,456 @@
+{
+  "schema_version": 1,
+  "profile_id": "yongan-town-npcs",
+  "source": {
+    "client_revision": "bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7",
+    "server_reference": {
+      "repository": "https://git.old-metin2.com/metin2/server",
+      "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+      "files": [
+        {
+          "path": "gamefiles/conf/mob_proto.txt",
+          "git_sha": "002c00106dec10dcde3e8e292d6f1e242bf1c4d9",
+          "sha256": "9aeb98db989ed64ec51dcd1e0df844d7cbd52004779747156017b1617c6be3fa"
+        },
+        {
+          "path": "gamefiles/conf/mob_names_en.txt",
+          "git_sha": "5e832ca9ac25ce6227f140e41b55224e7a485b68",
+          "sha256": "171a1f706d6e7471138cab38f4101a059cb4d0803e62a7c4e044f154902e2ec3"
+        },
+        {
+          "path": "gamefiles/data/map/metin2_map_a1/npc.txt",
+          "git_sha": "3751576f53ac1cc01c2242ae7577204276b74039",
+          "sha256": "a8237893a4de691df66b96b63c1bc9a1742abe913f9925f3a7ddc0ca428ce936"
+        },
+        {
+          "path": "src/game/src/regen.cpp",
+          "git_sha": "8ddb138a463d673a8035e61821ddefbf912d3c2c",
+          "sha256": "d7e19fcef7d254f5a27cf45241599dd60ad94628d83a0d78c0b9d942c9b045af"
+        }
+      ]
+    }
+  },
+  "npcs": [
+    {
+      "id": "actor.npc.arms-9001",
+      "vnum": 9001,
+      "model_key": "arms",
+      "source_root": "ymir work/npc/arms",
+      "output": "actors/arms-9001.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.defence-9002",
+      "vnum": 9002,
+      "model_key": "defence",
+      "source_root": "ymir work/npc/defence",
+      "output": "actors/defence-9002.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.goods-9003",
+      "vnum": 9003,
+      "model_key": "goods",
+      "source_root": "ymir work/npc/goods",
+      "output": "actors/goods-9003.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.hotel-grandfa-9005",
+      "vnum": 9005,
+      "model_key": "hotel_grandfa",
+      "source_root": "ymir work/npc/hotel_grandfa",
+      "output": "actors/hotel-grandfa-9005.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.hotel-grandma-9006",
+      "vnum": 9006,
+      "model_key": "hotel_grandma",
+      "source_root": "ymir work/npc/hotel_grandma",
+      "output": "actors/hotel-grandma-9006.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.sailor-9009",
+      "vnum": 9009,
+      "model_key": "sailor",
+      "source_root": "ymir work/npc/sailor",
+      "output": "actors/sailor-9009.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.oldster-9012",
+      "vnum": 9012,
+      "model_key": "oldster",
+      "source_root": "ymir work/npc/oldster",
+      "output": "actors/oldster-9012.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.gangyo-patrol-spear-11000",
+      "vnum": 11000,
+      "model_key": "gangyo_patrol_spear",
+      "source_root": "ymir work/npc/gangyo_patrol_spear",
+      "output": "actors/gangyo-patrol-spear-11000.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.gangyo-patrol-bow-11001",
+      "vnum": 11001,
+      "model_key": "gangyo_patrol_bow",
+      "source_root": "ymir work/npc/gangyo_patrol_bow",
+      "output": "actors/gangyo-patrol-bow-11001.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.alchemist-20001",
+      "vnum": 20001,
+      "model_key": "alchemist",
+      "source_root": "ymir work/npc/alchemist",
+      "output": "actors/alchemist-20001.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.mr-restaurant-20008",
+      "vnum": 20008,
+      "model_key": "mr_restaurant",
+      "source_root": "ymir work/npc/mr_restaurant",
+      "output": "actors/mr-restaurant-20008.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.oldster-20009",
+      "vnum": 20009,
+      "model_key": "oldster",
+      "source_root": "ymir work/npc/oldster",
+      "output": "actors/oldster-20009.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.blacksmith-20016",
+      "vnum": 20016,
+      "model_key": "blacksmith",
+      "source_root": "ymir work/npc/blacksmith",
+      "output": "actors/blacksmith-20016.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.bookworm-20023",
+      "vnum": 20023,
+      "model_key": "bookworm",
+      "source_root": "ymir work/npc/bookworm",
+      "output": "actors/bookworm-20023.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.sinsu-patrol-spear-20300",
+      "vnum": 20300,
+      "model_key": "sinsu_patrol_spear",
+      "source_root": "ymir work/npc/sinsu_patrol_spear",
+      "output": "actors/sinsu-patrol-spear-20300.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.sinsu-patrol-spear-20301",
+      "vnum": 20301,
+      "model_key": "sinsu_patrol_spear",
+      "source_root": "ymir work/npc/sinsu_patrol_spear",
+      "output": "actors/sinsu-patrol-spear-20301.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.sinsu-patrol-spear-20302",
+      "vnum": 20302,
+      "model_key": "sinsu_patrol_spear",
+      "source_root": "ymir work/npc/sinsu_patrol_spear",
+      "output": "actors/sinsu-patrol-spear-20302.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.sinsu-patrol-spear-20303",
+      "vnum": 20303,
+      "model_key": "sinsu_patrol_spear",
+      "source_root": "ymir work/npc/sinsu_patrol_spear",
+      "output": "actors/sinsu-patrol-spear-20303.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.sinsu-patrol-spear-20304",
+      "vnum": 20304,
+      "model_key": "sinsu_patrol_spear",
+      "source_root": "ymir work/npc/sinsu_patrol_spear",
+      "output": "actors/sinsu-patrol-spear-20304.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.sinsu-patrol-spear-20305",
+      "vnum": 20305,
+      "model_key": "sinsu_patrol_spear",
+      "source_root": "ymir work/npc/sinsu_patrol_spear",
+      "output": "actors/sinsu-patrol-spear-20305.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.sinsu-patrol-spear-20306",
+      "vnum": 20306,
+      "model_key": "sinsu_patrol_spear",
+      "source_root": "ymir work/npc/sinsu_patrol_spear",
+      "output": "actors/sinsu-patrol-spear-20306.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.sinsu-patrol-spear-20307",
+      "vnum": 20307,
+      "model_key": "sinsu_patrol_spear",
+      "source_root": "ymir work/npc/sinsu_patrol_spear",
+      "output": "actors/sinsu-patrol-spear-20307.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.jinno-patrol-spear-20349",
+      "vnum": 20349,
+      "model_key": "jinno_patrol_spear",
+      "source_root": "ymir work/npc/jinno_patrol_spear",
+      "output": "actors/jinno-patrol-spear-20349.glb",
+      "yaw_correction_degrees": 180.0
+    }
+  ],
+  "spawns": [
+    {
+      "id": "spawn.yongan.arms-9001-0",
+      "actor_id": "actor.npc.arms-9001",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.defence-9002-0",
+      "actor_id": "actor.npc.defence-9002",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.goods-9003-0",
+      "actor_id": "actor.npc.goods-9003",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.hotel-grandfa-9005-0",
+      "actor_id": "actor.npc.hotel-grandfa-9005",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.hotel-grandma-9006-0",
+      "actor_id": "actor.npc.hotel-grandma-9006",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.sailor-9009-0",
+      "actor_id": "actor.npc.sailor-9009",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.sailor-9009-1",
+      "actor_id": "actor.npc.sailor-9009",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 1
+    },
+    {
+      "id": "spawn.yongan.sailor-9009-2",
+      "actor_id": "actor.npc.sailor-9009",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 2
+    },
+    {
+      "id": "spawn.yongan.sailor-9009-3",
+      "actor_id": "actor.npc.sailor-9009",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 3
+    },
+    {
+      "id": "spawn.yongan.sailor-9009-4",
+      "actor_id": "actor.npc.sailor-9009",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 4
+    },
+    {
+      "id": "spawn.yongan.sailor-9009-5",
+      "actor_id": "actor.npc.sailor-9009",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 5
+    },
+    {
+      "id": "spawn.yongan.sailor-9009-6",
+      "actor_id": "actor.npc.sailor-9009",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 6
+    },
+    {
+      "id": "spawn.yongan.sailor-9009-7",
+      "actor_id": "actor.npc.sailor-9009",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 7
+    },
+    {
+      "id": "spawn.yongan.sailor-9009-8",
+      "actor_id": "actor.npc.sailor-9009",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 8
+    },
+    {
+      "id": "spawn.yongan.sailor-9009-9",
+      "actor_id": "actor.npc.sailor-9009",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 9
+    },
+    {
+      "id": "spawn.yongan.oldster-9012-0",
+      "actor_id": "actor.npc.oldster-9012",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.gangyo-patrol-spear-11000-0",
+      "actor_id": "actor.npc.gangyo-patrol-spear-11000",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.gangyo-patrol-bow-11001-0",
+      "actor_id": "actor.npc.gangyo-patrol-bow-11001",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.alchemist-20001-0",
+      "actor_id": "actor.npc.alchemist-20001",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.mr-restaurant-20008-0",
+      "actor_id": "actor.npc.mr-restaurant-20008",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.oldster-20009-0",
+      "actor_id": "actor.npc.oldster-20009",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.blacksmith-20016-0",
+      "actor_id": "actor.npc.blacksmith-20016",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.bookworm-20023-0",
+      "actor_id": "actor.npc.bookworm-20023",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.sinsu-patrol-spear-20300-0",
+      "actor_id": "actor.npc.sinsu-patrol-spear-20300",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.sinsu-patrol-spear-20301-0",
+      "actor_id": "actor.npc.sinsu-patrol-spear-20301",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.sinsu-patrol-spear-20302-0",
+      "actor_id": "actor.npc.sinsu-patrol-spear-20302",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.sinsu-patrol-spear-20303-0",
+      "actor_id": "actor.npc.sinsu-patrol-spear-20303",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.sinsu-patrol-spear-20304-0",
+      "actor_id": "actor.npc.sinsu-patrol-spear-20304",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.sinsu-patrol-spear-20305-0",
+      "actor_id": "actor.npc.sinsu-patrol-spear-20305",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.sinsu-patrol-spear-20306-0",
+      "actor_id": "actor.npc.sinsu-patrol-spear-20306",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.sinsu-patrol-spear-20307-0",
+      "actor_id": "actor.npc.sinsu-patrol-spear-20307",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    },
+    {
+      "id": "spawn.yongan.jinno-patrol-spear-20349-0",
+      "actor_id": "actor.npc.jinno-patrol-spear-20349",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0
+    }
+  ],
+  "distribution": {
+    "basis": "development-only-original-fixture",
+    "evidence": "docs/third-party.md",
+    "release_status": "excluded-unless-rights-are-established"
+  },
+  "deferred_motion_events": [
+    {
+      "action_id": "actor.npc.gangyo-patrol-bow-11001.general.normal_attack",
+      "event_type": 6
+    }
+  ]
+}

@@ -37,6 +37,15 @@ class NpcDefinitionsTests(unittest.TestCase):
             ]
         }
         self.assertEqual(self.npc.material_paths(raw), ["ymir work/npc/shared/weapon.dds"])
+        masked = copy.deepcopy(raw)
+        maps = masked["Meshes"][0]["MaterialBindings"][0]["Material"]["Maps"]
+        opacity = copy.deepcopy(maps[0])
+        opacity["Usage"] = "Opacity"
+        maps.append(opacity)
+        self.assertEqual(self.npc.material_paths(masked), self.npc.material_paths(raw))
+        opacity["Map"]["Texture"]["FromFileName"] = "different.dds"
+        with self.assertRaises(ValueError):
+            self.npc.material_paths(masked)
         for usage in ["Normal Map", ""]:
             changed = copy.deepcopy(raw)
             changed["Meshes"][0]["MaterialBindings"][0]["Material"]["Maps"][0]["Usage"] = usage
@@ -103,8 +112,8 @@ class NpcDefinitionsTests(unittest.TestCase):
         self.assertEqual(idle["weights"], [65, 35])
         self.assertEqual(sum(len(group["files"]) for group in groups), 5)
         self.assertFalse(next(group for group in groups if group["action"] == "dead")["loop"])
+        self.assertEqual(self.npc.motion_groups(rows + [rows[0]]), groups)
         for invalid in [
-            rows + [rows[0]],
             rows[:1],
             [{**rows[0], "action": "attack"}],
             [{**rows[0], "mode": "onehand"}],

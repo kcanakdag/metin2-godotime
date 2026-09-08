@@ -175,6 +175,14 @@ pub fn valid_spawn(x: f32, z: f32) -> Result<(), String> {
     Ok(())
 }
 
+/// Original stationary NPCs may stand on blocked terrain; players and mobs may not.
+pub fn valid_npc_position(x: f32, z: f32) -> Result<(), String> {
+    if !in_bounds(x, z) || !height(x, z).is_finite() {
+        return Err("NPC position is outside the finite map bounds.".into());
+    }
+    Ok(())
+}
+
 pub fn slide(x: f32, z: f32, dx: f32, dz: f32, bounds: &[Bounds]) -> (f32, f32) {
     if !YONGAN {
         return crate::movement::slide(x, z, dx, dz, bounds);
@@ -317,5 +325,19 @@ mod training_tests {
         assert!(!clear_path(2.5, 0.0, 0.5, 0.0, &wall));
         assert!(clear_path(0.5, 4.0, 2.5, 4.0, &wall));
         assert_eq!(slide(0.5, 0.0, 2.0, 0.0, &wall), (1.0, 0.0));
+    }
+}
+
+#[cfg(test)]
+mod npc_position_tests {
+    #[test]
+    fn stationary_policy_preserves_numeric_bounds() {
+        for (x, z) in [(f32::NAN, 1.0), (1.0, f32::INFINITY), (1.0e9, 1.0)] {
+            assert!(super::valid_npc_position(x, z).is_err());
+        }
+        if super::YONGAN {
+            assert!(super::valid_spawn(251.0, 874.0).is_err());
+            assert!(super::valid_npc_position(251.0, 874.0).is_ok());
+        }
     }
 }

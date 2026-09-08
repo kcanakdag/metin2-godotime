@@ -7,6 +7,47 @@ or reclassify that scope.
 
 ## P6: all-class abilities requested; training target delivered locally
 
+### Original town NPC population prepared and qualified in isolation
+
+`content/profiles/yongan-town-npcs.json` now selects 23 original stationary NPC
+definitions at 32 point placements, including merchants, eight teachers,
+blacksmith, fishermen and townspeople. `.local/npcs/yongan-town-r7` converts 190
+reachable original motions. Combined with the existing guard,
+`yongan-town-catalog-r2/runtime` builds a 24-definition / 33-placement candidate.
+It has not replaced the installed catalog, live database or exported clients.
+Shops, training interactions, NPC combat and quests remain unimplemented.
+
+The work fixes source-driven importer issues: GR2 face material assignments now
+survive replacement of Blender slots; same-image opacity maps export as alpha
+masks; ordered 0–99 motion weights discard unreachable trailing registrations;
+event-free animation duration follows the GR2 as the original client does.
+Soon's 2-second MSA / 1.5-second GR2 mismatch remains recorded in metadata.
+The bailiff's attack projectile event is explicitly deferred in the profile and
+receipt, not silently treated as a working effect.
+
+Static NPC positions now use the source's finite/in-map policy, allowing the
+original fisherman on blocked terrain. Player movement and mob-home validation
+retain collision checks. The same function is used by server initialization and
+the offline inspector. Candidate package input and population-aware assertions
+make the real map-scene runner reusable without modifying installed assets.
+
+Evidence in `.local/npcs/`: `yongan-town-qa-r3/report.json` passes 936 native
+checks and captures all 23 actors; armour merchant, blacksmith, fisherman,
+teacher and alchemist screenshots were inspected. `yongan-town-world-r4/report.json`
+passes 39 real Main/map lifecycle and picking checks with a simulated connection.
+`town-server-r1.log` passes 146 Rust tests; `town-lint-r3.log` passes all groups.
+Focused Python suites pass 9 NPC, 4 GR2 and 2 world-authoring tests.
+No connected-editor, actual multiplayer, browser export or public-deployment
+qualification is claimed for this candidate. The next action is matched live
+server/client integration and exported-client verification.
+
+Failed attempts are retained: source material/motion restrictions, lost secondary
+material faces, incorrect idle duration expectation, blocked fisherman placement,
+screenshot numeric filenames, outdated fixture content hashes, first-row-as-guard
+assumption and a Godot-only void-return parser error. The final runs above pass.
+
+### Foliage and abilities remain in progress
+
 The continuing full-project goal includes quests, with filling the world first.
 The next foliage checkpoint prepares all 14 original tree definitions and 368
 Yongan placements through `tools/prepare_foliage.py`; the hash-verified receipt

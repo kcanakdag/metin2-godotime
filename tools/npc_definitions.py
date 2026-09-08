@@ -15,9 +15,14 @@ def material_paths(raw: dict) -> list[str]:
             raise ValueError("NPC mesh has no material bindings")
         for binding in bindings:
             maps = binding["Material"].get("Maps", [])
-            if len(maps) != 1 or maps[0]["Usage"] != "Diffuse Color":
-                raise ValueError("NPC converter currently requires one diffuse map per material")
-            paths.add(virtual_path(maps[0]["Map"]["Texture"]["FromFileName"]))
+            diffuse = [m for m in maps if m["Usage"] == "Diffuse Color"]
+            opacity = [m for m in maps if m["Usage"] == "Opacity"]
+            if len(diffuse) != 1 or len(opacity) > 1 or len(maps) != 1 + len(opacity):
+                raise ValueError("NPC material requires diffuse and optional shared opacity")
+            path = virtual_path(diffuse[0]["Map"]["Texture"]["FromFileName"])
+            if opacity and virtual_path(opacity[0]["Map"]["Texture"]["FromFileName"]) != path:
+                raise ValueError("Separate NPC opacity textures require another material handler")
+            paths.add(path)
     if not 1 <= len(paths) <= 32:
         raise ValueError("NPC texture dependency count is outside the supported bound")
     return sorted(paths)
@@ -74,18 +79,51 @@ def point_spawns(text: str, vnum: int) -> list[dict]:
 def motion_groups(rows: list[dict]) -> list[dict]:
     """Normalize idle variants while retaining every declared NPC motion/weight."""
     supported = {"wait": "wait", "wait1": "wait", "walk": "walk", "run": "run", "dead": "dead"}
+    supported.update(
+        {
+            action: action
+            for action in (
+                "normal_attack",
+                "front_damage",
+                "front_damage1",
+                "front_dead",
+                "front_knockdown",
+                "front_standup",
+                "back_damage",
+                "back_damage1",
+                "back_knockdown",
+                "back_standup",
+                "back_dead",
+            )
+        }
+    )
+    supported["normal_attack1"] = "normal_attack"
     groups: dict[str, dict] = {}
     paths = set()
     for row in rows:
-        action = supported.get(row["action"])
-        if row["mode"] != "general" or action is None or row["path"] in paths:
+        action = supported.get(re.sub(r"[0-9]{1,2}$", "", row["action"]))
+        if row["mode"] != "general" or action is None:
             raise ValueError("Unsupported or duplicate static NPC motion")
-        paths.add(row["path"])
         group = groups.setdefault(
-            action, {"action": action, "files": [], "weights": [], "loop": action != "dead"}
+            action,
+            {
+                "action": action,
+                "files": [],
+                "weights": [],
+                "loop": action in ("wait", "walk", "run"),
+            },
         )
+        # GetRandomMotionKey draws 0..99 and subtracts registration weights.
+        # Registrations beyond the first 100 points are unreachable (Octavio
+        # includes a repeated WAIT1; guardian damage variants also exceed 100).
+        remaining = 100 - sum(group["weights"])
+        if remaining == 0:
+            continue
+        if row["path"] in paths:
+            raise ValueError("Duplicate reachable static NPC motion")
+        paths.add(row["path"])
         group["files"].append(row["path"])
-        group["weights"].append(row["weight"])
+        group["weights"].append(min(row["weight"], remaining))
     if "wait" not in groups or any(sum(row["weights"]) != 100 for row in groups.values()):
         raise ValueError("NPC requires idle motion and normalized variant weights")
     return [groups[key] for key in sorted(groups)]

@@ -59,10 +59,18 @@ fn inspect() -> Result<Value, String> {
         return Err("Too many inspection points".into());
     }
     let mut samples = Vec::new();
+    let point_policy = request["point_policy"].as_str().unwrap_or("walkable");
+    if !matches!(point_policy, "walkable" | "static_npc") {
+        return Err("Unsupported point inspection policy".into());
+    }
     for point in points {
         let x = point["x"].as_f64().ok_or("Invalid inspection X")? as f32;
         let z = point["z"].as_f64().ok_or("Invalid inspection Z")? as f32;
-        let validation = content::valid_spawn(x, z);
+        let validation = if point_policy == "static_npc" {
+            content::valid_npc_position(x, z)
+        } else {
+            content::valid_spawn(x, z)
+        };
         samples.push(
             json!({"id":point["id"], "x":x,"y":content::height(x,z),"z":z,
             "valid":validation.is_ok(),"error":validation.err()}),

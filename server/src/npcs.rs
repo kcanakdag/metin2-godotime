@@ -35,7 +35,7 @@ fn in_range(x: f32, y: f32, z: f32, npc: &Definition) -> bool {
 
 pub fn validate_content() {
     for npc in definitions::NPCS {
-        content::valid_spawn(npc.x, npc.z).expect("NPC placement must be traversable");
+        content::valid_npc_position(npc.x, npc.z).expect("NPC placement must be inside the map");
         assert!(
             (content::height(npc.x, npc.z) - npc.y).abs() < 0.02,
             "NPC height differs from terrain"

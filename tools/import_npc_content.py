@@ -152,7 +152,33 @@ def compile_profile(path: Path, *, offline: bool) -> dict:
             }
         )
     actors, unsupported = _normalise_motions({"actors": declarations}, archive)
-    if unsupported:
+    for actor in actors:
+        for mode in actor["modes"]:
+            for motion in mode["motions"]:
+                animation = (
+                    _carbon_reader()
+                    .read_raw(archive.get(motion["source_gr2"]).read_bytes())
+                    .file_info["Animations"]
+                )
+                if len(animation) != 1:
+                    raise ValueError("NPC motion must contain one original animation")
+                duration = float(animation[0]["Duration"])
+                if not math.isfinite(duration) or not 0 < duration <= 60:
+                    raise ValueError("NPC animation duration is outside supported bounds")
+                clip_us = round(duration * 1_000_000)
+                if abs(clip_us - motion["duration_us"]) > 1:
+                    if motion["events"]:
+                        raise ValueError("NPC event timing differs from its original GR2 clip")
+                    # ActorInstance::GetMotionDuration uses the Granny animation,
+                    # not the MSA Duration field. Soon's idle differs by 0.5 s.
+                    motion["source_msa_duration_us"] = motion["duration_us"]
+                    motion["duration_us"] = clip_us
+    deferred = profile.get("deferred_motion_events", [])
+    actual = [
+        {"action_id": entry["action_id"], "event_type": entry.get("event_type")}
+        for entry in unsupported
+    ]
+    if actual != deferred or any(".normal_attack" not in e["action_id"] for e in actual):
         raise ValueError(f"NPC motion metadata has unsupported records: {unsupported}")
     spawns = []
     spawn_ids = set()
@@ -193,6 +219,7 @@ def compile_profile(path: Path, *, offline: bool) -> dict:
         "actors": actors,
         "items": [],
         "npc_catalog": catalog,
+        "deferred_motion_events": unsupported,
         "spawns": spawns,
         "sources": sources,
         "distribution": profile["distribution"],

@@ -19,8 +19,10 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument("--native", action="store_true")
+    parser.add_argument("--npc-package", type=Path, default=INSTALL_ROOT)
     args = parser.parse_args()
-    validate_package(INSTALL_ROOT)
+    package = args.npc_package.resolve()
+    validate_package(package)
     output = args.output.resolve()
     stage = output / "project"
     stage.mkdir(parents=True, exist_ok=False)
@@ -39,11 +41,14 @@ def main() -> None:
             for path in source.rglob("*"):
                 if path.is_file():
                     sources[str(path)] = sha256(path)
+    staged_npcs = stage / "assets/imported/npcs"
+    shutil.rmtree(staged_npcs)
+    shutil.copytree(package, staged_npcs)
     (stage / "tests").mkdir()
     test = ROOT / "client/tests/world_npc_smoke.gd"
     shutil.copy2(test, stage / "tests" / test.name)
     sources[str(test)] = sha256(test)
-    for path in INSTALL_ROOT.rglob("*"):
+    for path in package.rglob("*"):
         if path.is_file() and path.suffix != ".import":
             sources[str(path)] = sha256(path)
     sources[str(Path(__file__).resolve())] = sha256(Path(__file__))

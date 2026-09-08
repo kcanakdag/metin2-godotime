@@ -63,6 +63,11 @@ reward-free behavior are profile driven. It passes 16 native presentation checks
 45 live two-client checks and 82 actual Chrome/Linux checks, with matching exports. All 44 classic abilities have been discovered and
 converted for both appearances, but their full server mechanics are not yet live.
 
+The next [town-NPC package](docs/world-content.md) is prepared: 23 additional
+original definitions, 32 placements and 190 converted motions. Its isolated
+Godot gallery passes 936 checks and the real map-scene fixture passes 39. Live
+integration is pending; these models do not yet provide shops or quests.
+
 The current worktree is protocol 17 / trusted content schema 8 (item registry schema 2). Item actions
 carry the server item's revision, rejecting stale/replayed mutations. Quantity
 changes have a private transactional audit history and an offline reconciliation

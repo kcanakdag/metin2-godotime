@@ -67,10 +67,18 @@ def inspector(map_id: str) -> Path:
     return target / "debug/examples/world_content"
 
 
-def validate(profile: dict, binary: Path, points: list[dict] | None = None) -> dict:
+def validate(
+    profile: dict,
+    binary: Path,
+    points: list[dict] | None = None,
+    *,
+    point_policy: str = "walkable",
+) -> dict:
     result = subprocess.run(
         [str(binary)],
-        input=json.dumps({"profile": profile, "points": points or []}),
+        input=json.dumps(
+            {"profile": profile, "points": points or [], "point_policy": point_policy}
+        ),
         text=True,
         capture_output=True,
         check=False,

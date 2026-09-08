@@ -59,6 +59,12 @@ flowchart LR
 SpacetimeDB provides transactions, persistence, identity and subscriptions.
 Movement, content validation, combat rules and reward ownership are project code.
 
+Stationary NPC placement follows the original NPC exception: coordinates and
+terrain height must be finite and within the map, but the point need not be
+walkable. The shared `valid_npc_position` function is used at server initialization
+and by the offline catalog inspector. Mob spawning and player movement retain
+their collision checks. This does not add a client placement reducer.
+
 This page describes the implemented prototype. The
 [full-game design](rebuild/architecture-and-delivery.md) separately proposes
 module boundaries, state machines, modern replication/privacy contracts and

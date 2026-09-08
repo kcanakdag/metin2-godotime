@@ -256,6 +256,7 @@ def build(contents: list[Path], profiles: list[Path], output: Path) -> dict:
             profile,
             inspector(profile["map_id"]),
             [{"id": s["id"], "x": s["x_m"], "z": s["z_m"]} for s in selected],
+            point_policy="static_npc",
         )
         placements = []
         for spawn, point in zip(selected, report["points"], strict=True):

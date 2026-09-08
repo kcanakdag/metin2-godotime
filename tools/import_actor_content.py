@@ -188,17 +188,23 @@ def merge_default_hair(
 def assign_materials(meshes: list, raw_meshes: list[dict], textures: dict[str, Path]) -> int:
     from pathlib import PurePosixPath
 
+    from gr2_bindings import material_slots
+
     materials = {}
     textured_meshes = 0
     for mesh, original in zip(meshes, raw_meshes, strict=True):
         refs = material_references(original)
         if not refs:
             continue
+        slots = material_slots(original, [face.material_index for face in mesh.data.polygons])
         mesh.data.materials.clear()
-        for reference in refs:
+        for index, reference in enumerate(refs):
+            maps = original["MaterialBindings"][index]["Material"].get("Maps", [])
+            opacity = any(entry["Usage"] == "Opacity" for entry in maps)
+            key = (reference, opacity)
             if reference not in textures:
                 raise ValueError(f"Undeclared material dependency: {reference}")
-            if reference not in materials:
+            if key not in materials:
                 material = bpy.data.materials.new("MT2." + PurePosixPath(reference).stem)
                 material.use_nodes = True
                 bsdf = material.node_tree.nodes.get("Principled BSDF")
@@ -210,10 +216,20 @@ def assign_materials(meshes: list, raw_meshes: list[dict], textures: dict[str, P
                 node = material.node_tree.nodes.new("ShaderNodeTexImage")
                 node.image = image
                 material.node_tree.links.new(node.outputs["Color"], bsdf.inputs["Base Color"])
-                materials[reference] = material
-            mesh.data.materials.append(materials[reference])
+                if opacity:
+                    # Original BeginOpacityRender accepts byte alpha > 0. A half
+                    # byte cutoff preserves that boundary in glTF's >= MASK test.
+                    cutoff = material.node_tree.nodes.new("ShaderNodeMath")
+                    cutoff.operation = "GREATER_THAN"
+                    cutoff.inputs[1].default_value = 0.5 / 255.0
+                    material.node_tree.links.new(node.outputs["Alpha"], cutoff.inputs[0])
+                    material.node_tree.links.new(cutoff.outputs[0], bsdf.inputs["Alpha"])
+                materials[key] = material
+            mesh.data.materials.append(materials[key])
+        for face, slot in zip(mesh.data.polygons, slots, strict=True):
+            face.material_index = slot
         textured_meshes += 1
-    if set(materials) != set(textures):
+    if {key[0] for key in materials} != set(textures):
         raise ValueError(
             f"Declared texture set differs from GR2 bindings: declared={sorted(textures)}, "
             f"used={sorted(materials)}"

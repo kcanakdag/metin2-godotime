@@ -50,6 +50,10 @@ func _verify_actor(instance: Node3D, actor: Dictionary) -> void:
 			var before := _pose(skeleton)
 			player.seek(animation.length * 0.5, true)
 			var after := _pose(skeleton)
+			var finite := true
+			for pose in before + after:
+				finite = finite and pose.is_finite()
+			_check(finite, "finite evaluated bone transforms")
 			var delta := 0.0
 			for index in before.size():
 				delta = maxf(delta, before[index].origin.distance_to(after[index].origin))
@@ -131,30 +135,40 @@ func _run() -> void:
 	var manifest: Dictionary = JSON.parse_string(
 		FileAccess.get_file_as_string("res://normalized.v1.json")
 	)
-	var actor: Dictionary = manifest.actors[0]
-	var packed := load("res://generated/" + str(actor.output)) as PackedScene
-	if not _check(packed != null, "NPC GLB imports"):
-		quit(1)
-		return
-	var grid := GridContainer.new()
-	grid.name = "Grid"
-	grid.columns = 2
-	root.add_child(grid)
-	var views := [
-		["View from -Z", 0.0], ["View from +Z", PI], ["Side A", PI / 2], ["Side B", -PI / 2]
-	]
-	for index in views.size():
-		var view: Array = views[index]
-		var instance := _view(packed, str(view[0]), float(view[1]))
-		if index == 0:
-			_verify_actor(instance, actor)
-		else:
-			_show_idle(instance, actor)
-	await process_frame
-	await process_frame
-	if DisplayServer.get_name() != "headless":
-		await RenderingServer.frame_post_draw
-		root.get_texture().get_image().save_png("user://npc-preview.png")
+	for actor: Dictionary in manifest.actors:
+		var packed := load("res://generated/" + str(actor.output)) as PackedScene
+		if not _check(packed != null, "NPC GLB imports"):
+			quit(1)
+			return
+		var grid := GridContainer.new()
+		grid.name = "Grid"
+		grid.columns = 2
+		root.add_child(grid)
+		var views := [
+			["View from -Z", 0.0], ["View from +Z", PI], ["Side A", PI / 2], ["Side B", -PI / 2]
+		]
+		for index in views.size():
+			var view: Array = views[index]
+			var instance := _view(packed, str(actor.name) + " — " + str(view[0]), float(view[1]))
+			if index == 0:
+				_verify_actor(instance, actor)
+			else:
+				_show_idle(instance, actor)
+		await process_frame
+		await process_frame
+		if DisplayServer.get_name() != "headless":
+			await RenderingServer.frame_post_draw
+			_check(
+				(
+					root.get_texture().get_image().save_png(
+						"user://npc-preview-%s.png" % str(int(actor.vnum))
+					)
+					== OK
+				),
+				"actor screenshot saved"
+			)
+		grid.queue_free()
+		await process_frame
 	var file := FileAccess.open("user://npc-probe.json", FileAccess.WRITE)
 	file.store_string(
 		JSON.stringify({"passed": not _failed, "checks": _checks, "motions": _motions}, "\t")
