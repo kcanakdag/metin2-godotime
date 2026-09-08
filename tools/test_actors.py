@@ -98,6 +98,7 @@ def main() -> None:
     )
     parser.add_argument("--effect-catalog", type=Path)
     parser.add_argument("--effect-links", type=Path)
+    parser.add_argument("--mixed-effect-catalog", type=Path)
     parser.add_argument("--output", type=Path, default=ROOT / ".local/actors")
     options = parser.parse_args()
     if (options.scenario == "mobs") != (options.mob_content is not None):
@@ -152,6 +153,25 @@ def main() -> None:
                 destination = effects / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source, destination)
+        if options.mixed_effect_catalog:
+            mixed_dir = stage / "mixed-candidate"
+            mixed_dir.mkdir()
+            mixed = json.loads(options.mixed_effect_catalog.read_text())
+            shutil.copy2(options.mixed_effect_catalog, mixed_dir / "catalog.json")
+            assets = [(t["path"], t["sha256"]) for t in mixed["textures"].values()]
+            for mesh in mixed["meshes"]:
+                assets.append((mesh["model"], mesh["model_sha256"]))
+                assets.extend((g["texture"], g["texture_sha256"]) for g in mesh["geometries"])
+            for name, expected in assets:
+                relative = Path(name)
+                if relative.is_absolute() or ".." in relative.parts:
+                    raise ValueError("Unsafe mixed effect asset path")
+                source = options.mixed_effect_catalog.resolve().parent / relative
+                if sha256(source) != expected:
+                    raise ValueError("Mixed effect asset hash mismatch")
+                target = mixed_dir / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, target)
         shutil.copytree(ACTOR_PROFILE, stage / "assets/imported/content/p0-warrior-dog")
         shutil.copytree(options.character_package, stage / "assets/imported/characters")
         shutil.copytree(TARGET_EFFECT_PROFILE, stage / "assets/imported/content/p2-target-effects")
@@ -290,6 +310,8 @@ def main() -> None:
             tested_files["world_motion_effects"] = sha256(
                 stage / "scripts/world/world_motion_effects.gd"
             )
+        if options.mixed_effect_catalog:
+            tested_files["mixed_effect_catalog"] = sha256(options.mixed_effect_catalog)
         environment = {
             **os.environ,
             "XDG_DATA_HOME": str(stage / ".data"),

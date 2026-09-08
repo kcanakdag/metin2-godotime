@@ -2158,3 +2158,9 @@ Use `test_particle_emission.py --scenario mixed --catalog MIXED_MESH_CATALOG
 --godot GODOT --output NEW_DIR` to run the complete Bash particle/mesh gallery.
 This checks the combined lifecycle and missing-resource rejection, with native
 captures. It does not install effect links or prove browser/world integration.
+
+Add `--mixed-effect-catalog MIXED_CATALOG` to the equipped `skill_effects` actor
+scenario and supply all eight Warrior skill/sex links to include complete Bash.
+The runner verifies and stages mesh/texture assets separately; the fixture uses
+normal resource loading for mixed assets and captures the short Bash burst at
+frame 65. This is still an isolated candidate test, not a live package install.

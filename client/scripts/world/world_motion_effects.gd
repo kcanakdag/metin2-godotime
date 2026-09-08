@@ -1,16 +1,21 @@
 extends Node3D
 ## Shared presentation-only effect instances. The world supplies the render clock.
 
+const Mixed = preload("res://scripts/actors/mixed_effect.gd")
 const Effect = preload("res://scripts/actors/particle_effect.gd")
 var error_message := ""
 var _recipes: Dictionary = {}
 var _textures: Dictionary = {}
+var _mixed: Dictionary = {}
+var _scenes: Dictionary = {}
 var _bindings: Dictionary = {}
 var _instances: Array[Dictionary] = []
 var _next_seed := 0
 
 
-func configure(recipes: Array, textures: Dictionary) -> bool:
+func configure(
+	recipes: Array, textures: Dictionary, mixed: Array = [], scenes: Dictionary = {}
+) -> bool:
 	if not _instances.is_empty() or not _bindings.is_empty():
 		return false
 	var indexed: Dictionary = {}
@@ -19,6 +24,14 @@ func configure(recipes: Array, textures: Dictionary) -> bool:
 		if path.is_empty() or indexed.has(path):
 			return false
 		indexed[path] = recipe.duplicate(true)
+	var mixed_index: Dictionary = {}
+	for recipe: Dictionary in mixed:
+		var path := str(recipe.get("source_effect", ""))
+		if path.is_empty() or indexed.has(path) or mixed_index.has(path):
+			return false
+		mixed_index[path] = recipe.duplicate(true)
+	_mixed = mixed_index
+	_scenes = scenes.duplicate()
 	_recipes = indexed
 	_textures = textures.duplicate()
 	return true
@@ -62,19 +75,24 @@ func _spawn(event: Dictionary, reference: WeakRef, yaw: float) -> void:
 	if actor == null or not bool(event.get("enabled", true)):
 		return
 	var path := str(event.get("effect_path", ""))
-	if not _recipes.has(path):
+	if not _recipes.has(path) and not _mixed.has(path):
 		error_message = "Motion effect resource is not installed: " + path
 		return
 	var placement: Dictionary = actor.motion_effect_transform(event, yaw)
 	if placement.has("error"):
 		error_message = placement.error
 		return
-	var effect := Effect.new()
+	var effect: Node3D = Mixed.new() if _mixed.has(path) else Effect.new()
 	add_child(effect)
 	effect.top_level = true
 	effect.global_transform = placement.transform
 	_next_seed += 1
-	if not effect.configure(_recipes[path], _textures, _next_seed):
+	var configured: bool = (
+		effect.configure(_mixed[path], _scenes, _textures, _next_seed)
+		if _mixed.has(path)
+		else effect.configure(_recipes[path], _textures, _next_seed)
+	)
+	if not configured:
 		effect.queue_free()
 		error_message = "Motion effect recipe cannot render: " + path
 		return

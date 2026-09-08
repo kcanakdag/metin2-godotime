@@ -3,6 +3,8 @@ extends "res://tests/actor_smoke.gd"
 
 const WorldEffects = preload("res://scripts/world/world_motion_effects.gd")
 var _requests := 0
+var _mixed: Array = []
+var _scenes: Dictionary = {}
 
 
 func _run() -> void:
@@ -22,8 +24,22 @@ func _run() -> void:
 		textures[path] = ImageTexture.create_from_image(
 			Image.load_from_file("res://effect-candidate/" + str(effects.textures[path].path))
 		)
+	if FileAccess.file_exists("res://mixed-candidate/catalog.json"):
+		var mixed: Dictionary = JSON.parse_string(
+			FileAccess.get_file_as_string("res://mixed-candidate/catalog.json")
+		)
+		_mixed.append(mixed)
+		for mesh: Dictionary in mixed.meshes:
+			_scenes[mesh.model] = load("res://mixed-candidate/" + str(mesh.model))
+			for geometry: Dictionary in mesh.geometries:
+				textures[geometry.texture] = load("res://mixed-candidate/" + str(geometry.texture))
+		for path: String in mixed.textures:
+			textures[path] = load("res://mixed-candidate/" + str(mixed.textures[path].path))
 	_build_stage()
-	_check(links.size() == 6, "three complete particle skills across both Warrior sexes")
+	_check(
+		links.size() == (6 if _mixed.is_empty() else 8),
+		"complete selected skills across both Warrior sexes"
+	)
 	for link: Dictionary in links:
 		await _exercise(link, effects.effects, textures)
 	_finish()
@@ -40,7 +56,7 @@ func _exercise(link: Dictionary, recipes: Array, textures: Dictionary) -> void:
 	)
 	var manager := WorldEffects.new()
 	_stage.add_child(manager)
-	_check(manager.configure(recipes, textures), "effect resources configure")
+	_check(manager.configure(recipes, textures, _mixed, _scenes), "effect resources configure")
 	_check(manager.bind_actor(actor, 180), "actor effect signal binds")
 	_requests = 0
 	actor.motion_effect_requested.connect(func(_event: Dictionary) -> void: _requests += 1)
@@ -58,6 +74,12 @@ func _exercise(link: Dictionary, recipes: Array, textures: Dictionary) -> void:
 		clean = manager.advance(1.0 / 60, _camera) and clean
 		peak = maxi(peak, manager._instances.size())
 		sane = sane and _skeleton_pose_is_sane(actor) and _equipment_bounds_are_sane(actor)
+		if int(link.skill_vnum) == 17 and frame == 65:
+			await _capture_from(
+				str(link.actor_id).get_slice(".", 2) + "-bash-burst",
+				Vector3(5, 4, -8),
+				Vector3(0, 1, -2)
+			)
 		if frame in [20, 50, 80]:
 			var center := _skeleton_pose_center(actor)
 			await _capture_from(

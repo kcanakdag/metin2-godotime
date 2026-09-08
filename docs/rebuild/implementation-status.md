@@ -5,6 +5,29 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## All four equipped Warrior effects through shared manager — 2026-09-09
+
+`WorldMotionEffects.configure` accepts separate mixed definitions and loaded mesh
+scenes alongside particle-only recipes/textures. Source-effect paths choose the
+renderer; duplicate paths reject. Both types share event dispatch, transform updates,
+actor-exit behavior and completion cleanup. Existing particle-only callers retain
+their default signature. The particle gallery stages the additional dependencies.
+
+The equipped actor runner accepts `--mixed-effect-catalog`, hash-checks and stages
+its assets, and exercises eight complete skill/sex combinations. The final run
+passes 73 native checks with all 16 source events emitted once, bounded original
+models/swords and no renderer errors. Evidence:
+`.local/p6-skill-effects-r15/actors-burst/report.json`, 26 captures and `../links.json`.
+Dedicated frame-65 captures show the full Bash burst extending ahead of both
+Warrior variants; male bone-following and original female root fallback both work.
+Earlier fixed snapshots fell after Bash's short visible burst and did not prove its
+appearance; the targeted captures correct that evidence gap. Touched lint passes.
+
+This is native staged content with original animations and real effect-manager
+instances. Main still lacks installed effect package loading/binding. Browser,
+two-client synchronization and public effect qualification remain pending; original
+pixel/color parity has not been established. No server/database/deployment changed.
+
 ## Complete mixed Bash renderer and original angular orbit — 2026-09-09
 
 `mixed_effect.gd` creates all particle and mesh layers, advances their common clock,
