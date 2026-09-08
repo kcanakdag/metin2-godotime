@@ -21,6 +21,20 @@ python3 tools/build_training_dummy.py --blender /path/to/blender --install
 make dummy-build BLENDER=/path/to/blender
 ```
 
+Validate a customized profile before launching Blender:
+
+```sh
+python3 tools/build_training_dummy.py --profile /path/to/dummy.json --check-profile
+```
+
+This command checks the profile without creating assets. Both the authoring tool
+and server reject unknown fields, duplicate placement IDs within a map, invalid
+stats and malformed appearance data. Height supports 0.5–3.5 metres, body radius
+0.1–0.8 metres, and each wood/straw/rope/target color has four RGBA channels in
+the 0–1 range. Use `--profile` without `--check-profile` to build that variant;
+select the same profile for the server as described below. Traversability is
+checked separately against the actual map during server initialization.
+
 Blender runs in an isolated background process. The generator does not modify the
 open editor. It produces an editable `.blend`, a GLB with wait/impact/defeat clips,
 a presentation manifest, provenance receipt and audit. Only the GLB and manifest
@@ -66,3 +80,11 @@ not the connected editor. No Windows or public deployment evidence is claimed.
 A fresh native recheck in `.local/p6-class-skills/dummy-actors-current-r1` passes
 all 16 checks with the same installed model hash. The rendered straw-and-wood
 model, target marker and full-health label were visually inspected.
+
+The profile-validation follow-up rebuilt the asset in background Blender under
+`.local/p6-class-skills/dummy-profile-build-r1`, reproducing the installed GLB
+hash exactly. `dummy-profile-actors-r1` passes 16 fresh native Godot checks;
+the rendered straw target was inspected. Three Python tests and three Rust
+tests cover valid custom profiles and malformed input. This follow-up changes
+authoring validation only; it does not add playable class skills or constitute
+a new multiplayer/export qualification.

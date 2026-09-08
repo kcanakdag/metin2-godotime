@@ -13,11 +13,14 @@ import struct
 import subprocess
 from pathlib import Path
 
+from training_dummy_profile import validate_profile
+
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "content/profiles/training-dummy.json"
 
 
 def audit(output: Path, profile: dict) -> dict:
+    validate_profile(profile)
     model = output / "training-dummy.glb"
     data = model.read_bytes()
     if len(data) < 20 or len(data) > 2_000_000:
@@ -67,7 +70,25 @@ def main():
     parser.add_argument("--profile", type=Path, default=PROFILE)
     parser.add_argument("--output", type=Path, default=ROOT / ".local/training-dummy")
     parser.add_argument("--install", action="store_true")
+    parser.add_argument(
+        "--check-profile", action="store_true", help="Validate data without Blender"
+    )
     args = parser.parse_args()
+    profile = json.loads(args.profile.read_text())
+    validate_profile(profile)
+    if args.check_profile:
+        if args.install:
+            parser.error("--check-profile cannot be combined with --install")
+        print(
+            json.dumps(
+                {
+                    "passed": True,
+                    "actor_id": profile["id"],
+                    "placements": len(profile["placements"]),
+                }
+            )
+        )
+        return
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     with (output / "build.log").open("w") as log:
@@ -91,7 +112,7 @@ def main():
             timeout=180,
             check=True,
         )
-    report = audit(output, json.loads(args.profile.read_text()))
+    report = audit(output, profile)
     (output / "audit.json").write_text(json.dumps(report, indent=2) + "\n")
     if args.install:
         destination = ROOT / "client/assets/imported/authored/training-dummy"

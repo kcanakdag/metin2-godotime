@@ -62,6 +62,9 @@ Yongan entry point in the local build. Its authored Blender model and passive,
 reward-free behavior are profile driven. It passes 16 native presentation checks,
 45 live two-client checks and 82 actual Chrome/Linux checks, with matching exports. All 44 classic abilities have been discovered and
 converted for both appearances, but their full server mechanics are not yet live.
+Dummy customization can be checked without Blender using
+`python3 tools/build_training_dummy.py --profile /path/to/dummy.json --check-profile`;
+see the [profile workflow](docs/training-dummy.md) for supported fields.
 
 The [town-NPC package](docs/world-content.md) is now live locally: 32 original
 NPC definitions at 41 placements, including the existing guard, merchants,

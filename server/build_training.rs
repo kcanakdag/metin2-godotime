@@ -11,6 +11,31 @@ fn number(root: &Value, key: &str, low: u64, high: u64) -> Result<u64, String> {
 }
 
 pub fn generate(root: &Value, map: &str) -> Result<String, String> {
+    let expected = [
+        "schema_version",
+        "id",
+        "vnum",
+        "name",
+        "health",
+        "level",
+        "vitality",
+        "dexterity",
+        "defense",
+        "sword_resistance_percent",
+        "fan_resistance_percent",
+        "respawn_ms",
+        "hit_radius_m",
+        "hit_center_y_m",
+        "height_m",
+        "body_radius_m",
+        "colors",
+        "placements",
+    ];
+    if !root.as_object().is_some_and(|fields| {
+        fields.len() == expected.len() && expected.iter().all(|key| fields.contains_key(*key))
+    }) {
+        return Err("Invalid training target profile fields".into());
+    }
     if root["schema_version"] != 1 {
         return Err("Unsupported training target schema".into());
     }
@@ -18,6 +43,7 @@ pub fn generate(root: &Value, map: &str) -> Result<String, String> {
         .as_str()
         .filter(|s| {
             s.starts_with("actor.training.")
+                && s.len() > "actor.training.".len()
                 && s.len() <= 100
                 && s.bytes()
                     .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'.' || b == b'-')
@@ -44,6 +70,34 @@ pub fn generate(root: &Value, map: &str) -> Result<String, String> {
     };
     let hit_radius = finite("hit_radius_m")?;
     let hit_y = finite("hit_center_y_m")?;
+    for (key, low, high) in [("height_m", 0.5, 3.5), ("body_radius_m", 0.1, 0.8)] {
+        if !root[key]
+            .as_f64()
+            .is_some_and(|v| v.is_finite() && (low..=high).contains(&v))
+        {
+            return Err(format!("Invalid training target {key}"));
+        }
+    }
+    let colors = root["colors"]
+        .as_object()
+        .ok_or("Invalid training target colors")?;
+    if colors.len() != 4
+        || !["wood", "straw", "rope", "target"].iter().all(|key| {
+            colors
+                .get(*key)
+                .and_then(Value::as_array)
+                .is_some_and(|channels| {
+                    channels.len() == 4
+                        && channels.iter().all(|channel| {
+                            channel
+                                .as_f64()
+                                .is_some_and(|v| v.is_finite() && (0.0..=1.0).contains(&v))
+                        })
+                })
+        })
+    {
+        return Err("Invalid training target RGBA colors".into());
+    }
     let rows = root["placements"]
         .as_array()
         .filter(|v| !v.is_empty() && v.len() <= 32)
@@ -51,6 +105,14 @@ pub fn generate(root: &Value, map: &str) -> Result<String, String> {
     let mut ids = std::collections::BTreeSet::new();
     let mut spawns = String::new();
     for row in rows {
+        if !row.as_object().is_some_and(|fields| {
+            fields.len() == 4
+                && ["map_id", "id", "home_x", "home_z"]
+                    .iter()
+                    .all(|key| fields.contains_key(*key))
+        }) {
+            return Err("Invalid training target placement fields".into());
+        }
         let world = row["map_id"]
             .as_str()
             .filter(|s| matches!(*s, "training" | "metin2_map_a1"))

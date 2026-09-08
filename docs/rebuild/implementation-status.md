@@ -7,6 +7,26 @@ or reclassify that scope.
 
 ## P6: all-class abilities requested; training target delivered locally
 
+### Training dummy customization validation
+
+The authored dummy is already present in the accepted local town build. A fresh
+background Blender rebuild, `.local/p6-class-skills/dummy-profile-build-r1`,
+reproduces its installed GLB hash exactly and retains the editable `.blend`.
+`dummy-profile-actors-r1` passes 16 native Godot checks; the rendered model was
+inspected. Blender MCP remains unreachable on port 9876.
+
+`tools/build_training_dummy.py --check-profile` validates custom data without
+launching Blender. Authoring and server compilation now reject typos, duplicate
+map/placement IDs, malformed colors and out-of-range dimensions in addition to
+gameplay bounds. Three Python and three Rust focused tests pass. No gameplay
+content changed, and this is not a new export or multiplayer qualification.
+The requested 44 playable abilities remain incomplete; existing conversion and
+formula evidence must not be described as runtime skill integration.
+
+The separate protocol-18 area-NPC changes remain uncommitted work in progress:
+the candidate catalog and Wasm build exist, but bindings, live subscription QA
+and matching exports are not yet accepted. The served build remains protocol 17.
+
 ### Original area-spawn townspeople: conversion and source contract
 
 Placement follow-up: `server/src/npc_placement.rs` implements the shared inclusive
