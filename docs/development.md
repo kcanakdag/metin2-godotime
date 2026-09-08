@@ -2181,3 +2181,16 @@ effect. The packager checks source resource hashes, canonicalizes PNG encoding
 without changing decoded pixels, and rejects conflicting textures or incomplete
 links. The current source-to-actor yaw is 180 degrees, matching the character
 converter. This command prepares a package; it does not install or deploy it.
+
+
+For packaged-resource qualification, replace the candidate effect flags with:
+
+```sh
+python3 tools/test_actors.py --scenario skill_effects --native --godot GODOT \
+  --effect-package NEW_DIR/runtime --output NEW_EVIDENCE_DIR
+```
+
+This verifies declared file/import-setting hashes before staging and loads assets
+through Godot ResourceLoader. The fixture exercises copy-safe motion event joins,
+matching catalog hashes and equipped effects. It does not install the package or
+prove normal world subscriptions/browser rendering.

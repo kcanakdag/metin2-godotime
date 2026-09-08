@@ -96,6 +96,7 @@ def main() -> None:
         action="store_true",
         help="Exercise the actor PNG policy through an Xvfb editor 3D-scene negative control.",
     )
+    parser.add_argument("--effect-package", type=Path)
     parser.add_argument("--effect-catalog", type=Path)
     parser.add_argument("--effect-links", type=Path)
     parser.add_argument("--mixed-effect-catalog", type=Path)
@@ -103,8 +104,10 @@ def main() -> None:
     options = parser.parse_args()
     if (options.scenario == "mobs") != (options.mob_content is not None):
         parser.error("The mobs scenario requires --mob-content exclusively")
-    if options.scenario == "skill_effects" and (
-        not options.effect_catalog or not options.effect_links
+    if (
+        options.scenario == "skill_effects"
+        and not options.effect_package
+        and (not options.effect_catalog or not options.effect_links)
     ):
         parser.error("skill_effects requires --effect-catalog and --effect-links")
     options.output = options.output.resolve()
@@ -139,6 +142,7 @@ def main() -> None:
                 ROOT / "client/scripts/world/world_motion_effects.gd",
                 stage / "scripts/world/world_motion_effects.gd",
             )
+        if options.scenario == "skill_effects" and not options.effect_package:
             effects = stage / "effect-candidate"
             effects.mkdir()
             shutil.copy2(options.effect_catalog, effects / "effects.v1.json")
@@ -153,6 +157,23 @@ def main() -> None:
                 destination = effects / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source, destination)
+        if options.effect_package:
+            package = json.loads((options.effect_package / "catalog.v1.json").read_text())
+            destination = stage / "effect-package"
+            destination.mkdir()
+            shutil.copy2(
+                options.effect_package / "catalog.v1.json", destination / "catalog.v1.json"
+            )
+            for relative, expected in {**package["files"], **package["import_sidecars"]}.items():
+                path = Path(relative)
+                if path.is_absolute() or ".." in path.parts:
+                    raise ValueError("Unsafe packaged effect path")
+                source = options.effect_package / path
+                if sha256(source) != expected:
+                    raise ValueError("Packaged effect resource differs")
+                target = destination / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, target)
         if options.mixed_effect_catalog:
             mixed_dir = stage / "mixed-candidate"
             mixed_dir.mkdir()
@@ -304,7 +325,7 @@ def main() -> None:
         if options.authored_package:
             tested_files["authored_manifest"] = sha256(authored / "manifest.v1.json")
             tested_files["authored_model"] = sha256(authored / "training-dummy.glb")
-        if options.scenario == "skill_effects":
+        if options.scenario == "skill_effects" and not options.effect_package:
             tested_files["effect_catalog"] = sha256(options.effect_catalog)
             tested_files["effect_links"] = sha256(options.effect_links)
             tested_files["world_motion_effects"] = sha256(
@@ -312,6 +333,14 @@ def main() -> None:
             )
         if options.mixed_effect_catalog:
             tested_files["mixed_effect_catalog"] = sha256(options.mixed_effect_catalog)
+        if options.effect_package:
+            tested_files["effect_package"] = sha256(options.effect_package / "catalog.v1.json")
+            tested_files["motion_effect_loader"] = sha256(
+                stage / "scripts/content/motion_effect_catalog.gd"
+            )
+            tested_files["world_motion_effects"] = sha256(
+                stage / "scripts/world/world_motion_effects.gd"
+            )
         environment = {
             **os.environ,
             "XDG_DATA_HOME": str(stage / ".data"),

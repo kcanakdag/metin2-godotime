@@ -1,10 +1,12 @@
 extends "res://tests/actor_smoke.gd"
 ## Original equipped clips with candidate type-1 effect links, never installed by QA.
 
+const EffectCatalog = preload("res://scripts/content/motion_effect_catalog.gd")
 const WorldEffects = preload("res://scripts/world/world_motion_effects.gd")
 var _requests := 0
 var _mixed: Array = []
 var _scenes: Dictionary = {}
+var _package: RefCounted
 
 
 func _run() -> void:
@@ -12,6 +14,9 @@ func _run() -> void:
 	if not _catalog.load_required(ActorCatalog.MANIFEST_PATH, true):
 		_check(false, "skill effect actor catalog loads")
 		_finish()
+		return
+	if FileAccess.file_exists("res://effect-package/catalog.v1.json"):
+		await _packaged_run()
 		return
 	var effects: Dictionary = JSON.parse_string(
 		FileAccess.get_file_as_string("res://effect-candidate/effects.v1.json")
@@ -62,7 +67,10 @@ func _exercise(link: Dictionary, recipes: Array, textures: Dictionary) -> void:
 	actor.motion_effect_requested.connect(func(_event: Dictionary) -> void: _requests += 1)
 	var action := str(link.actor_id) + ".general.skill_" + str(int(link.skill_vnum))
 	var motion: Dictionary = _catalog.motion(link.actor_id, "general", action).duplicate(true)
-	motion.effects = link.effects
+	if _package != null:
+		motion = _package.with_effects(motion)
+	else:
+		motion.effects = link.effects
 	_check(actor._play_motion(motion, "general", 1, 0, 0, false, 1.0), "original skill starts")
 	var peak := 0
 	var sane := true
@@ -102,3 +110,45 @@ func _exercise(link: Dictionary, recipes: Array, textures: Dictionary) -> void:
 	await actor.tree_exited
 	manager.queue_free()
 	await process_frame
+
+
+func _packaged_run() -> void:
+	var package := EffectCatalog.new()
+	var characters := FileAccess.get_sha256("res://assets/imported/characters/catalog.v1.json")
+	var skills := FileAccess.get_sha256("res://assets/imported/skills/catalog.v1.json")
+	_check(
+		not package.load_required("res://effect-package/catalog.v1.json", "wrong", skills),
+		"mismatched characters reject effect package"
+	)
+	_check(package.document.is_empty(), "rejected package not exposed")
+	_check(
+		package.load_required("res://effect-package/catalog.v1.json", characters, skills),
+		"runtime effect package loads"
+	)
+	if package.document.is_empty():
+		print("PACKAGE_ERROR ", package.error_message)
+		_finish()
+		return
+	_mixed = package.document.mixed_effects.values()
+	_scenes = package.scenes
+	_package = package
+	_build_stage()
+	for actor_id: String in ["actor.player.warrior-male", "actor.player.warrior-female"]:
+		for skill: Dictionary in _catalog.skills.available(0):
+			var action := actor_id + ".general." + str(skill.motion)
+			_check(package.document.links.has(action), "packaged effect link resolves")
+			var original: Dictionary = _catalog.motion(actor_id, "general", action)
+			var enriched: Dictionary = package.with_effects(original)
+			_check(not original.has("effects"), "effect join preserves immutable motion")
+			enriched.effects.clear()
+			_check(
+				not package.with_effects(original).effects.is_empty(),
+				"effect join does not share mutable event arrays"
+			)
+			var link := {
+				"actor_id": actor_id,
+				"skill_vnum": int(skill.vnum),
+				"effects": package.document.links[action]
+			}
+			await _exercise(link, package.document.effects.values(), package.textures)
+	_finish()

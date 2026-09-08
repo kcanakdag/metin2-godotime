@@ -5,6 +5,26 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Packaged Godot motion-effect loader — 2026-09-09
+
+The Godot loader checks the installed character/skill hashes, resolves only hashed
+PNG/GLB resource paths through ResourceLoader, and rejects missing or ambiguous
+effect references. Failed loads expose no usable document/resources. Motion events
+are joined onto private presentation copies; the frozen actor catalog and packaged
+event arrays remain unchanged.
+
+The actor runner now accepts `--effect-package` and stages only catalog-declared,
+hash-verified runtime resources and import settings. The latest native run passes
+99 checks across four skills and both Warrior appearances, with 26 captures:
+`.local/p6-skill-effects-r18/packaged-actors/report.json`. This includes mismatched
+catalog rejection, immutable/copy-safe joins and equipped rendering through the
+packaged resource loader. The preceding loader-only run passed 83 checks at
+`.local/p6-skill-effects-r17/packaged-actors/report.json`. Touched lint passes.
+
+This remains isolated native evidence. Main does not yet load/bind this package;
+normal multiplayer casts, browser exports and public deployment remain pending.
+Godot MCP was unavailable in this session; no connected-editor inspection is claimed.
+
 ## Portable motion-effect runtime package — 2026-09-09
 
 `build_motion_effect_catalog.py` packages particle and mixed resources, rewrites
