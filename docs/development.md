@@ -12,6 +12,12 @@ Node runs the authentication service and local development proxy/MCP tools.
 The auth service is deployed separately; no Python/Node runtime belongs inside
 a player's Godot client build.
 
+After wildlife conversion, `tools/build_mob_catalog.py --content CONVERTED_DIR
+--output NEW_DIR` compiles the candidate motion/gameplay catalog and checks it
+against the conversion receipt and exact Blender animation report. See
+[mob tooling](mobs.md) for its source timing policies and remaining runtime work.
+The command is offline and does not install content or restart services.
+
 ## Classic character builds
 
 Use `make characters-build` for the selected four-class/eight-appearance pipeline,

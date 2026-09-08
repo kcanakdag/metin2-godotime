@@ -20,7 +20,9 @@ scenery, classes and abilities. The new [world-content workflow](docs/world-cont
 adds validated population profiles and an isolated Godot development preview.
 The [next mob pipeline](docs/mobs.md) now discovers selected original wildlife
 stats and converts five models with 68 reachable clips. Native asset QA passes
-304 checks; additional enemy gameplay is not live yet.
+304 checks. The candidate gameplay compiler links nine weighted attack variants,
+per-species movement and recovery timing to those converted models; additional
+enemy gameplay is not live yet.
 Yongan's six authored Wild Dog homes pass **107 two-client checks** on a fresh
 local database. The original City Guard is installed in the playable map layer,
 with original placement, weighted idle animations and its attached weapon.

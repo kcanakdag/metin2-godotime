@@ -9,6 +9,24 @@ or reclassify that scope.
 
 ### Original wildlife definitions in progress
 
+The converted wildlife now has an offline gameplay-catalog compiler:
+`tools/build_mob_catalog.py` links five species and all nine weighted attack
+variants to the exact Blender report, preserving hit samples, distinct defending
+spheres, movement accumulation and reaction durations. It separates original
+integer-rounded server cadence from precise client playback timestamps. Full
+source stats/AI/regen/drop records remain attached, without implying those
+mechanics are implemented. The reviewed timing rules and server revision are
+recorded in the output.
+
+`.local/mobs/wildlife-gameplay-r3` and `r4` are byte-identical; catalog SHA-256 is
+`3e111b2a60a424f18fe35dad60c279375d698b09ef2682b7dbdabeed40dd85dd`.
+Six compiler tests, three source-parser tests and Python lint pass. The actual
+CLI rejects altered converted metadata before creating an output directory.
+Evidence is in `.local/mobs/gameplay-catalog-acceptance-r1.json`. This is an
+offline candidate only: weighted runtime selection, client catalog/playback,
+original spawns/passive AI and reward tables remain to integrate. No new model,
+server publication or exported build is claimed by this checkpoint.
+
 Gameplay registry consumers now use `MobDefinition` for ordinary spawning,
 health/level, movement and attack timing, XP/gold, respawn, defending geometry
 and GREAT-hit recovery. Simulation no longer rewrites all ordinary levels to the

@@ -122,3 +122,48 @@ Remaining integration includes compiling all five gameplay records from the
 converted catalog, matching client content identities, original spawn groups and
 passive/provoked AI. The existing potion drop remains a development fixture;
 per-definition XP/gold does not establish original item-drop-table parity.
+
+## Compile converted motion mechanics
+
+```sh
+.local/venv-dev/bin/python tools/build_mob_catalog.py \
+  --content .local/mobs/wildlife-converted --output .local/mobs/wildlife-gameplay
+```
+
+This creates `gameplay.v1.json` and a receipt in a new directory. It requires the
+conversion receipt, checks the exact normalized/report/model hashes and matches
+every reported animation ID, name and duration. Changed conversion inputs reject
+before output is written. Generated content remains ignored and is not installed
+by this command.
+
+The catalog preserves all nine weighted normal-attack variants across the five
+species, original hit samples and parameters, per-species defending spheres and
+front/back knockdown and front-standup durations. It derives run speed from the
+converted run accumulation and duration. Full source records, including pending
+AI/regen/drop mechanics, remain attached; the compiler does not replace them with
+the dog fixture's values. Unsupported geometry, motion groups or deferred events
+reject rather than choosing a default. The current geometry policy retains the
+single original Bip01 sphere, as in the existing runtime; this is not new world
+collision or animated hit-geometry qualification.
+
+Timing records distinguish the pinned server's `CalculateDuration` cadence from
+precise client animation playback. Boar attack speed 80 yields a 2.4-second source
+server cooldown, while a 1.5-second clip plays for 1.875 seconds. Bear move speed
+70 applies the original 130-percent duration factor, rather than multiplying its
+run speed by 0.7. Faster server cadence retains the original integer-percent
+rounding. Motion hit-window timestamps are separately scaled using ceiling
+division for future authoritative animated hits; the original server's immediate
+damage dispatch is not reproduced by that scheduling proposal.
+
+Rules are recorded against server revision
+`7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318`: `utils.cpp:CalculateDuration`,
+`char.cpp:GetMoveMotionSpeed/GetMoveSpeed` and `char_state.cpp:StateBattle`.
+This compiler requires that reviewed revision. Runtime integration still needs
+weighted action selection, matching client playback/catalog gates, original
+population/AI handling and deliberate reward-table support.
+
+`.local/mobs/wildlife-gameplay-r3` and `r4` produce identical catalogs for five
+mobs/nine attacks. Six compiler regressions and three mob-source tests pass, as
+does Python lint. A real CLI check rejects altered converted metadata before
+creating output. `gameplay-catalog-acceptance-r1.json` records this evidence.
+No model, live module, exported client or served endpoint changed.
