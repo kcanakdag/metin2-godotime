@@ -9,6 +9,7 @@ mod build_combo;
 mod build_items;
 mod build_npcs;
 mod build_population;
+mod build_regeneration;
 mod build_skills;
 mod build_training;
 use build_combo::{
@@ -497,6 +498,7 @@ fn main() {
     println!("cargo:rerun-if-changed={COMBO_VALIDATOR}");
     println!("cargo:rerun-if-changed=build_items.rs");
     println!("cargo:rerun-if-changed=build_population.rs");
+    println!("cargo:rerun-if-changed=build_regeneration.rs");
     println!("cargo:rerun-if-env-changed=MT2_POPULATION_PROFILE");
     println!("cargo:rerun-if-changed={DUAL_TARGET_FIXTURE}");
     println!("cargo:rerun-if-changed={PASSIVE_TARGET_FIXTURE}");
@@ -1501,6 +1503,25 @@ pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
         .unwrap();
     }
     writeln!(output, "];").unwrap();
+
+    output.push_str("#[derive(Clone, Copy, Debug)]\npub struct RegenerationDefinition { pub id: u32, pub interval_us: i64, pub capacity: usize, pub startup_jitter_seconds: u8, pub templates: &'static [MonsterSpawnDefinition] }\n");
+    if std::env::var(TARGET_FIXTURE_ENV).unwrap_or_default() == "regenerating-wild-dog-v1" {
+        let payload: Value = serde_json::from_slice(
+            &fs::read(REGENERATING_TARGET_FIXTURE).expect("regeneration fixture must exist"),
+        )
+        .expect("valid fixture JSON");
+        let settings =
+            build_regeneration::parse(&payload["regeneration"]).unwrap_or_else(|error| fail(error));
+        let (id, interval, capacity, jitter) = (
+            settings.id,
+            settings.interval_us,
+            settings.capacity,
+            settings.startup_jitter_seconds,
+        );
+        writeln!(output, "pub const REGENERATION_DEFINITIONS: &[RegenerationDefinition] = &[RegenerationDefinition {{ id: {id}, interval_us: {interval}, capacity: {capacity}, startup_jitter_seconds: {jitter}, templates: MONSTER_SPAWNS }}];").unwrap();
+    } else {
+        output.push_str("pub const REGENERATION_DEFINITIONS: &[RegenerationDefinition] = &[];\n");
+    }
 
     let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("Cargo sets OUT_DIR"));
     let item_fixture = build_items::recovery_fixture_enabled(

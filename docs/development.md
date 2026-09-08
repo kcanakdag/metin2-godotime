@@ -1695,3 +1695,9 @@ that follower 900003 survives and replacement members 900004/900005 appear, then
 checks stale-target rejection, disconnect and reconnect. Use a fresh database for
 each replay because successful runs advance the population. Never deploy this
 training fixture over the public map.
+
+The regeneration fixture’s JSON `regeneration` object now supplies `id`,
+`interval_us`, `capacity` and `startup_jitter_seconds`. Rebuild after editing it;
+the generated server definition owns those settings and its member-template slice.
+Do not edit generated Rust output. Existing replay expectations target the checked-in
+five-second, capacity-one configuration; altered content needs matching QA.

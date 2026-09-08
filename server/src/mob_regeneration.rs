@@ -13,14 +13,19 @@ pub struct MonsterRegeneration {
     pub last_owner: u64,
 }
 
+fn definition(id: u32) -> Result<&'static crate::definitions::RegenerationDefinition, String> {
+    crate::definitions::REGENERATION_DEFINITIONS
+        .iter()
+        .find(|d| d.id == id)
+        .ok_or("Regeneration entry is outside the installed registry".into())
+}
+
 fn restore(row: &MonsterRegeneration) -> Result<EntryState, String> {
-    if !crate::definitions::REGENERATING_MOB_FIXTURE || row.id != 1 {
-        return Err("Regeneration entry is outside the installed fixture".into());
-    }
+    let definition = definition(row.id)?;
     EntryState::restore(
-        5_000_000,
-        1,
-        0,
+        definition.interval_us,
+        definition.capacity,
+        definition.startup_jitter_seconds,
         EntrySnapshot {
             next_tick_us: row.next_tick_us,
             initial: row.initial,
@@ -42,12 +47,13 @@ fn row(id: u32, state: &EntryState) -> MonsterRegeneration {
 }
 
 pub fn initialize(ctx: &ReducerContext) -> Result<(), String> {
-    if crate::definitions::REGENERATING_MOB_FIXTURE {
-        ctx.db
-            .monster_regeneration()
-            .insert(row(1, &EntryState::new(5_000_000, 1, 0)?));
-        tick(ctx)?;
+    for d in crate::definitions::REGENERATION_DEFINITIONS {
+        ctx.db.monster_regeneration().insert(row(
+            d.id,
+            &EntryState::new(d.interval_us, d.capacity, d.startup_jitter_seconds)?,
+        ));
     }
+    tick(ctx)?;
     Ok(())
 }
 
@@ -57,7 +63,7 @@ pub fn tick(ctx: &ReducerContext) -> Result<(), String> {
         let next = state.plan_tick(crate::now_us(ctx), || {
             let members = crate::monster_spawns::allocate_group(
                 ctx,
-                crate::definitions::MONSTER_SPAWNS,
+                definition(saved.id)?.templates,
                 saved.id,
             )?;
             let owner = u64::from(

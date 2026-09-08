@@ -16,5 +16,11 @@
       "home_x": 10.0,
       "home_z": 3.0
     }
-  ]
+  ],
+  "regeneration": {
+    "id": 1,
+    "interval_us": 5000000,
+    "capacity": 1,
+    "startup_jitter_seconds": 0
+  }
 }

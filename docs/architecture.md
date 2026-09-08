@@ -1462,3 +1462,26 @@ targeting rejects; disconnect/reconnect preserves the same three IDs. Six protoc
 checks reject 22/accept 23. Seven targeted allocator/scheduler tests and strict
 library Clippy pass, along with touched Python/GDScript checks. The initial r1
 scenario passed 64 checks before reconnect coverage was added; r2 is final evidence.
+
+## Compiled regeneration settings — 2026-09-08
+
+The live adapter now resolves `REGENERATION_DEFINITIONS` by entry ID for restore,
+initialization and spawning. It no longer hardcodes entry 1, a five-second interval,
+capacity one or the global mob-template list. Each compiled definition owns its
+interval, capacity, startup jitter and template slice. The selected fixture’s
+`regeneration` object supplies these values; the build rejects invalid IDs,
+intervals above one day, capacities above 1,000 and jitter above 16 seconds.
+Zero interval/capacity retain the scheduler’s disabled/no-capacity behavior.
+The currently selected content still emits one two-member training entry. Other
+builds emit an empty regeneration registry. This is not an installed original
+population; source selector/rectangle compilation and randomized placement remain
+pending. Protocol 23 and bindings are unchanged.
+
+Evidence: `.local/mobs/regeneration-definitions-r1/acceptance.json`, database
+`mt2-p2-regeneration-definitions-r1-20260908`. All 66 focused live regeneration
+checks pass, including leader replacement, surviving follower, stale-target
+rejection and reconnect. Two settings tests cover the checked-in/disabled values
+and ten malformed cases; strict targeted Clippy passes. The first replay received
+auth signup HTTP 429 before gameplay; the retry completed after the requested
+300-second cooldown. The final compiler validation refinement produced a module
+byte-identical to the frozen tested module. Unknown/missing setting fields reject.
