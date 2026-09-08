@@ -5,7 +5,34 @@ Players do not install Blender, Rust, Python, Node or the SDK. The current
 development endpoint is [https://kcanakdag.com:8443](https://kcanakdag.com:8443/),
 on `159.195.213.9`. It may restart during updates.
 
-The public development endpoint is now `https://kcanakdag.com:8443`, protocol 19,
+The public development endpoint now serves protocol 24, database
+`mt2-public-population-v24-20260908`, release `20260908T170855056942Z`.
+The selected original population package contains 945 regeneration entries and
+44 possible species, with converted mob models, current held-attack handling and
+original coin/potion ground models plus separated labels. Auth accounts, signing
+keys and previous world databases were preserved (`delete_data=never`). Existing
+accounts have a separate character roster in this new world. Evidence and frozen
+module/exports are in `.local/public-population-r1/`.
+
+Deployment/package audits and all 114 public browser/Linux checks passed in
+`browser-qa-r3/report.json`: independent accounts, replicated movement, original
+field combat/death, matching ground models, full return route, character switching,
+disconnect/reconnect, reload and logout/login. Browser errors and native engine/
+script errors are empty. Both loot captures were reviewed. Chrome's instrumented
+field median was 26.5 FPS; this is not a release-performance qualification.
+
+The initial two-client run reached the world with identical 2,812-mob,
+42-species subscriptions, then stopped at an incorrect all-catalog-species census
+assertion. Original random group selection does not guarantee every species at
+once; the corrected test retains peer equality and valid unique registered mobs
+while reporting unobserved variants. No runtime or database was modified to force
+the census. A second run demonstrated that the fixed local hunting route ends
+beyond the public group's camera/combat range. The successful third run used the
+offline collision-checked route to the actual subscribed public group. Both failed
+reports are retained. The earlier local combat-return stall was not reproduced
+in this public run; its root cause and broader performance remain unresolved.
+
+The preceding public development endpoint used protocol 19,
 database `mt2-public-progress-v19-20260908`, release `20260908T121524155504Z`.
 This supersedes the older public protocol-4 deployment. The user explicitly
 requested this update. Existing auth accounts, issuer keys and prior databases

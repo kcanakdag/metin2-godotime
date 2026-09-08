@@ -4,7 +4,37 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from test_browser_mobs import health_observed, matching_ground_drops
+from test_browser_mobs import health_observed, matching_ground_drops, population_summary
+
+
+class PopulationEvidenceTests(unittest.TestCase):
+    def test_variant_catalog_is_not_a_required_live_census(self):
+        catalog = {"mobs": [{"vnum": 101}, {"vnum": 171}]}
+        state = {
+            "monsters": [
+                {"id": 900002 + i, "definition_vnum": 101, "x": 1.0, "y": 0.0, "z": 2.0}
+                for i in range(2001)
+            ]
+        }
+        result = population_summary(state, state, catalog)
+        self.assertEqual(result["species"], 1)
+        self.assertEqual(result["catalog_species"], 2)
+        self.assertEqual(result["unobserved_species"], [171])
+        peer = copy.deepcopy(state)
+        peer["monsters"][0]["definition_vnum"] = 171
+        with self.assertRaisesRegex(AssertionError, "different mob populations"):
+            population_summary(state, peer, catalog)
+        peer["monsters"][0]["definition_vnum"] = 999
+        with self.assertRaisesRegex(AssertionError, "Unregistered"):
+            population_summary(peer, peer, catalog)
+        peer = copy.deepcopy(state)
+        peer["monsters"][0]["id"] = peer["monsters"][1]["id"]
+        with self.assertRaisesRegex(AssertionError, "duplicate"):
+            population_summary(peer, peer, catalog)
+        peer = copy.deepcopy(state)
+        peer["monsters"][0]["x"] = float("nan")
+        with self.assertRaisesRegex(AssertionError, "position"):
+            population_summary(peer, peer, catalog)
 
 
 class FieldCombatEvidenceTests(unittest.TestCase):

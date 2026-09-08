@@ -697,7 +697,8 @@ def main() -> None:
                 samples["original_population"] = population_summary(web(), desktop(), catalog)
                 wait("both_exports_receive_full_original_population", lambda: True)
             if args.mob_route:
-                samples["field_mobs"] = exercise_field(
+                samples["field_mobs"] = {}
+                exercise_field(
                     page,
                     web,
                     desktop,
@@ -710,6 +711,7 @@ def main() -> None:
                     profile_probe=args.profile_probe,
                     field_combat=args.field_combat,
                     ground_items=args.ground_items,
+                    evidence=samples["field_mobs"],
                 )
                 if args.field_only:
                     assert not browser_errors, "Browser engine errors: " + "; ".join(

@@ -2,6 +2,26 @@
 
 ## Test scope and passive mob replay
 
+The original-population browser replay distinguishes installed catalog species
+from the live census. Random group variants and failed terrain placement mean
+not every possible species must exist simultaneously. `population_summary`
+requires matching instance-ID/species maps in both client subscriptions, unique
+valid IDs, finite positions and registered species, retaining the full-world
+minimum of 2,001 ordinary mobs. It reports catalog/observed counts and unobserved
+species separately. Package audits prove installed definitions; a census does not
+prove all-species combat or all regeneration entries. Four focused browser event/
+census/drop tests are in `tests/test_browser_mob_events.py`.
+
+Hunting routes target positions, not regeneration identities. A route captured
+against one database may end outside the camera/combat range of another database's
+randomly placed groups. Use `server/examples/world_route.rs` with the observed
+database's subscribed mob position to generate a terrain/collision-checked route;
+do not move or reseed server mobs to fit a replay. The public population rollout
+uses `.local/public-population-r1/hunting-route.json` (goal `[780,570]`, near its
+observed Wild Dog group), while the committed route remains the local fixture.
+The field replay retains its completed evidence in `samples.field_mobs` even if
+a subsequent return-to-town check fails.
+
 Use targeted checks for changed code and affected behavior during implementation.
 Reserve full-suite runs for major milestone completion or demonstrated broad
 impact. Repeat a passing check only after a relevant change or unresolved finding;

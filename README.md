@@ -7,7 +7,9 @@ original character and Yongan assets. The original Metin2 executable cannot
 connect to this game's new protocol.
 
 The current [public development build](https://kcanakdag.com:8443/) uses protocol
-19 and passed 114 public browser/Linux checks on 2026-09-08. Refresh an older
+24 with the original population package and latest loot presentation. Deployment
+audits and 114 public browser/Linux checks passed on 2026-09-08, including field
+combat, loot, return movement and account reconnect lifecycle. Refresh an older
 open tab before signing in. Existing login accounts are retained; this new
 world database has a separate character roster. See [deployment evidence](docs/distribution.md).
 
@@ -32,14 +34,14 @@ projectile resources; the installed Main scene passed 31 controlled checks.
 Held attacks now wait for request completion instead of repeatedly sending from a
 stale idle row. Focused scheduler/actor checks and 74 exported lifecycle checks
 pass; cooldown/late-input notices and a combined field-return timeout remain under
-investigation. The public build remains protocol 19.
+investigation. The public build now uses protocol 24.
 
 Original coin-pile and red-potion ground models are now installed locally through
 [the reusable ground-item pipeline](docs/ground-items.md). The exported field/drop
 replay passes 48 checks. A shared screen-space loot-label layout now separates
 nearby names in native fixtures (21 layout and 30 item checks) and reviewed browser/
-Linux field captures. The updated two-client replay passes 49 checks. Public
-deployment of this slice and original drop effects remain pending.
+Linux field captures. The updated local two-client replay passes 49 checks. This
+slice is now deployed and verified publicly; original drop effects remain pending.
 
 Items, future quests, mobs and classes follow the
 [data-based content authoring contract](docs/rebuild/content-authoring.md):

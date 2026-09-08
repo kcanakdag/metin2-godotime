@@ -5,6 +5,40 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Public original-population rollout — 2026-09-08
+
+The public endpoint now serves protocol 24, database
+`mt2-public-population-v24-20260908`, release `20260908T170855056942Z`, runtime
+source `0b9d0df`. The module was built for the public auth issuer with guests
+disabled, the selected mob catalog and original 945-entry regeneration package.
+Frozen module/exports, deployment log, served-manifest comparison and hashed
+acceptance are in `.local/public-population-r1/`. Existing accounts, keys, previous
+databases and unrelated containers were retained; the new world has its own roster.
+
+Actual public Chrome/Linux replay `browser-qa-r3/report.json` passes 114 checks,
+including field combat/death and loot, complete outward/return route, bidirectional
+movement, reducer rejection, character switching, disconnect/reconnect, browser
+reload and logout/login. Browser errors and native engine/script errors are empty.
+Both reviewed ground captures show original models and separated item/Yang names;
+player-name overlap remains possible because character labels use a separate path.
+
+The first run exposed an invalid census assumption: the 44-species catalog is a
+set of possible variants, not a guarantee that all occur simultaneously. Both
+clients observed identical 2,812-mob/42-species populations; absent vnums 354/391
+share one of ten selector-110 group choices. The test now reports observed and
+catalog species separately while preserving duplicate/finite/registered-species,
+full-world size and peer equality checks. Four focused evidence tests pass.
+The second run reached the fixed local route's endpoint but no mob was in camera
+range; the successful third used the existing offline collision-route generator
+to reach an observed public group. No server mobs were moved, reset or reseeded.
+Completed field evidence now survives a later replay failure.
+
+The public field's instrumented Chrome median was 26.5 FPS; native remained slow.
+The earlier local return/resubscription stall was not reproduced here but its cause
+is not established. Next performance slice: make expensive export-test snapshots
+opt-in for QA, then measure ordinary exported play. All-skills gameplay, scenery,
+additional maps and the remaining full-rebuild milestones are still incomplete.
+
 ## Shared ground-label layout — 2026-09-08
 
 `WorldDropLabels` now projects nearby ground names into a viewport-local canvas
