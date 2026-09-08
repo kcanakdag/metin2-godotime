@@ -22,6 +22,24 @@ evidence. No server or public deployment changed in this recheck.
 
 ### Original wildlife definitions in progress
 
+Current presentation checkpoint (supersedes the pending-rendering statements in
+the historical checkpoints below): commit `fcfea47` added the opaque-target arrow
+material and connected all four selected flights to particle/mesh attachments,
+trails and impacts. `arrow-material-r4` passes 527 native checks and
+`projectile-render-r3` passes 61, with reviewed captures. Original-client blend
+parity and browser/export qualification are not established.
+
+The next actor integration publishes all 26 original launch declarations on their
+motions. Shared actor presentation emits each once at its source timestamp and
+resolves the original model-space bone offset; late joins skip old launches and
+resync does not duplicate them. The full `population-launch-r2` native gallery
+passes 1,440 checks across 44 definitions and 78 attacks. Eleven focused Python
+tests and scoped lint pass. This uses controlled rows, not live subscriptions.
+See [launch events](../mobs.md#mob-motion-launch-events) for source semantics and
+long-frame completion coverage. Next connect effect creation and publish
+server-owned target state, then implement original MAGIC/RANGE damage and live
+population integration. No additional mob, skill or projectile is deployed.
+
 Projectile arrow checkpoint: the selected original `arrow_01.mse`/MDE/TGA now
 convert through a reusable mesh-effect command. Export auditing supports sparse
 morph data, source frame/geometry counts and explicit offsets; both existing

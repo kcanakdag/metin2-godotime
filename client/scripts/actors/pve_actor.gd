@@ -2,6 +2,8 @@ class_name PveActor
 extends Node3D
 ## Subscribed monster presentation plus the existing loot presentation modes.
 
+signal projectile_launched(actor: Node3D, definition: Dictionary, origin: Vector3)
+
 const ActorCatalogScript := preload("res://scripts/content/actor_catalog.gd")
 const ActorPresentationScript := preload("res://scripts/actors/actor_presentation.gd")
 const TargetEffectScript := preload("res://scripts/actors/target_effect.gd")
@@ -276,6 +278,10 @@ func _ensure_presentation() -> bool:
 	if not _presentation.configure(_catalog, actor_id):
 		return false
 	_visual.add_child(_presentation)
+	_presentation.projectile_launched.connect(
+		func(definition: Dictionary, origin: Vector3):
+			projectile_launched.emit(self, definition, origin)
+	)
 	return true
 
 

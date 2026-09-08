@@ -66,6 +66,8 @@ func _test_species(definition: Dictionary) -> void:
 			absf(float(snapshot.animation_position) - float(elapsed) / 1e6 * rate) < 0.005,
 			"late subscription seeks at scaled rate"
 		)
+		for launch: Dictionary in attack.get("projectile_launches", []):
+			_test_launch(mob, row, launch)
 		mob.apply_state(row, int(row.action_ends_at_us) + 50_000)
 		_check(mob.presentation_snapshot().frozen_pose, "completed action holds final pose")
 		row.activity = 0
@@ -109,3 +111,73 @@ func _test_species(definition: Dictionary) -> void:
 	_check(not mob.presentation_snapshot().frozen_pose, "new life releases death pose")
 	mob.queue_free()
 	await process_frame
+
+
+func _test_launch(mob: Node3D, row: Dictionary, launch: Dictionary) -> void:
+	var emitted: Array[Dictionary] = []
+	var listener := func(actor: Node3D, definition: Dictionary, origin: Vector3):
+		emitted.append({"actor": actor, "definition": definition, "origin": origin})
+	mob.projectile_launched.connect(listener)
+	var presentation: Node3D = mob.get_node("ActorVisual/Presentation")
+	row.attack_sequence += 1
+	mob.apply_state(row, int(row.action_started_at_us))
+	var player: AnimationPlayer = presentation.animation_player
+	player.seek(float(int(launch.start_us) - 1) / 1e6, true)
+	presentation._process(0)
+	_check(emitted.is_empty(), "projectile does not launch before source deadline")
+	player.seek(float(launch.start_us) / 1e6, true)
+	presentation._process(0)
+	_check(emitted.size() == 1, "projectile launches exactly at source deadline")
+	if emitted.size() == 1:
+		_check(emitted[0].actor == mob, "PvE launch identifies the subscribed actor")
+		_check(
+			emitted[0].definition.fly_definition == launch.fly_definition,
+			"exact source flight reference"
+		)
+		_check(emitted[0].origin.is_finite(), "converted attachment bone resolves")
+		_check(emitted[0].origin.distance_to(mob.global_position) > 0.01, "launch uses bone offset")
+		var origin: Vector3 = emitted[0].origin
+		mob.rotation.y = 1.7
+		var rotated: Dictionary = presentation.projectile_launch_origin(launch)
+		_check(
+			rotated.position.distance_to(origin) < 0.0001,
+			"source launch offset ignores actor heading"
+		)
+		mob.rotation.y = 0
+		var shifted := launch.duplicate(true)
+		shifted.source_position_cm = [10, 20, 30]
+		var shifted_origin: Dictionary = presentation.projectile_launch_origin(shifted)
+		_check(
+			shifted_origin.position.distance_to(origin + Vector3(0.1, 0.3, -0.2)) < 0.0001,
+			"source offset has correct units and axes"
+		)
+	presentation._process(0)
+	_check(emitted.size() == 1, "repeated update cannot duplicate projectile")
+	presentation.play_mob_action(
+		"general",
+		row.attack_action_id,
+		row.attack_sequence,
+		row.action_started_at_us,
+		row.action_ends_at_us,
+		row.action_started_at_us,
+		true
+	)
+	player.seek(float(launch.start_us) / 1e6, true)
+	presentation._process(0)
+	_check(emitted.size() == 1, "resync and rewind cannot duplicate projectile")
+	row.attack_sequence += 1
+	mob.apply_state(row, int(row.action_started_at_us))
+	player.seek(float(launch.start_us) / 1e6, true)
+	presentation._process(0)
+	_check(emitted.size() == 2, "new attack sequence can launch")
+	row.attack_sequence += 1
+	mob.apply_state(row, int(row.action_ends_at_us) - 1)
+	presentation._process(0)
+	_check(emitted.size() == 2, "late subscription skips historical launch")
+	row.attack_sequence += 1
+	mob.apply_state(row, int(row.action_started_at_us))
+	player.advance(float(presentation.current_motion.duration_us) / 1e6 + 1)
+	_check(emitted.size() == 3, "long frame crossing animation end still launches once")
+	presentation._process(0)
+	_check(emitted.size() == 3, "finished animation cannot repeat its launch")
+	mob.projectile_launched.disconnect(listener)

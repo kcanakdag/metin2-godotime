@@ -342,9 +342,22 @@ now terminates its isolated process group on timeout. Owned Python/GDScript lint
 and 20 parser/accessor tests pass. No editor MCP, browser/export, live launch or
 server damage evidence is claimed.
 
-Next integrate original bone/event launches and authoritative magic/projectile
+The subsequent `population-launch-r2/report.json` passes 1,440 native Godot
+checks across the full 44-definition/78-attack selection. The presentation compiler
+now includes all 26 source launch declarations, and ActorPresentation emits them
+once per action/sequence through PveActor. All converted bones resolve; source
+clock, heading-independent original offsets, resync deduplication and late joins
+are exercised. See `docs/mobs.md#mob-motion-launch-events` for the surprising
+original model-space offset semantics and long-frame completion coverage.
+Archer/Jin-Hee idle gallery captures were reviewed; not launch-render evidence.
+Eleven Python tests and scoped lint pass. This fixture uses controlled rows.
+
+Next connect those signals to flight creation and authoritative magic/projectile
 combat so the prepared mobs
-can become playable. Do not keep substituting inventory reports for integration.
+can become playable. `MonsterClock.pending_target` is private and the current
+public Monster row has no target; introduce synchronized authoritative target
+state with protocol/two-client QA rather than client-side nearest-player guesses.
+Do not keep substituting inventory reports for integration.
 The interrupted investigation inspected pinned primary files under
 `.cache/full-game-research/client/source/src/EffectLib/`:
 

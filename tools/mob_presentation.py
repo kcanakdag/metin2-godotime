@@ -4,21 +4,24 @@ import copy
 
 from content_compile import _client_motion
 from mob_gameplay import validate_actor_reports
+from mob_projectiles import compile_launches
 
 
-def public_motion(motion):
+def public_motion(motion, launches=()):
     result = _client_motion(motion, None)
     # The shared PvE presentation uses canonical death action names. Preserve
     # original action IDs and clip names when mapping the source registrations.
     result["action"] = {"front_dead": "front_death", "back_dead": "back_death"}.get(
         result["action"], result["action"]
     )
+    result["projectile_launches"] = copy.deepcopy(list(launches))
     return result
 
 
 def compile_presentation(normalized, report, gameplay_hash):
     validate_actor_reports(normalized["actors"], report["artifacts"])
     actors, artifacts = [], []
+    launches = compile_launches(normalized)
     reports = {a["id"]: a for a in report["artifacts"]}
     for actor in normalized["actors"]:
         artifact = reports[actor["id"]]
@@ -51,13 +54,17 @@ def compile_presentation(normalized, report, gameplay_hash):
                 "skeleton_signature": artifact["skeleton_signature"],
                 "attachment_bones": copy.deepcopy(actor["attachment_bones"]),
                 "forward": actor["orientation"]["output_forward"],
+                "source_to_actor_yaw_degrees": actor["orientation"]["yaw_correction_degrees"],
                 "motion_vector_space": actor["motion_vector_space"],
                 "modes": [
                     {
                         "id": mode["id"],
                         "required_item_vnums": [],
                         "combo_chains": [],
-                        "motions": [public_motion(m) for m in mode["motions"]],
+                        "motions": [
+                            public_motion(m, launches.get(m["action_id"], ()))
+                            for m in mode["motions"]
+                        ],
                     }
                     for mode in actor["modes"]
                 ],

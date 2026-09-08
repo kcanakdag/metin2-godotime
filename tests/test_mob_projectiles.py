@@ -2,6 +2,8 @@ import copy
 import unittest
 
 from mob_gameplay import compile_catalog
+from mob_presentation import public_motion
+from mob_projectiles import compile_launches
 from test_mob_gameplay import fixture, sealed
 
 
@@ -49,6 +51,17 @@ class MobProjectileTests(unittest.TestCase):
         self.assertEqual(launch["source_position_cm"], [0, 1, 2])
         self.assertTrue(result["unimplemented_runtime_requirements"])
         self.assertEqual(source, before)
+
+    def test_public_motion_keeps_source_launch_clock_and_independent_metadata(self):
+        source = projectile_fixture()
+        motion = source["actors"][0]["modes"][0]["motions"][0]
+        motion.update(variant=1, fallback_mode=None)
+        launches = compile_launches(source)[motion["action_id"]]
+        public = public_motion(motion, launches)
+        self.assertEqual(public["projectile_launches"][0]["start_us"], 400000)
+        self.assertEqual(public["projectile_launches"][0]["bone"], "Bip01 R Hand")
+        public["projectile_launches"][0]["source_position_cm"][0] = 99
+        self.assertEqual(launches[0]["source_position_cm"], [0, 1, 2])
 
     def test_wrong_event_identity_timing_attachment_and_unsafe_asset_reject(self):
         for field, bad in (

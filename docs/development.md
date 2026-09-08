@@ -20,8 +20,10 @@ The command is offline and does not install content or restart services.
 The full selection now compiles projectile launch declarations separately from
 melee windows. Catalogs and receipts expose `unimplemented_runtime_requirements`;
 successful compilation does not establish that those mechanics are playable.
-The existing `test_actors.py --scenario mobs` timing fixture accepts melee-only
-selections; the full converted asset gallery remains `test_npc_content.py`.
+The `test_actors.py --scenario mobs` timing fixture now accepts the full selection,
+including source-timed projectile signals and converted attachment bones. It uses
+controlled state rows and does not qualify live combat or network delivery;
+`test_npc_content.py` remains the separate converted asset gallery.
 It also writes `presentation.v1.json`. Use `tools/test_actors.py --scenario mobs
 --mob-content CONVERTED_DIR --native --godot GODOT --output NEW_DIR` to check the
 candidate through the real PvE actor in an isolated project. This runner merges

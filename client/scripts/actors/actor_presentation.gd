@@ -2,6 +2,8 @@ class_name ActorPresentation
 extends Node3D
 ## Shared model, manifest motion, and bone-equipment presentation.
 
+signal projectile_launched(definition: Dictionary, origin: Vector3)
+
 var catalog: RefCounted
 var actor_id := ""
 var error_message := ""
@@ -16,6 +18,7 @@ var _definition: Dictionary = {}
 var _clips: Dictionary = {}
 var _equipment: Node3D
 var _frozen_pose := false
+var _consumed_launches: Dictionary = {}
 
 
 func configure(value: RefCounted, definition_id: String) -> bool:
@@ -110,6 +113,8 @@ func _play_motion(
 	if animation_player == null or not _clips.has(clip_name):
 		return _fail("Actor %s model is missing declared clip %s." % [actor_id, clip_name])
 	_frozen_pose = false
+	if not same:
+		_consumed_launches.clear()
 	current_motion = motion
 	current_mode = resolved_mode
 	current_sequence = sequence
@@ -127,7 +132,60 @@ func _play_motion(
 		else:
 			offset_seconds = minf(offset_seconds, maxf(0.0, duration_seconds - 0.001))
 		animation_player.seek(offset_seconds, true)
+	# A late subscription/resync must not replay launches from before its pose.
+	for launch: Dictionary in current_motion.get("projectile_launches", []):
+		if int(launch.start_us) < int(round(offset_seconds * 1_000_000)):
+			_consumed_launches[str(launch.source_event)] = true
 	return true
+
+
+func _process(_delta: float) -> void:
+	if animation_player == null or _frozen_pose or not animation_player.is_playing():
+		return
+	_emit_projectiles(int(round(animation_player.current_animation_position * 1_000_000)))
+
+
+func _emit_projectiles(source_time_us: int) -> void:
+	for launch: Dictionary in current_motion.get("projectile_launches", []):
+		var identity := str(launch.source_event)
+		if _consumed_launches.has(identity) or int(launch.start_us) > source_time_us:
+			continue
+		_consumed_launches[identity] = true
+		var origin := projectile_launch_origin(launch)
+		if origin.has("position"):
+			projectile_launched.emit(launch.duplicate(true), origin.position)
+
+
+func _on_animation_finished(clip: StringName) -> void:
+	if current_motion.is_empty() or _frozen_pose:
+		return
+	if clip == _clips.get(str(current_motion.get("godot_name", "")), ""):
+		# A long frame may finish playback before this node polls the clock.
+		_emit_projectiles(int(current_motion.duration_us))
+
+
+func projectile_launch_origin(launch: Dictionary) -> Dictionary:
+	var offset: Array = launch.source_position_cm
+	var point := (
+		global_position + Vector3(float(offset[0]), float(offset[2]), -float(offset[1])) * 0.01
+	)
+	if launch.attached:
+		var skeleton := _find_skeleton(model)
+		var index := skeleton.find_bone(str(launch.bone)) if skeleton else -1
+		if index < 0:
+			return {"error": "Projectile attachment bone is missing"}
+		# Original ProcessMotionEventFly adds the model-space bone translation,
+		# without the actor world heading. Undo only the importer's baked yaw.
+		var local_pose := (
+			global_transform.affine_inverse()
+			* skeleton.global_transform
+			* skeleton.get_bone_global_pose(index)
+		)
+		var undo_yaw := Basis(
+			Vector3.UP, -deg_to_rad(float(_definition.get("source_to_actor_yaw_degrees", 0)))
+		)
+		point += undo_yaw * local_pose.origin
+	return {"position": point}
 
 
 func freeze_at_end() -> void:
@@ -143,6 +201,7 @@ func reset_action() -> void:
 	current_motion = {}
 	current_mode = ""
 	current_sequence = -1
+	_consumed_launches.clear()
 	_frozen_pose = false
 	if animation_player:
 		animation_player.stop()
@@ -224,6 +283,7 @@ func _build() -> bool:
 	animation_player = _find_animation_player(model)
 	if animation_player == null:
 		return _fail("Required actor model has no AnimationPlayer: " + path)
+	animation_player.animation_finished.connect(_on_animation_finished)
 	for clip: StringName in animation_player.get_animation_list():
 		_clips[str(clip)] = clip
 	for mode: Dictionary in _definition.get("modes", []):

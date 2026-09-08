@@ -64,8 +64,10 @@ render in an isolated Godot gallery with 62 checks and reviewed captures;
 live combat integration and browser qualification remain pending. The four original
 flight definitions now pass 80 Godot trajectory/homing checks. All four flights
 now connect to rendered particle/mesh attachments, trails and impacts, passing
-61 native checks with reviewed arrow captures. Live combat integration remains
-pending.
+61 native checks with reviewed arrow captures. The full mob presentation gallery
+now passes 1,440 checks, including all 26 bone-based launch declarations, source
+timing and resync deduplication. Connecting those signals to flight creation and
+server-owned target/damage state remains pending.
 Yongan's six authored Wild Dog homes pass **107 two-client checks** on a fresh
 local database. The original City Guard is installed in the playable map layer,
 with original placement, weighted idle animations and its attached weapon.

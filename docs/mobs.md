@@ -103,8 +103,8 @@ pending. Catalogs/receipts explicitly list unimplemented runtime requirements.
 `.local/mobs/population-gameplay-r2` links all models and actions; the original
 five-species melee records are unchanged after removing the new descriptive fields.
 Twenty-eight focused Python tests and Python lint pass. Evidence:
-`.local/mobs/projectile-linker-acceptance-r1.json`. The melee timing fixture rejects
-projectile catalogs until its gameplay scenario supports them; the separate full
+`.local/mobs/projectile-linker-acceptance-r1.json`. The timing fixture now accepts
+projectile catalogs for presentation-only launch checks; the separate full
 asset gallery remains valid conversion evidence. No runtime, export or deployment
 claim is made from this candidate compilation.
 
@@ -783,3 +783,51 @@ isolated CLI projects; a connected Godot MCP editor was unavailable.
 No flight has been connected to live combat, bone
 launch declarations, exported clients or server damage. Original-client visual
 comparison and browser/occlusion/performance qualification remain outstanding.
+
+
+### Mob motion launch events
+
+`mob_presentation.py` now publishes the validated launch declarations on their
+exact source motions, along with the importer's source-to-actor yaw correction.
+`ActorPresentation.projectile_launched` fires at the source animation timestamp;
+the existing server-owned playback interval scales the animation clock.
+`PveActor.projectile_launched` forwards the originating actor, declaration and
+world launch position. Neither signal authorizes damage or chooses a target.
+
+Launch identity is consumed once per action/sequence. A rewind or forced resync
+does not replay it; a new action sequence resets consumption. Late subscriptions
+consume launches before their initial pose instead of bursting historical effects.
+Natural animation completion also consumes pending launches, covering long frames
+that cross both a launch deadline and the clip end without an intervening poll.
+
+Pinned `ActorInstanceMotionEvent.cpp::ProcessMotionEventFly` adds source
+`FlyPosition` and the model-space bone translation to actor position.
+`ThingInstance::GetBoneMatrix` reads the Granny world pose before actor world
+matrix application (`ModelInstanceUpdate.cpp`). Therefore this launch offset
+does not rotate with the actor heading. The Godot helper undoes the importer's
+baked yaw and preserves that rule; it does not substitute the rendered hand's
+world position. Missing converted bones return an explicit error.
+
+Reproduce with the existing full candidate:
+
+```sh
+python3 tools/test_actors.py --scenario mobs --native --godot /path/to/godot \
+  --mob-content .local/mobs/population-converted-r3 \
+  --output /path/to/new-mob-launch-check
+```
+
+`.local/mobs/population-launch-r2/report.json` passes 1,440 native Godot checks
+across 44 definitions/78 attacks, including all 26 projectile launch declarations.
+Checks exercise source deadlines, forwarded actor identity, bone presence, units,
+heading-independent offsets, resync deduplication, new sequences, late joins and
+long frames crossing animation completion.
+The Archer and Dispirited Jin-Hee gallery images were reviewed; these are idle
+model captures, not images proving launched projectiles. Eleven focused Python
+tests and scoped Python/GDScript lint pass. No engine errors were observed.
+
+The world still needs to connect these signals to the projectile resource
+factory. The current public monster row does not expose its target; that target
+is private in `MonsterClock`. Add an authoritative public attack-target contract
+with synchronized client/protocol and two-client tests rather than guessing the
+nearest player. Magic/ranged damage, live population installation, browser and
+exported client qualification remain unfinished.
