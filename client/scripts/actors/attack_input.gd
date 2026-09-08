@@ -6,11 +6,37 @@ const AttackTiming = preload("res://scripts/actors/attack_timing.gd")
 var held := false
 var _last_sequence := -1
 var _last_sent_ms := 0
+var _pending := false
+var _idle_sequence := -1
+var _idle_life := -1
 
 
-func pressed(row: Dictionary, now_ms: int) -> void:
+func pressed(row: Dictionary, now_ms: int) -> bool:
 	held = true
+	if _pending:
+		return false
 	_record(row, now_ms)
+	return true
+
+
+func on_reducer_completed(name: String, succeeded: bool, _timestamp: int) -> void:
+	if name == "perform_attack":
+		completed(succeeded)
+
+
+func completed(succeeded: bool) -> void:
+	_pending = false
+	if not succeeded:
+		_idle_sequence = -1
+
+
+func reset() -> void:
+	held = false
+	_pending = false
+	_idle_sequence = -1
+	_idle_life = -1
+	_last_sequence = -1
+	_last_sent_ms = 0
 
 
 func release() -> void:
@@ -20,12 +46,21 @@ func release() -> void:
 func should_send(
 	row: Dictionary, catalog: ActorCatalog, server_us: int, now_ms: int, actor_id: String
 ) -> bool:
-	if not held or row.is_empty() or int(row.get("health", 0)) <= 0:
-		return false
-	if now_ms - _last_sent_ms < 150:
+	if (
+		_pending
+		or not held
+		or row.is_empty()
+		or int(row.get("health", 0)) <= 0
+		or now_ms - _last_sent_ms < 150
+	):
 		return false
 	var end := int(row.get("action_ends_at_us", 0))
 	if end == 0:
+		if (
+			int(row.get("attack_sequence", 0)) == _idle_sequence
+			and int(row.get("life_sequence", 0)) == _idle_life
+		):
+			return false
 		_record(row, now_ms)
 		return true
 	if server_us >= end or int(row.get("attack_sequence", 0)) == _last_sequence:
@@ -66,3 +101,7 @@ func _in_combo_window(
 func _record(row: Dictionary, now_ms: int) -> void:
 	_last_sequence = int(row.get("attack_sequence", 0))
 	_last_sent_ms = now_ms
+	_pending = true
+	if int(row.get("action_ends_at_us", 0)) == 0:
+		_idle_sequence = _last_sequence
+		_idle_life = int(row.get("life_sequence", 0))

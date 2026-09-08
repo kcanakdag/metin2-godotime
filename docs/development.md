@@ -1868,3 +1868,10 @@ corpse removal need not coincide across independently delayed clients. Combine w
 unrelated account lifecycle checks; these actions affect the selected development
 world normally, without privileged damage or a database reset. This scenario
 covers the encountered mob, not every registered species or reward/drop rule.
+
+The held-attack scheduler's focused Godot scenario is
+`client/tests/held_attack_smoke.gd`. Run it in an isolated imported client project
+with `godot --headless --path <project> --script res://tests/held_attack_smoke.gd`
+and isolated XDG data/config directories. It exercises pending acknowledgements,
+stale idle observations, release/rejection and reset; it does not replace actual
+exported held-Space/combo and reconnect checks.

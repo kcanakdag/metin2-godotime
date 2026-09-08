@@ -29,7 +29,10 @@ held-Space damage and a full-health Hungry Stray Dog kill observed by both clien
 uses the original view range; 41 focused Main-scene checks pass with a 2,800-row fixture. The [client package installer](docs/development.md#install-converted-mobs-in-the-client)
 now installs the selected 44-mob presentation catalog, 19 shared models and their
 projectile resources; the installed Main scene passed 31 controlled checks.
-The public build remains protocol 19.
+Held attacks now wait for request completion instead of repeatedly sending from a
+stale idle row. Focused scheduler/actor checks and 74 exported lifecycle checks
+pass; cooldown/late-input notices and a combined field-return timeout remain under
+investigation. The public build remains protocol 19.
 
 Items, future quests, mobs and classes follow the
 [data-based content authoring contract](docs/rebuild/content-authoring.md):

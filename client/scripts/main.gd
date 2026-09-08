@@ -94,12 +94,13 @@ func _ready() -> void:
 	connection.chat_changed.connect(hud.set_chat)
 	connection.world_info_changed.connect(_on_world_info)
 	connection.reducer_failed.connect(hud.show_notice)
+	connection.reducer_completed.connect(_attack_input.on_reducer_completed)
 	hud.connect_requested.connect(_connect_game)
 	hud.disconnect_requested.connect(_logout)
 	hud.change_character_requested.connect(_change_character)
 	hud.reconnect_requested.connect(connection.reconnect_game)
 	hud.reset_identity_requested.connect(connection.reset_identity)
-	hud.attack_requested.connect(connection.perform_attack)
+	hud.attack_requested.connect(_request_attack)
 	hud.pickup_requested.connect(_pickup)
 	hud.move_item_requested.connect(connection.move_item)
 	hud.equip_item_requested.connect(connection.equip_item)
@@ -139,6 +140,12 @@ func _ready() -> void:
 	_account_flow.configure(connection, hud, _settings, _profile)
 	if bool(_settings.get("auto_connect", false)):
 		_connect_game(_settings.server_url, _settings.database, _settings.player_name)
+
+
+func _request_attack() -> void:
+	var row: Dictionary = _local_actor.row if is_instance_valid(_local_actor) else {}
+	if connection.state == "connected" and _attack_input.pressed(row, Time.get_ticks_msec()):
+		connection.perform_attack()
 
 
 func _update_held_attack() -> void:
@@ -260,11 +267,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_ENTER:
 				hud.focus_chat()
 			KEY_SPACE:
-				_attack_input.pressed(
-					_local_actor.row if is_instance_valid(_local_actor) else {},
-					Time.get_ticks_msec()
-				)
-				connection.perform_attack()
+				_request_attack()
 			KEY_E, KEY_Z:
 				_pickup()
 			KEY_ESCAPE:
@@ -418,6 +421,7 @@ func _on_connection_state(state: String, message: String) -> void:
 	if state == "connected":
 		_npcs.set_active(true)
 	if state != "connected":
+		_attack_input.reset()
 		_held_movement = false
 		_set_hovered_actor(null)
 		camera_rig.reset_screen_waves()

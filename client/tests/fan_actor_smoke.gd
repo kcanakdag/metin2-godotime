@@ -99,6 +99,7 @@ func _shaman(sex: int) -> void:
 		)
 		var held := AttackInput.new()
 		held.pressed({"attack_sequence": step - 1}, 1000)
+		held.completed(true)
 		var pre := _scaled(int(motion.combo.pre_input_us) if step < 4 else int(motion.duration_us))
 		_check(
 			not held.should_send(row, _catalog, 2_000_000 + pre, 1300, actor_id), "no early link"

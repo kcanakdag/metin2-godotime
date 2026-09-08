@@ -529,6 +529,7 @@ func _call_reducer(
 		if joining:
 			_fail(message)
 		else:
+			reducer_completed.emit(reducer_name, false, 0)
 			reducer_failed.emit(message)
 		return
 	_pending_calls[call.request_id] = {

@@ -5,6 +5,52 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Held attack acknowledgement gate — 2026-09-08
+
+Main now allows one outstanding attack request and suppresses repeated held input
+against the same accepted idle sequence/life. Space and the attack HUD share the
+gate. Release stops repeats without discarding an outstanding request; rejection
+permits an idle retry; leaving the connection resets it. Local reducer send failure
+now emits failed completion as well as the existing notice. Server rules and
+rejection notices are preserved, not suppressed.
+
+The real Godot scheduler scenario passes 17 checks, and the converted Shaman fan
+fixture passes 87 checks including input windows and duplicate-link prevention.
+Actual browser/Linux exports passed packaged mob audits. The separate lifecycle
+run `.local/combat/held-gate-lifecycle-r1/report.json` passes all 74 checks, including
+movement rejection, character switching, disconnect/reconnect, reload, wrong
+password and world re-entry. No engine errors were reported.
+
+The combined field run `.local/combat/held-gate-live-r1/report.json` remains FAILED:
+50 checks completed, including equipment, selection and replicated death of Wild
+Dog 902837 (vnum 101, life 0, initial 126 HP), then return waypoint 4 timed out while
+the browser was subscribing and native remained connected. The exact cause is
+unresolved. The reviewed capture shows the corpse and a cooldown notice. Recorded
+browser warnings: three late-input, one cooldown and one defeated-player rejection;
+no duplicate-queue notice. This is not a warning-free or full-route acceptance.
+
+Scoped evidence/source/export hashes: `.local/combat/held-input-gate-r1/acceptance.json`.
+A live disconnect specifically during a pending attack was not injected; that
+reset transition is covered by the focused scheduler scenario. Public deployment
+is unchanged. Remaining work includes cooldown/late-window pacing, the return
+route/resubscription failure and loot presentation.
+
+## Held attack stale-idle request finding — 2026-09-08
+
+A focused headless Godot reproduction confirms that `AttackInput.should_send`
+issues repeated intents at 1,150, 1,300, 1,450 and 1,600 ms after a first press at
+1,000 ms when the subscribed idle row remains unchanged. This path has no pending
+request/acknowledgement gate. It can enqueue redundant requests during the delayed
+subscriptions observed in the field replay. This does not establish that every
+combo rejection has the same cause.
+
+Evidence/source hashes: `.local/combat/held-input-audit-r1/finding.json` and
+`runtime-isolated.log` (replayed with writable isolated userdata after the initial
+run reported userdata permission errors). No gameplay change was made in this investigation. The next input
+change must coordinate acknowledgements with authoritative action observation and
+cover rejection, release and reconnect, rather than merely increasing the 150 ms
+delay or hiding server rejection messages. Server queue validation stays intact.
+
 ## Original field combat through exported input — 2026-09-08
 
 `--field-combat --field-only --mob-route <route>` now equips the current Warrior
