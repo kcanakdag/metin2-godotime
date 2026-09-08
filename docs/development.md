@@ -2213,3 +2213,22 @@ read-only `motion_effects` snapshot reports the loaded package hash, spawn count
 active instances, bindings and renderer error. It does not expose effect-spawning
 commands or confer gameplay authority. Existing visible skill controls are reused
 without resetting scroll before a drag.
+
+
+## Batch class-skill effect discovery
+
+```sh
+python3 tools/discover_skill_effects.py --offline \
+  --skills SKILL_SOURCE_INVENTORY --characters CHARACTER_IMPORT_PROFILE \
+  --output NEW_JSON
+```
+
+This uses the pinned skill inventory and character profile to resolve each
+appearance's original race script and MSA through archive precedence. It extracts
+all supported type-1 effect events, records source hashes, groups referenced MSEs,
+and preserves rejected events with reasons and all remaining metadata. Existing
+outputs are never overwritten; offline mode fetches nothing from the network.
+The report is an unresolved candidate: original/converted bone resolution, MSE
+conversion, runtime feature support and gameplay acceptance are still required.
+It does not install assets or enable a skill. Adding a skill to the selected
+inventory automatically includes both configured appearances in this scan.

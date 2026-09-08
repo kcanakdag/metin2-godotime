@@ -5,6 +5,27 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## All-class motion-effect discovery — 2026-09-09
+
+`tools/discover_skill_effects.py` now batches effect extraction across the pinned
+skill inventory and character import profile. It resolves race/MSA paths through
+original archive precedence, records input/source hashes and groups shared MSE
+references. Unsupported type-1 records are retained with failure reasons; other
+metadata is preserved. It does not install content, resolve bones, fetch MSE
+resources or claim unsupported mechanics work.
+
+Actual offline run: `.local/p6-all-skill-effects-r1/inventory.json`, all 44 skills
+and 88 appearance motions, 136 extracted events, 59 distinct MSE references,
+zero rejected type-1 events and 54 remaining metadata records. The latter include
+28 type-6, eight type-2, four type-10, two each type-7/8/9, and eight non-event
+records. Three focused tests pass using the real MSA parser: supported extraction,
+lossless rejection/other-event retention and source-pin rejection. Touched Ruff
+checks pass. Existing installed content and public deployment are unchanged.
+
+Next: resolve these events against original/converted skeletons and batch their
+resource requirements, alongside implementing the remaining class-specific
+combat/status contracts. An extracted event is not a playable ability.
+
 ## Original Warrior effects deployed publicly — 2026-09-09
 
 Release `20260908T233819834672Z` serves the full-map skill-effect build at
