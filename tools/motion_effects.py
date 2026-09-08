@@ -60,6 +60,25 @@ def motion_effect(event: dict, duration_us: int) -> dict:
     }
 
 
+def resolve_attachment(effect: dict, source_bones: set[str], converted_bones: set[str]) -> dict:
+    """Resolve legacy missing-bone behavior while detecting conversion loss."""
+    result = {**effect, "requested_bone": effect["bone"], "enabled": True}
+    if effect["attachment"] not in ("follow_bone", "capture_bone"):
+        return result
+    bone = effect["bone"]
+    if bone in source_bones:
+        if bone not in converted_bones:
+            raise ValueError(f"Conversion lost effect attachment bone: {bone}")
+        return result
+    if bone in converted_bones:
+        raise ValueError(f"Converted effect bone is absent from source skeleton: {bone}")
+    if effect["attachment"] == "follow_bone":
+        result.update(attachment="follow_root", bone="", resolution="original-missing-bone-root")
+    else:
+        result.update(enabled=False, resolution="original-missing-bone-skip")
+    return result
+
+
 def main():
     """Extract explicitly selected local MSA files without installing runtime content."""
     import argparse

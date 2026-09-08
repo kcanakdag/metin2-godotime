@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from motion_effects import motion_effect
+from motion_effects import motion_effect, resolve_attachment
 
 
 def event():
@@ -60,6 +60,28 @@ class MotionEffectTests(unittest.TestCase):
         self.assertEqual(result["attachment"], "follow_root")
         self.assertEqual(result["effect_path"], "ymir work/pc/warrior/effect/test.mse")
         self.assertEqual(source, previous)
+
+    def test_missing_source_bone_has_original_follow_and_capture_behavior(self):
+        source = event()
+        source["fields"]["AttachingEnable"] = ["1"]
+        source["fields"]["FollowingEnable"] = ["1"]
+        effect = motion_effect(source, 1000000)
+        result = resolve_attachment(effect, set(), set())
+        self.assertEqual(result["attachment"], "follow_root")
+        self.assertEqual(result["requested_bone"], "Bip01 Head")
+        self.assertTrue(result["enabled"])
+        effect["attachment"] = "capture_bone"
+        self.assertFalse(resolve_attachment(effect, set(), set())["enabled"])
+
+    def test_conversion_loss_cannot_be_hidden_by_legacy_fallback(self):
+        source = event()
+        source["fields"]["AttachingEnable"] = ["1"]
+        effect = motion_effect(source, 1000000)
+        bones = {"Bip01 Head"}
+        self.assertTrue(resolve_attachment(effect, bones, bones)["enabled"])
+        for original, converted in ((bones, set()), (set(), bones)):
+            with self.assertRaises(ValueError):
+                resolve_attachment(effect, original, converted)
 
     def test_malformed_metadata_rejected(self):
         for key, value in (

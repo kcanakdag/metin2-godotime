@@ -5,6 +5,25 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Original female Warrior missing-bone behavior — 2026-09-09
+
+The effect skeleton audit found `Bip01 Footsteps` absent from the female converted
+model. Reading the pinned original GR2 with the existing Carbon/legacy-header
+adapter confirms it is also absent from the original 84-bone skeleton. The male
+model contains the bone. Source `ActorInstanceAttach.cpp:AttachEffectByID` falls
+back to root for missing follow-bone attachments; the capture-bone branch in
+`ActorInstanceMotionEvent.cpp` skips the effect instead.
+
+`motion_effects.resolve_attachment` now encodes those distinct source behaviors.
+It rejects a bone lost during conversion or added only in conversion, so legacy
+fallback cannot hide conversion damage. Five focused Python tests pass, including
+follow/capture fallback and conversion-loss rejection. All 16 selected events
+resolve against original GR2 and converted GLB skeletons: two root fallbacks
+(female Sword Spin and Bash), zero lost effect bones. Source/model hashes and
+resolved records: `.local/p6-skill-effects-r5/attachments.json`. Touched lint passes.
+This is offline attachment qualification; animated runtime dispatch and complete
+Bash resources remain unfinished. No models, live catalogs or deployment changed.
+
 ## Typed original motion-effect extraction — 2026-09-09
 
 `tools/motion_effects.py` adds a reusable, explicit local-MSA extraction command.

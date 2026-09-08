@@ -426,3 +426,9 @@ not establish pixel parity across the original Direct3D and Godot renderers.
 `GameLib/RaceMotionDataEvent.h` and attachment branch behavior in
 `GameLib/ActorInstanceMotionEvent.cpp` at the existing client pin. The selected
 MSA source files remain ignored; no original implementation is copied.
+
+The motion-effect linker also follows `GameLib/ActorInstanceAttach.cpp:AttachEffectByID`
+for missing follow-bone fallback and the separate capture-bone branch in
+`ActorInstanceMotionEvent.cpp`. The selected original female Warrior GR2 lacks
+`Bip01 Footsteps`; source and converted skeletons were compared using the existing
+pinned Carbon reader and legacy-header adapter, without modifying the asset.
