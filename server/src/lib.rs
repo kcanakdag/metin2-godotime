@@ -31,6 +31,7 @@ pub mod regeneration;
 mod root_motion;
 mod skill_area;
 mod skill_hits;
+mod skill_reactions;
 mod skills;
 mod training_targets;
 

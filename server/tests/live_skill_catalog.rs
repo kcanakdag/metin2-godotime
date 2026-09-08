@@ -40,6 +40,8 @@ fn fixed_areas_require_one_valid_shape_per_event() {
     .unwrap();
     catalog["skills"][0]["handler"] = json!("physical_area_v1");
     let area = json!({"kind":"attack_area", "coordinate_space":"output_actor_local_godot",
+        "hitting_type":2,"invisible_us":100000,"stiffen_us":0,"external_force":0,
+        "attack_type":0,"collision_type":4,
         "spheres":[{"position_m":[0,1,-2],"radius_m":1.2}]});
     for variant in catalog["skills"][0]["variants"].as_array_mut().unwrap() {
         variant["hit_geometry"] = json!([area.clone()]);
@@ -56,6 +58,36 @@ fn fixed_areas_require_one_valid_shape_per_event() {
         bad["skills"][0]["variants"][0]["hit_geometry"] = invalid;
         assert!(compiler::generate(bad.to_string().as_bytes()).is_err());
     }
+    for (field, value) in [
+        ("hitting_type", json!(0)),
+        ("hitting_type", json!(3)),
+        ("invisible_us", json!(-1)),
+        ("invisible_us", json!(10_000_001)),
+        ("stiffen_us", json!(1)),
+        ("external_force", json!(-1)),
+        ("external_force", json!(21)),
+        ("external_force", json!(5)),
+        ("attack_type", json!(1)),
+        ("collision_type", json!(0)),
+    ] {
+        let mut bad = catalog.clone();
+        bad["skills"][0]["variants"][0]["hit_geometry"][0][field] = value;
+        assert!(
+            compiler::generate(bad.to_string().as_bytes()).is_err(),
+            "{field}"
+        );
+    }
+    let mut great = catalog.clone();
+    for variant in great["skills"][0]["variants"].as_array_mut().unwrap() {
+        variant["hit_geometry"][0]["hitting_type"] = json!(1);
+        variant["hit_geometry"][0]["external_force"] = json!(5);
+        variant["hit_geometry"][0]["invisible_us"] = json!(500000);
+    }
+    assert!(
+        compiler::generate(great.to_string().as_bytes())
+            .unwrap()
+            .contains("hit_type:1,invulnerability_us:500000,external_force:5.0")
+    );
     catalog["skills"][0]["handler"] = json!("physical_splash_v1");
     assert!(compiler::generate(catalog.to_string().as_bytes()).is_err());
 }

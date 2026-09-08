@@ -5,6 +5,26 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Authored skill cooldowns and GREAT response — 2026-09-08
+
+Fixed-area events now compile bounded original reaction metadata. Runtime checks
+the shared victim cooldown before damage/receipts, writes the event cooldown on
+success, and routes surviving GREAT hits to existing force/knockdown/recovery.
+The analytic unit-mass/friction endpoint preserves force-5 (0.392 m), force-15
+(3.675 m) and force-17 (4.732 m) values; existing one-second interpolation remains
+an approximation of original physics. GOOD flinch presentation remains missing.
+Nonzero stiffen, GOOD pushes and unsupported collision/attack policies reject at
+compile time instead of being silently discarded.
+
+The original Three-Way Cut candidate compiles with all three reaction records.
+Ten focused skill tests and seven compiler tests pass; strict library/example
+Clippy passes after removing an unused import. Source behavior was inspected in
+the pinned client's GameType, ActorInstanceBattle and PhysicsObject files. Evidence:
+`.local/p6-skill-reactions-r1/`. No new database/schema, live cast, export or public
+qualification is claimed. Previous 50 client checks apply to the preceding build.
+Next: normal-hit flinch definitions, required target acceptance and source dispatch
+quantization, then install/qualify the complete Three-Way Cut slice.
+
 ## Live compiler and fixed-area resolver — 2026-09-08
 
 The live skill compiler/linker now supports catalog-selected fixed areas and

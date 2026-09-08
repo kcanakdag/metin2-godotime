@@ -92,6 +92,8 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
         "#[allow(dead_code)] pub enum SkillHitGeometry",
     ));
     out.push_str(geometry::RESOLVER);
+    out.push_str("#[derive(Clone,Copy,Debug)] pub struct SkillHitReaction {pub hit_type:u8,pub invulnerability_us:i64,pub external_force:f64}\n");
+    let mut reactions = Vec::new();
     let mut geometries = Vec::new();
     let mut definitions = Vec::new();
     let mut actions = Vec::new();
@@ -165,12 +167,26 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
                     .filter(|hits| hits.len() == events.len())
                     .ok_or("Skill areas must match their event list")?;
                 let mut shapes = Vec::new();
+                let mut responses = Vec::new();
                 for hit in hits {
                     if hit["kind"] != "attack_area" {
                         return Err("Fixed-area handler requires attack-area geometry".into());
                     }
                     shapes.push(geometry::generate(hit)?);
+                    let hit_type = n(hit, "hitting_type", 1, 2)?;
+                    let invisible = n(hit, "invisible_us", 0, 10_000_000)?;
+                    n(hit, "stiffen_us", 0, 0)?;
+                    let force = f(hit, "external_force", 20.0)?;
+                    if force < 0.0
+                        || (hit_type == 2 && force != 0.0)
+                        || hit["attack_type"] != 0
+                        || hit["collision_type"] != 4
+                    {
+                        return Err("Unsupported fixed-area reaction or attack policy".into());
+                    }
+                    responses.push(format!("SkillHitReaction{{hit_type:{hit_type},invulnerability_us:{invisible},external_force:{force:?}}}"));
                 }
+                reactions.push(format!("({id},{actor:?},&[{}])", responses.join(",")));
                 geometries.push(format!("({id},{actor:?},&[{}])", shapes.join(",")));
             } else if v.get("hit_geometry").is_some() {
                 return Err("Radial handler cannot silently ignore authored geometry".into());
@@ -202,6 +218,12 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
         out,
         "pub const SKILL_EVENT_GEOMETRY:&[(u16,&str,&[SkillHitGeometry])]=&[{}];",
         geometries.join(",")
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "pub const SKILL_EVENT_REACTIONS:&[(u16,&str,&[SkillHitReaction])]=&[{}];",
+        reactions.join(",")
     )
     .unwrap();
     Ok(out)

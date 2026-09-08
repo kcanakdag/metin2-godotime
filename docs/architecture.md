@@ -7,8 +7,9 @@ advancement and rejects stale controllers through the shared ownership check.
 Bindings are regenerated from a fresh local database. The radial Sword Spin resolver does not consume these placements. Catalog-selected
 fixed areas seed exact-life defending centers at activation, skip that tick, and
 scan swept three-dimensional spheres until exclusive expiry. Samples refresh each
-scan and omit removed lives; new lives start at their current center. Source hit
-reactions and target requirements remain pending before enabling Three-Way Cut.
+scan and omit removed lives; new lives start at their current center. Authored cooldowns and GREAT force/recovery now resolve after area admission.
+GOOD flinches, exact physics and target requirements remain pending before enabling
+Three-Way Cut.
 Public protocol 24 is unchanged.
 
 Protocol 25 replaces the private pending skill's single deadline pair with an

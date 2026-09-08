@@ -317,3 +317,27 @@ Use `--installed` in place of the input path to compile the installed catalog.
 The geometry enum has a narrow generated `dead_code` allowance because selected
 catalogs can omit either kind; the compiler and runtime still reject unsupported
 weapon windows for the fixed-area handler. No checks are disabled globally.
+
+### Authored area hit responses
+
+Each fixed-area event now compiles its GOOD/GREAT type, invulnerability duration
+and external force. Runtime rejection during an existing hit cooldown leaves the
+event eligible for a later scan, without recording a damage receipt. Accepted hits
+set their authored cooldown (zero adds none); lethal hits use ordinary death cleanup.
+Surviving GREAT hits cancel the victim's pending attack and enter the shared force/
+knockdown/recovery path. GOOD flinch animation is still missing and is not claimed.
+
+Three-Way Cut's original events use GOOD/100 ms/force 0 twice, then GREAT/500 ms/
+force 5. The unit-mass, friction-0.3 endpoint calculation produces 0.392 m for force
+5 and reproduces existing force-15/17 endpoints. Movement uses the existing one-
+second server ease-out and collision clipping; the original client uses a different
+interpolation path, so exact physical parity is still pending. Source references:
+pinned client `GameLib/GameType.h`, `ActorInstanceBattle.cpp` and `PhysicsObject.cpp`
+at `bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7`; no reference code was copied.
+
+The compiler explicitly rejects nonzero stiffen, GOOD pushes, unsupported hit
+kinds, non-splash/non-area policies and out-of-range values. Those features need
+separate implementations before their content can be enabled. Ten focused skill
+tests, seven compiler tests and strict library/example Clippy qualify this code;
+the prior 50 Sword Spin client checks cover the preceding build. Three-Way Cut
+is not installed, deployed or qualified in two real clients by this change.

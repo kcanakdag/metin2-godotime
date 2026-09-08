@@ -427,6 +427,11 @@ pub fn simulate(ctx: &ReducerContext, now: i64) -> Result<(), String> {
         }
         let d = definition(cast.skill_vnum)?;
         let geometry = area_geometry(ctx, &cast)?;
+        let appearance = crate::characters::owned_appearance(ctx, cast.character_id)?;
+        let reactions = definitions::SKILL_EVENT_REACTIONS
+            .iter()
+            .find(|(id, actor, _)| *id == cast.skill_vnum && *actor == appearance.actor_id)
+            .map(|(_, _, events)| *events);
         let bounds = crate::collision_bounds(ctx);
         for event_index in 0..windows.len() {
             if active & (1 << event_index) == 0 {
@@ -451,6 +456,13 @@ pub fn simulate(ctx: &ReducerContext, now: i64) -> Result<(), String> {
                     .collect()
             };
             victims.sort_by_key(|m| m.id);
+            let reaction = reactions
+                .map(|events| {
+                    events
+                        .get(event_index)
+                        .ok_or("Skill event reaction is missing")
+                })
+                .transpose()?;
             for mut victim in victims {
                 if cast.hit_lives.len() >= usize::from(d.max_targets) {
                     break;
@@ -463,6 +475,9 @@ pub fn simulate(ctx: &ReducerContext, now: i64) -> Result<(), String> {
                     cast.per_life_limit,
                     u16::from(d.max_targets),
                 )? {
+                    continue;
+                }
+                if reaction.is_some() && !combat::monster_hit_cooldown_allows(ctx, victim.id, now) {
                     continue;
                 }
                 let amount = crate::physical_damage::roll_skill_hit(
@@ -487,8 +502,18 @@ pub fn simulate(ctx: &ReducerContext, now: i64) -> Result<(), String> {
                     u32::from(amount),
                     crate::mob_threat::DamageKind::MeleeSkill,
                 )?;
+                if let Some(reaction) = reaction.filter(|r| r.invulnerability_us > 0) {
+                    combat::mark_monster_hit_cooldown(
+                        ctx,
+                        victim.id,
+                        now,
+                        reaction.invulnerability_us,
+                    )?;
+                }
                 if combat::apply_damage(&mut victim.health, amount) {
                     combat::kill_monster(ctx, &mut victim, cast.character_id);
+                } else if let Some(reaction) = reaction {
+                    crate::skill_reactions::apply(ctx, &mut victim, &owner, &cast, reaction, now)?;
                 }
                 ctx.db.monster().id().update(victim);
             }
