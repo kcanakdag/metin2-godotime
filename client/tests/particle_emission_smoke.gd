@@ -30,6 +30,7 @@ func _recipe() -> Dictionary:
 
 
 func _run() -> void:
+	_duplicate_curves()
 	var system := Emission.new()
 	var recipe := _recipe()
 	_check("configure", system.configure(recipe))
@@ -73,15 +74,36 @@ func _run() -> void:
 		recipe.emitter.MaxEmissionCount = bad
 		_check("reject invalid capacity", not system.configure(recipe))
 	var args := OS.get_cmdline_user_args()
-	if args.size() != 1:
+	if args.size() != 2 or not args[1].is_valid_int() or int(args[1]) < 1:
 		_check("requires converted catalog", false)
 	else:
-		_exercise_catalog(args[0])
+		_exercise_catalog(args[0], int(args[1]))
 	print(JSON.stringify({"checks": _checks, "failures": _failures}))
 	quit(0 if _failures.is_empty() else 1)
 
 
-func _exercise_catalog(path: String) -> void:
+func _duplicate_curves() -> void:
+	var cases := [
+		[[[0.25, 2], [0.25, 4], [0.75, 8]], [0, 0.25, 0.5, 1], [2, 2, 6, 8]],
+		[[[0, 2], [0.5, 4], [0.5, 8], [1, 12]], [0.25, 0.5, 0.75], [3, 4, 10]],
+		[[[0, 2], [0.5, 4], [0.5, 0]], [0.25, 0.5, 0.75], [3, 4, 0]],
+		[[[0.5, 2], [0.5, 4]], [0.25, 0.5, 0.75], [2, 2, 4]],
+	]
+	for entry: Array in cases:
+		var recipe := _recipe()
+		recipe.emitter.curves.LifeTime = entry[0]
+		_check("ordered duplicate curve accepted", Emission.new().configure(recipe))
+		for index: int in range(entry[1].size()):
+			_check(
+				"duplicate boundary interpolation",
+				Emission.sample(entry[0], entry[1][index]) == float(entry[2][index])
+			)
+	var descending := _recipe()
+	descending.emitter.curves.LifeTime = [[1, 2], [0, 4]]
+	_check("descending curve rejected", not Emission.new().configure(descending))
+
+
+func _exercise_catalog(path: String, expected_systems: int) -> void:
 	var catalog: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
 	var systems := 0
 	for effect: Dictionary in catalog.effects:
@@ -102,4 +124,4 @@ func _exercise_catalog(path: String) -> void:
 			_check("original capacity respected", bounded)
 			if int(recipe.emitter.CycleLoopEnable) == 0 or int(recipe.emitter.LoopCount) > 0:
 				_check("original finite emitter drains", state.finished and state.alive == 0)
-	_check("all selected original systems exercised", systems == 22)
+	_check("all selected original systems exercised", systems == expected_systems)

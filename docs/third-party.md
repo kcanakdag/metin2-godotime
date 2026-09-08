@@ -1,5 +1,15 @@
 # Third-party sources
 
+The Warrior skill-effect investigation selects six MSE scripts (`samyeon_d`,
+`palbang_sword`, `palbang_spin`, `gigongcham_making`, `gigongcham_swing`,
+`gyeoksantau_triple`) at client pin
+`bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7`. The five particle-only scripts
+and their 12 referenced textures are converted as ignored candidates; Bash
+contains mesh groups and is not partially installed. The independently authored
+scalar-curve adapter follows `EffectLib/Type.h:GetTimeEventBlendValue`: ordered
+duplicate timestamps are valid, exact timestamps use the first duplicate, and
+subsequent interpolation starts from the last duplicate. No source code was copied.
+
 The independently authored ground-label layout uses the five-pixel spacing and
 20-adjustment bound observed in the pinned client's `PythonTextTail.cpp` as a
 behavioral reference. No original implementation was copied. It uses our shared

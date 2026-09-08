@@ -94,13 +94,25 @@ class ParticleTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             sample_curve(keys, float("nan"))
 
+    def test_ordered_duplicate_keys_preserve_discontinuities(self):
+        for rows, times, expected in (
+            ("0.25 2\n0.25 4\n0.75 8", (0, 0.25, 0.5, 1), (2, 2, 6, 8)),
+            ("0 2\n0.5 4\n0.5 8\n1 12", (0.25, 0.5, 0.75), (3, 4, 10)),
+            ("0 2\n0.5 4\n0.5 0", (0.25, 0.5, 0.75), (3, 4, 0)),
+            ("0.5 2\n0.5 4", (0.25, 0.5, 0.75), (2, 2, 4)),
+        ):
+            with self.subTest(rows=rows):
+                effect = parse_particle_mse(fixture().replace("0 0.5\n1 1", rows), PATH)
+                keys = effect["systems"][0]["particle"]["curves"]["ScaleX"]
+                self.assertEqual([sample_curve(keys, t) for t in times], list(expected))
+
     def test_malformed_or_unsupported_records_reject(self):
         for old, new in (
             ("MaxEmissionCount 30", "MaxEmissionCount 999999"),
             ("StartTime 0", "StartTime nan"),
             ("LoopCount 10", "LoopCount 1.5"),
             ("AttachEnable 0", "AttachEnable 2"),
-            ("0 0.5\n1 1", "0 0.5\n0 1"),
+            ("0 0.5\n1 1", "1 0.5\n0 1"),
             ("MOVING_TYPE_DIRECT", "MOVING_TYPE_BEZIER"),
             ("Group ParticleProperty", "Group UnknownProperty"),
             ("RotationSpeed 32", "RotationSpeed 32\nUnknownField 1"),

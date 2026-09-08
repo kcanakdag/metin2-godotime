@@ -27,11 +27,19 @@ def main():
         choices=("emission", "motion", "render", "flight", "projectile", "mesh", "package"),
         default="emission",
     )
+    parser.add_argument(
+        "--expected-systems",
+        type=int,
+        default=22,
+        help="Expected emission fixture system count (default: 22)",
+    )
     parser.add_argument("--flights", type=Path)
     parser.add_argument(
         "--meshes", type=Path, help="Optional converted mesh catalog for projectiles"
     )
     args = parser.parse_args()
+    if args.expected_systems < 1:
+        parser.error("--expected-systems must be positive")
     output = args.output.resolve()
     scene = f"tests/particle_{args.scenario}_smoke.gd"
     if args.scenario == "flight":
@@ -76,7 +84,7 @@ def main():
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / "client" / relative, destination)
     shutil.copy2(args.catalog, output / "effects.v1.json")
-    extra_args = []
+    extra_args = [str(args.expected_systems)] if args.scenario == "emission" else []
     if args.scenario == "projectile":
         shutil.copy2(args.flights, output / "flights.v1.json")
         extra_args = [str(output / "flights.v1.json")]

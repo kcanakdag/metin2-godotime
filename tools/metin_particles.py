@@ -110,14 +110,14 @@ def curve(node):
         if len(row) != 2:
             raise ValueError("Expected curve time/value pair")
         time, value = number(row[0], 0, 3600), number(row[1])
-        if result and time <= result[-1][0]:
-            raise ValueError("Particle curve times must strictly increase")
+        if result and time < result[-1][0]:
+            raise ValueError("Particle curve times must be nondecreasing")
         result.append([time, value])
     return result
 
 
 def sample_curve(events, time):
-    """Original scalar interpolation: empty=0, constant outside key range."""
+    """Original scalar interpolation; exact duplicate times select the first key."""
     number(time, 0, 3600)
     if not events:
         return 0.0

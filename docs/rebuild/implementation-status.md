@@ -5,6 +5,32 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Warrior particle candidates and duplicate scalar keys — 2026-09-09
+
+The scalar MSE importer and Godot emitter now accept nondecreasing timestamps,
+retaining descending/nonfinite/bounds rejection. Source-backed sampling preserves
+first-key selection at an exact duplicate timestamp and interpolation from the last
+duplicate afterward. This unblocks Sword Spin's original lifetime curve without
+rewriting its keys. Five Python tests and 108 Godot regression checks pass, including
+discontinuities at the beginning, middle and end and the existing projectile fixture.
+The emission runner accepts `--expected-systems` for other selected catalogs.
+
+Five original Warrior MSE effects convert to 13 systems and 12 textures; decoded
+RGBA pixels are verified. All 81 selected Godot emission checks pass. Evidence is
+under `.local/p6-skill-effects-r2/`: `particles/receipt.json`,
+`emission-skills/report.json`, and `emission-regression-final/report.json`.
+The rendered gallery fails 9 of 46 checks: three recipes are rejected because
+billboard mode 3 and color operation 5 are unsupported. Its failed `render/run.log`
+is retained. This is conversion/emission evidence, not rendered parity or live
+integration. Bash's mixed particle/mesh MSE remains outside this candidate catalog.
+Next: source-backed billboard/color rendering, mixed mesh effects, and motion-event
+attachment dispatch. No server, installed content or public release was changed.
+
+Touched Python and GDScript lint/format checks pass. Repository Python lint finds
+pre-existing format differences in `tests/test_mob_server_registry.py` and
+`tools/build_npc_catalog.py`; they remain outside this change. Connected editor MCP
+inspection was unavailable; the gallery used isolated native Godot/Xvfb.
+
 ## Expanded world actors deployed without a world reset — 2026-09-09
 
 Public release `20260908T220207351930Z` deploys the corrected world actor loading

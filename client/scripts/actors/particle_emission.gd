@@ -135,7 +135,7 @@ static func _curve_valid(keys: Variant) -> bool:
 			return false
 		if not _number(key[0], 0, 3600) or not _number(key[1], 0, 100000):
 			return false
-		if float(key[0]) <= previous:
+		if float(key[0]) < previous:
 			return false
 		previous = float(key[0])
 	return true

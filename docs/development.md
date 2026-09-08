@@ -158,7 +158,8 @@ from the new module before running the test. Preserve existing databases.
 
 `tools/test_particle_emission.py --godot GODOT --catalog PARTICLE_CATALOG
 --output NEW_DIR` runs the actual GDScript emitter lifecycle in an isolated Godot
-project. Its source-bound report distinguishes emission checks from rendering
+project. Use `--expected-systems COUNT` for a different selected emission fixture;
+the default remains the 22-system projectile fixture. Its source-bound report distinguishes emission checks from rendering
 and server integration, which are not exercised. See [emission lifecycle](mobs.md#godot-emission-lifecycle).
 Add `--scenario motion` to exercise the connected particle kinematics, moving
 emitters and deterministic replay; this is still non-rendering QA.
