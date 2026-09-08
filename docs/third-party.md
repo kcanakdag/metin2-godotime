@@ -3,6 +3,14 @@
 These are the source revisions used by the current project. Code licenses and
 original game asset rights remain separate.
 
+The bounded `yongan-population.json` selection derives 44 monster definitions from
+the original map's audited regeneration/group dependencies. Metadata resolves 12
+GR2 models and 19 race scripts at the existing pins; this is not an import of every
+game asset. Default ShapeData texture remaps are now retained. Blue Wolf 104,
+Red Wild Boar 109 and Black Bear 112 were converted as a focused appearance check,
+with their original variant DDS textures kept in ignored source storage and only
+converted derivatives used by Godot. No original runtime implementation was copied.
+
 The foliage preparation selects Yongan's 14 referenced SPT files and the matching
 `bin/SpeedTreeRT.dll` / `extern/include/speedtree/SpeedTreeRT.h` from the existing
 client pin into ignored storage. The header and PE exports are ABI references;

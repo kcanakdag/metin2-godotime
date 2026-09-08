@@ -138,7 +138,9 @@ func _view(packed: PackedScene, label_text: String, yaw: float) -> Node3D:
 		bounds = mesh_bounds if first else bounds.merge(mesh_bounds)
 		first = false
 	camera.keep_aspect = Camera3D.KEEP_HEIGHT
-	camera.size = maxf(bounds.size.y, bounds.size.x * 360.0 / 640.0) * 1.25
+	# Skinned idle poses can extend past the bind-pose projection. Use the
+	# full bounds diagonal so long animals remain visible in every view.
+	camera.size = maxf(bounds.size.length(), 0.1) * 1.25
 	world.add_child(camera)
 	var center := bounds.get_center()
 	camera.position = center + Vector3(0, 0, -maxf(bounds.size.length() * 2.0, 5.0))

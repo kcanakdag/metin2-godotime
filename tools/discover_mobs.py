@@ -10,6 +10,7 @@ from content_compile import ROOT, canonical_bytes, fetch_server_references, sour
 from content_formats import parse_motion_list, parse_race_script
 from fetch_test_assets import METIN_COMMIT
 from mob_definitions import normalize, records
+from mob_shapes import default_shape
 
 
 def compile_profile(path, *, offline):
@@ -53,10 +54,19 @@ def compile_profile(path, *, offline):
         root = selection["source_root"]
         shape = archive.resolve(root + "/" + definition["model_key"] + ".msm")
         motions = archive.resolve(root + "/motlist.txt")
-        race = parse_race_script(archive.get(shape).read_text())
+        race_text = archive.get(shape).read_text()
+        race = parse_race_script(race_text)
+        selected_shape = default_shape(race_text)
         definition["assets"] = {
             "race_script": shape,
-            "model": archive.resolve(race["base_model"]),
+            "model": archive.resolve(selected_shape["model"]),
+            "default_shape": {
+                "index": 0,
+                "skin_remaps": [
+                    {key: archive.resolve(value) for key, value in pair.items()}
+                    for pair in selected_shape["skin_remaps"]
+                ],
+            },
             "motion_list": motions,
             "motions": parse_motion_list(archive.get(motions).read_text()),
             "source_collision": race["collision"],
@@ -86,7 +96,13 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--offline", action="store_true")
     args = parser.parse_args()
-    inputs = (args.profile.resolve(), Path(__file__).resolve(), ROOT / "tools/mob_definitions.py")
+    inputs = (
+        args.profile.resolve(),
+        Path(__file__).resolve(),
+        ROOT / "tools/mob_definitions.py",
+        ROOT / "tools/mob_shapes.py",
+        ROOT / "tools/content_formats.py",
+    )
     hashes = {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in inputs}
     document = compile_profile(args.profile, offline=args.offline)
     if any(hashlib.sha256(p.read_bytes()).hexdigest() != hashes[str(p)] for p in inputs):

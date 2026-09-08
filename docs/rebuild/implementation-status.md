@@ -9,6 +9,27 @@ or reclassify that scope.
 
 ### Original wildlife definitions in progress
 
+Map selection and skin-variant checkpoint: `build_population_profile.py` derives
+the checked-in `yongan-population.json` from the audited source dependency closure,
+preserving existing actor IDs. Discovery resolves **44 definitions, 12 base GR2
+models and 19 race scripts**. All **945 original entries** are now covered at the
+declared-definition level. Repeated offline inventories in `population-assets-r3`
+and `r4` are identical after the selected missing metadata was fetched.
+
+The importer now preserves default ShapeData model/texture substitutions and
+applies exact material-bound remaps. Blue Wolf 104, Red Wild Boar 109 and Black
+Bear 112 were converted in background Blender; `skin-actors-r2` passes **179
+native Godot checks**, and all three four-angle captures were inspected. The
+gallery's cropped Bear side views were corrected by fitting the bounds diagonal.
+Twenty Python tests and Python/GDScript lint pass. Evidence is in
+`.local/mobs/population-profile-acceptance-r1.json`.
+
+This remains source/asset preparation. Fourteen White Oath definitions use the
+original `MAGIC` battle type, which is not supported by the physical handler.
+Not all 44 appearances are converted or packaged; model reuse, group lifecycle,
+combat handlers, live catalog gates and real population/export qualification
+remain unfinished. No served endpoint changed.
+
 Original population dependency checkpoint: inspection showed Yongan uses group
 selectors rather than direct mob IDs, so compiling species-only respawn defaults
 would preserve the wrong world lifecycle. `tools/discover_mob_population.py` now

@@ -275,3 +275,48 @@ and the ten existing mob compiler/source tests pass, along with Python lint.
 Next, resolve the 39 additional definition dependencies through the bounded map
 selection, reuse verified identical model inputs where possible, and compile the
 server registry alongside a matching live client catalog and group population.
+
+## Derive and resolve the full map selection
+
+```sh
+.local/venv-dev/bin/python tools/build_population_profile.py \
+  --population .local/mobs/yongan-population/population.v1.json \
+  --output .local/mobs/map-selection.json
+.local/venv-dev/bin/python tools/discover_mobs.py --profile .local/mobs/map-selection.json \
+  --offline --output .local/mobs/map-assets
+```
+
+The builder checks the population hash, source revision and exact definition
+closure, retains existing IDs from `--base-profile`, and derives stable IDs and
+source folders for additional definitions. It refuses to overwrite an existing
+output. The checked-in `content/profiles/yongan-population.json` selects all 44
+Yongan dependencies. Its source inventory resolves **12 GR2 model paths and 19
+race scripts**; auditing population coverage with this profile covers all **945
+entries**. This counts declared definition references, not converted/live actors.
+
+Default monster ShapeData can replace a model and remap its source skin to a
+variant DDS. Discovery now records that selected shape, and conversion applies
+its substitutions to exact material-bound paths. Missing/duplicate substitutions,
+incomplete source/target pairs and unsupported shape fields reject. Source motion
+paths continue to resolve from the original motion-list directory. This preserves
+blue/grey wolves, bear colors and red boars without replacing their meshes with
+different geometry. Model sharing in the runtime remains a separate optimization;
+12 base models do not imply 12 identical appearances.
+
+The 44-definition discovery first needed selected variant metadata fetched from
+the pinned archive. `population-assets-r3` and `r4` then reproduce identical
+inventories offline. The three-variant `skin-converted-r1` probe uses background
+Blender; `skin-actors-r2` passes **179 native Godot checks** for clips, deforming
+bones, skin bindings and textured surfaces. Blue Wolf 104, Red Wild Boar 109 and
+Black Bear 112 captures were inspected. The first gallery clipped the Bear's
+side views; its camera now uses the full bounds diagonal, and the repeat captures
+show complete models. Twenty Python tests and Python/GDScript lint pass.
+`population-profile-acceptance-r1.json` records the evidence.
+
+Fourteen White Oath definitions have original battle type `MAGIC`; the physical
+handler must continue rejecting them until their mechanics are implemented.
+The new selection is not a claim that all 44 appearances are converted, that
+model reuse is implemented, or that the original population is playable. Group
+spawning/AI, complete combat handlers, shared model packaging, matching live
+catalog gates and exported multiplayer QA remain pending. Served builds are
+unchanged.

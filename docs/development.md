@@ -28,6 +28,12 @@ regeneration/group dependencies from the pinned local server checkout. Override
 `--source-checkout`, `--map` and `--profile` for another reviewed source map or
 definition selection. It reads committed blobs, records hashes and never installs
 spawns, fetches assets or alters a database. See [population discovery](mobs.md).
+`tools/build_population_profile.py --population POPULATION_JSON --output NEW_JSON`
+derives a bounded selection from that audited dependency closure, retaining
+existing actor IDs from the base profile. The checked-in Yongan population profile
+was generated this way; `tools/discover_mobs.py --profile PROFILE --offline
+--output NEW_DIR` verifies its cached model/race/motion metadata without installing
+assets. Omit `--offline` only when the selected pinned metadata needs fetching.
 
 ## Classic character builds
 

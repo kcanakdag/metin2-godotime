@@ -1,0 +1,249 @@
+{
+  "schema_version": 1,
+  "profile_id": "metin2_map_a1-population",
+  "source": {
+    "client_revision": "bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7",
+    "server_reference": {
+      "repository": "https://git.old-metin2.com/metin2/server",
+      "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+      "files": [
+        {
+          "path": "gamefiles/conf/mob_proto.txt",
+          "git_sha": "002c00106dec10dcde3e8e292d6f1e242bf1c4d9",
+          "sha256": "9aeb98db989ed64ec51dcd1e0df844d7cbd52004779747156017b1617c6be3fa"
+        },
+        {
+          "path": "gamefiles/conf/mob_names_en.txt",
+          "git_sha": "5e832ca9ac25ce6227f140e41b55224e7a485b68",
+          "sha256": "171a1f706d6e7471138cab38f4101a059cb4d0803e62a7c4e044f154902e2ec3"
+        }
+      ]
+    }
+  },
+  "population_source": {
+    "map": "metin2_map_a1",
+    "content_hash": "64982cb28d0437945c8438b591750a6d06bc92615178d9f81bd327c4aea77a72"
+  },
+  "mobs": [
+    {
+      "id": "actor.mob.wild-dog-101",
+      "vnum": 101,
+      "source_root": "ymir work/monster/stray_dog"
+    },
+    {
+      "id": "actor.mob.wolf-102",
+      "vnum": 102,
+      "source_root": "ymir work/monster/wolf"
+    },
+    {
+      "id": "actor.mob.alpha-wolf-103",
+      "vnum": 103,
+      "source_root": "ymir work/monster/wolf"
+    },
+    {
+      "id": "actor.mob.blue-wolf-104",
+      "vnum": 104,
+      "source_root": "ymir work/monster/wolf"
+    },
+    {
+      "id": "actor.mob.alpha-blue-wolf-105",
+      "vnum": 105,
+      "source_root": "ymir work/monster/wolf"
+    },
+    {
+      "id": "actor.mob.grey-wolf-106",
+      "vnum": 106,
+      "source_root": "ymir work/monster/wolf"
+    },
+    {
+      "id": "actor.mob.alpha-grey-wolf-107",
+      "vnum": 107,
+      "source_root": "ymir work/monster/wolf"
+    },
+    {
+      "id": "actor.mob.wild-boar-108",
+      "vnum": 108,
+      "source_root": "ymir work/monster/wild_boar"
+    },
+    {
+      "id": "actor.mob.red-wild-boar-109",
+      "vnum": 109,
+      "source_root": "ymir work/monster/wild_boar"
+    },
+    {
+      "id": "actor.mob.bear-110",
+      "vnum": 110,
+      "source_root": "ymir work/monster/bear"
+    },
+    {
+      "id": "actor.mob.grizzly-bear-111",
+      "vnum": 111,
+      "source_root": "ymir work/monster/bear"
+    },
+    {
+      "id": "actor.mob.black-bear-112",
+      "vnum": 112,
+      "source_root": "ymir work/monster/bear"
+    },
+    {
+      "id": "actor.mob.brown-bear-113",
+      "vnum": 113,
+      "source_root": "ymir work/monster/bear"
+    },
+    {
+      "id": "actor.mob.tiger-114",
+      "vnum": 114,
+      "source_root": "ymir work/monster/tiger"
+    },
+    {
+      "id": "actor.mob.white-tiger-115",
+      "vnum": 115,
+      "source_root": "ymir work/monster/tiger"
+    },
+    {
+      "id": "actor.mob.hungry-stray-dog-171",
+      "vnum": 171,
+      "source_root": "ymir work/monster/stray_dog"
+    },
+    {
+      "id": "actor.mob.hungry-wolf-172",
+      "vnum": 172,
+      "source_root": "ymir work/monster/wolf"
+    },
+    {
+      "id": "actor.mob.hungry-alpha-wolf-173",
+      "vnum": 173,
+      "source_root": "ymir work/monster/wolf"
+    },
+    {
+      "id": "actor.mob.hungry-blue-wolf-174",
+      "vnum": 174,
+      "source_root": "ymir work/monster/wolf"
+    },
+    {
+      "id": "actor.mob.hungry-alpha-blue-wolf-175",
+      "vnum": 175,
+      "source_root": "ymir work/monster/wolf"
+    },
+    {
+      "id": "actor.mob.hungry-grey-wolf-176",
+      "vnum": 176,
+      "source_root": "ymir work/monster/wolf"
+    },
+    {
+      "id": "actor.mob.hungry-alpha-grey-wolf-177",
+      "vnum": 177,
+      "source_root": "ymir work/monster/wolf"
+    },
+    {
+      "id": "actor.mob.hungry-wild-boar-178",
+      "vnum": 178,
+      "source_root": "ymir work/monster/wild_boar"
+    },
+    {
+      "id": "actor.mob.hungry-red-boar-179",
+      "vnum": 179,
+      "source_root": "ymir work/monster/wild_boar"
+    },
+    {
+      "id": "actor.mob.hungry-bear-180",
+      "vnum": 180,
+      "source_root": "ymir work/monster/bear"
+    },
+    {
+      "id": "actor.mob.hungry-grizzly-181",
+      "vnum": 181,
+      "source_root": "ymir work/monster/bear"
+    },
+    {
+      "id": "actor.mob.hungry-black-bear-182",
+      "vnum": 182,
+      "source_root": "ymir work/monster/bear"
+    },
+    {
+      "id": "actor.mob.hungry-brown-bear-183",
+      "vnum": 183,
+      "source_root": "ymir work/monster/bear"
+    },
+    {
+      "id": "actor.mob.hungry-tiger-184",
+      "vnum": 184,
+      "source_root": "ymir work/monster/tiger"
+    },
+    {
+      "id": "actor.mob.hungry-white-tiger-185",
+      "vnum": 185,
+      "source_root": "ymir work/monster/tiger"
+    },
+    {
+      "id": "actor.mob.white-oath-soldier-301",
+      "vnum": 301,
+      "source_root": "ymir work/monster/bksoldier"
+    },
+    {
+      "id": "actor.mob.white-oath-archer-302",
+      "vnum": 302,
+      "source_root": "ymir work/monster/bkarcher"
+    },
+    {
+      "id": "actor.mob.white-oath-general-303",
+      "vnum": 303,
+      "source_root": "ymir work/monster/bkknight"
+    },
+    {
+      "id": "actor.mob.white-oath-commander-304",
+      "vnum": 304,
+      "source_root": "ymir work/monster/bkknight"
+    },
+    {
+      "id": "actor.mob.craven-white-oath-sold-351",
+      "vnum": 351,
+      "source_root": "ymir work/monster/bksoldier"
+    },
+    {
+      "id": "actor.mob.craven-white-oath-archer-352",
+      "vnum": 352,
+      "source_root": "ymir work/monster/bkarcher"
+    },
+    {
+      "id": "actor.mob.craven-wh-oath-com-354",
+      "vnum": 354,
+      "source_root": "ymir work/monster/bkknight"
+    },
+    {
+      "id": "actor.mob.mi-jung-391",
+      "vnum": 391,
+      "source_root": "ymir work/monster/bksecond"
+    },
+    {
+      "id": "actor.mob.eun-jung-392",
+      "vnum": 392,
+      "source_root": "ymir work/monster/bkthird"
+    },
+    {
+      "id": "actor.mob.se-rang-393",
+      "vnum": 393,
+      "source_root": "ymir work/monster/bkfourth"
+    },
+    {
+      "id": "actor.mob.dispirited-mi-jung-395",
+      "vnum": 395,
+      "source_root": "ymir work/monster/bksecond"
+    },
+    {
+      "id": "actor.mob.dispirited-eun-jung-396",
+      "vnum": 396,
+      "source_root": "ymir work/monster/bkthird"
+    },
+    {
+      "id": "actor.mob.dispirited-se-rang-397",
+      "vnum": 397,
+      "source_root": "ymir work/monster/bkfourth"
+    },
+    {
+      "id": "actor.mob.dispirited-jin-hee-398",
+      "vnum": 398,
+      "source_root": "ymir work/monster/bkboss"
+    }
+  ]
+}

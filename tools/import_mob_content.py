@@ -12,6 +12,7 @@ from discover_mobs import compile_profile
 from fetch_test_assets import METIN_COMMIT
 from metin_archive import safe_path
 from metin_root_motion import _carbon_reader
+from mob_shapes import apply_skin_remaps
 from npc_definitions import material_bindings, motion_groups
 
 
@@ -26,6 +27,7 @@ def normalize(profile, *, offline):
             key: archive.resolve(value)
             for key, value in material_bindings(raw, "/".join(model.split("/")[3:-1])).items()
         }
+        textures = apply_skin_remaps(textures, mob["assets"]["default_shape"]["skin_remaps"])
         archive.fetch_many(sorted(set(textures.values())))
         bindings[mob["id"]] = textures
         declarations.append(
@@ -37,7 +39,7 @@ def normalize(profile, *, offline):
                 "model_key": mob["model_key"],
                 "race_script": mob["assets"]["race_script"],
                 "model": model,
-                "motion_root": model.rsplit("/", 1)[0],
+                "motion_root": mob["assets"]["motion_list"].rsplit("/", 1)[0],
                 "textures": sorted(set(textures.values())),
                 "output": f"actors/{mob['model_key']}-{mob['vnum']}.glb",
                 "attachment_bones": {},
@@ -88,6 +90,7 @@ def main():
                 "import_mob_content.py",
                 "discover_mobs.py",
                 "mob_definitions.py",
+                "mob_shapes.py",
                 "npc_definitions.py",
                 "import_actor_content.py",
                 "gr2_bindings.py",

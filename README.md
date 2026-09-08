@@ -31,6 +31,10 @@ The original Yongan population audit resolves 945 regeneration entries into
 54 groups and 44 mob definitions across 12 source model folders. The current
 five-definition selection covers no complete original selector; see
 [population discovery](docs/mobs.md) before extending world spawns.
+The derived `yongan-population.json` profile now resolves all 44 definitions and
+covers every original entry's references. Skin-remap support preserves color
+variants; three additional variants pass 179 rendered asset checks. This is
+source/asset preparation, not an installed 44-mob population.
 Yongan's six authored Wild Dog homes pass **107 two-client checks** on a fresh
 local database. The original City Guard is installed in the playable map layer,
 with original placement, weighted idle animations and its attached weapon.
