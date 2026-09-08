@@ -5,6 +5,27 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Portable motion-effect runtime package — 2026-09-09
+
+`build_motion_effect_catalog.py` packages particle and mixed resources, rewrites
+mesh/texture paths to hashed runtime assets, and validates complete coverage of
+every currently enabled skill appearance against installed character motions.
+Duplicate/missing links, unresolved effects, bad event times/offsets and asset hash
+mismatches reject. The catalog records character/skill catalog hashes and its own
+content hash; the provenance receipt is outside the `runtime/` directory.
+
+The two converters produced different PNG encodings for an identical referenced
+texture. Canonical PNG encoding now deduplicates equal decoded RGBA pixels while
+retaining input-byte hashes and rejecting different content. Three focused Python
+tests cover complete/copy-safe links, rejection paths, canonical deduplication and
+changed asset bytes. Touched Ruff/format checks pass.
+
+Actual package: `.local/p6-skill-effects-r16/package-r2/runtime`, eight motion links,
+18 resources, hash `9302c44b19bf51c2d44703c24a6d70a6daeebde7cc00f77961176482e07abd5c`.
+The failed pre-canonicalization candidate remains separate. No package is installed
+yet: Godot resource loading, actor binding in Main, exported two-client replay and
+public deployment remain next. This is packaging evidence, not runtime acceptance.
+
 ## All four equipped Warrior effects through shared manager — 2026-09-09
 
 `WorldMotionEffects.configure` accepts separate mixed definitions and loaded mesh

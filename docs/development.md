@@ -2164,3 +2164,20 @@ scenario and supply all eight Warrior skill/sex links to include complete Bash.
 The runner verifies and stages mesh/texture assets separately; the fixture uses
 normal resource loading for mixed assets and captures the short Bash burst at
 frame 65. This is still an isolated candidate test, not a live package install.
+
+## Motion effect runtime packaging
+
+```sh
+python3 tools/build_motion_effect_catalog.py --particles PARTICLE_CATALOG \
+  --mixed MIXED_CATALOG --links RESOLVED_LINKS_JSON \
+  --skills client/assets/imported/skills/catalog.v1.json \
+  --characters client/assets/imported/characters/catalog.v1.json --output NEW_DIR
+```
+
+The generated `runtime/` contains only the catalog, hashed PNG/GLB resources and
+owned texture import settings. `receipt.json` stays outside that runtime directory.
+Every enabled skill appearance must resolve to an installed motion and packaged
+effect. The packager checks source resource hashes, canonicalizes PNG encoding
+without changing decoded pixels, and rejects conflicting textures or incomplete
+links. The current source-to-actor yaw is 180 degrees, matching the character
+converter. This command prepares a package; it does not install or deploy it.
