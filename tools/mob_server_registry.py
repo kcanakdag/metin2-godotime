@@ -129,7 +129,15 @@ def species_record(mob):
     """Species facts only; acquisition/leash/respawn belong to world policy."""
     source = mob["source_definition"]
     rewards = source["rewards"]
+    flags = source["flags"]["ai_flag"]
+    if (
+        not isinstance(flags, list)
+        or len(set(flags)) != len(flags)
+        or any(f != "AGGR" for f in flags)
+    ):
+        raise ValueError("Unsupported species AI flags")
     fields = {
+        "aggressive": "true" if "AGGR" in flags else "false",
         "vnum": str(integer(mob["vnum"], 1, 2**32 - 1, "species vnum")),
         "actor_id": rust_text(mob["id"]),
         "name": rust_text(mob["name"]),

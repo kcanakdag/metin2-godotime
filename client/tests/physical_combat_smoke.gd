@@ -38,6 +38,8 @@ func _run() -> void:
 			)
 		ready = await _approach_dog(actor, observer, actor_id)
 	if ready:
+		ready = await _prove_retained_victim(actor, observer, actor_id, observer_id)
+	if ready:
 		ready = await _physical_hit(actor, observer, actor_id, true, "captured_sword")
 	if ready:
 		ready = await _physical_hit(actor, observer, actor_id, false, "unarmed_next_action")
@@ -54,6 +56,47 @@ func _run() -> void:
 	if not ready:
 		_check("physical_scenario_completed", false)
 	_finish()
+
+
+func _prove_retained_victim(
+	actor: GameConnection, observer: GameConnection, actor_id: String, observer_id: String
+) -> bool:
+	if not _check(
+		"aggro_initial_victim_is_actor",
+		await _wait_until(func(): return str(_monster(observer).attack_target) == actor_id, 6.0)
+	):
+		return false
+	var dog_position := _position(_monster(observer))
+	observer.move_to(dog_position.x, dog_position.y + 0.2)
+	if not _check(
+		"aggro_observer_moves_closer_without_attacking",
+		await _wait_until(
+			func():
+				var dog := _position(_monster(observer))
+				return (
+					_position(_player(actor, observer_id)).distance_to(dog) < 0.6
+					and _position(_player(observer, actor_id)).distance_to(dog) > 1.0
+				),
+			12.0
+		)
+	):
+		return false
+	observer.stop_moving()
+	var sequence := int(_monster(observer).attack_sequence)
+	if not _check(
+		"aggro_keeps_victim_across_next_attack_on_both_clients",
+		await _wait_until(
+			func():
+				return (
+					int(_monster(observer).attack_sequence) > sequence
+					and str(_monster(observer).attack_target) == actor_id
+					and str(_monster(actor).attack_target) == actor_id
+				),
+			6.0
+		)
+	):
+		return false
+	return await _park_observer(observer, actor, observer_id)
 
 
 func _enter_physical_world(

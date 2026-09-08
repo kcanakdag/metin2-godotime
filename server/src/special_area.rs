@@ -523,6 +523,7 @@ fn apply_hit(
         area.character_id,
         controller.connection_id,
         u32::from(damage),
+        crate::mob_threat::DamageKind::Normal,
     )?;
     if crate::combat::apply_damage(&mut monster.health, damage) {
         crate::combat::kill_monster(ctx, monster, area.character_id);

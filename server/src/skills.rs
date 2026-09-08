@@ -352,6 +352,7 @@ pub fn simulate(ctx: &ReducerContext, now: i64) -> Result<(), String> {
                 cast.character_id,
                 cast.connection_id,
                 u32::from(amount),
+                crate::mob_threat::DamageKind::MeleeSkill,
             )?;
             if combat::apply_damage(&mut victim.health, amount) {
                 combat::kill_monster(ctx, &mut victim, cast.character_id);

@@ -10,6 +10,7 @@ def catalog():
     result = compile_catalog(fixture())
     source = result["mobs"][0]["source_definition"]
     source["battle_type"] = "MELEE"
+    source["flags"] = {"ai_flag": []}
     source["rewards"].update(exp=15, gold_min=18, gold_max=27)
     source["stats"].update(
         st=3, ht=5, dx=6, damage_min=20, damage_max=24, **{"def": 4, "damage_multiplier": 1.4}

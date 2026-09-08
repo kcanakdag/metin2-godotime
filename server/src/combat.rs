@@ -621,6 +621,7 @@ pub fn cancel_player_attack(controller: &mut Controller) {
 }
 
 pub fn cancel_attacks_targeting(ctx: &ReducerContext, character: Identity) {
+    crate::mob_aggro::forget_character(ctx, character);
     for mut clock in ctx
         .db
         .monster_clock()
@@ -782,6 +783,7 @@ pub fn resolve_player_hit(ctx: &ReducerContext, character: Identity, hit: Pendin
         character,
         controller.connection_id,
         u32::from(hit.damage),
+        crate::mob_threat::DamageKind::Normal,
     )
     .unwrap_or_else(|error| panic!("cannot record resolved monster damage: {error}"));
     mark_monster_hit_cooldown(ctx, monster.id, now, hit.invulnerability_us)
@@ -865,10 +867,21 @@ pub(crate) fn record_damage(
     character_id: Identity,
     controller_connection_id: ConnectionId,
     damage: u32,
+    kind: crate::mob_threat::DamageKind,
 ) -> Result<(), String> {
     if damage == 0 || crate::training_targets::definition(monster_id).is_some() {
         return Ok(());
     }
+    let monster = ctx
+        .db
+        .monster()
+        .id()
+        .find(monster_id)
+        .ok_or("Threat monster is missing")?;
+    if monster.life_sequence != monster_life_sequence {
+        return Err("Threat monster life is stale".into());
+    }
+    crate::mob_aggro::record_hit(ctx, &monster, character_id, damage, kind)?;
     let mut matching: Vec<_> = ctx
         .db
         .monster_damage()
@@ -913,7 +926,7 @@ fn source_distance_approx_cm(dx_cm: i64, dz_cm: i64) -> Option<i64> {
         .map(|value| value >> 8)
 }
 
-fn source_distance_between_meters(a: (f32, f32), b: (f32, f32)) -> Option<i64> {
+pub(crate) fn source_distance_between_meters(a: (f32, f32), b: (f32, f32)) -> Option<i64> {
     let to_cm = |delta: f64| {
         let value = (delta * 100.0).trunc();
         if value.is_finite() && value >= i64::MIN as f64 && value <= i64::MAX as f64 {
@@ -979,6 +992,7 @@ fn distribute_raw_experience(
 }
 
 fn clear_monster_damage(ctx: &ReducerContext, monster_id: u32, life_sequence: u32) {
+    crate::mob_aggro::clear_monster(ctx, monster_id);
     let ids: Vec<_> = ctx
         .db
         .monster_damage()
@@ -1204,7 +1218,7 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
             clock.home_x = spawn.home_x;
             clock.home_z = spawn.home_z;
         }
-        let target = nearest_target(ctx, &monster, &clock, &bounds);
+        let target = select_monster_victim(ctx, &monster, &clock, &bounds);
         let (tx, tz) = target
             .as_ref()
             .map(|player| (player.x, player.z))
@@ -1271,14 +1285,25 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
     Ok(())
 }
 
-fn nearest_target(
+fn select_monster_victim(
     ctx: &ReducerContext,
     monster: &Monster,
     clock: &MonsterClock,
     bounds: &[crate::movement::Bounds],
 ) -> Option<crate::Player> {
     let definition = ordinary_definition(monster).ok()?;
-    ctx.db
+    if let Some(player) = crate::mob_aggro::victim(ctx, monster).filter(|p| {
+        (p.x - clock.home_x).hypot(p.z - clock.home_z) < definition.chase_home_range_m
+            && content::clear_path(monster.x, monster.z, p.x, p.z, bounds)
+    }) {
+        return Some(player);
+    }
+    crate::mob_aggro::clear_monster(ctx, monster.id);
+    if !definition.aggressive {
+        return None;
+    }
+    let selected = ctx
+        .db
         .player()
         .iter()
         .filter(|player| player.online && player.health > 0)
@@ -1293,7 +1318,11 @@ fn nearest_target(
             (a.x - monster.x)
                 .hypot(a.z - monster.z)
                 .total_cmp(&(b.x - monster.x).hypot(b.z - monster.z))
-        })
+        });
+    if let Some(player) = &selected {
+        crate::mob_aggro::acquire(ctx, monster, player);
+    }
+    selected
 }
 
 fn schedule_monster_hit(

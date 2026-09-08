@@ -57,7 +57,7 @@ gallery checks every alias against the actual shared GLB clips. See
 
 ## Attack target protocol fixture
 
-The worktree requires protocol 19. To run `test_physical_combat.py --scenario melee`,
+The worktree requires protocol 20; the current public export remains protocol 19. To run `test_physical_combat.py --scenario melee`,
 publish a fresh **training** module (build without `--features yongan`) to a new
 `mt2-p2-...` database. The scenario intentionally expects one dog on the training
 map; a Yongan module is not interchangeable. Use `--server` for the authentication

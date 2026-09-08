@@ -1,6 +1,6 @@
 {
   "sdk_commit": "f6c59d7068e5dacbde0559906746d0a6c5933ffb",
-  "schema_sha256": "0e20635c4f614a884e4d08c2eba09d2f19c6e027d5eb5a96fe5567c1c480234a",
+  "schema_sha256": "9a03bdaffe22413dee3e511f6e668214f1a84da66b5513c35c2aab9194b86858",
   "files": {
     "module_game_client.gd": "e64bb7da0c620c01ade312369b99dbc57ed865b42d45352e3d19f64dada70f7d",
     "module_game_db.gd": "badcad53db048be1ec8cca0b10f51e4bbbce52e304c2ddab52f819bb855c1c96",
@@ -74,6 +74,8 @@
     "types/game_monster_damage.gd": "999f55409c3ce3ebce9d65690c264f4402c73a7eb0732ea12a1cc621370828e7",
     "types/game_monster_force.gd": "b41fca0c0b1cff8fb3f3d6a4f39d0363c8a34b1717e3a0435df94377ccd558da",
     "types/game_monster_reaction.gd": "ab12169c55e8f1c1172bd18ac25e9173b71383d5750550ed23b0af3d412df4b9",
+    "types/game_monster_threat.gd": "8f54b0c93795c9636c8f542e0ca019ab79fb15027e8f61787743fb46d1ad3bd0",
+    "types/game_monster_victim.gd": "2c9e345ddef48dc7784774352a64b13404519d122a28efcf5420cd5777a47a06",
     "types/game_npc_interaction.gd": "e5416f3e679f031436259c8315349831e3312b9846a387e8e94adfabe6dbf3e3",
     "types/game_npc_spawn.gd": "536e08c942de961950fcad5d15c001fb550d2dc2e7de31d1c5b8ff8fd51e9ebf",
     "types/game_npc_spawn_retry.gd": "79c4fac64ce66a84e49bdd2b2a6e9b2fa0064a4d03bd2250d2d52d4fd1f3fd53",

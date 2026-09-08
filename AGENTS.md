@@ -593,3 +593,34 @@ passive retaliation requires a separate persisted current victim/threat state,
 including source/target lifecycle cleanup and original ChangeVictimByAggro
 arbitration. Do not implement passivity by simply disabling attacks, or retarget
 by the nearest player on every tick. The current authored dog AI is unchanged.
+
+### Persistent mob victims — protocol 20
+
+Protocol 20 now adds private `monster_threat` and `monster_victim` tables.
+The actual simulation retains a valid victim instead of choosing the nearest
+player each tick. Validated damage updates separate threat with an explicit
+damage kind; normal combos and Sword Spin retain distinct dispatch for future
+extension. Switching follows the three-second gate and strict higher-score rules.
+Source/target life checks, existing chase/path bounds, death/reset and character
+leave cleanup apply. XP attribution continues to store unboosted damage.
+The species compiler preserves AGGR (three of 44 species); passive definitions
+skip proximity acquisition but can retaliate through damage-created victim state.
+The existing authored dog remains aggressive. Full passive-population play,
+party threat propagation, original wandering/group AI, persistence across a
+server-process restart and the remaining world installation are not qualified.
+The imported candidate still is not installed.
+Bindings were generated from a fresh protocol-20 training database: 88 files,
+schema SHA-256 `9a03bdaffe22413dee3e511f6e668214f1a84da66b5513c35c2aab9194b86858`.
+The schema marks both new tables Private. A direct unsigned CLI SQL inspection
+was rejected (403/sign-in required), so it does not establish private row counts.
+The public endpoint remains the verified protocol-19 release; do not point the
+worktree client at it. Use the new disposable protocol-20 database for QA.
+
+Final evidence: `.local/mobs/aggro-runtime-r2/acceptance.json`, frozen module and
+`multiplayer.json`, database `mt2-p2-aggro-runtime-r2-20260908`. All 108 two-account
+checks pass, including a closer nonattacking observer not stealing the next attack
+in either subscription, XP rewards, death/respawn and disconnect/reconnect.
+All-target Rust tests (152 library tests) and full `tools/dev.py lint` pass.
+The r1 protocol fixture passes six checks rejecting 19 and accepting 20; candidate
+Rust table fixture passes 11 checks including three aggressive species out of 44.
+Dedicated live higher-threat switching and passive retaliation tests remain next.
