@@ -5,6 +5,33 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Exported skill replay exposed and fixed world actor selection — 2026-09-09
+
+Added `tools/test_browser_skills.py`, a focused two-Chrome replay using existing
+private development accounts. Actual panel clicks spend skill points, mouse drags
+bind quickslots, pointer input selects the dummy and number keys cast. Authorized
+level setup uses the existing chat command. The final replay requires fresh attack
+sequences on both clients, subscribed cooldown, matching damage and no browser
+engine errors. No privileged probe command or direct database mutation was added.
+
+The first export demonstrated learning/binding and replicated damage, but failed
+on missing male Warrior skill motions in both clients. `Main` loaded the legacy
+base Warrior while intro/equipped QA loaded the expanded character package.
+Both world catalog load sites now explicitly choose the installed expanded models.
+The corrected export passes 32 checks with two hardware-rendered Chrome clients:
+Spirit Strike rank 3 advances sequence 3→4 on both, health 29783→29656; Bash rank 2
+advances 4→5 on both, health 29656→29536. Target life remains 0. Browser engine
+errors are empty, and both cast captures were reviewed with attached swords.
+The initial failed run observed first learning of Bash; the final accepted run
+upgraded the preserved skills instead of resetting the database.
+
+Evidence: `.local/p6-browser-skills-r2/acceptance.json` and `replay/report.json`;
+failed predecessor retained in `.local/p6-browser-skills-r1/replay/`. Actual Web
+export/package audits and targeted Python/GDScript lint pass. No claim of original
+skill effect/physics parity or native/exported all-rank balance. Public Web/Linux
+exports for the existing protocol-26 world are being prepared in
+`.local/public-skill-actors-r1/`; public rollout/endpoint qualification pending.
+
 ## Scroll-aware skill control inspection and real mouse QA — 2026-09-08
 
 Added read-only per-vnum slot/learn-button centers and visibility to the existing

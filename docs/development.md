@@ -2073,3 +2073,28 @@ interfered with the following right-click even though hover reached the correct
 slot. Use viewport-local motion/button coordinates, matching the other UI fixtures.
 Evidence: `.local/p6-skill-controls-r7/`; the rendered panel/quickslot capture was
 reviewed. Exported browser learning/casting integration remains the next step.
+
+## Focused exported skill controls
+
+`tools/test_browser_skills.py --url <local-proxy> --database <mt2-p2-database>
+--fixture <owner-only-account-fixture> --output <fresh-evidence-directory>` runs
+Spirit Strike and Bash by default; `--skills` selects the vnums. It reuses exactly
+two accounts from the progression fixture, with existing selected characters.
+The first account must have server-authorized progression controls; the replay
+uses ordinary chat `/level` for sufficient points, then actual learn buttons,
+mouse dragging to quickslots, pointer targeting and number keys. It verifies
+subscribed rank/cooldown, fresh attack sequences on both clients, matching dummy
+damage and surviving target life. Browser engine errors fail acceptance.
+The test does not add a privileged probe action or write gameplay tables.
+
+Use an isolated proxy and matching exported client/server content. The replay
+spends points (upgrades existing skills on subsequent runs) and moves the character;
+retain previous reports and databases. The final local run passes 32 checks with
+two hardware-rendered Chrome contexts. It is a focused skill-controls replay,
+not a replacement for account lifecycle, ordinary-mob reactions or all-rank balance.
+
+World actor catalogs must load the installed expanded character models, as the
+character previews do. `Main` now explicitly selects them at startup and content
+reload. The older default catalog mode retains the base Warrior fixture for
+fixture consumers; using it for the live player omitted newly imported skill
+motions even though native equipped tests using expanded models passed.

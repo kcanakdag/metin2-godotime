@@ -116,7 +116,7 @@ func _ready() -> void:
 	hud.screenshot_requested.connect(_save_screenshot)
 	hud.copy_diagnostics_requested.connect(_copy_diagnostics)
 	_load_settings()
-	if not _actor_catalog.load_required():
+	if not _actor_catalog.load_required(ActorCatalog.MANIFEST_PATH, true):
 		hud.show_notice(_actor_catalog.error_message)
 	if not _target_effect_catalog.load_required():
 		hud.show_notice(_target_effect_catalog.error_message)
@@ -567,10 +567,11 @@ func _on_world_info(info: Dictionary) -> void:
 
 func _prepare_world(info: Dictionary) -> void:
 	var generation := _content_generation
-	if _actor_catalog.manifest.is_empty() and not _actor_catalog.load_required():
-		connection.disconnect_game()
-		hud.show_notice(_actor_catalog.error_message)
-		return
+	if _actor_catalog.manifest.is_empty():
+		if not _actor_catalog.load_required(ActorCatalog.MANIFEST_PATH, true):
+			connection.disconnect_game()
+			hud.show_notice(_actor_catalog.error_message)
+			return
 	if not _target_effect_catalog.loaded and not _target_effect_catalog.load_required():
 		connection.disconnect_game()
 		hud.show_notice(_target_effect_catalog.error_message)
