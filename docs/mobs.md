@@ -76,3 +76,28 @@ Next, compile per-definition attacks, collision, stats and rewards into a truste
 mob registry, replace dog-only runtime references, then qualify real movement,
 combat, life/respawn and reward handling with independent clients. Do not install
 these models as static scenery or label conversion as playable enemy support.
+
+## Physical registry checkpoint
+
+Ordinary physical attacks and defenses now resolve a trusted definition by vnum
+and actor ID. The runtime registry still includes only the existing dog; the
+training dummy retains its authored defense profile. Candidate wildlife stats can
+be compiled without installing them:
+
+```sh
+cargo run --manifest-path server/Cargo.toml --offline --example compile_mob_physical -- \
+  .local/mobs/wildlife-converted/normalized.v1.json .local/mobs/wildlife-physical.rs
+```
+
+The compiler validates actor links, duplicate identities, numeric ranges and
+runtime float precision. Unsupported nonzero combat modifiers reject instead of
+silently disappearing. Original POWER-family battle types use the same physical
+handler as MELEE. The Boar's five-percent normal-hit critical chance is retained;
+normal critical damage doubles with checked overflow. Skill critical probability
+and critical visual effects are separate, unfinished mechanics.
+
+The five-definition candidate compiles in `wildlife-physical-r2.rs`. The runtime
+adapter checkpoint passes 161 Rust tests, strict Rust lint and 113 checks with two
+authenticated clients in `physical-registry-live-r1.json`. Those live checks use
+the existing dog population on `mt2-p2-mob-physical-qa-r1-20260908`; they do not
+establish five-species gameplay or change the served client/server build.

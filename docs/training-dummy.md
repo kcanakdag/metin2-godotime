@@ -68,8 +68,8 @@ Current evidence: `.local/p6-class-skills/dummy-actors-r4/report.json` passes 16
 native presentation checks; `dummy-live-r4.json` passes 45 actual server checks.
 The latter uses `mt2-p2-dummy-qa-r2-20260908` with a 600-HP test profile. The normal
 profile is separately generated and audited. The dummy remains installed in the
-current town build at `http://127.0.0.1:8186`, using
-`mt2-p2-town-dev-r1-20260908`.
+current local build at `http://127.0.0.1:8186`, using
+`mt2-p2-npc-areas-qa-r1-20260908`.
 `dummy-browser-r4/report.json` passes 82 actual Chrome/Linux checks against the
 final `exports/dummy-web-r3` and `exports/dummy-linux-r3` builds, including
 pointer selection, held Space damage and mutual dummy presentation, with no

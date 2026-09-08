@@ -9,6 +9,22 @@ or reclassify that scope.
 
 ### Original wildlife definitions in progress
 
+Physical registry checkpoint: ordinary damage now selects attacker/defender
+stats through a trusted vnum/actor registry. The default registry remains the dog;
+the candidate compiler emits all five wildlife definitions and preserves the
+Boar's five-percent normal critical chance. Unsupported nonzero modifiers reject.
+Normal critical doubling is checked for overflow; critical effects and skill
+critical rules remain pending. Runtime arithmetic tests exercise distinct Wolf
+stats and resistance, while compiler tests cover malformed/unlinked definitions.
+The candidate is not installed until actions, AI, health, rewards and client
+content checks are integrated together.
+
+The checkpoint passes 161 Rust tests, strict Rust lint and **113 actual two-client
+checks** in `.local/mobs/physical-registry-live-r1.json`, using isolated database
+`mt2-p2-mob-physical-qa-r1-20260908`. All staged QA sources remained unchanged.
+This qualifies regression behavior for existing dogs, not new wildlife gameplay.
+The local served area-NPC build and public endpoint remain unchanged.
+
 Spawn identity checkpoint: the shared population parser now takes an explicit
 registry and retains each placement's `definition_vnum`. Generated ordinary and
 training-target spawn records carry that ID through creation, and physical combat

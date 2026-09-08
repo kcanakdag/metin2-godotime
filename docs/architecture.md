@@ -10,6 +10,13 @@ persisted identity against its compiled spawn. This internal build contract adds
 no database columns or reducers; protocol 18 remains unchanged. The converted
 wildlife registry still needs stats, action and reward integration.
 
+Physical combat now resolves ordinary attacker and defender stats by trusted
+definition vnum and actor ID. The installed registry still contains only Wild
+Dog; the offline wildlife compiler validates five candidate definitions without
+installing an incomplete gameplay catalog. Normal mob critical hits have a
+bounded percentage roll and checked damage doubling. Skill critical probability
+is a separate mechanic; these rules do not implicitly enable it.
+
 Classic class presentation and combat share the installed character catalog
 (see [characters](characters.md)). The common Sword+0 and Fan+0 chains resolve each step
 from the server-owned character appearance and captured weapon vnum. All eight

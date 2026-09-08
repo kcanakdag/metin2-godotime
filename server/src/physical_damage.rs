@@ -777,24 +777,30 @@ fn player_attacker_with_power(
     snapshot
 }
 
-fn dog_attacker() -> Result<PhysicalAttackerSnapshot, String> {
+fn mob_physical(monster: &Monster) -> Result<&'static definitions::MobPhysicalDefinition, String> {
+    crate::combat::validate_monster(monster)?;
+    definitions::MOB_PHYSICAL_DEFINITIONS
+        .iter()
+        .find(|d| d.vnum == monster.definition_vnum && d.actor_id == monster.actor_id)
+        .ok_or("Monster has no registered physical definition.".into())
+}
+
+fn mob_attacker(
+    d: &definitions::MobPhysicalDefinition,
+) -> Result<PhysicalAttackerSnapshot, String> {
     validate_generated_policy()?;
-    let dog = definitions::WILD_DOG_101_PHYSICAL;
-    if dog.actor_id != definitions::MOB_ACTOR_ID || dog.vnum != definitions::MOB_VNUM {
-        return Err("The generated Wild Dog physical definition is unsupported.".into());
-    }
     Ok(policy_attacker(
         CombatantKind::Npc,
-        dog.level,
-        dog.strength,
-        dog.dexterity,
+        d.level,
+        d.strength,
+        d.dexterity,
         PhysicalPowerSource {
             class: PhysicalWeaponClass::Unarmed,
-            power_min: dog.power_min,
-            power_max: dog.power_max,
+            power_min: d.power_min,
+            power_max: d.power_max,
             refine_attack: 0,
         },
-        dog.damage_multiplier,
+        d.damage_multiplier,
     ))
 }
 
@@ -823,7 +829,7 @@ fn policy_victim(
     }
 }
 
-fn dog_victim(monster: &Monster) -> Result<PhysicalVictimSnapshot, String> {
+fn mob_victim(monster: &Monster) -> Result<PhysicalVictimSnapshot, String> {
     crate::combat::validate_monster(monster)?;
     validate_generated_policy()?;
     if let Some(d) = crate::training_targets::validate(monster)? {
@@ -837,23 +843,20 @@ fn dog_victim(monster: &Monster) -> Result<PhysicalVictimSnapshot, String> {
             d.fan_resistance,
         ));
     }
-    let dog = definitions::WILD_DOG_101_PHYSICAL;
-    if monster.definition_vnum != dog.vnum
-        || monster.actor_id != dog.actor_id
-        || monster.max_health != definitions::MOB_MAX_HEALTH
-        || crate::combat::trusted_spawn(monster.id).is_none()
-    {
-        return Err("The physical victim is not the selected trusted Wild Dog.".into());
-    }
-    Ok(policy_victim(
+    let d = mob_physical(monster)?;
+    Ok(mob_defender(d))
+}
+
+fn mob_defender(d: &definitions::MobPhysicalDefinition) -> PhysicalVictimSnapshot {
+    policy_victim(
         CombatantKind::Npc,
-        dog.level,
-        dog.vitality,
-        dog.dexterity,
-        dog.proto_defense,
-        dog.sword_resistance_percent,
-        dog.fan_resistance_percent,
-    ))
+        d.level,
+        d.vitality,
+        d.dexterity,
+        d.proto_defense,
+        d.sword_resistance_percent,
+        d.fan_resistance_percent,
+    )
 }
 
 fn player_victim(
@@ -966,7 +969,7 @@ pub fn roll_player_hit(
     captured: CapturedPlayerAttacker,
     monster: &Monster,
 ) -> Result<u16, String> {
-    roll_damage(ctx, player_attacker(captured)?, dog_victim(monster)?)
+    roll_damage(ctx, player_attacker(captured)?, mob_victim(monster)?)
 }
 
 pub fn roll_skill_hit(
@@ -978,7 +981,7 @@ pub fn roll_skill_hit(
     monster: &Monster,
 ) -> Result<u16, String> {
     let attacker = player_attacker(captured)?;
-    let victim = dog_victim(monster)?;
+    let victim = mob_victim(monster)?;
     let power = ctx
         .rng()
         .gen_range(attacker.power.power_min..=attacker.power.power_max);
@@ -999,15 +1002,31 @@ pub fn roll_monster_hit(
     monster: &Monster,
     target: Identity,
 ) -> Result<u16, String> {
-    crate::combat::validate_monster(monster)?;
-    if monster.definition_vnum != definitions::WILD_DOG_101_PHYSICAL.vnum
-        || monster.actor_id != definitions::WILD_DOG_101_PHYSICAL.actor_id
-        || monster.max_health != definitions::MOB_MAX_HEALTH
-        || crate::combat::trusted_spawn(monster.id).is_none()
-    {
-        return Err("The physical attacker is not the selected trusted Wild Dog.".into());
+    let definition = mob_physical(monster)?;
+    let damage = roll_damage(ctx, mob_attacker(definition)?, player_victim(ctx, target)?)?;
+    if definition.critical_percent == 0 {
+        return Ok(damage);
     }
-    roll_damage(ctx, dog_attacker()?, player_victim(ctx, target)?)
+    normal_mob_critical(
+        damage,
+        definition.critical_percent,
+        ctx.rng().gen_range(1..=100),
+    )
+}
+
+// Original normal-hit path: roll 1..100 against the full critical percentage,
+// then double damage. Skill-critical probability follows a different formula.
+fn normal_mob_critical(damage: u16, percent: u8, roll: u8) -> Result<u16, String> {
+    if percent > 100 || !(1..=100).contains(&roll) {
+        return Err("Invalid normal mob critical roll.".into());
+    }
+    if roll <= percent {
+        damage
+            .checked_mul(2)
+            .ok_or("Critical damage exceeds the supported range.".into())
+    } else {
+        Ok(damage)
+    }
 }
 
 pub fn display_values(
@@ -1055,6 +1074,58 @@ pub fn display_values(
 mod tests {
     use super::*;
     use std::cell::Cell;
+
+    #[test]
+    fn normal_mob_critical_uses_full_percentage_and_bounded_doubling() {
+        for roll in 1..=100 {
+            assert_eq!(
+                normal_mob_critical(37, 5, roll).unwrap(),
+                if roll <= 5 { 74 } else { 37 }
+            );
+            assert_eq!(normal_mob_critical(37, 0, roll).unwrap(), 37);
+        }
+        assert!(normal_mob_critical(37, 101, 1).is_err());
+        assert!(normal_mob_critical(37, 5, 0).is_err());
+        assert!(normal_mob_critical(u16::MAX, 100, 1).is_err());
+    }
+
+    #[test]
+    fn mob_stat_adapters_change_both_sides_of_the_real_damage_calculation() {
+        // Original vnum 102 row, recorded by the pinned wildlife inventory.
+        let wolf = definitions::MobPhysicalDefinition {
+            actor_id: "actor.mob.wolf-102",
+            vnum: 102,
+            level: 3,
+            strength: 4,
+            vitality: 7,
+            dexterity: 9,
+            proto_defense: 6,
+            power_min: 23,
+            power_max: 28,
+            damage_multiplier: 1.0,
+            sword_resistance_percent: 0,
+            fan_resistance_percent: 0,
+            critical_percent: 0,
+        };
+        let dog = &definitions::MOB_PHYSICAL_DEFINITIONS[0];
+        let target = warrior_victim(1, 4, 3);
+        let dog_hits = damage_domain(mob_attacker(dog).unwrap(), target);
+        let wolf_hits = damage_domain(mob_attacker(&wolf).unwrap(), target);
+        assert!(wolf_hits.iter().min().unwrap() > dog_hits.iter().min().unwrap());
+        assert!(wolf_hits.iter().max().unwrap() > dog_hits.iter().max().unwrap());
+        let attacker = initial_warrior(SWORD_10_POWER);
+        let dog_receives = damage_domain(attacker, mob_defender(dog));
+        let wolf_receives = damage_domain(attacker, mob_defender(&wolf));
+        assert!(wolf_receives.iter().max().unwrap() < dog_receives.iter().max().unwrap());
+        let resistant = definitions::MobPhysicalDefinition {
+            sword_resistance_percent: 50,
+            ..wolf
+        };
+        let resisted = damage_domain(attacker, mob_defender(&resistant));
+        for (normal, reduced) in wolf_receives.iter().zip(resisted) {
+            assert_eq!(reduced, normal / 2);
+        }
+    }
 
     fn initial_warrior(power: PhysicalPowerSource) -> PhysicalAttackerSnapshot {
         warrior(1, 6, 3, power)
