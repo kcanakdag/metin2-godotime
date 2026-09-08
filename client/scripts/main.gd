@@ -11,6 +11,8 @@ const WorldPickerScript := preload("res://scripts/world/world_picker.gd")
 const WorldNpcsScript := preload("res://scripts/world/world_npcs.gd")
 const WorldProjectilesScript := preload("res://scripts/world/world_projectiles.gd")
 const PROJECTILE_CATALOG_PATH := "res://assets/imported/projectiles/catalog.v1.json"
+const PveVisibility := preload("res://scripts/world/pve_visibility.gd")
+const PVE_REFRESH_SECONDS := 0.25
 const HOVER_REFRESH_SECONDS := 0.1
 const GROUND_PICK_RADIUS_M := 2.0
 
@@ -27,6 +29,7 @@ var _marker_time := 0.0
 var _stream: WorldStream
 var _npcs: WorldNpcs
 var _pve: Dictionary = {}
+var _pve_refresh_elapsed := 0.0
 var _projectiles: Node3D
 var _original_map := false
 var _content_generation := 0
@@ -164,6 +167,14 @@ func _process(delta: float) -> void:
 	_update_held_attack()
 	if is_instance_valid(_local_actor):
 		_stream.focus(_local_actor.server_position)
+	if _original_map and connection.state == "connected":
+		_pve_refresh_elapsed += delta
+		if _pve_refresh_elapsed >= PVE_REFRESH_SECONDS:
+			_pve_refresh_elapsed = 0.0
+			_sync_pve(connection.monsters, false)
+			_sync_pve(connection.loot, true)
+			_sync_pve(connection.item_drops, true, true)
+			_refresh_combat_target()
 	if _original_map:
 		for actor: PlayerActor in _actors.values():
 			actor.visible = _stream.ready_at(actor.server_position)
@@ -540,10 +551,7 @@ func _observe_screen_waves(server_time_us: int) -> void:
 
 
 func _subscribed_position(row: Dictionary) -> Variant:
-	var position := Vector3(
-		float(row.get("x", NAN)), float(row.get("y", NAN)), float(row.get("z", NAN))
-	)
-	return position if position.is_finite() else null
+	return PveVisibility.position_for(row)
 
 
 func _on_world_info(info: Dictionary) -> void:
@@ -648,6 +656,15 @@ func _sync_pve(rows: Array, loot_mode: bool, item_mode: bool = false) -> void:
 	var present: Dictionary = {}
 	for row: Dictionary in rows:
 		var id := prefix + str(row.id)
+		if (
+			_original_map
+			and not PveVisibility.includes(
+				row,
+				_local_actor.server_position if is_instance_valid(_local_actor) else null,
+				_stream.ready_at
+			)
+		):
+			continue
 		present[id] = true
 		if not _pve.has(id):
 			var actor := PveActor.new()

@@ -180,6 +180,7 @@ func _run() -> void:
 		"removed target no longer resolves",
 		main.call("_resolve_projectile_target", target_id).is_empty()
 	)
+	await _test_population_visibility(main, gameplay, target)
 	var file := FileAccess.open("res://report.json", FileAccess.WRITE)
 	file.store_string(JSON.stringify({"checks": _checks, "failures": _failures}))
 	file.close()
@@ -187,3 +188,73 @@ func _run() -> void:
 	main.queue_free()
 	await process_frame
 	quit(0 if _failures.is_empty() else 1)
+
+
+func _test_population_visibility(main: Node3D, gameplay: Dictionary, target: Dictionary) -> void:
+	main.call("_on_players", [target])
+	await process_frame
+	var player: PlayerActor = main.get("_actors")[str(target.identity)]
+	main.set("_local_actor", player)
+	main.set("_original_map", true)
+	var connection: GameConnection = main.connection
+	connection.state = "connected"
+	var definition: Dictionary = gameplay.mobs[0]
+	var rows: Array = []
+	for index in 2800:
+		rows.append(
+			{
+				"id": 910000 + index,
+				"definition_vnum": definition.vnum,
+				"actor_id": definition.id,
+				"name": definition.name,
+				"health": definition.health,
+				"max_health": definition.health,
+				"x": 1000.0 + index,
+				"y": 0.0,
+				"z": 0.0,
+				"life_sequence": 0,
+				"attack_sequence": 0,
+				"activity": 0
+			}
+		)
+	rows[0].x = 3.0
+	connection.monsters = rows
+	main.call("_on_monsters", rows)
+	_check("2800 subscribed mobs instantiate only nearby actor", main.get("_pve").size() == 1)
+	_check(
+		"presentation filtering retains full subscribed state", connection.monsters.size() == 2800
+	)
+	var Policy = preload("res://scripts/world/pve_visibility.gd")
+	_check(
+		"original approximate-distance edge included",
+		Policy.includes({"x": 57.24, "y": 0, "z": 0}, Vector3.ZERO, func(_point): return true)
+	)
+	_check(
+		"original approximate-distance outside excluded",
+		not Policy.includes({"x": 57.26, "y": 0, "z": 0}, Vector3.ZERO, func(_point): return true)
+	)
+	_check(
+		"malformed position excluded",
+		not Policy.includes({"x": NAN, "y": 0, "z": 0}, Vector3.ZERO, func(_point): return true)
+	)
+	player.server_position = Vector3(1001, 0, 0)
+	main.call("_process", 0.3)
+	var visible: Dictionary = main.get("_pve")
+	_check("movement admits new rows without subscription update", visible.has("Monster_910001"))
+	_check("movement removes distant actor", not visible.has("Monster_910000"))
+	_check("movement keeps actor population bounded", visible.size() < 65)
+	var stream: WorldStream = main.get("_stream")
+	stream.set_active(true)
+	main.call("_process", 0.3)
+	_check("unready terrain releases actors", main.get("_pve").is_empty())
+	stream.set_active(false)
+	player.server_position = Vector3(3, 0, 0)
+	rows[0].life_sequence = 1
+	main.call("_process", 0.3)
+	_check(
+		"reentry uses latest authoritative life",
+		int(main.get("_pve")["Monster_910000"].row.life_sequence) == 1
+	)
+	main.call("_on_monsters", [])
+	main.call("_on_players", [])
+	await process_frame

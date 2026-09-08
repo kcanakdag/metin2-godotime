@@ -1641,3 +1641,24 @@ The selected 945-entry inventory initialized 2,835 members covering 44 species i
 This establishes population subscriptions and connection lifecycle, not full-map
 rendering performance, long-running stability, every species' combat, or server
 restart persistence. Public protocol 19 is still the earlier build.
+
+
+## Nearby mob presentation — 2026-09-08
+
+The client retains full subscribed mob/loot state but instantiates PVE actors only
+inside the original visibility distance on Yongan, with loaded terrain and a local
+player required. `pve_visibility.gd` implements the pinned server's `config.cpp`
+5,000 + 500 cm view range and `entity_view.cpp` approximate-distance comparison.
+This bounds animation/model work independently of terrain chunk size. Training
+fixtures retain their existing presentation behavior. Main reevaluates subscribed
+rows every 250 ms as well as on updates, so movement and terrain readiness can
+admit/remove actors without waiting for a changed mob row. Re-entry uses current
+subscribed life/action state; removal clears picking and projectile actor references.
+This is client presentation filtering, not server subscription interest management.
+
+Focused evidence: `.local/mobs/visibility-main-r1/report.json`, 41 native Main
+checks, including 2,800 controlled rows, original distance boundaries, malformed
+position rejection, movement without row updates, terrain readiness and life re-entry.
+The existing four projectile checks/captures also pass; the 301 capture was reviewed.
+Afterward, a test-local preload variable was renamed to satisfy lint; runtime code
+is unchanged from the qualified run. This is not full-world browser performance QA.

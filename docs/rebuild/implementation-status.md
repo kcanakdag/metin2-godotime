@@ -5,6 +5,22 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Nearby PVE presentation for the full population — 2026-09-08
+
+The previous client instantiated every subscribed mob before hiding actors outside
+loaded terrain. Main now selects nearby PVE rows before creating actors, using the
+original 5,500 cm approximate view distance and loaded-terrain readiness. A periodic
+250 ms refresh admits/removes actors as the player moves even without mob updates.
+Full subscribed state remains available; this does not reduce network subscription
+scope or server simulation cost. Training fixtures retain their existing behavior.
+
+`.local/mobs/visibility-main-r1/report.json`: 41 focused native Main checks pass,
+including a 2,800-row controlled population, movement across the view boundary,
+terrain unload, current-life re-entry and existing projectile presentation. Reviewed
+301 screenshot. Scoped lint and real Godot parsing pass; the test-local preload
+variable was subsequently renamed for lint with no runtime logic change. Connected
+editor, rendered live Yongan and browser performance qualification remain pending.
+
 ## Original Yongan population linked and subscribed — 2026-09-08
 
 `MT2_ORIGINAL_POPULATION` now links the 945 original regeneration entries into a
