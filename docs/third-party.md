@@ -432,3 +432,8 @@ for missing follow-bone fallback and the separate capture-bone branch in
 `ActorInstanceMotionEvent.cpp`. The selected original female Warrior GR2 lacks
 `Bip01 Footsteps`; source and converted skeletons were compared using the existing
 pinned Carbon reader and legacy-header adapter, without modifying the asset.
+
+Effect transform inspection follows `EterGrnLib/ThingInstance.cpp:GetBoneMatrix`,
+`ModelInstanceModel.cpp:GetBoneMatrixPointer`, and the row-vector multiplication
+order in `GameLib/ActorInstanceAttach.cpp`. Original world-pose transforms were
+compared independently with installed GLB rest frames; no original code was copied.

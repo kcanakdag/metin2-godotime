@@ -208,6 +208,35 @@ func projectile_launch_origin(launch: Dictionary) -> Dictionary:
 	return {"position": point}
 
 
+func motion_effect_transform(effect: Dictionary, source_to_actor_yaw_degrees: float) -> Dictionary:
+	var offset: Array = effect.get("position_m", [])
+	if not is_finite(source_to_actor_yaw_degrees) or offset.size() != 3:
+		return {"error": "Effect needs finite source orientation and three offset components"}
+	for value: Variant in offset:
+		if not (value is int or value is float) or not is_finite(float(value)):
+			return {"error": "Effect offset must be finite"}
+	var attachment := str(effect.get("attachment", ""))
+	if attachment not in ["follow_root", "capture_root", "follow_bone", "capture_bone"]:
+		return {"error": "Unknown effect attachment mode"}
+	var source_basis := global_basis * Basis(Vector3.UP, deg_to_rad(source_to_actor_yaw_degrees))
+	var transform := Transform3D(source_basis, global_position)
+	if attachment.ends_with("bone"):
+		var skeleton := _find_skeleton(model)
+		var index := skeleton.find_bone(str(effect.get("bone", ""))) if skeleton else -1
+		if index < 0:
+			return {"error": "Resolved effect attachment bone is missing"}
+		transform = skeleton.global_transform * skeleton.get_bone_global_pose(index)
+		# glTF joint axes retain Blender bone coordinates; effect vertices already
+		# use the source-to-Godot axis mapping, so undo it on the right.
+		transform.basis *= Basis(Vector3.RIGHT, PI / 2)
+	# Original bone * translation * actor row-vector order: offset belongs to
+	# actor space, not the animated bone's local axes.
+	transform.origin += source_basis * Vector3(float(offset[0]), float(offset[1]), float(offset[2]))
+	if not transform.is_finite():
+		return {"error": "Nonfinite effect attachment transform"}
+	return {"transform": transform}
+
+
 func freeze_at_end() -> void:
 	if animation_player == null or current_motion.is_empty():
 		return

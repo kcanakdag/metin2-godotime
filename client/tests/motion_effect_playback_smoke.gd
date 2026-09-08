@@ -112,6 +112,7 @@ func _run() -> void:
 	actor._process(0.5)
 	_check("legacy projectile dispatch preserved", _projectiles == [Vector3(1, 3, -2)])
 	_check("no effects required for legacy motion", _events.is_empty())
+	_attachment_checks(actor)
 	actor.queue_free()
 	await process_frame
 	print(JSON.stringify({"checks": _checks, "failures": _failures}))
@@ -122,3 +123,39 @@ func _record(event: Dictionary) -> void:
 	_events.append(str(event.source_event))
 	# Signal receivers must not mutate catalog metadata.
 	event.start_us = -1
+
+
+func _attachment_checks(actor: Node3D) -> void:
+	actor.model = Node3D.new()
+	actor.add_child(actor.model)
+	var skeleton := Skeleton3D.new()
+	actor.model.add_child(skeleton)
+	skeleton.add_bone("hand")
+	skeleton.set_bone_pose_position(0, Vector3(1, 2, 3))
+	skeleton.set_bone_pose_rotation(0, Quaternion(Vector3.UP, PI / 2))
+	actor.position = Vector3(10, 0, 0)
+	var effect := {"attachment": "follow_root", "position_m": [1, 0, 0]}
+	var result: Dictionary = actor.motion_effect_transform(effect, 180.0)
+	_check(
+		"source yaw rotates root offset", result.transform.origin.is_equal_approx(Vector3(9, 0, 0))
+	)
+	effect.attachment = "follow_bone"
+	effect.bone = "hand"
+	result = actor.motion_effect_transform(effect, 180.0)
+	_check(
+		"offset does not rotate with hand",
+		result.transform.origin.is_equal_approx(Vector3(10, 2, 3))
+	)
+	_check(
+		"bone axes converted for effect geometry",
+		result.transform.basis.is_equal_approx(
+			Basis(Vector3.UP, PI / 2) * Basis(Vector3.RIGHT, PI / 2)
+		)
+	)
+	effect.bone = "missing"
+	_check(
+		"missing resolved bone rejects", actor.motion_effect_transform(effect, 180.0).has("error")
+	)
+	effect.attachment = "follow_root"
+	effect.position_m = [NAN, 0, 0]
+	_check("nonfinite offset rejects", actor.motion_effect_transform(effect, 180.0).has("error"))

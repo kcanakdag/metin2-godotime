@@ -5,6 +5,31 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Effect attachment transform conventions — 2026-09-09
+
+`ActorPresentation.motion_effect_transform` resolves explicit root/bone modes into
+world transforms. The caller supplies the catalog's source-to-actor yaw. Source
+metre offsets rotate with the actor source frame, not the animated bone; bone
+orientation receives the inverse source-to-Godot axis mapping on the right
+(a local X quarter-turn). Missing resolved bones and nonfinite inputs reject.
+The method does not choose a fallback at runtime; the source-aware linker does.
+
+The original `GetBoneMatrix` uses Granny world pose, distinct from the skinning
+composite. An independent rest-frame comparison of pinned GR2 model placement and
+bone hierarchy with installed GLB node transforms found position errors below
+0.000001 m on both Warrior hand/spine attachments and male Footsteps. All five
+basis comparisons yield the same local-axis correction within export roundoff.
+Evidence: `.local/p6-skill-effects-r7/inspect_frames.py` and `frame-comparison.txt`.
+This comparison used system NumPy for local inspection, adding no runtime dependency.
+
+The actual Godot playback fixture now passes 24 checks including root yaw, actor-space
+bone offset, converted bone basis and missing/nonfinite rejection:
+`.local/p6-skill-effects-r7/playback-final/report.json`. Touched GDScript lint passes.
+This establishes rest-frame conventions and synthetic animated-pose resolution,
+not visual animated attachment parity. Renderer lifecycle, complete Bash effects,
+installed catalog links and two-client rendered acceptance remain unfinished.
+No imported models, server/database or public deployment changed.
+
 ## Shared actor motion-effect event playback — 2026-09-09
 
 `ActorPresentation` now dispatches optional typed `effects` from the actual
