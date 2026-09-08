@@ -7,6 +7,36 @@ or reclassify that scope.
 
 ## P6: all-class abilities requested; training target delivered locally
 
+### Remaining original point NPCs: candidate package
+
+The new `yongan-season1-npcs` profile selects eight NPCs, including six animated
+townspeople, Weol Memorial and Nameless Flowers. Conversion in
+`.local/npcs/yongan-season1-r3` preserves all 18 registered motions and exports the
+two source-static landmarks without fabricated idle clips. Explicit `#` race
+folders and GR2-local texture bindings now follow pinned client behavior.
+NPC catalog schema 2 makes static/animated presentation explicit; legacy schema 1
+remains supported. The candidate package is
+`.local/npcs/yongan-complete-points-r1/runtime` (32 definitions, 41 placements).
+
+`.local/npcs/yongan-season1-qa-r2` passes 137 rendered gallery checks. Chaegirab,
+memorial and flower captures were inspected; bounds-based framing fixes cropped
+landmark previews. The real Main/map test in
+`.local/npcs/yongan-complete-points-world-r2` passes 53 checks, including static
+placement, labels and picking-only collision on both remote landmark chunks.
+Its connection is simulated. The follow-up
+`.local/npcs/yongan-complete-points-world-r3` also passes 53 checks, removes the
+prior guard dialogue overlay and frames landmark bounds. Both unobstructed map
+captures were visually inspected.
+Twelve focused Python tests, `make server-test` and repository lint pass.
+
+The first conversion attempts exposed model-local texture names and pack-prefix
+normalization; logs are retained. The first map run exposed strict Array membership
+for JSON float versions, fixed by numeric version comparisons. Reproducible map-QA
+project copies were pruned after terminal runs to recover disk space; reports,
+logs, source assets, databases and served builds are preserved.
+No new server or exported client has been deployed for this candidate. Remaining
+random-area NPCs, shops, quests, full abilities and foliage are still unfinished.
+
 ### Skill mechanic metadata and dummy recheck
 
 The full-class candidate Rust generator previously omitted damage attributes,

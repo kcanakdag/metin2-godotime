@@ -65,6 +65,11 @@ def material_references(mesh: dict) -> list[str]:
 
 
 def texture_map(asset: dict, source_root: Path) -> dict[str, Path]:
+    bindings = asset.get("material_texture_bindings")
+    if bindings is not None:
+        if set(bindings.values()) != set(asset["source_textures"]):
+            raise ValueError("NPC material bindings differ from declared texture dependencies")
+        return {name: source_root / path for name, path in bindings.items()}
     result = {}
     for source in asset["source_textures"]:
         parts = Path(source).parts
@@ -308,11 +313,12 @@ def analyze_root_motion(actions: list, motions: list[dict], root_bone: str) -> l
 
 def vertex_samples(scene, rig, meshes, actions: list) -> list[list[tuple[float, float, float]]]:
     result = []
-    for action in actions:
+    for action in actions or [None]:
+        rig.animation_data_create()
         rig.animation_data.action = action
-        if action.slots:
+        if action is not None and action.slots:
             rig.animation_data.action_slot = action.slots[0]
-        frame = int((action.frame_range.x + action.frame_range.y) / 2)
+        frame = int((action.frame_range.x + action.frame_range.y) / 2) if action else 0
         scene.frame_set(frame)
         depsgraph = bpy.context.evaluated_depsgraph_get()
         result.append(
@@ -451,6 +457,8 @@ def convert_actor(actor: dict, source_root: Path, output: Path) -> dict:
     graph, hair_raw_meshes, hair_report = merge_default_hair(graph, actor, source_root)
     rigid_bindings = normalize_rigid_bindings(graph)
     motions = [motion for mode in actor["modes"] for motion in mode["motions"]]
+    if not motions and actor.get("presentation") != "static":
+        raise ValueError("Only explicitly static NPCs may omit animations")
     for motion in motions:
         path = source_root / motion["source_gr2"]
         animation_graph = carbon_gr2.read_gr2(path)
@@ -521,13 +529,13 @@ def convert_actor(actor: dict, source_root: Path, output: Path) -> dict:
             "tail_m": list(bone.tail_local),
         }
     action_report = exercise_actions(bpy.context.scene, rig, meshes, motions, imported["actions"])
-    rig.animation_data.action = imported["actions"][0]
-    if rig.animation_data.action.slots:
+    rig.animation_data.action = imported["actions"][0] if imported["actions"] else None
+    if rig.animation_data.action is not None and rig.animation_data.action.slots:
         rig.animation_data.action_slot = rig.animation_data.action.slots[0]
     bpy.context.scene.frame_set(0)
     model_bounds, vertices, triangles = bounds(meshes)
     target = output / actor["output"]
-    export_glb(target, [rig, *meshes], animations=True, skins=True)
+    export_glb(target, [rig, *meshes], animations=bool(motions), skins=True)
     return {
         "id": actor["id"],
         "type": "actor",

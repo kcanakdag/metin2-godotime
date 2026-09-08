@@ -277,3 +277,10 @@ assets. Its editable Blender source and conversion receipt stay under `.local/`;
 only its generated GLB and runtime manifest are installed/exported. The selected
 full-class motion/UI expansion uses the same pinned client revision above; it adds
 88 normal-grade skill motions and their selected icons, not the complete archive.
+
+The bounded `yongan-season1-npcs` profile adds eight original point-placement NPCs,
+including the static memorial and flowers, under the same asset restrictions.
+Pinned `GameLib/RaceManager.cpp::__LoadRaceData` supplies the `#folder/shape.msm`
+registration rule; `EterGrnLib/Material.cpp::__GetImagePointer` supplies model-local
+texture resolution. These source files are references for independently written
+import logic. Original GR2s, textures, converted GLBs and receipts remain ignored.

@@ -28,12 +28,18 @@ func _pose(skeleton: Skeleton3D) -> Array[Transform3D]:
 func _verify_actor(instance: Node3D, actor: Dictionary) -> void:
 	var skeletons := instance.find_children("*", "Skeleton3D", true, false)
 	var players := instance.find_children("*", "AnimationPlayer", true, false)
+	var stationary_model := str(actor.get("presentation", "animated")) == "static"
 	if not _check(
-		skeletons.size() == 1 and players.size() == 1, "one skeleton and animation player"
+		skeletons.size() == 1 and players.size() == (0 if stationary_model else 1),
+		"skeleton and animation players match presentation"
 	):
 		return
 	var skeleton := skeletons[0] as Skeleton3D
-	var player := players[0] as AnimationPlayer
+	var player: AnimationPlayer = null if stationary_model else players[0] as AnimationPlayer
+	if stationary_model:
+		_check(actor.modes.is_empty(), "static actor declares no motions")
+		for pose in _pose(skeleton):
+			_check(pose.is_finite(), "finite static bone transform")
 	var expected: Array = []
 	for mode: Dictionary in actor.modes:
 		for motion: Dictionary in mode.motions:
@@ -65,7 +71,7 @@ func _verify_actor(instance: Node3D, actor: Dictionary) -> void:
 			_motions.append(
 				{"id": motion.action_id, "duration_us": motion.duration_us, "pose_delta": delta}
 			)
-	var actual := Array(player.get_animation_list())
+	var actual := [] if stationary_model else Array(player.get_animation_list())
 	actual.sort()
 	expected.sort()
 	_check(actual == expected, "exact declared clip set")
@@ -81,6 +87,8 @@ func _verify_actor(instance: Node3D, actor: Dictionary) -> void:
 
 
 func _show_idle(instance: Node3D, actor: Dictionary) -> void:
+	if actor.get("presentation", "animated") == "static":
+		return
 	var player := instance.find_children("*", "AnimationPlayer", true, false)[0] as AnimationPlayer
 	for mode: Dictionary in actor.modes:
 		for motion: Dictionary in mode.motions:
@@ -123,10 +131,18 @@ func _view(packed: PackedScene, label_text: String, yaw: float) -> Node3D:
 	world.add_child(actor)
 	var camera := Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = 2.8
+	var bounds := AABB()
+	var first := true
+	for mesh: MeshInstance3D in actor.find_children("*", "MeshInstance3D", true, false):
+		var mesh_bounds: AABB = mesh.global_transform * mesh.get_aabb()
+		bounds = mesh_bounds if first else bounds.merge(mesh_bounds)
+		first = false
+	camera.keep_aspect = Camera3D.KEEP_HEIGHT
+	camera.size = maxf(bounds.size.y, bounds.size.x * 360.0 / 640.0) * 1.25
 	world.add_child(camera)
-	camera.position = Vector3(0, 1.1, -5)
-	camera.look_at(Vector3(0, 1.1, 0))
+	var center := bounds.get_center()
+	camera.position = center + Vector3(0, 0, -maxf(bounds.size.length() * 2.0, 5.0))
+	camera.look_at(center)
 	camera.current = true
 	return actor
 

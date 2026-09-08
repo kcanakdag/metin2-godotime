@@ -84,6 +84,7 @@ def public_actor(actor: dict, artifact: dict) -> dict:
         "sha256": artifact["sha256"],
         "label_height": artifact["bounds_m"][1][1] + 0.2,
         "idle": idle,
+        "presentation": actor.get("presentation", "animated"),
     }
 
 
@@ -99,14 +100,18 @@ def finite(value: object, minimum: float, maximum: float) -> bool:
 def validate_public(document: dict) -> None:
     """Used before installation and export; no source paths/receipts may ship."""
     exact(document, "schema version actors maps")
-    if document["schema"] != "mt2spacetime.static-npcs" or document["version"] != 1:
+    if document["schema"] != "mt2spacetime.static-npcs" or document["version"] not in (1, 2):
         raise ValueError("Unsupported NPC catalog")
     actors, maps = document["actors"], document["maps"]
     if not isinstance(actors, list) or not 1 <= len(actors) <= 256:
         raise ValueError("Expected 1..256 NPC definitions")
     ids, models, vnums = set(), set(), set()
     for actor in actors:
-        exact(actor, "id vnum name model sha256 label_height idle")
+        exact(
+            actor,
+            "id vnum name model sha256 label_height idle"
+            + (" presentation" if document["version"] == 2 else ""),
+        )
         if (
             not re.fullmatch(r"actor\.npc\.[a-z0-9-]+", actor["id"])
             or actor["id"] in ids
@@ -125,6 +130,13 @@ def validate_public(document: dict) -> None:
         ids.add(actor["id"])
         vnums.add(actor["vnum"])
         models.add(actor["model"])
+        presentation = actor.get("presentation", "animated")
+        if presentation not in ("animated", "static"):
+            raise ValueError("Unsupported NPC presentation")
+        if presentation == "static":
+            if actor["idle"] != []:
+                raise ValueError("Static NPCs must not declare idle animations")
+            continue
         if not isinstance(actor["idle"], list) or not 1 <= len(actor["idle"]) <= 16:
             raise ValueError("Missing NPC idle variants")
         clips = set()
@@ -280,7 +292,7 @@ def build(contents: list[Path], profiles: list[Path], output: Path) -> dict:
         raise ValueError("Every NPC map needs a population profile for terrain validation")
     document = {
         "schema": "mt2spacetime.static-npcs",
-        "version": 1,
+        "version": 2,
         "actors": sorted(actors, key=lambda a: a["id"]),
         "maps": sorted(maps, key=lambda m: m["id"]),
     }

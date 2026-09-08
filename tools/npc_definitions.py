@@ -7,6 +7,18 @@ import re
 from content_formats import integer, virtual_path
 
 
+def race_paths(model_key: str, source_root: str) -> tuple[str, str]:
+    root = virtual_path(source_root)
+    if model_key.startswith("#"):
+        registered = virtual_path(model_key[1:].rstrip("/"))
+        if registered != root:
+            raise ValueError("Explicit NPC registration differs from the selected source root")
+        return root + "/shape.msm", root + "/motlist.txt"
+    if not re.fullmatch(r"[a-z0-9_]+", model_key):
+        raise ValueError("Invalid conventional NPC model key")
+    return root + "/" + model_key + ".msm", root + "/motlist.txt"
+
+
 def material_paths(raw: dict) -> list[str]:
     paths = set()
     for mesh in raw["Meshes"]:
@@ -26,6 +38,26 @@ def material_paths(raw: dict) -> list[str]:
     if not 1 <= len(paths) <= 32:
         raise ValueError("NPC texture dependency count is outside the supported bound")
     return sorted(paths)
+
+
+def material_bindings(raw: dict, model_directory: str) -> dict[str, str]:
+    """Mirror CGrannyMaterial's model-local path for non-drive texture names."""
+    material_paths(raw)  # Validate supported map kinds before resolving dependencies.
+    result = {}
+    for mesh in raw["Meshes"]:
+        for binding in mesh["MaterialBindings"]:
+            for entry in binding["Material"]["Maps"]:
+                name = entry["Map"]["Texture"]["FromFileName"]
+                reference = virtual_path(name)
+                resolved = (
+                    virtual_path(model_directory + "/" + reference)
+                    if len(name) > 2 and name[1] != ":"
+                    else reference
+                )
+                if reference in result and result[reference] != resolved:
+                    raise ValueError("Ambiguous NPC material texture binding")
+                result[reference] = resolved
+    return result
 
 
 def point_spawns(text: str, vnum: int) -> list[dict]:

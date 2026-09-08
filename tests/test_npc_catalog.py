@@ -14,10 +14,37 @@ from pathlib import Path
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from build_npc_catalog import CATALOG, RESOURCE_ROOT, artifact_path, heading, validate_package
+from build_npc_catalog import (
+    CATALOG,
+    RESOURCE_ROOT,
+    artifact_path,
+    heading,
+    validate_package,
+    validate_public,
+)
 
 
 class NpcCatalogTests(unittest.TestCase):
+    def test_static_presentation_is_explicit_and_cannot_discard_idle_variants(self):
+        doc = self.document()
+        doc["version"] = 2
+        with self.assertRaises(ValueError):
+            validate_public(doc)
+        actor = doc["actors"][0]
+        actor["presentation"] = "animated"
+        validate_public(doc)
+        actor["presentation"] = "static"
+        with self.assertRaises(ValueError):
+            validate_public(doc)
+        actor["idle"] = []
+        validate_public(doc)
+        actor["presentation"] = "animated"
+        with self.assertRaises(ValueError):
+            validate_public(doc)
+        actor["presentation"] = "script"
+        with self.assertRaises(ValueError):
+            validate_public(doc)
+
     def model(self):
         image = io.BytesIO()
         Image.new("RGBA", (2, 2), (122, 231, 93, 255)).save(image, format="PNG")

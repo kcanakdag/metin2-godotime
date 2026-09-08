@@ -25,7 +25,7 @@ func load_document(document: Dictionary) -> bool:
 	error_message = ""
 	if (
 		document.get("schema") != "mt2spacetime.static-npcs"
-		or document.get("version") != 1
+		or (document.get("version") != 1 and document.get("version") != 2)
 		or not document.get("actors") is Array
 		or not document.get("maps") is Array
 	):
@@ -33,7 +33,7 @@ func load_document(document: Dictionary) -> bool:
 	if document.actors.is_empty() or document.actors.size() > 256 or document.maps.size() > 32:
 		return _fail("NPC catalog exceeds supported bounds.")
 	for actor: Variant in document.actors:
-		if not _index_actor(actor):
+		if not _index_actor(actor, int(document.version)):
 			return _fail("Invalid NPC actor definition.")
 	for world: Variant in document.maps:
 		if not _index_map(world):
@@ -54,13 +54,14 @@ func layout(info: Dictionary) -> Dictionary:
 	return world.duplicate(true)
 
 
-func _index_actor(value: Variant) -> bool:
+func _index_actor(value: Variant, version: int) -> bool:
 	if not value is Dictionary:
 		return false
 	var id := str(value.get("id", ""))
 	var path := str(value.get("model", ""))
 	if (
-		id.is_empty()
+		value.has("presentation") != (version == 2)
+		or id.is_empty()
 		or actors.has(id)
 		or not path.begins_with(PREFIX)
 		or not path.ends_with(".glb")
@@ -71,7 +72,12 @@ func _index_actor(value: Variant) -> bool:
 		or not value.get("idle") is Array
 	):
 		return false
-	if not _valid_idle(value.idle):
+	var presentation := str(value.get("presentation", "animated"))
+	if presentation not in ["animated", "static"]:
+		return false
+	if presentation == "static" and not value.idle.is_empty():
+		return false
+	if presentation == "animated" and not _valid_idle(value.idle):
 		return false
 	actors[id] = value.duplicate(true)
 	return true

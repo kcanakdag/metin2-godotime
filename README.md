@@ -69,6 +69,11 @@ teachers, blacksmith and fishermen. It passes 936 gallery checks, 39 isolated
 map-scene checks and 114 actual Chrome/Linux checks. Opening an NPC conversation
 also clears a previous combat target. Shops and quests remain pending.
 
+The next [NPC candidate](docs/world-content.md#remaining-original-point-placements)
+adds six townspeople plus Weol Memorial and Nameless Flowers. The importer now
+supports explicit source folders, model-local textures and truly static models.
+This candidate has not yet replaced the served town build.
+
 The current worktree is protocol 17 / trusted content schema 8 (item registry schema 2). Item actions
 carry the server item's revision, rejecting stale/replayed mutations. Quantity
 changes have a private transactional audit history and an offline reconciliation

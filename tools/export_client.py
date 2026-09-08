@@ -1309,6 +1309,9 @@ func audit_npcs(expected_hash: String) -> Variant:
         if summary.mesh_count == 0 or summary.skinned_mesh_count != summary.mesh_count or summary.textured_mesh_count != summary.mesh_count:
             push_error("Packaged NPC body/weapon lost skinning or textures")
             return null
+        if actor.get("presentation", "animated") == "static" and not summary.clips.is_empty():
+            push_error("Packaged static NPC contains undeclared animations")
+            return null
         for motion: Dictionary in actor.idle:
             if motion.clip not in summary.clips:
                 push_error("Packaged NPC idle animation is missing")

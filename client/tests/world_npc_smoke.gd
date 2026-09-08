@@ -189,7 +189,55 @@ func _run() -> void:
 		"final Main scene holds the loaded population after transitions"
 	)
 	_check_catalog_failures()
+	await _check_static_landmarks(main, catalog, definition, layer, stream)
 	_finish(main)
+
+
+func _check_static_landmarks(
+	main: Node3D, catalog: NpcCatalog, definition: Dictionary, layer: WorldNpcs, stream: WorldStream
+) -> void:
+	main.hud.npc_panel.hide()
+	main.camera_rig.set_process(false)
+	for spawn: Dictionary in definition.placements:
+		var data: Dictionary = catalog.actors[spawn.actor_id]
+		if data.get("presentation", "animated") != "static":
+			continue
+		var chunk := "%03d%03d" % [int(spawn.position[0] / 256), int(spawn.position[2] / 256)]
+		_check(await stream.call("_load_chunk", chunk), "landmark terrain loads")
+		layer.refresh()
+		_check(layer.actors.has(spawn.id), "landmark appears on its original terrain chunk")
+		if not layer.actors.has(spawn.id):
+			continue
+		var actor: NpcActor = layer.actors[spawn.id]
+		_check(actor.get("_animation") == null, "static landmark has no fabricated animation")
+		_check(actor.get_node("NameLabel").text == data.name, "original landmark name")
+		_check(
+			actor.position.is_equal_approx(
+				Vector3(spawn.position[0], spawn.position[1], spawn.position[2])
+			),
+			"landmark uses catalog terrain height and position"
+		)
+		_check(
+			actor.find_children("*", "CollisionObject3D", true, false).all(_is_picking_only),
+			"landmark introduces no invisible movement obstacle"
+		)
+		var camera: Camera3D = main.camera_rig.camera
+		var center := actor.global_position + Vector3.UP * float(data.label_height) * 0.5
+		var distance := maxf(float(data.label_height) * 3.0, 8.0)
+		camera.global_position = center + Vector3(0.3, 0.45, -1).normalized() * distance
+		camera.look_at(center)
+		await create_timer(0.4).timeout
+		if DisplayServer.get_name() != "headless":
+			await RenderingServer.frame_post_draw
+			_check(
+				(
+					root.get_texture().get_image().save_png(
+						"user://world-npc-static-%s.png" % str(int(data.vnum))
+					)
+					== OK
+				),
+				"landmark screenshot saved"
+			)
 
 
 func _expected_count(definition: Dictionary, stream: WorldStream) -> int:

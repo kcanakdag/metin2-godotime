@@ -20,11 +20,15 @@ func configure(definition: Dictionary, spawn: Dictionary, packed: PackedScene) -
 		return false
 	add_child(visual)
 	var players := visual.find_children("*", "AnimationPlayer", true, false)
-	if players.size() != 1:
-		error_message = "NPC model requires one animation player."
+	var stationary_model := str(definition.get("presentation", "animated")) == "static"
+	if players.size() != (0 if stationary_model else 1):
+		error_message = "NPC animation players differ from the presentation definition."
 		return false
-	_animation = players[0] as AnimationPlayer
+	_animation = null if stationary_model else players[0] as AnimationPlayer
 	_idle = definition.idle.duplicate(true)
+	if stationary_model and not _idle.is_empty():
+		error_message = "Static NPC declares idle animations."
+		return false
 	for motion: Dictionary in _idle:
 		if (
 			not _animation.has_animation(motion.clip)

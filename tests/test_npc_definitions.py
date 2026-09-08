@@ -8,6 +8,51 @@ from pathlib import Path
 
 
 class NpcDefinitionsTests(unittest.TestCase):
+    def test_explicit_registration_uses_shape_and_rejects_root_mismatch(self):
+        self.assertEqual(
+            self.npc.race_paths("#season1/npc/chagirap/", "season1/npc/chagirap"),
+            ("season1/npc/chagirap/shape.msm", "season1/npc/chagirap/motlist.txt"),
+        )
+        self.assertEqual(
+            self.npc.race_paths("guard_leader", "ymir work/npc/guard_leader")[0],
+            "ymir work/npc/guard_leader/guard_leader.msm",
+        )
+        for key in ("#season1/npc/other/", "#../outside/", "../guard"):
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                self.npc.race_paths(key, "season1/npc/chagirap")
+
+    def test_local_texture_names_resolve_beside_the_model(self):
+        def raw(name):
+            return {
+                "Meshes": [
+                    {
+                        "MaterialBindings": [
+                            {
+                                "Material": {
+                                    "Maps": [
+                                        {
+                                            "Usage": "Diffuse Color",
+                                            "Map": {"Texture": {"FromFileName": name}},
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+
+        self.assertEqual(
+            self.npc.material_bindings(raw("chagirap.dds"), "season1/npc/chagirap"),
+            {"chagirap.dds": "season1/npc/chagirap/chagirap.dds"},
+        )
+        self.assertEqual(
+            self.npc.material_bindings(raw("D:/Ymir Work/npc/shared.dds"), "season1/npc/chagirap"),
+            {"ymir work/npc/shared.dds": "ymir work/npc/shared.dds"},
+        )
+        with self.assertRaises(ValueError):
+            self.npc.material_bindings(raw("../outside.dds"), "season1/npc/chagirap")
+
     @classmethod
     def setUpClass(cls):
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))

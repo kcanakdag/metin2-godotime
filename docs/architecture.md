@@ -146,6 +146,12 @@ chunks, removes them as chunks unload, and clears on leave/disconnect/reconfigur
 Repeated entry cannot duplicate an actor. Training intentionally has no original
 NPC layout. A missing or mismatched Yongan catalog prevents world entry.
 
+NPC catalog schema 2 explicitly distinguishes `animated` and `static` models.
+Static definitions have no idle clips or AnimationPlayer; animated definitions
+retain weighted original idles. The loader also accepts legacy schema 1, where
+every definition is animated. The existing catalog hash gates matching builds;
+the resource filename stays `catalog.v1.json` for path compatibility.
+
 NPC presentation remains immutable. A picking-only body uses layer 2 with mask
 zero; it is excluded from movement collision. The client reserves a click and
 sends ordinary movement until its subscribed position is within 4.5 meters,

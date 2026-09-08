@@ -23,7 +23,7 @@ from content_formats import parse_motion_list, parse_race_script
 from fetch_test_assets import METIN_COMMIT
 from metin_archive import safe_path
 from metin_root_motion import _carbon_reader
-from npc_definitions import material_paths, motion_groups, point_spawns
+from npc_definitions import material_bindings, motion_groups, point_spawns, race_paths
 
 DEFAULT_PROFILE = ROOT / "content/profiles/yongan-city-guard.json"
 
@@ -107,15 +107,34 @@ def compile_profile(path: Path, *, offline: bool) -> dict:
         if len(mapping) != 1 or mapping[0][1] != selected["model_key"] or str(vnum) not in names:
             raise ValueError(f"NPC {vnum} has inconsistent client/name catalogs")
         root = safe_path(selected["source_root"])
-        msm = archive.resolve(root + "/" + selected["model_key"] + ".msm")
+        shape_path, motion_path = race_paths(selected["model_key"], root)
+        msm = archive.resolve(shape_path)
         race = parse_race_script(archive.get(msm).read_text())
         model = archive.resolve(race["base_model"])
         if not model.lower().endswith(".gr2"):
             raise ValueError("NPC model must resolve to GR2")
-        motlist = archive.resolve(root + "/motlist.txt")
-        motions = motion_groups(parse_motion_list(archive.get(motlist).read_text()))
+        presentation = selected.get("presentation", "animated")
+        if presentation not in ("animated", "static"):
+            raise ValueError("Unknown NPC presentation policy")
+        try:
+            motlist = archive.resolve(motion_path)
+        except FileNotFoundError:
+            if presentation != "static":
+                raise
+            motlist = None
+        if presentation == "static" and motlist is not None:
+            raise ValueError("A registered motion list cannot be discarded for a static NPC")
+        motions = (
+            motion_groups(parse_motion_list(archive.get(motlist).read_text()))
+            if motlist is not None
+            else []
+        )
         raw_model = _carbon_reader().read_raw(archive.get(model).read_bytes()).file_info
-        textures = [archive.resolve(name) for name in material_paths(raw_model)]
+        bindings = {
+            name: archive.resolve(path)
+            for name, path in material_bindings(raw_model, "/".join(model.split("/")[3:-1])).items()
+        }
+        textures = sorted(set(bindings.values()))
         archive.fetch_many(textures)
         yaw = selected["yaw_correction_degrees"]
         if type(yaw) not in (int, float) or not math.isfinite(yaw) or abs(yaw) > 360:
@@ -138,7 +157,7 @@ def compile_profile(path: Path, *, offline: bool) -> dict:
                 "output": output,
                 "attachment_bones": {},
                 "orientation": {"output_forward": "-Z", "yaw_correction_degrees": yaw},
-                "modes": [{"id": "general", "motions": motions}],
+                "modes": [{"id": "general", "motions": motions}] if motions else [],
             }
         )
         catalog.append(
@@ -149,10 +168,16 @@ def compile_profile(path: Path, *, offline: bool) -> dict:
                 "kind": "stationary-npc",
                 "model_key": selected["model_key"],
                 "source_collision": race["collision"],
+                "presentation": presentation,
+                "source_motion_list": motlist,
+                "material_texture_bindings": bindings,
             }
         )
     actors, unsupported = _normalise_motions({"actors": declarations}, archive)
     for actor in actors:
+        record = next(c for c in catalog if c["id"] == actor["id"])
+        actor["presentation"] = record["presentation"]
+        actor["material_texture_bindings"] = record["material_texture_bindings"]
         for mode in actor["modes"]:
             for motion in mode["motions"]:
                 animation = (

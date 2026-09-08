@@ -90,6 +90,8 @@ def main() -> None:
     try:
         run_preview(command, env, output / "runtime.log", smoke=True)
     finally:
+        for capture in (output / "data").rglob("world-npc-static-*.png"):
+            shutil.copy2(capture, output / capture.name)
         for filename in ("world-npc.json", "world-npc.png"):
             found = list((output / "data").rglob(filename))
             if found:

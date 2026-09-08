@@ -261,3 +261,39 @@ rejection, combat/reward, independent lives, respawn and reconnect without rewar
 duplication. Scripts parse before accounts are created. The safe return route
 currently targets Yongan. Adding a home does not require repeating unrelated
 token-refresh or inventory UI scenarios.
+
+## Remaining original point placements
+
+`content/profiles/yongan-season1-npcs.json` selects Biologist Chaegirab, Handu-Up,
+Wonda-Rim, Heuk-Young, Seon-Pyeong, Captain, Weol Memorial and Nameless Flowers.
+All eight placements come from the pinned Yongan `npc.txt`. Registrations starting
+with `#` explicitly select a folder's `shape.msm`; other registrations retain their
+named MSM. Non-drive material filenames resolve relative to their GR2, matching
+the original client's material loader. Resolved dependencies remain hash tracked.
+
+The memorial and flowers have no source motion lists. Their profile explicitly
+selects `presentation: static`, which rejects a registered motion list and exports
+a rest-pose skinned GLB without animations. Public catalog schema 2 carries this
+choice; the Godot actor retains the usual name and picking-only proxy. Other NPCs
+still require valid weighted idle animations. The gallery automatically frames
+model bounds, allowing both human models and large landmarks to be inspected.
+
+```sh
+python3 tools/import_npc_content.py --profile content/profiles/yongan-season1-npcs.json \
+  --blender /path/to/blender --output .local/npcs/season1
+python3 tools/test_npc_content.py --content .local/npcs/season1 --native \
+  --godot /path/to/godot --output .local/npcs/season1-qa
+python3 tools/build_npc_catalog.py --content .local/p3-npcs/city-guard-r7 \
+  --content .local/npcs/yongan-town-r7 --content .local/npcs/season1 \
+  --population content/worlds/yongan.population.json --output .local/npcs/all-point-npcs
+python3 tools/test_world_npcs.py --npc-package .local/npcs/all-point-npcs/runtime \
+  --native --godot /path/to/godot --output .local/npcs/all-point-npcs-world
+```
+
+Use your own completed conversion directories for the first two package inputs.
+The combined candidate contains 32 definitions at 41 placements. Candidate gallery
+QA passes 137 checks over eight actors and 18 motions; real Main/map QA passes
+53 checks with a simulated connection, including both static landmark chunks.
+The served build still has 24 definitions/33 placements. Installing this candidate
+requires matching server and client builds plus exported gameplay qualification.
+Random-area NPC spawns, groups, warps, interactions, shops and quests remain work.

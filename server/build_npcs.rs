@@ -14,7 +14,9 @@ fn exact(value: &Value, keys: &[&str]) -> Result<(), String> {
 
 pub fn generate(catalog: &[u8], actions: &Value, map_hash: &str) -> Result<String, String> {
     let doc: Value = serde_json::from_slice(catalog).map_err(|e| e.to_string())?;
-    if doc["schema"] != "mt2spacetime.static-npcs" || doc["version"] != 1 {
+    if doc["schema"] != "mt2spacetime.static-npcs"
+        || !matches!(doc["version"].as_u64(), Some(1 | 2))
+    {
         return Err("Unsupported static NPC catalog".into());
     }
     exact(actions, &["schema_version", "map_id", "interactions"])?;
