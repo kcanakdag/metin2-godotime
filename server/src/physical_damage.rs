@@ -262,7 +262,8 @@ fn wild_dog_victim() -> PhysicalVictimSnapshot {
 ///
 /// The calculation helpers admit bounded synthetic modifiers so ordering can be unit-tested.
 /// The selected integration remains limited to the classic classes, selected weapons/unarmed, and Wild Dog 101
-/// rows, with excluded bonus stages at zero, bounded authored resistances, and unit multipliers.
+/// rows, with excluded bonus stages at zero and bounded authored NPC multipliers/resistances.
+/// Player NPC-multiplier fields and the unrelated final multiplier must remain one.
 pub fn validate_selected_policy(
     attacker: PhysicalAttackerSnapshot,
     victim: PhysicalVictimSnapshot,
@@ -270,6 +271,7 @@ pub fn validate_selected_policy(
 ) -> Result<(), PhysicalDamageError> {
     validate_level_and_stats(attacker.level, attacker.strength, attacker.dexterity)?;
     server_defense_grade(victim)?;
+    validate_multiplier(attacker.npc_damage_multiplier)?;
     let direction_matches = matches!(
         (attacker.kind, victim.kind),
         (CombatantKind::Player, CombatantKind::Npc) | (CombatantKind::Npc, CombatantKind::Player)
@@ -279,7 +281,9 @@ pub fn validate_selected_policy(
         || attacker.party_attack_bonus != 0
         || attacker.attack_percent != 0
         || attacker.melee_magic_attack_percent != 0
-        || attacker.npc_damage_multiplier.to_bits() != 1.0_f32.to_bits()
+        || attacker.npc_damage_multiplier <= 0.0
+        || (attacker.kind == CombatantKind::Player
+            && attacker.npc_damage_multiplier.to_bits() != 1.0_f32.to_bits())
         || attacker.final_multiplier.to_bits() != 1.0_f32.to_bits()
         || victim.defense_grade_bonus != 0
         || victim.party_defender_bonus != 0
@@ -1477,6 +1481,71 @@ mod tests {
         assert_eq!(resisted, unresisted / 2);
         victim.sword_resistance_percent = 101;
         assert!(calculate_with_rolls(attacker, victim, |lo, _| lo, || 3).is_err());
+    }
+
+    #[test]
+    fn original_population_multipliers_reach_runtime_damage_before_defense() {
+        let victim = warrior_victim(1, 4, 3);
+        // Source arithmetic: rated attack is 33 or 39, defender grade is 4.
+        // Multiply attack, truncate, then subtract defense; do not scale net damage.
+        for (multiplier, expected) in [(1.0, [29, 35]), (1.4, [42, 50]), (2.0, [62, 74])] {
+            let definition = definitions::MobPhysicalDefinition {
+                damage_multiplier: multiplier,
+                ..definitions::MOB_PHYSICAL_DEFINITIONS[0]
+            };
+            let attacker = mob_attacker(&definition).unwrap();
+            for (roll, damage) in [20, 24].into_iter().zip(expected) {
+                assert_eq!(
+                    calculate_with_rolls(
+                        attacker,
+                        victim,
+                        |_, _| roll,
+                        || panic!("unexpected low floor")
+                    )
+                    .unwrap(),
+                    damage
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn runtime_multiplier_rejection_precedes_random_draws() {
+        for multiplier in [
+            f32::NAN,
+            f32::INFINITY,
+            f32::NEG_INFINITY,
+            -1.0,
+            0.0,
+            MAX_MULTIPLIER + 1.0,
+        ] {
+            let attacker = PhysicalAttackerSnapshot {
+                npc_damage_multiplier: multiplier,
+                ..wild_dog_attacker()
+            };
+            assert!(
+                calculate_with_rolls(
+                    attacker,
+                    warrior_victim(1, 4, 3),
+                    |_, _| panic!("invalid input drew power"),
+                    || panic!("invalid input drew floor")
+                )
+                .is_err()
+            );
+        }
+        let player = PhysicalAttackerSnapshot {
+            npc_damage_multiplier: 1.4,
+            ..initial_warrior(SWORD_10_POWER)
+        };
+        assert!(
+            calculate_with_rolls(
+                player,
+                wild_dog_victim(),
+                |_, _| panic!("player cannot use NPC multiplier"),
+                || 3
+            )
+            .is_err()
+        );
     }
 
     #[test]

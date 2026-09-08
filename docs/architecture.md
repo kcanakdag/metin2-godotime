@@ -1240,3 +1240,19 @@ and single consumption at acceptance with no later tick replay. No ranged/magic
 mob is installed yet, so live multiplayer acceptance for this branch is pending.
 Original population registry generation, canonical resistance adapters and original
 AI/distance policies still need integration before release qualification.
+
+The runtime physical-policy gate now accepts finite positive authored NPC damage
+multipliers within the existing arithmetic bound (100). Player NPC-multiplier
+fields and the unrelated final multiplier still require 1.0. The full Yongan
+candidate contains 24 definitions at 1.0, 13 at 1.4 and seven at 2.0; the old gate
+would reject those 20 non-unit definitions despite arithmetic support.
+Two new runtime-path tests cover exact source-ordered results for all three
+multipliers, the mob-definition adapter, invalid/nonfinite bounds and rejection
+before RNG. All-target Rust tests pass (145 library tests plus other suites),
+as does strict all-feature Clippy. Evidence: `.local/mobs/multiplier-runtime-r1`.
+The installed dog still uses 1.0; no database, content installation or deployment
+changed. Full registry generation and population integration remain pending.
+Seven MAGIC variants (391,392,393,395,396,397,398) also have source penetration 1;
+the finalizer does not yet consume it. Do not silently discard it during registry
+installation. Original MAGIC penetration reduces the chance but still consumes
+a random draw for a nonzero source value, even when the resulting chance is zero.
