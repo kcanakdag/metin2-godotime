@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 
 from content_formats import integer, virtual_path
+from gr2_bindings import unused_material_slot
 
 
 def race_paths(model_key: str, source_root: str) -> tuple[str, str]:
@@ -25,8 +26,10 @@ def material_paths(raw: dict) -> list[str]:
         bindings = mesh.get("MaterialBindings", [])
         if not bindings:
             raise ValueError("NPC mesh has no material bindings")
-        for binding in bindings:
+        for index, binding in enumerate(bindings):
             maps = binding["Material"].get("Maps", [])
+            if not maps and unused_material_slot(mesh, index):
+                continue
             diffuse = [m for m in maps if m["Usage"] == "Diffuse Color"]
             opacity = [m for m in maps if m["Usage"] == "Opacity"]
             if len(diffuse) != 1 or len(opacity) > 1 or len(maps) != 1 + len(opacity):
@@ -62,6 +65,15 @@ def material_bindings(raw: dict, model_directory: str) -> dict[str, str]:
 
 def point_spawns(text: str, vnum: int) -> list[dict]:
     """Keep source heading/randomness explicit; world X/Y metres become map X/Z."""
+    return _stationary_spawns(text, vnum, area=False)
+
+
+def area_spawns(text: str, vnum: int) -> list[dict]:
+    """Preserve original server-sampled centimetre rectangles; never choose a client point."""
+    return _stationary_spawns(text, vnum, area=True)
+
+
+def _stationary_spawns(text: str, vnum: int, *, area: bool) -> list[dict]:
     result = []
     for number, original in enumerate(text.splitlines(), 1):
         line = original.split("//", 1)[0].strip()
@@ -74,9 +86,10 @@ def point_spawns(text: str, vnum: int) -> list[dict]:
                 raise ValueError(f"spawn line {number}: expected eleven fields")
             continue
         kind, x, y, radius_x, radius_y, section, direction, interval, chance, count, _ = fields
-        if kind != "m" or any(integer(n) != 0 for n in (radius_x, radius_y, section)):
+        rx, ry = integer(radius_x), integer(radius_y)
+        if kind != "m" or integer(section) != 0 or bool(rx or ry) != area:
             raise ValueError(
-                f"spawn line {number}: only point NPC spawns in section zero supported"
+                f"spawn line {number}: expected {'area' if area else 'point'} NPC in section zero"
             )
         if integer(chance, maximum=100) != 100 or integer(count) != 1:
             raise ValueError(
@@ -103,8 +116,23 @@ def point_spawns(text: str, vnum: int) -> list[dict]:
                 "respawn_interval_us": seconds * 1_000_000,
             }
         )
+        if area:
+            row = result[-1]
+            cx, cy = row.pop("x_m"), row.pop("z_m")
+            rectangle = [(cx - rx) * 100, (cy - ry) * 100, (cx + rx) * 100, (cy + ry) * 100]
+            if any(not 0 <= value <= 2**31 - 1 for value in rectangle):
+                raise ValueError("NPC spawn rectangle exceeds original centimetre bounds")
+            row.update(
+                position_policy="server-random-area",
+                bounds_cm=rectangle,
+                position_step_cm=1,
+                spawn_attempts=16,
+                heading_policy="random-integer-degree",
+                source_heading_degrees=None,
+                heading_bounds_degrees=[0, 360],
+            )
     if not result:
-        raise ValueError(f"No point spawn found for NPC {vnum}")
+        raise ValueError(f"No {'area' if area else 'point'} spawn found for NPC {vnum}")
     return result
 
 

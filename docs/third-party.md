@@ -284,3 +284,9 @@ Pinned `GameLib/RaceManager.cpp::__LoadRaceData` supplies the `#folder/shape.msm
 registration rule; `EterGrnLib/Material.cpp::__GetImagePointer` supplies model-local
 texture resolution. These source files are references for independently written
 import logic. Original GR2s, textures, converted GLBs and receipts remain ignored.
+
+The bounded `yongan-area-npcs` profile selects six additional stationary NPCs and
+pins `src/game/src/char_manager.cpp` alongside `regen.cpp`. Their `SpawnMobRange`
+and point-spawn branches define the preserved centimetre ranges, retry count and
+different heading policies. These are source-backed definitions for a future
+server-owned placement implementation, not imported legacy server code.

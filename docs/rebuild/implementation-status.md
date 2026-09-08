@@ -7,6 +7,30 @@ or reclassify that scope.
 
 ## P6: all-class abilities requested; training target delivered locally
 
+### Original area-spawn townspeople: conversion and source contract
+
+`content/profiles/yongan-area-npcs.json` selects six `NOMOVE` NPCs: Aranyo, Ah-Yu,
+Yonah, Mirine, Uriel and Baek-Go. Their original regeneration rectangles are
+preserved as inclusive centimetre bounds with 16 attempts and independent random
+integer headings (0..360), following pinned `regen.cpp` / `char_manager.cpp`.
+The explicit area policy omits fixed X/Z coordinates; the fixed-point catalog
+builder rejects it until authoritative runtime placement is implemented.
+The non-stationary Shabby Pedestrian remains outside this profile.
+
+`.local/npcs/yongan-area-r3` converts all six models and 26 original motions;
+`yongan-area-qa-r1` passes **144 rendered Godot checks**. Ah-Yu, Yonah and Mirine
+captures were visually inspected. Fifteen NPC tests, four GR2 tests and repository
+lint pass. `area-point-rejection-r1.log` proves the real catalog command rejects
+area data before creating an output package.
+
+The first conversion exposed the potter's unused empty material slot, now accepted
+only with topology proof; used textureless materials remain rejected. The next
+attempt exposed Mirine's embedded run translation without MSA accumulation.
+Stationary NPC conversion now preserves and flags that unused source clip while
+retaining the playable-character and double-travel checks. Failed logs remain.
+No new NPCs are installed or deployed by this slice; server-owned sampled positions,
+subscriptions and real two-client placement/reconnect QA remain required.
+
 ### Remaining original point NPCs: candidate package
 
 Live follow-up: the expanded package now serves at `http://127.0.0.1:8186` on the

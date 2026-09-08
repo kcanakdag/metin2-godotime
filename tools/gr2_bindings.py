@@ -6,6 +6,14 @@ import math
 from collections import Counter
 
 
+def unused_material_slot(raw_mesh: dict, index: int) -> bool:
+    """An empty exporter slot is harmless only if topology proves no face uses it."""
+    groups = raw_mesh.get("PrimaryTopology", {}).get("Groups")
+    return isinstance(groups, list) and not any(
+        group["MaterialIndex"] == index and group["TriCount"] != 0 for group in groups
+    )
+
+
 def material_slots(raw_mesh: dict, imported_groups: list[int]) -> list[int]:
     """Resolve Carbon's per-face group indices before Blender clears its slots."""
     groups = raw_mesh["PrimaryTopology"]["Groups"]

@@ -23,7 +23,7 @@ from content_formats import parse_motion_list, parse_race_script
 from fetch_test_assets import METIN_COMMIT
 from metin_archive import safe_path
 from metin_root_motion import _carbon_reader
-from npc_definitions import material_bindings, motion_groups, point_spawns, race_paths
+from npc_definitions import area_spawns, material_bindings, motion_groups, point_spawns, race_paths
 
 DEFAULT_PROFILE = ROOT / "content/profiles/yongan-city-guard.json"
 
@@ -220,7 +220,11 @@ def compile_profile(path: Path, *, offline: bool) -> dict:
         relative = safe_path(selected["source"])
         if relative not in {record["path"] for record in references}:
             raise ValueError("Spawn source is not pinned")
-        rows = point_spawns((source / relative).read_text(encoding="latin-1"), matches[0]["vnum"])
+        policy = selected.get("position_policy", "point")
+        if policy not in ("point", "server-random-area"):
+            raise ValueError("Unsupported NPC placement policy")
+        parse_spawns = area_spawns if policy == "server-random-area" else point_spawns
+        rows = parse_spawns((source / relative).read_text(encoding="latin-1"), matches[0]["vnum"])
         occurrence = selected["occurrence"]
         if type(occurrence) is not int or not 0 <= occurrence < len(rows):
             raise ValueError("Spawn occurrence is out of bounds")

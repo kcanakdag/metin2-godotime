@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "profile_id": "yongan-area-npcs",
+  "source": {
+    "client_revision": "bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7",
+    "server_reference": {
+      "repository": "https://git.old-metin2.com/metin2/server",
+      "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+      "files": [
+        {
+          "path": "gamefiles/conf/mob_proto.txt",
+          "git_sha": "002c00106dec10dcde3e8e292d6f1e242bf1c4d9",
+          "sha256": "9aeb98db989ed64ec51dcd1e0df844d7cbd52004779747156017b1617c6be3fa"
+        },
+        {
+          "path": "gamefiles/conf/mob_names_en.txt",
+          "git_sha": "5e832ca9ac25ce6227f140e41b55224e7a485b68",
+          "sha256": "171a1f706d6e7471138cab38f4101a059cb4d0803e62a7c4e044f154902e2ec3"
+        },
+        {
+          "path": "gamefiles/data/map/metin2_map_a1/npc.txt",
+          "git_sha": "3751576f53ac1cc01c2242ae7577204276b74039",
+          "sha256": "a8237893a4de691df66b96b63c1bc9a1742abe913f9925f3a7ddc0ca428ce936"
+        },
+        {
+          "path": "src/game/src/regen.cpp",
+          "git_sha": "8ddb138a463d673a8035e61821ddefbf912d3c2c",
+          "sha256": "d7e19fcef7d254f5a27cf45241599dd60ad94628d83a0d78c0b9d942c9b045af"
+        },
+        {
+          "path": "src/game/src/char_manager.cpp",
+          "git_sha": "f2936284950d1d4eb57c57f95a818e3f213130e6",
+          "sha256": "015e64eb1eb9c5aa31460675bff3794c838c7d1729d7f9c53095e7618a0f6607"
+        }
+      ]
+    }
+  },
+  "npcs": [
+    {
+      "id": "actor.npc.auntie-20002",
+      "vnum": 20002,
+      "model_key": "auntie",
+      "source_root": "ymir work/npc/auntie",
+      "output": "actors/auntie-20002.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.baby-and-mom-20003",
+      "vnum": 20003,
+      "model_key": "baby_and_mom",
+      "source_root": "ymir work/npc/baby_and_mom",
+      "output": "actors/baby-and-mom-20003.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.ceramist-20005",
+      "vnum": 20005,
+      "model_key": "ceramist",
+      "source_root": "ymir work/npc/ceramist",
+      "output": "actors/ceramist-20005.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.girl-lost-elder-brother-20006",
+      "vnum": 20006,
+      "model_key": "girl_lost_elder_brother",
+      "source_root": "ymir work/npc/girl_lost_elder_brother",
+      "output": "actors/girl-lost-elder-brother-20006.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.plant-researcher-20011",
+      "vnum": 20011,
+      "model_key": "plant_researcher",
+      "source_root": "ymir work/npc/plant_researcher",
+      "output": "actors/plant-researcher-20011.glb",
+      "yaw_correction_degrees": 180.0
+    },
+    {
+      "id": "actor.npc.doctor-20018",
+      "vnum": 20018,
+      "model_key": "doctor",
+      "source_root": "ymir work/npc/doctor",
+      "output": "actors/doctor-20018.glb",
+      "yaw_correction_degrees": 180.0
+    }
+  ],
+  "spawns": [
+    {
+      "id": "spawn.yongan.auntie-20002-0",
+      "actor_id": "actor.npc.auntie-20002",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0,
+      "position_policy": "server-random-area"
+    },
+    {
+      "id": "spawn.yongan.baby-and-mom-20003-0",
+      "actor_id": "actor.npc.baby-and-mom-20003",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0,
+      "position_policy": "server-random-area"
+    },
+    {
+      "id": "spawn.yongan.ceramist-20005-0",
+      "actor_id": "actor.npc.ceramist-20005",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0,
+      "position_policy": "server-random-area"
+    },
+    {
+      "id": "spawn.yongan.girl-lost-elder-brother-20006-0",
+      "actor_id": "actor.npc.girl-lost-elder-brother-20006",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0,
+      "position_policy": "server-random-area"
+    },
+    {
+      "id": "spawn.yongan.plant-researcher-20011-0",
+      "actor_id": "actor.npc.plant-researcher-20011",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0,
+      "position_policy": "server-random-area"
+    },
+    {
+      "id": "spawn.yongan.doctor-20018-0",
+      "actor_id": "actor.npc.doctor-20018",
+      "map_id": "metin2_map_a1",
+      "source": "gamefiles/data/map/metin2_map_a1/npc.txt",
+      "occurrence": 0,
+      "position_policy": "server-random-area"
+    }
+  ],
+  "distribution": {
+    "basis": "development-only-original-fixture",
+    "evidence": "docs/third-party.md",
+    "release_status": "excluded-unless-rights-are-established"
+  }
+}

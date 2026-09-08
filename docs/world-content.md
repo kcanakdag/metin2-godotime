@@ -308,3 +308,34 @@ closure failed the final rejoin; the unchanged repeat passed. Both reports remai
 Remote landmark appearance is qualified by native map QA and pack audits; the
 browser route does not visit every remote placement. Public deployment is unchanged.
 Random-area NPC spawns, groups, warps, interactions, shops and quests remain work.
+
+## Original area-spawn NPCs
+
+`content/profiles/yongan-area-npcs.json` selects Aranyo, Ah-Yu, Yonah, Mirine,
+Uriel and Baek-Go. Each is an original `NPC` with `NOMOVE`, but its regeneration
+record specifies a small rectangular spawn area. The wandering Shabby Pedestrian
+is not included: it needs server-controlled movement, not a stationary substitute.
+
+The explicit `position_policy: server-random-area` retains inclusive centimetre
+bounds, one-centimetre sampling, 16 placement attempts and random integer headings
+from 0 through 360. The original range-spawn path ignores the record's fixed
+direction, unlike point spawning; the original direction remains recorded as
+provenance. No sampled position is chosen by the importer or client, and the
+fixed-point catalog builder rejects these candidates rather than placing them at
+an invented center. Server-owned persisted positions and client subscriptions
+must be implemented before installing this population.
+
+```sh
+python3 tools/import_npc_content.py --profile content/profiles/yongan-area-npcs.json \
+  --blender /path/to/blender --output .local/npcs/area
+python3 tools/test_npc_content.py --content .local/npcs/area --native \
+  --godot /path/to/godot --output .local/npcs/area-qa
+```
+
+The six models and 26 original motions pass 144 native Godot gallery checks.
+The potter has an unused, textureless material slot; topology must prove no faces
+use it before the converter preserves it as an empty slot. Used materials still
+require supported textures. Mirine has a travelling run clip without MSA travel:
+for stationary NPCs only, the converter preserves and flags this unused embedded
+motion. It does not enable NPC locomotion or relax playable-character root checks.
+The served population remains 32 definitions at 41 placements.

@@ -76,6 +76,10 @@ supports explicit source folders, model-local textures and truly static models.
 Both actual export audits verify all 32 models; the browser route checks 23 entry
 NPCs. One initial native connection drop did not recur in the unchanged repeat.
 
+Six further original townspeople are converted and pass 144 native gallery checks.
+Their [random-area spawn definitions](docs/world-content.md#original-area-spawn-npcs)
+are preserved for server-owned placement; they are not yet installed in the map.
+
 The current worktree is protocol 17 / trusted content schema 8 (item registry schema 2). Item actions
 carry the server item's revision, rejecting stale/replayed mutations. Quantity
 changes have a private transactional audit history and an offline reconciliation

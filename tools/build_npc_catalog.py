@@ -246,6 +246,12 @@ def build(contents: list[Path], profiles: list[Path], output: Path) -> dict:
         inputs[str(path)] = sha256(path)
     for directory in contents:
         manifest, artifacts = converted(directory)
+        if any(
+            spawn.get("position_policy") == "server-random-area" for spawn in manifest["spawns"]
+        ):
+            raise ValueError(
+                "Area NPCs require server-owned sampled placements; cannot install them as fixed points"
+            )
         for name in ("conversion-receipt.json", "normalized.v1.json", "blender-report.json"):
             inputs[str(directory / name)] = sha256(directory / name)
         for actor in manifest["actors"]:

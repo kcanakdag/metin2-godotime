@@ -53,10 +53,15 @@ def virtual_path(value: str) -> str:
     return value.lower()
 
 
-def material_references(mesh: dict) -> list[str]:
+def material_references(mesh: dict) -> list[str | None]:
+    from gr2_bindings import unused_material_slot
+
     result = []
-    for binding in mesh.get("MaterialBindings", []):
+    for index, binding in enumerate(mesh.get("MaterialBindings", [])):
         maps = (binding.get("Material") or {}).get("Maps", [])
+        if not maps and unused_material_slot(mesh, index):
+            result.append(None)
+            continue
         diffuse = next((entry for entry in maps if entry["Usage"] == "Diffuse Color"), None)
         if diffuse is None:
             raise ValueError("Rendered material binding has no diffuse texture")
@@ -204,6 +209,9 @@ def assign_materials(meshes: list, raw_meshes: list[dict], textures: dict[str, P
         slots = material_slots(original, [face.material_index for face in mesh.data.polygons])
         mesh.data.materials.clear()
         for index, reference in enumerate(refs):
+            if reference is None:
+                mesh.data.materials.append(None)
+                continue
             maps = original["MaterialBindings"][index]["Material"].get("Maps", [])
             opacity = any(entry["Usage"] == "Opacity" for entry in maps)
             key = (reference, opacity)
@@ -276,7 +284,9 @@ def scale_action_locations(actions: list, factor: float) -> None:
                 key.handle_right.y *= factor
 
 
-def analyze_root_motion(actions: list, motions: list[dict], root_bone: str) -> list[dict]:
+def analyze_root_motion(
+    actions: list, motions: list[dict], root_bone: str, *, stationary_npc: bool = False
+) -> list[dict]:
     path = f'pose.bones["{root_bone}"].location'
     result = []
     for action, motion in zip(actions, motions, strict=True):
@@ -294,7 +304,14 @@ def analyze_root_motion(actions: list, motions: list[dict], root_bone: str) -> l
         # and is not baked into these locomotion clips.  Allow small resampling
         # drift while rejecting a second copy of authored horizontal travel.
         horizontal_displacement = math.hypot(displacement[0], displacement[1])
-        if motion["action"] in {"walk", "run"} and horizontal_displacement > 0.05:
+        embedded_locomotion = motion["action"] in {"walk", "run"} and horizontal_displacement > 0.05
+        # Some NOMOVE NPCs retain authored travelling clips without MSA travel.
+        # Preserve those unused source clips; they are not enabled as NPC movement.
+        source_only_npc = (
+            stationary_npc
+            and math.hypot(motion["accumulation_m"][0], motion["accumulation_m"][2]) <= 0.05
+        )
+        if embedded_locomotion and not source_only_npc:
             raise ValueError(
                 f"Locomotion root translates {horizontal_displacement}m in {motion['action_id']}"
             )
@@ -306,6 +323,8 @@ def analyze_root_motion(actions: list, motions: list[dict], root_bone: str) -> l
                 "armature_node_translation_tracks": 0,
                 "source_accumulation_godot_m": motion["accumulation_m"],
                 "source_accumulation_applied_to_clip": False,
+                "unused_stationary_npc_embedded_locomotion": embedded_locomotion
+                and source_only_npc,
             }
         )
     return result
@@ -510,7 +529,9 @@ def convert_actor(actor: dict, source_root: Path, output: Path) -> dict:
     root_bones = [bone.name for bone in rig.data.bones if bone.parent is None]
     if len(root_bones) != 1:
         raise ValueError(f"Expected one skeleton root, found {root_bones}")
-    root_motion = analyze_root_motion(imported["actions"], motions, root_bones[0])
+    root_motion = analyze_root_motion(
+        imported["actions"], motions, root_bones[0], stationary_npc=actor["kind"] == "npc"
+    )
     for mesh in meshes:
         world = mesh.matrix_world.copy()
         mesh.parent = rig
