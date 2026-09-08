@@ -1,6 +1,7 @@
 """Emit candidate Rust combat tables using the server's existing definition types."""
 
 import json
+import struct
 
 from mob_gameplay import integer, number
 
@@ -154,9 +155,13 @@ def species_record(mob):
         "level": str(integer(mob["level"], 1, 99, "species level")),
         "health": str(integer(mob["health"], 1, 65535, "species health")),
         "attack_range_m": repr(float(number(mob["attack_range_m"], 0.01, 100, "range"))),
-        "move_speed_mps": repr(
-            float(number(mob["movement"]["server_speed_mps"], 0.001, 100, "move speed"))
-        ),
+        "move_speed_mps": "f32::from_bits(0x%08x)"
+        % struct.unpack(
+            ">I",
+            struct.pack(
+                ">f", number(mob["movement"]["server_speed_mps"], 0.001, 100, "move speed")
+            ),
+        )[0],
     }
     if mob["health"] != source["stats"]["max_hp"] or mob["level"] != source["stats"]["level"]:
         raise ValueError("Species stats differ from source")

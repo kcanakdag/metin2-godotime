@@ -1589,3 +1589,35 @@ and a player-ID replacement rejection. Root reviewed captures for vnums 301 and
 397 (models/materials visible through the normal loader). This remains controlled
 actor-state rendering, not original-world multiplayer/export qualification. No
 connected editor was inspected, and protocol/database/public deployment are unchanged.
+
+## Selected server mob package and public hash — 2026-09-08
+
+`MT2_MOB_CONTENT=/absolute/catalog-directory` selects a locally compiled package
+containing `receipt.json`, `gameplay.v1.json`, `presentation.v1.json` and
+`combat-registry.rs`. The build checks all three artifact hashes and matching
+gameplay identities, then links its assembled `MOBS` and `PHYSICAL` registries.
+Without the option, authored definitions remain selected. These are trusted local
+compiler outputs; receipt hashes establish package consistency, not signatures.
+Protocol 24 adds public `world_info.mob_catalog_hash` for the installed client
+catalog gate. Bindings contain 92 files, schema SHA-256
+`d39af557ae04d54d77a794d432b36a7fd07225eeb1db19b06bb54fc571fc2c1a`.
+
+The mob generator emits exact f32 bit patterns for converted movement speeds,
+preserving Rust’s previous rounded values while satisfying strict precision lint.
+Selected builds retain displaced authored constants for independent fixtures;
+only those generated constants receive a documented dead-code exception. The
+whole generated module/lint configuration remains checked.
+
+The full 44-definition registry is now linked in disposable training database
+`mt2-p2-server-package-r1-20260908`. Its selected area fixture still spawns only
+Wild Dogs (original 126 HP) and the dummy. This does not install original population
+entries, copy the mob assets into the working client, or qualify every species in
+live combat. Public protocol 19 remains unchanged.
+
+Evidence: `.local/mobs/server-package-r1/acceptance.json`. All 74 real two-account
+regeneration/combat checks pass, with the expected public mob hash and 126-HP dogs
+in initial subscriptions. Six protocol checks reject 23/accept 24. The package
+integrity test rejects changed catalog/presentation/registry bytes and mismatched
+identities; three Python registry checks and selected-package strict library
+Clippy pass. The normal rendered client’s matching-package qualification is next;
+this run exercises the gameplay connection fixture, not exported Main rendering.

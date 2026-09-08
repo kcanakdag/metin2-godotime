@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 mod build_classes;
 mod build_combo;
 mod build_items;
+mod build_mobs;
 mod build_npcs;
 mod build_population;
 mod build_regeneration;
@@ -494,6 +495,10 @@ fn emit_attack(output: &mut String, name: &str, attack: Attack<'_>) {
 }
 
 fn main() {
+    println!("cargo:rerun-if-env-changed=MT2_MOB_CONTENT");
+    println!("cargo:rerun-if-changed=build_mobs.rs");
+    let selected_mobs = std::env::var_os("MT2_MOB_CONTENT")
+        .map(|path| build_mobs::load(Path::new(&path)).unwrap_or_else(|error| fail(error)));
     println!("cargo:rerun-if-changed={DEFINITIONS}");
     println!("cargo:rerun-if-changed={COMBO_VALIDATOR}");
     println!("cargo:rerun-if-changed=build_items.rs");
@@ -1571,6 +1576,48 @@ pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
     output.push_str(&build_classes::build());
     output.push_str(&build_skills::build());
     output.push_str(&build_training::build());
+    let (mob_hash, registry) = if let Some(package) = selected_mobs {
+        output = output.replace("pub const MOB_PHYSICAL_DEFINITIONS: &[MobPhysicalDefinition] = &[WILD_DOG_101_PHYSICAL];", "pub const MOB_PHYSICAL_DEFINITIONS: &[MobPhysicalDefinition] = crate::selected_mobs::PHYSICAL;");
+        let start = output
+            .find("pub const MOB_DEFINITIONS: &[MobDefinition] = &[")
+            .expect("generated mob registry");
+        let end = start
+            + output[start..]
+                .find("\n}];")
+                .expect("generated mob registry end")
+            + "\n}];".len();
+        // Keep the authored fixture constants for its independent tests even
+        // when a selected package replaces the active registry. Scope the lint
+        // exception to those displaced constants, not the generated module.
+        let legacy = output[start..end]
+            .split(|c: char| !c.is_ascii_alphanumeric() && c != '_')
+            .filter(|name| name.starts_with("MOB_") && *name != "MOB_DEFINITIONS")
+            .map(str::to_owned)
+            .chain(std::iter::once("WILD_DOG_101_PHYSICAL".into()))
+            .collect::<std::collections::BTreeSet<_>>();
+        output.replace_range(
+            start..end,
+            "pub const MOB_DEFINITIONS: &[MobDefinition] = crate::selected_mobs::MOBS;",
+        );
+        for name in legacy {
+            output = output.replace(
+                &format!("pub const {name}:"),
+                &format!(
+                    "#[allow(dead_code)] // Displaced authored fixture constant.\npub const {name}:"
+                ),
+            );
+        }
+        (package.gameplay_hash, package.registry)
+    } else {
+        (String::new(), String::new())
+    };
+    writeln!(
+        output,
+        "pub const MOB_CATALOG_HASH: &str = {};",
+        rust_string(&mob_hash)
+    )
+    .unwrap();
+    fs::write(out_dir.join("selected_mobs.rs"), registry).expect("write selected mob registry");
     fs::write(out_dir.join("trusted_definitions.rs"), output)
         .unwrap_or_else(|error| fail(format!("cannot write generated Rust definitions ({error})")));
 }

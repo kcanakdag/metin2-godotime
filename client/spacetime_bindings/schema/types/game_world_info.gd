@@ -9,6 +9,7 @@ const table_names: Array[String] = ['world_info']
 @export var id: int
 @export var protocol_version: int
 @export var npc_catalog_hash: String
+@export var mob_catalog_hash: String
 @export var character_catalog_hash: String
 @export var skill_catalog_hash: String
 @export var training_target_hash: String
@@ -26,6 +27,7 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"id": "U8",
 	"protocol_version": "U32",
 	"npc_catalog_hash": "String",
+	"mob_catalog_hash": "String",
 	"character_catalog_hash": "String",
 	"skill_catalog_hash": "String",
 	"training_target_hash": "String",
@@ -41,21 +43,23 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 ## 1. id: int[br]
 ## 2. protocol_version: int[br]
 ## 3. npc_catalog_hash: String[br]
-## 4. character_catalog_hash: String[br]
-## 5. skill_catalog_hash: String[br]
-## 6. training_target_hash: String[br]
-## 7. map_name: String[br]
-## 8. map_id: String[br]
-## 9. content_hash: String[br]
-## 10. definition_profile: String[br]
-## 11. definition_hash: String[br]
-## 12. tick_ms: int[br]
-## 13. half_size: float[br]
-static func create(p_id: int, p_protocol_version: int, p_npc_catalog_hash: String, p_character_catalog_hash: String, p_skill_catalog_hash: String, p_training_target_hash: String, p_map_name: String, p_map_id: String, p_content_hash: String, p_definition_profile: String, p_definition_hash: String, p_tick_ms: int, p_half_size: float) -> GameWorldInfo:
+## 4. mob_catalog_hash: String[br]
+## 5. character_catalog_hash: String[br]
+## 6. skill_catalog_hash: String[br]
+## 7. training_target_hash: String[br]
+## 8. map_name: String[br]
+## 9. map_id: String[br]
+## 10. content_hash: String[br]
+## 11. definition_profile: String[br]
+## 12. definition_hash: String[br]
+## 13. tick_ms: int[br]
+## 14. half_size: float[br]
+static func create(p_id: int, p_protocol_version: int, p_npc_catalog_hash: String, p_mob_catalog_hash: String, p_character_catalog_hash: String, p_skill_catalog_hash: String, p_training_target_hash: String, p_map_name: String, p_map_id: String, p_content_hash: String, p_definition_profile: String, p_definition_hash: String, p_tick_ms: int, p_half_size: float) -> GameWorldInfo:
 	var result: GameWorldInfo = GameWorldInfo.new()
 	result.id = p_id
 	result.protocol_version = p_protocol_version
 	result.npc_catalog_hash = p_npc_catalog_hash
+	result.mob_catalog_hash = p_mob_catalog_hash
 	result.character_catalog_hash = p_character_catalog_hash
 	result.skill_catalog_hash = p_skill_catalog_hash
 	result.training_target_hash = p_training_target_hash

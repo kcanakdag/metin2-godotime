@@ -30,9 +30,13 @@ mod root_motion;
 mod skills;
 mod training_targets;
 
-const PROTOCOL_VERSION: u32 = 23;
+const PROTOCOL_VERSION: u32 = 24;
 mod special_area;
 mod targeting;
+
+mod selected_mobs {
+    include!(concat!(env!("OUT_DIR"), "/selected_mobs.rs"));
+}
 
 mod definitions {
     include!(concat!(env!("OUT_DIR"), "/trusted_definitions.rs"));
@@ -87,6 +91,7 @@ pub struct WorldInfo {
     pub id: u8,
     pub protocol_version: u32,
     pub npc_catalog_hash: String,
+    pub mob_catalog_hash: String,
     pub character_catalog_hash: String,
     pub skill_catalog_hash: String,
     pub training_target_hash: String,
@@ -216,6 +221,7 @@ fn compiled_world_info() -> WorldInfo {
         .into(),
         definition_profile: definitions::PROFILE_ID.into(),
         definition_hash: definitions::DEFINITION_HASH.into(),
+        mob_catalog_hash: definitions::MOB_CATALOG_HASH.into(),
         half_size: HALF_SIZE,
     }
 }

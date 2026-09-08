@@ -16,6 +16,12 @@ func _run() -> void:
 			str(actor.world_info.content_hash) == "training-v7-regenerating-area-wild-dog-v1"
 		)
 	if ready:
+		_timing_evidence.append(
+			{
+				"world_info": actor.world_info.duplicate(true),
+				"initial_mobs": actor.monsters.duplicate(true)
+			}
+		)
 		var position := _position(_monster(observer))
 		ready = _check(
 			"leader_sampled_inside_authored_area",

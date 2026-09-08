@@ -4210,6 +4210,14 @@
                     "String": []
                   },
                   "name": {
+                    "some": "mob_catalog_hash"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "String": []
+                  },
+                  "name": {
                     "some": "character_catalog_hash"
                   }
                 },

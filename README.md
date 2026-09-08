@@ -14,9 +14,10 @@ world database has a separate character roster. See [deployment evidence](docs/d
 Local mob threat behavior now has a reusable two-account passive
 retaliation and target-switching scenario (42 checks passed). See the
 [development replay instructions](docs/development.md#test-scope-and-passive-mob-replay).
-The worktree now uses protocol 23 with database-backed group regeneration; its
-two-client training replay passed 66 checks for leader replacement, surviving
-followers and reconnect. Original population installation remains pending. The public build remains protocol 19.
+The worktree now uses protocol 24 with selectable mob packages and a shared mob
+content hash. Its selected-registry training replay passed 74 checks, including
+leader replacement, surviving followers and reconnect. Original population
+installation remains pending. The public build remains protocol 19.
 
 Items, future quests, mobs and classes follow the
 [data-based content authoring contract](docs/rebuild/content-authoring.md):

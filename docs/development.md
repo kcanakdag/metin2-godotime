@@ -1712,3 +1712,16 @@ current explicit fixture marker is `training-v7-regenerating-area-wild-dog-v1`.
 The startup jitter setting is a maximum, sampled once when enabled scheduling
 starts. Optional `force_aggressive` is a boolean (default false), applied to all
 members of the entry’s groups.
+
+## Select a compiled mob package
+
+Set `MT2_MOB_CONTENT` to the absolute output directory from
+`tools/build_mob_catalog.py` when building the server. The build validates its
+receipt/artifact hashes and links the selected mob registries. For focused QA,
+combine it with `MT2_COMBAT_TEST_FIXTURE=regenerating-wild-dog-v1`, the local auth
+issuer and disabled guests, then freeze/publish to a fresh database and run
+`--scenario regeneration`. Source HP/rewards now apply; the replay records public
+world metadata and initial mobs. This is still a training fixture, not a public
+map deployment. The normal rendered client additionally requires the matching
+`assets/imported/mobs/presentation.v1.json` and converted assets; without them its
+content-hash gate intentionally rejects the selected server. Protocol 24 is required.
