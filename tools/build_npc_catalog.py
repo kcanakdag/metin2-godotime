@@ -237,15 +237,22 @@ def validate_extracted_textures(directory: Path, relative: str) -> set[str]:
         allowed = set()
         for source in paths:
             name = source.relative_to(root).as_posix()
-            destination = directory / name
-            if destination.exists():
-                with Image.open(source) as expected, Image.open(destination) as actual:
-                    if (
-                        expected.size != actual.size
-                        or expected.convert("RGBA").tobytes() != actual.convert("RGBA").tobytes()
-                    ):
-                        raise ValueError("NPC extracted texture differs from its converted GLB")
-            allowed.update((name, name + ".import"))
+            names = {name}
+            # Godot's GLB import drops the original DDS suffix when extracting
+            # embedded PNG images. Accept only this observed alias, and verify
+            # its pixels against the hash-checked model just like the canonical PNG.
+            if name.endswith(".dds.png"):
+                names.add(name.removesuffix(".dds.png") + ".png")
+            for candidate in names:
+                destination = directory / candidate
+                if destination.exists():
+                    with Image.open(source) as expected, Image.open(destination) as actual:
+                        if (
+                            expected.size != actual.size
+                            or expected.convert("RGBA").tobytes() != actual.convert("RGBA").tobytes()
+                        ):
+                            raise ValueError("NPC extracted texture differs from its converted GLB")
+                allowed.update((candidate, candidate + ".import"))
         return allowed
 
 

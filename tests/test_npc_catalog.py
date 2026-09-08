@@ -77,14 +77,14 @@ class NpcCatalogTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_public(doc)
 
-    def model(self):
+    def model(self, image_name="guard"):
         image = io.BytesIO()
         Image.new("RGBA", (2, 2), (122, 231, 93, 255)).save(image, format="PNG")
         binary = image.getvalue()
         document = json.dumps(
             {
                 "bufferViews": [{"byteOffset": 0, "byteLength": len(binary)}],
-                "images": [{"name": "guard", "mimeType": "image/png", "bufferView": 0}],
+                "images": [{"name": image_name, "mimeType": "image/png", "bufferView": 0}],
             }
         ).encode()
         document += b" " * (-len(document) % 4)
@@ -154,6 +154,26 @@ class NpcCatalogTests(unittest.TestCase):
                 (root / CATALOG).write_text(json.dumps(changed))
                 with self.assertRaisesRegex(ValueError, "fields"):
                     validate_package(root)
+
+    def test_godot_dds_name_alias_must_match_embedded_pixels(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "actors").mkdir()
+            model = self.model("guard.dds")
+            (root / "actors/guard.glb").write_bytes(model)
+            document = self.document()
+            document["actors"][0]["sha256"] = hashlib.sha256(model).hexdigest()
+            (root / CATALOG).write_text(json.dumps(document))
+            alias = root / "actors/guard_guard.png"
+            Image.new("RGBA", (2, 2), (122, 231, 93, 255)).save(alias)
+            self.assertEqual(validate_package(root), document)
+            Image.new("RGBA", (2, 2), (255, 0, 0, 255)).save(alias)
+            with self.assertRaisesRegex(ValueError, "texture differs"):
+                validate_package(root)
+            alias.unlink()
+            (root / "actors/unrelated.png").write_bytes(b"undeclared")
+            with self.assertRaisesRegex(ValueError, "undeclared files"):
+                validate_package(root)
 
     def test_model_path_cannot_escape_or_select_scripts(self):
         for relative in ("../secret.glb", "actors/../../secret.glb", "actors/run.gd", "/x.glb"):

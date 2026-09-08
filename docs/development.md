@@ -1,5 +1,14 @@
 # Development workflow
 
+Opening an installed actor package in Godot may create a PNG alias that removes
+an embedded image's `.dds` suffix (for example, `actor_face.dds.png` becomes
+`actor_face.png`). The shared character/NPC package validator permits this exact
+alias only after comparing decoded RGBA pixels and dimensions against the
+hash-checked GLB. Changed aliases and unrelated files still reject. Preserve the
+editor's generated files; do not delete them or bypass package validation to make
+exports pass. Export staging reapplies the standard actor texture import policy
+to both canonical and alias PNGs.
+
 ## Test scope and passive mob replay
 
 The original-population browser replay distinguishes installed catalog species
