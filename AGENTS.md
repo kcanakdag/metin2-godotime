@@ -316,7 +316,15 @@ The same runner's `--scenario flight --catalog FLIGHT_INVENTORY` checks swept hi
 range-before-hit ordering, force/homing order and state-preserving rejection.
 It emits presentation events only; it is not wired to effects or combat yet.
 
-Next attach the rendered effects to those trajectories, implement impact/trails, then
+The combined `projectile_effect.gd`/`projectile_trail.gd` now passes 53 native
+checks in `.local/mobs/projectile-render-r1/report.json`, with nine hashed captures.
+All three particle-based flights and impacts were visually reviewed; see
+`projectile-render-review-r1.json`. Reproduce with `--scenario projectile --catalog
+PARTICLE_CATALOG --flights FLIGHT_INVENTORY`. Paired attachment spacing, flight-end
+cleanup, impact lifetime and trail expiry are covered. The arrow mesh definition
+is explicitly rejected until its original 3/8 material behavior is implemented.
+
+Next implement the arrow mesh material, integrate original bone/event launches, then
 flight attachment and authoritative magic/projectile combat so the prepared mobs
 can become playable. Do not keep substituting inventory reports for integration.
 The interrupted investigation inspected pinned primary files under

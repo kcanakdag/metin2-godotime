@@ -22,22 +22,37 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--godot", required=True)
     parser.add_argument(
-        "--scenario", choices=("emission", "motion", "render", "flight"), default="emission"
+        "--scenario",
+        choices=("emission", "motion", "render", "flight", "projectile"),
+        default="emission",
     )
+    parser.add_argument("--flights", type=Path)
     args = parser.parse_args()
     output = args.output.resolve()
     scene = f"tests/particle_{args.scenario}_smoke.gd"
     if args.scenario == "flight":
         scene = "tests/projectile_flight_smoke.gd"
+    if args.scenario == "projectile":
+        if args.flights is None:
+            parser.error("--scenario projectile requires --flights")
+        scene = "tests/projectile_effect_smoke.gd"
     files = ["scripts/actors/particle_emission.gd", scene]
-    if args.scenario in ("motion", "render"):
+    if args.scenario in ("motion", "render", "projectile"):
         files += ["scripts/actors/particle_motion.gd", "scripts/actors/particle_simulation.gd"]
         files += ["scripts/actors/particle_style.gd"]
-    if args.scenario == "render":
+    if args.scenario in ("render", "projectile"):
         files += ["scripts/actors/particle_effect.gd"]
+    if args.scenario == "projectile":
+        files += [
+            "scripts/actors/projectile_flight.gd",
+            "scripts/actors/projectile_effect.gd",
+            "scripts/actors/projectile_trail.gd",
+        ]
     if args.scenario == "flight":
         files += ["scripts/actors/particle_motion.gd", "scripts/actors/projectile_flight.gd"]
     inputs = [ROOT / "client" / f for f in files] + [args.catalog.resolve(), Path(__file__)]
+    if args.scenario == "projectile":
+        inputs.append(args.flights.resolve())
     frozen = {str(p.resolve()): digest(p) for p in inputs}
     output.mkdir(parents=True, exist_ok=False)
     (output / "project.godot").write_text(
@@ -48,7 +63,11 @@ def main():
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / "client" / relative, destination)
     shutil.copy2(args.catalog, output / "effects.v1.json")
-    if args.scenario == "render":
+    extra_args = []
+    if args.scenario == "projectile":
+        shutil.copy2(args.flights, output / "flights.v1.json")
+        extra_args = [str(output / "flights.v1.json")]
+    if args.scenario in ("render", "projectile"):
         catalog = json.loads(args.catalog.read_text())
         for texture in catalog["textures"].values():
             relative = Path(texture["path"])
@@ -64,7 +83,7 @@ def main():
                 raise ValueError("Particle texture changed while copying")
     env = {**os.environ, "XDG_DATA_HOME": str(output / "userdata")}
     prefix = [args.godot, "--headless"]
-    if args.scenario == "render":
+    if args.scenario in ("render", "projectile"):
         prefix = ["xvfb-run", "-a", args.godot, "--rendering-method", "gl_compatibility"]
     with (output / "run.log").open("w") as log:
         result = subprocess.run(
@@ -76,6 +95,7 @@ def main():
                 "res://" + scene,
                 "--",
                 str(output / "effects.v1.json"),
+                *extra_args,
             ],
             env=env,
             stdout=log,
@@ -94,7 +114,7 @@ def main():
         "scenario": args.scenario,
         "inputs": frozen,
         "engine_log_sha256": digest(output / "run.log"),
-        "rendering_verified": args.scenario == "render",
+        "rendering_verified": args.scenario in ("render", "projectile"),
         "server_integration_verified": False,
         "captures": {p.name: digest(p) for p in sorted(output.glob("effect-*.png"))},
     }

@@ -33,6 +33,10 @@ The independently authored `projectile_flight.gd` follows the selected trajector
 homing and collision-order contract in `GameLib/FlyingInstance.cpp` and quaternion/
 segment conventions in `EterLib/GrpMath.h`. It copies no original implementation
 and introduces no new asset downloads. Its hit output is presentation-only.
+The companion projectile wrapper/trail renderer independently interprets line and
+multi-line attachment transforms, impact lifetime and trail-history/segment rules
+in `FlyingInstance.cpp` and `FlyTrace.cpp`. It reuses already selected assets;
+original mesh-blend behavior remains outside this particle-only wrapper.
 
 The flight-discovery extension fetches only the four MSF definitions selected by
 the 26 White Oath launch declarations, at the existing client pin. It resolves

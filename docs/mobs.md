@@ -714,3 +714,43 @@ or floating-point replay parity, multiplayer evidence or a new deployment.
 
 Next combine the flight component with particle/mesh attachment transforms, impact
 effects and trails, then connect the prepared launch declarations to live combat.
+
+### Combined particle projectiles
+
+`projectile_effect.gd` connects the trajectory to line and paired multi-line
+particle attachments. It applies source angular spin and roll/distance offsets,
+destroys flight attachments at termination, and lets a separately positioned
+identity-oriented impact effect finish independently. Range expiry produces no
+impact. Setup failure discards its partial attachments and permits a corrected
+retry. The caller supplies the initial frame delta explicitly for the source's
+initial attachment-spin update.
+
+`projectile_trail.gd` keeps timestamped positions and renders original untextured
+additive segments with fixed or age-tapered widths. Source negative trail lifetime
+clears history immediately; it does not become a guessed visible trail. Samples
+at the exact expiration boundary remain until the following update. The helper
+preserves the original six-vertex segment geometry and constant source ARGB.
+
+```sh
+python3 tools/test_particle_emission.py --scenario projectile --godot /path/to/godot \
+  --catalog .local/mobs/particle-effects-r3/effects.v1.json \
+  --flights .local/mobs/projectile-sources-r5/inventory.v1.json \
+  --output .local/mobs/projectile-render-new
+```
+
+`.local/mobs/projectile-render-r1/report.json` passes 53 native Godot checks, with
+nine hashed captures. All three particle-based flights move, hit once, remove
+attachments, create an independent impact and finish cleanup. The paired Milgyo
+attachments keep their original 0.6-metre separation. Checks also cover range
+expiry without impact, setup-failure/retry, negative trail history and positive
+history expiration boundaries. All three frame-8 and impact captures were
+visually reviewed; `projectile-render-review-r1.json` binds that review. Native
+Compatibility used llvmpipe, with the same X11/VSync warnings and no engine errors.
+Owned Python/GDScript lint passes. The first launch request timed out in automatic
+permission review before starting; the permitted retry completed successfully.
+
+The fourth definition uses an arrow mesh and is explicitly rejected by this
+particle-only wrapper. Its geometry is converted, but original 3/8 blending still
+needs a mesh-effect renderer. No flight has been connected to live combat, bone
+launch declarations, exported clients or server damage. Original-client visual
+comparison and browser/occlusion/performance qualification remain outstanding.

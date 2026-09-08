@@ -62,6 +62,9 @@ for its observed driver and remaining original-client/browser comparison work.
 `--scenario flight --catalog FLIGHT_INVENTORY` exercises all four source trajectories
 and homing in headless Godot. This scenario consumes the flight inventory rather
 than particle recipes; see [flight trajectories](mobs.md#original-flight-trajectory-component).
+Use `--scenario projectile --catalog PARTICLE_CATALOG --flights FLIGHT_INVENTORY`
+for the native combined flight/attachment/impact/trail gallery. It explicitly
+excludes the unfinished arrow mesh renderer; see [combined projectiles](mobs.md#combined-particle-projectiles).
 
 `python3 tools/import_particle_effects.py --effect VIRTUAL_MSE --output NEW_DIR`
 converts explicitly selected particle recipes and their referenced textures.
