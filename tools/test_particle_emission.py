@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import shutil
+import signal
 import subprocess
 from pathlib import Path
 
@@ -23,20 +24,27 @@ def main():
     parser.add_argument("--godot", required=True)
     parser.add_argument(
         "--scenario",
-        choices=("emission", "motion", "render", "flight", "projectile"),
+        choices=("emission", "motion", "render", "flight", "projectile", "mesh"),
         default="emission",
     )
     parser.add_argument("--flights", type=Path)
+    parser.add_argument(
+        "--meshes", type=Path, help="Optional converted mesh catalog for projectiles"
+    )
     args = parser.parse_args()
     output = args.output.resolve()
     scene = f"tests/particle_{args.scenario}_smoke.gd"
     if args.scenario == "flight":
         scene = "tests/projectile_flight_smoke.gd"
+    if args.scenario == "mesh":
+        scene = "tests/projectile_mesh_smoke.gd"
     if args.scenario == "projectile":
         if args.flights is None:
             parser.error("--scenario projectile requires --flights")
         scene = "tests/projectile_effect_smoke.gd"
     files = ["scripts/actors/particle_emission.gd", scene]
+    if args.scenario == "mesh":
+        files = ["scripts/actors/projectile_mesh_effect.gd", scene]
     if args.scenario in ("motion", "render", "projectile"):
         files += ["scripts/actors/particle_motion.gd", "scripts/actors/particle_simulation.gd"]
         files += ["scripts/actors/particle_style.gd"]
@@ -47,12 +55,15 @@ def main():
             "scripts/actors/projectile_flight.gd",
             "scripts/actors/projectile_effect.gd",
             "scripts/actors/projectile_trail.gd",
+            "scripts/actors/projectile_mesh_effect.gd",
         ]
     if args.scenario == "flight":
         files += ["scripts/actors/particle_motion.gd", "scripts/actors/projectile_flight.gd"]
     inputs = [ROOT / "client" / f for f in files] + [args.catalog.resolve(), Path(__file__)]
     if args.scenario == "projectile":
         inputs.append(args.flights.resolve())
+        if args.meshes is not None:
+            inputs.append(args.meshes.resolve())
     frozen = {str(p.resolve()): digest(p) for p in inputs}
     output.mkdir(parents=True, exist_ok=False)
     (output / "project.godot").write_text(
@@ -67,6 +78,9 @@ def main():
     if args.scenario == "projectile":
         shutil.copy2(args.flights, output / "flights.v1.json")
         extra_args = [str(output / "flights.v1.json")]
+        if args.meshes is not None:
+            shutil.copy2(args.meshes, output / "mesh-effects.v1.json")
+            extra_args.append(str(output / "mesh-effects.v1.json"))
     if args.scenario in ("render", "projectile"):
         catalog = json.loads(args.catalog.read_text())
         for texture in catalog["textures"].values():
@@ -82,11 +96,52 @@ def main():
             if digest(destination) != texture["sha256"]:
                 raise ValueError("Particle texture changed while copying")
     env = {**os.environ, "XDG_DATA_HOME": str(output / "userdata")}
+    mesh_catalog = args.catalog if args.scenario == "mesh" else args.meshes
+    if mesh_catalog is not None:
+        catalog = json.loads(mesh_catalog.read_text())
+        assets = []
+        for mesh in catalog["meshes"]:
+            assets.append((mesh["model"], mesh["model_sha256"]))
+            assets.extend((g["texture"], g["texture_sha256"]) for g in mesh["geometries"])
+        for path, expected in assets:
+            relative = Path(path)
+            if relative.is_absolute() or ".." in relative.parts:
+                raise ValueError("Unsafe mesh asset path")
+            source = mesh_catalog.resolve().parent / relative
+            destination = output / relative
+            if digest(source) != expected:
+                raise ValueError("Mesh asset differs from catalog")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
+            if digest(destination) != expected:
+                raise ValueError("Mesh asset changed while copying")
+        with (output / "import.log").open("w") as log:
+            imported = subprocess.run(
+                [
+                    args.godot,
+                    "--headless",
+                    "--editor",
+                    "--import",
+                    "--path",
+                    str(output),
+                    "--lsp-port",
+                    "6481",
+                    "--dap-port",
+                    "6482",
+                ],
+                env=env,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                timeout=60,
+                check=False,
+            )
+        if imported.returncode or "ERROR:" in (output / "import.log").read_text():
+            raise RuntimeError(f"Mesh fixture import failed: {output / 'import.log'}")
     prefix = [args.godot, "--headless"]
-    if args.scenario in ("render", "projectile"):
+    if args.scenario in ("render", "projectile", "mesh"):
         prefix = ["xvfb-run", "-a", args.godot, "--rendering-method", "gl_compatibility"]
     with (output / "run.log").open("w") as log:
-        result = subprocess.run(
+        process = subprocess.Popen(
             [
                 *prefix,
                 "--path",
@@ -100,12 +155,22 @@ def main():
             env=env,
             stdout=log,
             stderr=subprocess.STDOUT,
-            timeout=120,
-            check=False,
+            start_new_session=True,
         )
+        try:
+            process.wait(timeout=120)
+        except subprocess.TimeoutExpired:
+            # xvfb-run launches children: terminate the entire isolated group.
+            os.killpg(process.pid, signal.SIGTERM)
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait()
+            raise
     log = (output / "run.log").read_text()
     rows = [json.loads(line) for line in log.splitlines() if line.startswith('{"checks":')]
-    if result.returncode or "ERROR:" in log or len(rows) != 1 or rows[0]["failures"]:
+    if process.returncode or "ERROR:" in log or len(rows) != 1 or rows[0]["failures"]:
         raise RuntimeError(f"Particle emission QA failed; inspect {output / 'run.log'}")
     if any(digest(Path(p)) != expected for p, expected in frozen.items()):
         raise RuntimeError("Particle emission QA inputs changed during the run")
@@ -114,7 +179,7 @@ def main():
         "scenario": args.scenario,
         "inputs": frozen,
         "engine_log_sha256": digest(output / "run.log"),
-        "rendering_verified": args.scenario in ("render", "projectile"),
+        "rendering_verified": args.scenario in ("render", "projectile", "mesh"),
         "server_integration_verified": False,
         "captures": {p.name: digest(p) for p in sorted(output.glob("effect-*.png"))},
     }

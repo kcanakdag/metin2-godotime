@@ -52,21 +52,20 @@ The [flight-definition importer](docs/mobs.md#flight-definition-discovery) now
 resolves their four shared flight scripts and eight effect dependencies, preserving
 original parameters and explicitly recording malformed source trails.
 The original arrow mesh now converts through the shared Blender pipeline and passes
-native Godot frame/geometry checks. Original blending and particle effects remain
-pending; the projectile is not yet live.
+native Godot frame/geometry checks. Its opaque-target material now passes a
+256-level pixel ramp; original-client blending parity remains unqualified.
 The seven particle effects now have converted recipes and 12 pixel-verified
 textures covering 22 systems. The reusable importer preserves curves, attachment,
-texture-frame order and original render settings; simulation and Godot rendering
-remain pending. See [particle conversion](docs/mobs.md#particle-effect-conversion).
+texture-frame order and original render settings. See [particle conversion](docs/mobs.md#particle-effect-conversion).
 The shared Godot emission/lifetime component passes 90 actual-engine checks across
 all 22 systems. Particle motion now passes another 89 actual-engine checks,
 including moving emitters and original gravity/drag order. The seven effects now
-render in an isolated Godot gallery with 62 checks and reviewed captures; flight,
+render in an isolated Godot gallery with 62 checks and reviewed captures;
 live combat integration and browser qualification remain pending. The four original
-flight definitions now pass 80 Godot trajectory/homing checks. Three particle
-flights are connected to rendered attachments, trails and impacts, passing 53
-native checks with reviewed captures. Arrow material rendering and live combat
-integration remain pending.
+flight definitions now pass 80 Godot trajectory/homing checks. All four flights
+now connect to rendered particle/mesh attachments, trails and impacts, passing
+61 native checks with reviewed arrow captures. Live combat integration remains
+pending.
 Yongan's six authored Wild Dog homes pass **107 two-client checks** on a fresh
 local database. The original City Guard is installed in the playable map layer,
 with original placement, weighted idle animations and its attached weapon.

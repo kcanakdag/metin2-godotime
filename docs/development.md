@@ -63,8 +63,13 @@ for its observed driver and remaining original-client/browser comparison work.
 and homing in headless Godot. This scenario consumes the flight inventory rather
 than particle recipes; see [flight trajectories](mobs.md#original-flight-trajectory-component).
 Use `--scenario projectile --catalog PARTICLE_CATALOG --flights FLIGHT_INVENTORY`
-for the native combined flight/attachment/impact/trail gallery. It explicitly
-excludes the unfinished arrow mesh renderer; see [combined projectiles](mobs.md#combined-particle-projectiles).
+for the native combined flight/attachment/impact/trail gallery. Add `--meshes
+MESH_CATALOG` to include the converted arrow; omitting it checks the three particle
+flights and rejection of a missing mesh resource. Use `--scenario mesh --catalog
+MESH_CATALOG` for the arrow animation/color-ramp checks. These native scenarios
+use isolated Linux/Xvfb projects, verify copied asset hashes and preserve reports;
+timed-out gallery runs terminate their isolated process group. See
+[combined projectiles](mobs.md#combined-particle-projectiles).
 
 `python3 tools/import_particle_effects.py --effect VIRTUAL_MSE --output NEW_DIR`
 converts explicitly selected particle recipes and their referenced textures.

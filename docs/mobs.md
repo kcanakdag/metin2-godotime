@@ -14,20 +14,35 @@ the MSE render recipe and audits every exported frame/UV against source geometry
 It currently accepts fixed-position, 50 FPS mesh effects with reviewed blend
 metadata. Reading a blend pair does not add renderer support: the ordinary target
 effect parser still defaults to its existing supported subset. The arrow's 3/8
-blend pair remains an explicit runtime requirement.
+blend pair has a bounded opaque-target renderer described below.
 
 The generalized GLB audit now supports sparse morph accessors, variable source
 frame/geometry counts and explicit offsets. An initial arrow audit rejected
 Blender's sparse zero-delta frames; the reader was corrected, not the exported
 model. Both installed click-effect GLBs still pass the same full geometry audit.
 
-`.local/mobs/arrow-mesh-r2` contains the converted arrow and source-bound receipt.
-The isolated native Godot probe in `arrow-native-r1` verifies four morph targets,
-all five frame-weight states and a 0.1-second loop; the textured arrow was visually
-inspected. Sixteen Python tests and Python lint pass. This is geometry/animation
-evidence, not original blending, in-flight attachment, particle effects or live
-combat qualification. Seven of the eight referenced MSE files are particle systems
-and still need the shared particle importer/renderer.
+`.local/mobs/arrow-mesh-r3` also writes `mesh-effects.v1.json`, binding the
+original recipe, frame visibility and model/texture hashes. The runtime
+`projectile_mesh_effect.gd` loads that converted GLB and applies discrete morph
+weights with the original strict frame deadline, 20-frame catch-up cap and retained
+backlog. It accepts the reviewed opaque arrow recipe only; unsupported blends,
+transparent destination viewports and non-opaque textures reject configuration.
+
+```sh
+python3 tools/test_particle_emission.py --scenario mesh --godot /path/to/godot \
+  --catalog /path/to/new-arrow-package/mesh-effects.v1.json \
+  --output /path/to/new-arrow-render-check
+```
+
+The original 3/8 blend reduces to source RGB squared when destination alpha is
+one. Godot's Compatibility color round trip darkened the low green channel in
+the first pixel test. The shader compensates for the pinned renderer transfer
+function; see [material provenance](third-party.md#arrow-material-color-transfer).
+`arrow-material-r4/report.json` passes 527 native checks, including all 256
+byte levels over two backgrounds, animation boundaries and explicit rejection.
+The worst channel error is 0.73 byte values. The rendered original arrow was
+visually inspected. This is opaque-target adaptation, not proof of the original
+client's destination-alpha state or browser/fog/tone-mapping parity.
 
 ## Flight-definition discovery
 
@@ -735,6 +750,7 @@ preserves the original six-vertex segment geometry and constant source ARGB.
 python3 tools/test_particle_emission.py --scenario projectile --godot /path/to/godot \
   --catalog .local/mobs/particle-effects-r3/effects.v1.json \
   --flights .local/mobs/projectile-sources-r5/inventory.v1.json \
+  --meshes .local/mobs/arrow-mesh-r3/mesh-effects.v1.json \
   --output .local/mobs/projectile-render-new
 ```
 
@@ -749,8 +765,21 @@ Compatibility used llvmpipe, with the same X11/VSync warnings and no engine erro
 Owned Python/GDScript lint passes. The first launch request timed out in automatic
 permission review before starting; the permitted retry completed successfully.
 
-The fourth definition uses an arrow mesh and is explicitly rejected by this
-particle-only wrapper. Its geometry is converted, but original 3/8 blending still
-needs a mesh-effect renderer. No flight has been connected to live combat, bone
+The optional mesh resource map now supplies converted definitions, PackedScenes
+and textures by source-effect path. The same wrapper creates either particle or
+mesh attachments, initializes their world transform immediately and preserves
+flight-end cleanup. Missing resources and ambiguous particle/mesh definitions
+reject configuration. Impact effects remain particle-based.
+
+`projectile-render-r3/report.json` passes 61 native checks for all four flights,
+with 12 hashed captures. The arrow points toward its target, moves, disappears at
+impact and leaves an independent golden burst; its frame-8 and impact captures
+were visually inspected. `arrow-render-review-r1.json` binds that review and the
+material close-up. An earlier gallery run failed because the test read the
+package effect path from a mesh entry; the fixture was corrected before rerunning.
+Python/GDScript lint and 20 focused parser/accessor tests pass. These tests use
+isolated CLI projects; a connected Godot MCP editor was unavailable.
+
+No flight has been connected to live combat, bone
 launch declarations, exported clients or server damage. Original-client visual
 comparison and browser/occlusion/performance qualification remain outstanding.

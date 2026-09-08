@@ -1,14 +1,16 @@
 extends Node3D
-## Selected particle-based flights and independent impact effects; no gameplay damage.
+## Selected particle and mesh flights and independent impact effects; no gameplay damage.
 
 const Flight = preload("res://scripts/actors/projectile_flight.gd")
 const Effect = preload("res://scripts/actors/particle_effect.gd")
 const Motion = preload("res://scripts/actors/particle_motion.gd")
+const MeshEffect = preload("res://scripts/actors/projectile_mesh_effect.gd")
 const Trail = preload("res://scripts/actors/projectile_trail.gd")
 var flight: RefCounted
 var _definition: Dictionary = {}
 var _effects: Dictionary = {}
 var _textures: Dictionary = {}
+var _mesh_effects: Dictionary = {}
 var _attachments: Array[Dictionary] = []
 var _impacts: Array[Node3D] = []
 var _spin := Quaternion.IDENTITY
@@ -22,7 +24,8 @@ func configure(
 	start: Vector3,
 	target: Vector3,
 	random_seed: int,
-	initial_delta: float
+	initial_delta: float,
+	mesh_effects: Dictionary = {}
 ) -> bool:
 	if (
 		not is_inside_tree()
@@ -36,7 +39,8 @@ func configure(
 		if (
 			int(attachment.type) != 1
 			or int(attachment.fly_type) not in [1, 2]
-			or not effects.has(attachment.effect)
+			or (not effects.has(attachment.effect) and not mesh_effects.has(attachment.effect))
+			or (effects.has(attachment.effect) and mesh_effects.has(attachment.effect))
 		):
 			return false
 	if definition.bomb_effect != null and not effects.has(definition.bomb_effect):
@@ -47,6 +51,7 @@ func configure(
 	_definition = definition.duplicate(true)
 	_effects = effects
 	_textures = textures
+	_mesh_effects = mesh_effects
 	_seed = random_seed
 	flight = candidate
 	_update_spin(initial_delta)
@@ -60,17 +65,27 @@ func configure(
 
 
 func _add_attachment(data: Dictionary) -> bool:
-	var effect := Effect.new()
-	add_child(effect)
+	var effect: Node3D
+	var configured := false
+	if _mesh_effects.has(data.effect):
+		var resource: Dictionary = _mesh_effects[data.effect]
+		effect = MeshEffect.new()
+		add_child(effect)
+		configured = effect.configure(resource.definition, resource.scene, resource.texture)
+	else:
+		effect = Effect.new()
+		add_child(effect)
+		configured = effect.configure(_effects[data.effect], _textures, _seed + _attachments.size())
+	if not configured:
+		effect.queue_free()
+		return false
+	effect.global_transform = attachment_transform(data)
 	var trail: MeshInstance3D = null
 	if data.tail != null:
 		trail = Trail.new()
 		add_child(trail)
 	_attachments.append({"data": data.duplicate(true), "effect": effect, "trail": trail})
-	return (
-		effect.configure(_effects[data.effect], _textures, _seed + _attachments.size() - 1)
-		and (trail == null or trail.configure(data.tail))
-	)
+	return trail == null or trail.configure(data.tail)
 
 
 func _discard_attachments() -> void:

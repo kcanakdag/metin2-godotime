@@ -28,7 +28,7 @@ func _capture(name: String) -> void:
 
 func _run() -> void:
 	var args := OS.get_cmdline_user_args()
-	if args.size() != 2:
+	if args.size() not in [2, 3]:
 		quit(1)
 		return
 	var catalog: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(args[0]))
@@ -41,6 +41,15 @@ func _run() -> void:
 		textures[path] = ImageTexture.create_from_image(
 			Image.load_from_file(args[0].get_base_dir().path_join(catalog.textures[path].path))
 		)
+	var meshes: Dictionary = {}
+	if args.size() == 3:
+		var mesh_catalog: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(args[2]))
+		for definition: Dictionary in mesh_catalog.meshes:
+			meshes[mesh_catalog.source_effect] = {
+				"definition": definition,
+				"scene": load("res://" + str(definition.model)) as PackedScene,
+				"texture": load("res://" + str(definition.geometries[0].texture)) as Texture2D
+			}
 	root.size = Vector2i(800, 480)
 	var world := Node3D.new()
 	root.add_child(world)
@@ -53,13 +62,15 @@ func _run() -> void:
 	camera.current = true
 	var start := Vector3(-3, 0, 0)
 	var target := Vector3(3, 0, 0)
-	for index: int in range(3):
+	for index: int in range(4 if not meshes.is_empty() else 3):
 		var definition: Dictionary = inventory.flight_definitions[index]
 		var projectile := Projectile.new()
 		world.add_child(projectile)
 		_check(
 			"flight configures",
-			projectile.configure(definition, effects, textures, start, target, 42, 1.0 / 60.0)
+			projectile.configure(
+				definition, effects, textures, start, target, 42, 1.0 / 60.0, meshes
+			)
 		)
 		var hits := 0
 		var done := false
@@ -97,7 +108,7 @@ func _run() -> void:
 	var arrow := Projectile.new()
 	world.add_child(arrow)
 	_check(
-		"unimplemented mesh flight rejects",
+		"missing mesh resource rejects",
 		not arrow.configure(inventory.flight_definitions[3], effects, textures, start, target, 1, 0)
 	)
 	arrow.queue_free()

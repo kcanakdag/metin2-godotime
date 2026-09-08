@@ -360,3 +360,23 @@ pins `src/game/src/char_manager.cpp` alongside `regen.cpp`. Their `SpawnMobRange
 and point-spawn branches define the preserved centimetre ranges, retry count and
 different heading policies. These are source-backed definitions for a future
 server-owned placement implementation, not imported legacy server code.
+
+## Arrow material color transfer
+
+`projectile_mesh_effect.gd` implements the opaque source-color /
+inverse-destination-alpha case described by Microsoft's
+[D3DBLEND reference](https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dblend).
+For opaque source and destination alpha one, the RGB result is source RGB squared.
+Transparent viewports and unsupported material recipes reject configuration.
+This does not establish the original client's destination-alpha state.
+
+Godot Compatibility's
+[color-transfer functions](https://raw.githubusercontent.com/godotengine/godot/master/drivers/gles3/shaders/tonemap_inc.glsl)
+were consulted to diagnose dark-pixel error observed in the installed engine.
+The project-authored shader uses bounded Newton iteration to invert that numerical
+transfer function; its polynomial coefficients are recorded engine behavior,
+not a copied engine implementation. Godot is MIT licensed; no additional engine
+source or binary is bundled. This adapter is qualified against the installed
+Godot 4.7.2 Compatibility renderer; engine changes require rerunning the rendered
+256-step pixel ramp. Nonlinear tone mapping, fog, other renderers and original
+client pixel parity are not covered by that qualification.

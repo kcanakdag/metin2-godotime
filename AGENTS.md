@@ -281,7 +281,8 @@ effects in an isolated native gallery; live projectile integration is unfinished
 selected MSE effects, 22 particle systems and 12 referenced textures. They retain
 original units, scalar curves, packed color keys, ordered texture frames, blend,
 billboard, attachment and rotation settings. They do not simulate/render effects.
-The arrow mesh is also converted, but original blend parity is unfinished.
+The arrow mesh is converted and has a native-tested opaque-target material;
+original-client blend parity remains unfinished.
 
 Evidence: `.local/mobs/particle-effects-r2` and `particle-effects-r3` are identical
 online/offline builds. `.local/mobs/particle-acceptance-r1.json` records 20 focused
@@ -314,18 +315,35 @@ in `particle-motion-r2`. These are component effects, not new live mobs/skills.
 the four original definitions in `.local/mobs/projectile-flight-r1/report.json`.
 The same runner's `--scenario flight --catalog FLIGHT_INVENTORY` checks swept hits,
 range-before-hit ordering, force/homing order and state-preserving rejection.
-It emits presentation events only; it is not wired to effects or combat yet.
+It emits presentation events only; effects are connected below, combat is not.
 
 The combined `projectile_effect.gd`/`projectile_trail.gd` now passes 53 native
 checks in `.local/mobs/projectile-render-r1/report.json`, with nine hashed captures.
 All three particle-based flights and impacts were visually reviewed; see
 `projectile-render-review-r1.json`. Reproduce with `--scenario projectile --catalog
 PARTICLE_CATALOG --flights FLIGHT_INVENTORY`. Paired attachment spacing, flight-end
-cleanup, impact lifetime and trail expiry are covered. The arrow mesh definition
-is explicitly rejected until its original 3/8 material behavior is implemented.
+cleanup, impact lifetime and trail expiry are covered.
 
-Next implement the arrow mesh material, integrate original bone/event launches, then
-flight attachment and authoritative magic/projectile combat so the prepared mobs
+The arrow follow-up adds `mesh-effects.v1.json` to the Blender package and
+`projectile_mesh_effect.gd`. `arrow-material-r4/report.json` passes 527 native
+checks: a full byte ramp over two backgrounds, discrete morph timing, catch-up
+backlog and rejection of transparent viewports/unsupported recipes. Compatibility
+color-transfer approximation caused a real low-green error; the bounded material
+compensation reduces the worst channel error to 0.73 bytes. See third-party notes.
+This adapts the opaque-destination case, not arbitrary original 3/8 blending.
+
+The combined wrapper now accepts a mesh resource map. Reproduce all four flights
+with `--scenario projectile --catalog PARTICLE_CATALOG --flights FLIGHT_INVENTORY
+--meshes .local/mobs/arrow-mesh-r3/mesh-effects.v1.json`.
+`projectile-render-r3/report.json` passes 61 native checks with 12 captures; the
+arrow frame-8, impact and separate material close-up were reviewed and bound in
+`arrow-render-review-r1.json`. A prior test catalog-key error is fixed. The runner
+now terminates its isolated process group on timeout. Owned Python/GDScript lint
+and 20 parser/accessor tests pass. No editor MCP, browser/export, live launch or
+server damage evidence is claimed.
+
+Next integrate original bone/event launches and authoritative magic/projectile
+combat so the prepared mobs
 can become playable. Do not keep substituting inventory reports for integration.
 The interrupted investigation inspected pinned primary files under
 `.cache/full-game-research/client/source/src/EffectLib/`:

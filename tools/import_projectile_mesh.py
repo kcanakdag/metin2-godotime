@@ -93,6 +93,32 @@ def main():
     for path, digest in {**frozen, **source_files}.items():
         if hashlib.sha256(Path(path).read_bytes()).hexdigest() != digest:
             raise ValueError("Mesh conversion inputs changed")
+    catalog = {
+        "schema": "mt2spacetime.mesh-effects-candidate",
+        "version": 1,
+        "source_effect": effect,
+        "meshes": [
+            {
+                "model": f"models/mesh-{i}.glb",
+                "model_sha256": audits[i]["sha256"],
+                "recipe": recipes[i],
+                "frame_count": original.frame_count,
+                "geometries": [
+                    {
+                        "texture": assets[i]["geometries"][j]["texture_resource"],
+                        "texture_sha256": hashlib.sha256(
+                            (output / assets[i]["geometries"][j]["texture_resource"]).read_bytes()
+                        ).hexdigest(),
+                        "visibility": [frame.visibility for frame in geometry.frames],
+                    }
+                    for j, geometry in enumerate(original.geometries)
+                ],
+            }
+            for i, original in enumerate(originals)
+        ],
+    }
+    catalog_path = output / "mesh-effects.v1.json"
+    catalog_path.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n")
     report = {
         "status": "geometry-converted-not-runtime-qualified",
         "source_effect": effect,
@@ -100,6 +126,7 @@ def main():
         "tools": frozen,
         "models": audits,
         "render_recipes": recipes,
+        "mesh_catalog_sha256": hashlib.sha256(catalog_path.read_bytes()).hexdigest(),
         "runtime_requirements": ["original-blend-and-color-recipe", "flight-attachment-rendering"],
     }
     (output / "receipt.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
