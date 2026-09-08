@@ -8,6 +8,7 @@ const table_names: Array[String] = []
 
 @export var monster_id: int
 @export var definition_vnum: int
+@export var group_owner: int
 @export var home_x: float
 @export var home_z: float
 
@@ -16,18 +17,21 @@ const primary_key: StringName = &'monster_id'
 const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"monster_id": "U32",
 	"definition_vnum": "U32",
+	"group_owner": "U64",
 	"home_x": "F32",
 	"home_z": "F32"
 }
 
 ## 1. monster_id: int[br]
 ## 2. definition_vnum: int[br]
-## 3. home_x: float[br]
-## 4. home_z: float[br]
-static func create(p_monster_id: int, p_definition_vnum: int, p_home_x: float, p_home_z: float) -> GameMonsterOrigin:
+## 3. group_owner: int[br]
+## 4. home_x: float[br]
+## 5. home_z: float[br]
+static func create(p_monster_id: int, p_definition_vnum: int, p_group_owner: int, p_home_x: float, p_home_z: float) -> GameMonsterOrigin:
 	var result: GameMonsterOrigin = GameMonsterOrigin.new()
 	result.monster_id = p_monster_id
 	result.definition_vnum = p_definition_vnum
+	result.group_owner = p_group_owner
 	result.home_x = p_home_x
 	result.home_z = p_home_z
 	return result

@@ -1,0 +1,14 @@
+{
+  "schema": "mt2spacetime.combat-spawn-fixture",
+  "schema_version": 1,
+  "fixture_id": "allocated-wild-dog-v1",
+  "map_id": "training",
+  "placements": [
+    {
+      "id": 1,
+      "definition_vnum": 101,
+      "home_x": 3.0,
+      "home_z": 3.0
+    }
+  ]
+}

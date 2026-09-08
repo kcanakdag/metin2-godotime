@@ -725,3 +725,35 @@ followers remain. Two focused allocator tests cover non-reuse, partial placement
 invalid counts and exact u32 exhaustion. Strict example/test Clippy passes and a
 legacy checkpoint rejects. This is offline evidence, not live group spawning.
 Protocol 21 and the public protocol-19 build remain unchanged.
+
+## Database-backed group allocation — 2026-09-08
+
+Protocol 22 adds private `monster_allocation_cursor` and `monster_spawn_group`
+tables plus `monster_origin.group_owner`. Initialization seeds the cursor above
+all authored mob/dummy IDs. Trusted placement can reserve 1..256 member IDs,
+insert their origins/group and advance the cursor; the caller inserts public
+monsters and AI clocks in that same reducer transaction. Failed initialization
+aborts the transaction. No client reducer exposes allocation. Authored origins
+still match compiled records; allocated origins must belong to a persisted group
+range, fit the cursor and resolve an installed species before combat accepts them.
+
+The explicit `MT2_COMBAT_TEST_FIXTURE=allocated-wild-dog-v1` training fixture
+uses the allocator during initialization. It is rejected for Yongan or combined
+population overrides. Its one dog should receive ID 900002, above dummy 900001,
+instead of authored ID 1. This proves allocation independently of fixed IDs; it
+does not yet implement regeneration deadlines, release a group slot on leader
+destruction or replace a killed group. The allocated dog currently follows the
+existing life-sequence respawn policy. Original 44-species population remains
+uninstalled. Existing databases are preserved; this schema uses fresh QA databases.
+
+Generated protocol-22 bindings contain 91 files, schema SHA-256
+`c05813aaab5aeae2820e665339403ec4779aa538113443b433d5bf5b8d55dd85`.
+The public endpoint remains protocol 19, separate from worktree protocol 22.
+
+Evidence: `.local/mobs/allocated-runtime-r1/acceptance.json`, fresh database
+`mt2-p2-allocated-runtime-r1-20260908`. All 108 real two-account combat/lifecycle
+checks pass; both final subscriptions contain allocated dog ID 900002, health 100,
+life sequence 1 after respawn/reentry. Six protocol checks reject 21 and accept 22.
+Focused origin tests, strict library Clippy, GDScript lint/format and generated
+binding parsing pass. This one-member fixture does not prove multi-member
+replacement, database restart, or regeneration leader-release behavior.

@@ -1672,3 +1672,14 @@ Yongan terrain. Outputs are explicitly preview data, not authoritative database
 rows. The report includes code, terrain and binary hashes; changing an input during
 qualification fails the run. This does not replace multiplayer placement,
 reconnect or disconnect tests when runtime subscriptions are implemented.
+
+## Allocated mob combat fixture
+
+Build a training module using `MT2_COMBAT_TEST_FIXTURE=allocated-wild-dog-v1`
+and the intended local auth issuer/guest policy, without `--features yongan`.
+Freeze and publish it to a fresh `mt2-p2-` database, then run
+`tools/test_physical_combat.py --scenario melee` against that database, using the
+same auth/game-server options as the passive replay above. This exercises the
+normal two-client combat scenario against a database-allocated dog ID (900002).
+Do not deploy this training fixture to the public map. Protocol 22 is required.
+The fixture tests allocation and existing respawn, not original regeneration.

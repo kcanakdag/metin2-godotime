@@ -16,6 +16,7 @@ mod mob_actions;
 mod mob_aggro;
 pub mod mob_damage;
 pub mod mob_threat;
+mod monster_allocation;
 mod monster_spawns;
 mod movement;
 pub mod npc_placement;
@@ -27,7 +28,7 @@ mod root_motion;
 mod skills;
 mod training_targets;
 
-const PROTOCOL_VERSION: u32 = 21;
+const PROTOCOL_VERSION: u32 = 22;
 mod special_area;
 mod targeting;
 

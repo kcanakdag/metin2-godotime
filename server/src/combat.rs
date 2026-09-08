@@ -165,10 +165,13 @@ fn visit_due_hits(events: &mut [DueHitEvent], mut visit: impl FnMut(DueHitEvent)
 pub fn initialize(ctx: &ReducerContext) {
     crate::monster_spawns::initialize(ctx);
     let bounds = collision_bounds(ctx);
-    for spawn in definitions::MONSTER_SPAWNS
-        .iter()
-        .chain(definitions::TRAINING_TARGET_SPAWNS)
-    {
+    let ordinary = if definitions::ALLOCATED_MOB_FIXTURE {
+        crate::monster_spawns::allocate_group(ctx, definitions::MONSTER_SPAWNS)
+            .expect("trusted training group allocation must succeed")
+    } else {
+        definitions::MONSTER_SPAWNS.to_vec()
+    };
+    for spawn in ordinary.iter().chain(definitions::TRAINING_TARGET_SPAWNS) {
         content::valid_spawn(spawn.home_x, spawn.home_z)
             .expect("Authored monster home must be traversable on the compiled map");
         assert!(
