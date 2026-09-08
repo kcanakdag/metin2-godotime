@@ -5,6 +5,30 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Original Warrior effects deployed publicly — 2026-09-09
+
+Release `20260908T233819834672Z` serves the full-map skill-effect build at
+https://kcanakdag.com:8443/. Actual Web and Linux exports passed package audits;
+deployment verified the served manifest. Protocol 26 and database
+`mt2-public-skills-v26-20260908` remain unchanged. The frozen module SHA-256 is
+`750f0c44bb4784dcc6d53eb35387ff07b8efe0932fc0907bc5bd12676f00279e`, identical to
+the previous public module. Publication used no reset and retained accounts/keys.
+
+Public hardware Chrome/Linux qualification passes all 76 checks: matching
+2,860-mob/44-species subscriptions, mutual rendered players, skill-panel input,
+movement and rejection, disconnect removal, character switching with saved
+position, reconnect, reload and logout/login. Browser engine errors are empty.
+The public world capture was reviewed. Evidence and frozen builds:
+`.local/public-world-effects-r1/acceptance.json`, `browser-qa/report.json`,
+`deploy.log`, `web/` and `linux/`. The one-mob census change from the earlier
+release is live regeneration; both clients agree on the current population.
+
+Skill casting/effect appearance was qualified separately on the local two-Chrome
+fixture below. Public QA does not claim public skill-casting coverage or original
+pixel parity. All four Warrior effects are now deployed; other classes' skill
+systems, missing scenery/maps, original UI fidelity and remaining full-rebuild
+milestones are still outstanding.
+
 ## Exported two-client skill effects — 2026-09-09
 
 The web export at `.local/p6-world-effects-r1/web` completed its existing actor,

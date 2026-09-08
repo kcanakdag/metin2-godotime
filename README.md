@@ -8,19 +8,20 @@ connect to this game's new protocol.
 
 The current [public development build](https://kcanakdag.com:8443/) uses protocol
 26 with the original population package and four Warrior skills: Three-Way Cut,
-Sword Spin, Spirit Strike and Bash. Release `20260908T220207351930Z` fixes world
-play loading the older male Warrior model without the new skill motions. It
-preserves the existing world, characters, login accounts and keys. Refresh older
-tabs before signing in. Both matching Web/Linux exports passed package audits;
-all 76 public Chrome/Linux checks passed, with no browser engine errors. A focused two-browser local replay
-passes 32 checks for skill points, dragging, quickslot casting and matching damage,
-with no browser engine errors. See [deployment evidence](docs/distribution.md).
+Sword Spin, Spirit Strike and Bash. Release `20260908T233819834672Z` adds the
+converted original Warrior skill effects to normal world playback. It preserves
+the existing world, characters, login accounts and keys. Refresh older tabs before
+signing in. Both matching Web/Linux exports passed package audits and all 76 public
+Chrome/Linux account/world checks passed with no browser engine errors. See [deployment evidence](docs/distribution.md).
+A focused local two-browser replay passes 34 checks for skill points, dragging,
+quickslot casting, matching damage and effect creation on both clients. Recorded
+Bash playback passes another 22 checks and shows its burst in both browser views.
 
 The four-skill replay passes 52 two-client dummy checks; equipped animation QA
 passes 132 checks and the scrollable skill panel passes 18 native checks.
 Another 28 two-client checks verify Three-Way Cut against original Grey Wolf
-flinch, knockdown, 0.392 m push and recovery. New-skill browser casting and exact
-original skill-tree/physics fidelity remain pending.
+flinch, knockdown, 0.392 m push and recovery. Exact original skill-tree/physics fidelity and the other classes’ skill gameplay
+remain incomplete.
 
 Local mob threat behavior now has a reusable two-account passive
 retaliation and target-switching scenario (42 checks passed). See the
