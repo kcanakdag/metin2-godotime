@@ -34,7 +34,10 @@ actor, UI and character packages. It stages all three, including the character
 catalog hash in its report. Run `--suite content_gate --suite screen_wave` to
 check class-aware camera-event routing and the existing screen-wave timing and
 lifecycle rules. Class routing uses synthetic events on registered motions;
-this is not evidence that additional original camera events have been imported.
+this routing fixture is separate from `screen_wave`, which now also checks the
+actual imported events on both Warriors. The exported account runner accepts
+`--classes --warrior-effects` for the female Warrior finisher scenario; ordinary
+`--classes` retains the Ninja/Shaman scenario.
 
 ## Install the quality tools
 

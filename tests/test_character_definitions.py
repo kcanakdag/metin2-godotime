@@ -2,16 +2,82 @@
 
 import sys
 import unittest
+from copy import deepcopy
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 
+from build_character_catalog import camera_event  # noqa: E402
 from character_definitions import (  # noqa: E402
     initial_points,
     registered_combo_chains,
     registered_motions,
 )
 from content_formats import parse_msa  # noqa: E402
+
+
+class CameraEventTests(unittest.TestCase):
+    def fixture(self):
+        motion = {
+            "action_id": "actor.player.warrior-female.onehand.combo_4",
+            "source_msa": "female/combo_04.msa",
+            "duration_us": 1_266_667,
+        }
+        event = {
+            "action_id": motion["action_id"],
+            "event_type": 2,
+            "source": motion["source_msa"],
+            "start_us": 630086,
+            "end_us": 830086,
+            "fields": {
+                "AffectingRange": ["200"],
+                "DuringTime": ["0.200000"],
+                "MotionEventType": ["2"],
+                "Power": ["300"],
+                "StartingTime": ["0.630086"],
+            },
+        }
+        return motion, {"unsupported_motion_metadata": [event]}
+
+    def test_original_wave_uses_next_legacy_frame_and_public_fields_only(self):
+        motion, source = self.fixture()
+        self.assertEqual(
+            camera_event(source, motion),
+            {
+                "screen_wave": {
+                    "activation_offset_us": 633334,
+                    "duration_us": 200000,
+                    "viewer_range_m": 2.0,
+                }
+            },
+        )
+        motion["action_id"] = "actor.player.shaman-male.fan.combo_4"
+        self.assertIsNone(camera_event(source, motion))
+
+    def test_unsupported_policies_and_inconsistent_source_fail_closed(self):
+        motion, original = self.fixture()
+        for field, values in [
+            ("Power", ["301"]),
+            ("DuringTime", ["0.3"]),
+            ("AffectingRange", ["nan"]),
+            ("AffectingRange", ["5001"]),
+            ("StartingTime", ["0.6"]),
+            ("Power", ["300", "300"]),
+        ]:
+            source = deepcopy(original)
+            source["unsupported_motion_metadata"][0]["fields"][field] = values
+            with self.subTest(field=field, values=values), self.assertRaises(ValueError):
+                camera_event(source, motion)
+        for field, value in [("source", "different.msa"), ("end_us", 830085)]:
+            source = deepcopy(original)
+            source["unsupported_motion_metadata"][0][field] = value
+            with self.assertRaises(ValueError):
+                camera_event(source, motion)
+        with self.assertRaises(ValueError):
+            camera_event(original, {**motion, "duration_us": 800000})
+        original["unsupported_motion_metadata"] *= 2
+        with self.assertRaises(ValueError):
+            camera_event(original, motion)
 
 
 def registrations() -> str:

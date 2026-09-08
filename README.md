@@ -26,7 +26,7 @@ fixture is simulated. A separate **103-check authenticated Web/Linux run**
 qualifies approach, dialogue, Close/Escape, WASD and account lifecycle. Another
 59 live checks cover private sessions, rejection, expiry and reconnect.
 The updated development build is served at **http://127.0.0.1:8186** against
-`mt2-p2-fan-r1-20260908`. Click the City Guard to approach and talk;
+`mt2-p2-class-effects-r1-20260908`. Click the City Guard to approach and talk;
 Close or Escape dismisses the dialogue, and movement resumes normally.
 Character creation shows Warrior, Ninja, Sura and Shaman together, with the
 selected class in front, original intro idle animations, hair, titles and
@@ -38,6 +38,10 @@ Starter weapons are selected by class data; equipment and damage remain server-o
 The fan milestone passes 106 live two-client checks, 69 rendered Godot checks
 and 105 Chrome/Linux checks. The left hotbar button uses the original attack icon.
 See the [status ledger](docs/rebuild/implementation-status.md) for evidence.
+Both Warriors now use their original fourth-hit camera-wave timing and range.
+The shared catalog importer adds supported events from the pinned motion data;
+classes without such events receive no invented shake. This follow-up passes
+76 isolated Godot checks and 106 exported Chrome/Linux checks.
 Trees, new mob types, additional weapon modes, attack-speed modifiers, ordinary
 finisher knockback and abilities remain pending. The local build uses a fresh
 character database; previous databases and auth accounts are preserved. The public

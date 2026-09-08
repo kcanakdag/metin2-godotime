@@ -19,6 +19,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_check_catalog_event()
+	_check_class_events()
 	var event := _event()
 	var action := _action(7, START_US)
 	var wave := ScreenWave.new()
@@ -260,6 +261,53 @@ func _check_catalog_event() -> void:
 			invalid_wave.snapshot().observed_actions == 0,
 			"invalid event offsets are rejected before arming"
 		)
+
+
+func _check_class_events() -> void:
+	var catalog := ActorCatalogScript.new()
+	_check(catalog.load_required(), "class wave catalog loads")
+	for definition: Dictionary in catalog.characters.classes:
+		for variant: Dictionary in definition.variants:
+			var actor_id := str(variant.actor_id)
+			var mode := "fan" if int(definition.class_id) == 3 else "onehand"
+			var action_id := actor_id + "." + mode + ".combo_4"
+			var motion := catalog.motion(actor_id, "", action_id)
+			var event: Dictionary = motion.get("screen_wave", {})
+			if int(definition.class_id) != 0:
+				_check(event.is_empty(), "no invented wave for " + actor_id)
+				continue
+			_check(
+				(
+					int(event.get("activation_offset_us", 0)) == ACTIVATION_OFFSET_US
+					and int(event.get("duration_us", 0)) == DURATION_US
+					and is_equal_approx(float(event.get("viewer_range_m", 0)), 2.0)
+				),
+				"original common finisher event: " + actor_id
+			)
+			var wave := ScreenWave.new()
+			var action := _action(1, START_US)
+			action.attack_action_id = action_id
+			wave.observe(actor_id, action, event, Vector3.ZERO, Vector3.ZERO, START_US)
+			_check(
+				wave.observe(
+					actor_id,
+					action,
+					event,
+					Vector3.ZERO,
+					Vector3.ZERO,
+					START_US + ACTIVATION_OFFSET_US
+				),
+				"actual class event triggers: " + actor_id
+			)
+			_check(
+				(
+					catalog
+					. motion(actor_id, "", actor_id + ".onehand.combo_7")
+					. get("screen_wave", {})
+					. is_empty()
+				),
+				"advanced-chain wave remains disabled"
+			)
 
 
 func _action(sequence: int, start_us: int) -> Dictionary:

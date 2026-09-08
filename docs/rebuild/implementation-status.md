@@ -30,6 +30,56 @@ feature records across 41 systems are a scope inventory with different sizes,
 dependencies and acceptance criteria, so their record counts do not support a
 meaningful percentage-complete claim.
 
+## Original common-chain camera events
+
+The local endpoint **http://127.0.0.1:8186** now serves
+`.local/p4-class-effects/exports/web-r1` against the new database
+`mt2-p2-class-effects-r1-20260908`. Existing databases and accounts are preserved;
+the public deployment is unchanged. The matching module remains protocol 14.
+
+The character catalog adapter now consumes supported camera-wave metadata for
+registered common-chain motions. The pinned sources contain an event on both
+Warriors' fourth attacks: activation at 633,334 microseconds, duration 200 ms,
+viewer range two metres and source power 300. The existing deterministic camera
+policy and accessibility setting apply. Ninja, Sura and Shaman receive no
+invented event. Advanced-chain events remain disabled. All converted model hashes
+are unchanged; the verified fan-milestone Blender conversion was reused, and the
+previous installed catalog is retained in `catalog-r1-previous-install`.
+
+Evidence under `.local/p4-class-effects/`:
+
+- `components-r4/report.json`: 34 main routing/content checks and 42 screen-wave
+  checks, including actual source-derived events on both Warriors, no events on
+  the other six appearances, disabled advanced events and camera lifecycle.
+- `python-r1.log`: eight character/importer tests, including duplicate events,
+  invalid power/range/duration and inconsistent source/timing rejection.
+- `exports/web-r1` and `exports/linux-r1`: actual exports and package audits,
+  inspecting 996 and 1,799 resource paths respectively, with 238 UI images.
+- `browser-r2/report.json`: 106 checks pass with zero browser engine errors.
+  Two independent accounts in actual Chrome/Linux exports exercise all eight
+  previews, female Ninja and Warrior held combos, the female Warrior's camera
+  wave, movement, rejection, character switching and reconnect/login lifecycle.
+  Her recorded wave count is one and the completed offset is zero. Rendered
+  status and world screenshots were inspected. This run checks the local
+  attacker's wave; remote-viewer range behavior is covered by component tests.
+- `lint-final.log`: owned-source lint passes. `build-r1.log` and `publish-r1.log`
+  record the matching module build and non-destructive local publication.
+
+The first browser run reached the camera event but failed its first-step
+comparison. Its assertion repeatedly read each process during one predicate;
+the corrected test takes one snapshot per client and passed on the same exports.
+The failed report is retained. An initial component expectation also needed
+numeric comparison for JSON-decoded microsecond values.
+
+Module SHA-256: `52f7b3fb272500498e8a1c36635c9db12d605fbfc91b684938b209287df389a6`.
+Character catalog SHA-256: `aa5ef3b8c3922c09fbb7b6731720acf238caee9aefd8bb714ed09a0b2c5c36df`.
+Web PCK SHA-256: `1eb029237d74d43822ad0ae105d8b6489e23f63218657d1b49fad42117ed59fe`.
+Linux PCK SHA-256: `9bb1fc864a5614b3edbfadbbfda929a755424cb9955f33072ed1a9c213664a6d`.
+
+Godot editor MCP was unavailable. Actual exported renderers provide the visual
+evidence; no Windows execution or public internet gameplay test was performed.
+Attack-speed modifiers, ordinary finisher knockback and abilities remain pending.
+
 ## Class-aware camera-event routing follow-up
 
 Main now resolves each subscribed attack's camera event using that character's

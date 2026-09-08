@@ -7,6 +7,30 @@ the public appearance projection drives the model shown by every client.
 
 ## Build selected original assets
 
+The catalog builder adapts source camera-wave events only for the registered
+common weapon chain. Both Warriors' fourth attacks carry a 200 ms wave, activated
+at 633,334 microseconds with a two-metre viewer range. The selected Ninja, Sura
+and Shaman motions have no such source event; advanced-chain waves remain
+disabled. The adapter accepts the existing power-300 deterministic camera policy
+and rejects unsupported values, duplicate events or inconsistent timing/source
+references. This preserves authored timing and range, not the original random
+camera algorithm. The accessibility toggle still suppresses the effect.
+
+Presentation-only metadata changes can reuse a verified Blender conversion:
+
+```sh
+.local/venv-dev/bin/python tools/build_character_catalog.py \
+  --source .local/characters/verified-conversion \
+  --output .local/characters/new-catalog --install --replace
+```
+
+Use new output directories; replacement retains the previous package. The
+catalog hash changes even when model hashes stay identical, so rebuild the
+matching server and client exports. `tools/test_target_client.py --suite
+screen_wave` checks actual catalog events. Add `--classes --warrior-effects` to
+the exported account test to play female Ninja followed by female Warrior and
+check the latter's authored finisher wave with normal keyboard input.
+
 Activate the development Python environment and install the baseline
 `p0-warrior-dog` content first. Use a new output directory for every build:
 

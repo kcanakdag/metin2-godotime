@@ -36,7 +36,17 @@ def exercise_previews(page, account, click, wait, output):
 
 
 def exercise_class_world(
-    page, web, desktop, wait, identity, actor_id, output, *, weapon_vnum=0, mode="general"
+    page,
+    web,
+    desktop,
+    wait,
+    identity,
+    actor_id,
+    output,
+    *,
+    weapon_vnum=0,
+    mode="general",
+    camera_wave=False,
 ):
     def local():
         return rendered_actor(web(), identity)
@@ -81,19 +91,27 @@ def exercise_class_world(
         page.keyboard.press("Escape")
         wait(f"{label}_inventory_closes", lambda: not web()["ui"]["visible"])
     before = local()["attack_sequence"]
+    wave_before = int(web().get("screen_wave", {}).get("trigger_count", 0))
     expected = actor_id + (f".{mode}.combo_1" if weapon_vnum else ".general.normal_attack")
+
+    def matching_attack():
+        # Each read crosses a process boundary. Re-reading midway through the
+        # predicate can compare different steps of a short, healthy combo.
+        current, remote = local(), peer()
+        return (
+            current.get("attack_sequence", 0) > before
+            and remote.get("attack_sequence") == current.get("attack_sequence")
+            and current.get("action_id", "").startswith(expected)
+            and remote.get("action_id") == current.get("action_id")
+            and bool(current.get("animation"))
+            and remote.get("animation") == current.get("animation")
+        )
+
     page.keyboard.down("Space")
     try:
         wait(
             f"{label}_keyboard_attack_plays_for_both_players",
-            lambda: (
-                local().get("attack_sequence", 0) > before
-                and peer().get("attack_sequence") == local().get("attack_sequence")
-                and local().get("action_id", "").startswith(expected)
-                and peer().get("action_id") == local().get("action_id")
-                and bool(local().get("animation"))
-                and peer().get("animation") == local().get("animation")
-            ),
+            matching_attack,
             5,
             poll_interval=0.03,
         )
@@ -123,7 +141,14 @@ def exercise_class_world(
             )
     finally:
         page.keyboard.up("Space")
-    sample = {"local": local(), "peer": peer()}
+    if camera_wave:
+        wait(
+            f"{label}_authored_finisher_triggers_camera_wave",
+            lambda: int(web().get("screen_wave", {}).get("trigger_count", 0)) > wave_before,
+            5,
+            poll_interval=0.02,
+        )
+    sample = {"local": local(), "peer": peer(), "screen_wave": web().get("screen_wave", {})}
     page.screenshot(path=str(output / f"{label}-attack.png"))
     wait(
         f"{label}_returns_to_idle",

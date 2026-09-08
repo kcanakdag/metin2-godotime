@@ -192,7 +192,14 @@ def main() -> None:
     )
     parser.add_argument("--native", type=Path, default=ROOT / "dist/linux-test/MT2Spacetime.x86_64")
     parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--warrior-effects",
+        action="store_true",
+        help="With --classes, exercise female Warrior finisher waves as the second character",
+    )
     args = parser.parse_args()
+    if args.warrior_effects and not args.classes:
+        parser.error("--warrior-effects requires --classes")
     if args.classes and any(
         (
             args.inventory,
@@ -826,12 +833,15 @@ def main() -> None:
             click("create_open")
             stage("create", "empty_slot_opens_creation")
             if args.classes:
-                click("slot_next")
-                click("slot_next")
-                click("male")
+                for _ in range(3 if args.warrior_effects else 2):
+                    click("slot_next")
+                click("female" if args.warrior_effects else "male")
                 wait(
-                    "second_creation_selects_male_shaman",
-                    lambda: account().get("character_class") == 3 and account().get("sex") == 0,
+                    "second_creation_selects_requested_class",
+                    lambda: (
+                        account().get("character_class") == (0 if args.warrior_effects else 3)
+                        and account().get("sex") == (1 if args.warrior_effects else 0)
+                    ),
                 )
             fill("character_name", names["native"])
             error_count = len(web().get("errors", []))
@@ -854,16 +864,19 @@ def main() -> None:
                 lambda: seen(desktop(), second_id) is not None and seen(desktop(), web_id) is None,
             )
             if args.classes:
-                samples["shaman"] = exercise_class_world(
+                samples["second_class"] = exercise_class_world(
                     page,
                     web,
                     desktop,
                     wait,
                     second_id,
-                    "actor.player.shaman-male",
+                    "actor.player.warrior-female"
+                    if args.warrior_effects
+                    else "actor.player.shaman-male",
                     output,
-                    weapon_vnum=7000,
-                    mode="fan",
+                    weapon_vnum=10 if args.warrior_effects else 7000,
+                    mode="onehand" if args.warrior_effects else "fan",
+                    camera_wave=args.warrior_effects,
                 )
             system_action("change_character")
             stage("select", "second_character_leaves_for_selection")

@@ -14,10 +14,55 @@ from pathlib import Path
 from build_npc_catalog import converted, validate_extracted_textures
 from character_definitions import registered_combo_chains
 from content_compile import ROOT, _client_motion, canonical_bytes, extract_actor_texture_pngs
+from content_formats import finite_number, seconds_to_us
 
 INSTALL_ROOT = ROOT / "client/assets/imported/characters"
 RESOURCE_ROOT = "res://assets/imported/characters/"
 BASE_WARRIOR = "actor.player.warrior-male"
+
+
+def camera_event(normalized: dict, motion: dict) -> dict | None:
+    """Adapt a selected common-chain wave to the existing 200 ms camera policy."""
+    matches = [
+        event
+        for event in normalized.get("unsupported_motion_metadata", [])
+        if event.get("action_id") == motion["action_id"] and event.get("event_type") == 2
+    ]
+    if not matches:
+        return None
+    if len(matches) != 1:
+        raise ValueError("A common-chain motion supports exactly one camera wave")
+    event = matches[0]
+    fields = event["fields"]
+    if set(fields) != {"AffectingRange", "DuringTime", "MotionEventType", "Power", "StartingTime"}:
+        raise ValueError("Unsupported camera-wave source fields")
+    if any(not isinstance(values, list) or len(values) != 1 for values in fields.values()):
+        raise ValueError("Camera-wave source fields must be scalars")
+    start = seconds_to_us(fields["StartingTime"][0])
+    duration = seconds_to_us(fields["DuringTime"][0])
+    range_m = finite_number(fields["AffectingRange"][0]) / 100
+    if (
+        fields["MotionEventType"] != ["2"]
+        or finite_number(fields["Power"][0]) != 300
+        or duration != 200_000
+        or not 0 < range_m <= 50
+        or start != event["start_us"]
+        or start + duration != event["end_us"]
+        or event["source"] != motion["source_msa"]
+        or not 0 <= start < motion["duration_us"]
+    ):
+        raise ValueError("Camera wave differs from the supported timing, range or power policy")
+    # The legacy dispatcher observes a floored 60 Hz frame on the next tick.
+    activation = ((start * 60 // 1_000_000 + 1) * 1_000_000 + 59) // 60
+    if activation + duration > motion["duration_us"]:
+        raise ValueError("Camera wave extends beyond its selected motion")
+    return {
+        "screen_wave": {
+            "activation_offset_us": activation,
+            "duration_us": duration,
+            "viewer_range_m": range_m,
+        }
+    }
 
 
 def public_catalog(normalized: dict, artifacts: dict) -> dict:
@@ -61,16 +106,28 @@ def public_catalog(normalized: dict, artifacts: dict) -> dict:
         )
         modes = []
         for mode in actor["modes"]:
+            chains = (
+                registered_combo_chains(
+                    registrations, actor["model_key"].split("_")[0].capitalize(), mode["id"]
+                )
+                if mode["id"] in {"onehand", "fan"}
+                else []
+            )
+            common = set(chains[0]) if chains else set()
             modes.append(
                 {
                     "id": mode["id"],
                     "required_item_vnums": {"onehand": [10], "fan": [7000]}.get(mode["id"], []),
-                    "combo_chains": registered_combo_chains(
-                        registrations, actor["model_key"].split("_")[0].capitalize(), mode["id"]
-                    )
-                    if mode["id"] in {"onehand", "fan"}
-                    else [],
-                    "motions": [_client_motion(motion, None) for motion in mode["motions"]],
+                    "combo_chains": chains,
+                    "motions": [
+                        _client_motion(
+                            motion,
+                            camera_event(normalized, motion)
+                            if motion["action"] in common
+                            else None,
+                        )
+                        for motion in mode["motions"]
+                    ],
                 }
             )
         actors.append(
