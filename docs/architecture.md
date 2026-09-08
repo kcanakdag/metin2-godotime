@@ -14,7 +14,8 @@ normalize source event clocks. The selected profile enables Three-Way Cut, Sword
 Spin, Spirit Strike and Bash. Two-client dummy acceptance covers all four; original
 Grey Wolf reaction acceptance covers Three-Way Cut. Exact original physics,
 specialization selection and exported qualification of this batch remain pending.
-Public protocol 24 is unchanged.
+The public development endpoint now uses protocol 26 in a new database; previous
+world databases and auth accounts are preserved.
 
 Protocol 25 replaces the private pending skill's single deadline pair with an
 ordered list of `SkillEventTiming` records and a captured per-life hit limit.

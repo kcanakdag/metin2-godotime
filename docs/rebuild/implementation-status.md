@@ -5,6 +5,28 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Public four-skill rollout accepted — 2026-09-08
+
+Release `20260908T212416762304Z` is live on the public HTTPS endpoint, database
+`mt2-public-skills-v26-20260908`. Explicit frozen module SHA-256:
+`750f0c44bb4784dcc6d53eb35387ff07b8efe0932fc0907bc5bd12676f00279e`.
+The deployed module uses the public auth issuer, guests disabled and no QA
+bootstrap identities. Deployment verified the served manifest and retained auth
+accounts, issuer keys and prior databases with `delete_data=never`. This fresh
+protocol-26 world has a separate character roster.
+
+Actual public Chrome/Linux QA passes 76 checks: independent account entry,
+matching 2859-mob/44-species subscriptions, rendered peers, skill-panel input,
+bidirectional movement, rejected invalid actions, character switching with saved
+position, disconnect/reconnect, reload and logout/login. Browser engine errors
+are empty. The public skill-panel capture was reviewed. Evidence and frozen
+artifacts: `.local/public-skills-v26-r1/acceptance.json` and `browser-qa/report.json`.
+
+This qualifies exported account/world integration, not browser casting of all four
+skills, all-species combat, original specialization/physics parity or software
+rendering performance. Next: qualify new-skill casting through exported controls
+and ordinary-mob reactions, then continue missing mechanics and world content.
+
 ## Full-world skill exports and account lifecycle — 2026-09-08
 
 Both matching Web/Linux exports and their actor/UI/mob/world package audits pass

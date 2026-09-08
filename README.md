@@ -7,24 +7,19 @@ original character and Yongan assets. The original Metin2 executable cannot
 connect to this game's new protocol.
 
 The current [public development build](https://kcanakdag.com:8443/) uses protocol
-24 with the original population package and latest loot presentation. Deployment
-audits and 114 public browser/Linux checks passed on 2026-09-08, including field
-combat, loot, return movement and account reconnect lifecycle. Refresh an older
-open tab before signing in. Existing login accounts are retained; this new
-world database has a separate character roster. See [deployment evidence](docs/distribution.md).
+26 with the original population package and four Warrior skills: Three-Way Cut,
+Sword Spin, Spirit Strike and Bash. Release `20260908T212416762304Z` preserves
+existing login accounts and keys; its new world has a separate character roster.
+Previous world databases remain intact. Refresh older tabs before signing in.
+Both matching Web/Linux exports passed package audits. Local hardware-rendered
+Chrome/Linux passed 76 account/world checks; public Chrome/Linux checks also passed all 76 checks.
+See [deployment evidence](docs/distribution.md).
 
-The local worktree now expects protocol 26 for persisted skill-event placements.
-The public endpoint remains protocol 24. Use matching regenerated bindings and a
-fresh test database for this local change; do not overwrite the public world.
-The protocol-26 state passes 35 authenticated Sword Spin checks and 15 real combat checks.
-Four Warrior skills are enabled locally: Three-Way Cut, Sword Spin, Spirit Strike
-and Bash. The four-skill replay passes 52 two-client checks; equipped animation QA
-passes 132 checks and the scrollable skill panel passes 18 native checks. Its two-client dummy
-replay passes 25 checks, including three replicated hits, target validation and
-cooldown rejection. Original icons pass native UI QA. Another 28 two-client checks verify original
-Grey Wolf flinch, knockdown, 0.392 m push and recovery. Equipped animation samples
-pass native QA for both Warriors. Exported browser qualification remains pending;
-the public build is unchanged.
+The four-skill replay passes 52 two-client dummy checks; equipped animation QA
+passes 132 checks and the scrollable skill panel passes 18 native checks.
+Another 28 two-client checks verify Three-Way Cut against original Grey Wolf
+flinch, knockdown, 0.392 m push and recovery. New-skill browser casting and exact
+original skill-tree/physics fidelity remain pending.
 
 Local mob threat behavior now has a reusable two-account passive
 retaliation and target-switching scenario (42 checks passed). See the

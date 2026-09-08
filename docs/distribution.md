@@ -5,7 +5,20 @@ Players do not install Blender, Rust, Python, Node or the SDK. The current
 development endpoint is [https://kcanakdag.com:8443](https://kcanakdag.com:8443/),
 on `159.195.213.9`. It may restart during updates.
 
-The current release is `20260908T181619790682Z`, source `e0e2b22`. It adds
+The current release is `20260908T212416762304Z`, using protocol 26 and database
+`mt2-public-skills-v26-20260908`. It includes the four selected Warrior skills and
+original Yongan population. Both public Web/Linux exports pass package audits;
+local matching exports passed 76 hardware-rendered Chrome/Linux account/world
+checks. The deployment verified its served manifest, retained auth accounts and
+issuer keys, and used `delete_data=never`. Previous world databases remain intact;
+accounts have a separate character roster in this new database. Public hardware-rendered Chrome/Linux QA passes 76 checks, including matching
+2859-mob/44-species subscriptions, mutual rendering, movement, skill-panel
+input, character switching, reconnect, reload and logout/login. Browser engine
+errors are empty. The public skill-panel capture was reviewed. Frozen artifacts, module hash and logs are in
+`.local/public-skills-v26-r1/`. The module uses the public issuer, guests disabled
+and no QA bootstrap privileges. New-skill browser casting remains unqualified.
+
+The preceding release is `20260908T181619790682Z`, source `e0e2b22`. It adds
 streamed-map UID restoration and preserves the protocol-24 database, accounts,
 characters and server module. Its web export and all 20 isolated map-section audits
 passed with no UID warnings. Evidence is in `.local/public-world-uids-r1/`;
