@@ -7,6 +7,15 @@ or reclassify that scope.
 
 ## P6: all-class abilities requested; training target delivered locally
 
+The continuing full-project goal includes quests, with filling the world first.
+The next foliage checkpoint prepares all 14 original tree definitions and 368
+Yongan placements through `tools/prepare_foliage.py`; the hash-verified receipt
+is `.local/foliage-r1/inputs.json`. Original tree placement ignores object rotation
+and property size overrides, unlike building placement. Two focused Python tests,
+Ruff and strict C compilation pass. The offline DLL probe was rejected by
+automatic approval review and has not run; explicit approval is pending.
+No new foliage is rendered or deployed. See [foliage](../foliage.md).
+
 The requested scope remains **all 44 classic abilities**, data-driven and
 customizable. It is not complete: the running skill implementation remains
 Warrior Sword Spin. Do not equate converted motions or compiled formulas with

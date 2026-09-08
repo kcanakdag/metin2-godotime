@@ -1,7 +1,8 @@
 # World population and development preview
 
-Quests are deferred. Priorities are playable mobs/combat, map NPCs and scenery,
-then classes, abilities and maps through reusable definitions. This slice adds
+The full goal includes quests; current priority is filling the world, then
+completing classes, abilities, maps and the remaining systems through reusable
+definitions. Quest implementation follows the world work. This slice adds
 authored Wild Dog populations and an offline inspector. General mob-stat/AI
 registries and live editing remain upcoming work. Static NPC dialogue now uses
 a shared server-validated interaction handler.
@@ -164,6 +165,9 @@ audited reducers; progression permissions do not grant those capabilities.
 
 Yongan still has 368 unsupported SpeedTree placements and six effects. Source
 markers are available; an SPT converter and foliage/streaming QA remain needed.
+`tools/prepare_foliage.py` now freezes the 14 original SPT definitions and all
+368 placements with verified source hashes. See [foliage conversion](foliage.md)
+for the original size/rotation policy and the pending offline runtime probe.
 Terrain adapters currently support training and Yongan. Additional playable maps
 need terrain, streaming metadata and transitions as well as another profile.
 

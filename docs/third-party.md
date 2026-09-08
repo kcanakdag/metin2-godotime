@@ -3,6 +3,13 @@
 These are the source revisions used by the current project. Code licenses and
 original game asset rights remain separate.
 
+The foliage preparation selects Yongan's 14 referenced SPT files and the matching
+`bin/SpeedTreeRT.dll` / `extern/include/speedtree/SpeedTreeRT.h` from the existing
+client pin into ignored storage. The header and PE exports are ABI references;
+no SDK implementation was copied. Runtime execution has not been approved or
+performed. The DLL is not a game dependency and must not enter exports. See
+[foliage conversion](foliage.md) for the bounded probe and current limitations.
+
 | Source | Pinned revision/version | Use and license |
 | --- | --- | --- |
 | [Metin2 client archive](https://git.old-metin2.com/metin2/client) | `bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7` | Selected original bodies/default hair and general/intro/one-hand-or-fan motions for eight classic appearances, Yongan dependencies, UI/portraits/minimap tiles and two target-selection effects; originals and derivatives are ignored |
