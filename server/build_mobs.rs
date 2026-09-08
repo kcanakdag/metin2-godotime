@@ -1,4 +1,6 @@
 //! Verify a locally compiled mob package before linking its generated registry.
+#[path = "build_mob_reactions.rs"]
+pub mod reactions;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::path::Path;
@@ -69,6 +71,7 @@ pub fn load(root: &Path) -> Result<Package, String> {
     if vnums.is_empty() {
         return Err("Empty mob registry".into());
     }
+    let registry = registry + &reactions::generate(&presentation)?;
     Ok(Package {
         vnums,
         gameplay_hash: hash.into(),

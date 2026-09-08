@@ -498,6 +498,7 @@ fn emit_attack(output: &mut String, name: &str, attack: Attack<'_>) {
 fn main() {
     println!("cargo:rerun-if-env-changed=MT2_MOB_CONTENT");
     println!("cargo:rerun-if-changed=build_mobs.rs");
+    println!("cargo:rerun-if-changed=build_mob_reactions.rs");
     let selected_mobs = std::env::var_os("MT2_MOB_CONTENT")
         .map(|path| build_mobs::load(Path::new(&path)).unwrap_or_else(|error| fail(error)));
     println!("cargo:rerun-if-env-changed=MT2_ORIGINAL_POPULATION");
@@ -1632,7 +1633,15 @@ pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
         }
         (package.gameplay_hash, package.registry)
     } else {
-        (String::new(), String::new())
+        let path = "../client/assets/imported/content/p0-warrior-dog/manifest.v1.json";
+        println!("cargo:rerun-if-changed={path}");
+        let presentation: Value =
+            serde_json::from_slice(&fs::read(path).expect("Missing fixture presentation"))
+                .expect("Invalid fixture presentation");
+        (
+            String::new(),
+            build_mobs::reactions::generate(&presentation).expect("Invalid fixture GOOD reactions"),
+        )
     };
     writeln!(
         output,

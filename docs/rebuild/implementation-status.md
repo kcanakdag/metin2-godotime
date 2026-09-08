@@ -5,6 +5,24 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Original GOOD flinch catalog and runtime — 2026-09-08
+
+Verified mob presentation packages now compile front/back weighted damage clips
+into a derived server GOOD-reaction table. The small default fixture uses its own
+manifest. No source asset or installed package changes were needed. GOOD skill hits
+publish original flinches via private reaction phases 5/6, retain attack/knockdown
+locks, and allow flinch replacement by a later GOOD/GREAT response. The existing
+reaction lifecycle returns completed flinches to idle. No schema columns changed.
+
+Seven knockback tests, two reaction-compiler tests, one package-integrity test,
+strict library Clippy for default and selected 44-mob/Yongan configurations pass.
+The existing native mob fixture now exercises every front/back damage variant:
+1,622 Godot checks pass across 44 mobs. Evidence: `.local/p6-good-reactions-r1/`.
+No connected Godot MCP was available; the run used isolated Godot/Xvfb. Controlled
+actor-state QA does not establish multiplayer flinch acceptance or exact source
+physics. No public update or new ability enabled. Next: target requirements and
+source event dispatch, followed by the complete Three-Way Cut live replay.
+
 ## Authored skill cooldowns and GREAT response — 2026-09-08
 
 Fixed-area events now compile bounded original reaction metadata. Runtime checks

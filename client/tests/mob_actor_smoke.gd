@@ -106,7 +106,17 @@ func _test_species(definition: Dictionary) -> void:
 			"idle resets playback rate"
 		)
 		_check(not mob.presentation_snapshot().frozen_pose, "idle releases held pose")
-	for reaction: Dictionary in definition.reactions.values():
+	var reactions: Array = definition.reactions.values()
+	for action in ["front_damage", "back_damage"]:
+		for motion: Dictionary in _catalog.motions(str(definition.id), "general", action):
+			reactions.append(
+				{
+					"id": motion.action_id,
+					"duration_us": motion.duration_us,
+					"godot_name": motion.godot_name
+				}
+			)
+	for reaction: Dictionary in reactions:
 		row.activity = 2
 		row.attack_sequence += 1
 		row.attack_action_id = str(reaction.id)

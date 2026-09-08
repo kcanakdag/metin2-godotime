@@ -3,6 +3,7 @@
 use crate::combat::monster;
 use crate::definitions::MonsterReactionDefinition;
 use crate::{collision_bounds, content};
+use spacetimedb::rand::Rng;
 use spacetimedb::{Identity, ReducerContext, Table};
 
 const FORCE_SUBSTEP_US: i64 = 50_000;
@@ -12,6 +13,8 @@ const REACTION_FRONT_KNOCKDOWN: u8 = 1;
 const REACTION_FRONT_STANDUP: u8 = 2;
 const REACTION_BACK_KNOCKDOWN: u8 = 3;
 const REACTION_COMPLETE: u8 = 4;
+const REACTION_FRONT_DAMAGE: u8 = 5;
+const REACTION_BACK_DAMAGE: u8 = 6;
 
 #[spacetimedb::table(accessor = monster_force)]
 pub struct MonsterForce {
@@ -160,8 +163,92 @@ fn reaction_definition(
         REACTION_FRONT_KNOCKDOWN => Some(definition.front_knockdown),
         REACTION_FRONT_STANDUP => Some(definition.front_standup),
         REACTION_BACK_KNOCKDOWN => Some(definition.back_knockdown),
+        REACTION_FRONT_DAMAGE | REACTION_BACK_DAMAGE => {
+            good_clips(monster.definition_vnum, phase == REACTION_FRONT_DAMAGE).and_then(|clips| {
+                clips
+                    .iter()
+                    .find(|(clip, _)| clip.id == monster.attack_action_id)
+                    .map(|(clip, _)| *clip)
+            })
+        }
         _ => None,
     }
+}
+
+fn good_clips(vnum: u32, front: bool) -> Option<&'static [(MonsterReactionDefinition, u8)]> {
+    crate::selected_mobs::GOOD_REACTIONS
+        .iter()
+        .find(|(id, _, _)| *id == vnum)
+        .map(|(_, forward, backward)| {
+            if front || backward.is_empty() {
+                *forward
+            } else {
+                *backward
+            }
+        })
+}
+
+fn weighted_reaction(
+    clips: &[(MonsterReactionDefinition, u8)],
+    roll: u8,
+) -> Option<MonsterReactionDefinition> {
+    let mut remaining = u16::from(roll);
+    for (clip, weight) in clips {
+        if remaining < u16::from(*weight) {
+            return Some(*clip);
+        }
+        remaining -= u16::from(*weight);
+    }
+    None
+}
+
+pub fn start_good(
+    ctx: &ReducerContext,
+    monster: &mut crate::combat::Monster,
+    front: bool,
+    now: i64,
+) -> Result<(), String> {
+    use crate::combat::monster_clock;
+    if crate::training_targets::validate(monster)?.is_some() {
+        return Ok(());
+    }
+    let clock = ctx
+        .db
+        .monster_clock()
+        .id()
+        .find(monster.id)
+        .ok_or("GOOD victim clock is missing")?;
+    let existing = ctx.db.monster_reaction().monster_id().find(monster.id);
+    if clock.attack_until_us > now
+        || existing
+            .as_ref()
+            .is_some_and(|r| reaction_blocks_knockdown(r, monster.life_sequence))
+    {
+        return Ok(());
+    }
+    let clips =
+        good_clips(monster.definition_vnum, front).ok_or("GOOD reaction clips are missing")?;
+    let roll = if clips.len() == 1 {
+        0
+    } else {
+        ctx.rng().gen_range(0..100)
+    };
+    let definition = weighted_reaction(clips, roll).ok_or("Invalid GOOD reaction distribution")?;
+    let ends_at_us = publish_reaction(monster, definition, now)?;
+    ctx.db.monster_reaction().monster_id().delete(monster.id);
+    ctx.db.monster_reaction().insert(MonsterReaction {
+        monster_id: monster.id,
+        monster_life_sequence: monster.life_sequence,
+        phase: if front {
+            REACTION_FRONT_DAMAGE
+        } else {
+            REACTION_BACK_DAMAGE
+        },
+        phase_started_at_us: now,
+        phase_ends_at_us: ends_at_us,
+        completed_at_tick_us: 0,
+    });
+    Ok(())
 }
 
 fn publish_reaction(
@@ -186,8 +273,12 @@ pub fn clear(ctx: &ReducerContext, monster_id: u32) {
     ctx.db.monster_reaction().monster_id().delete(monster_id);
 }
 
-fn reaction_is_active(reaction: &MonsterReaction, life_sequence: u32) -> bool {
-    reaction.monster_life_sequence == life_sequence && reaction.phase != REACTION_COMPLETE
+fn reaction_blocks_knockdown(reaction: &MonsterReaction, life_sequence: u32) -> bool {
+    reaction.monster_life_sequence == life_sequence
+        && matches!(
+            reaction.phase,
+            REACTION_FRONT_KNOCKDOWN | REACTION_FRONT_STANDUP | REACTION_BACK_KNOCKDOWN
+        )
 }
 
 fn reaction_phase_to_start(
@@ -195,7 +286,7 @@ fn reaction_phase_to_start(
     life_sequence: u32,
     front: bool,
 ) -> Option<u8> {
-    if existing.is_some_and(|row| reaction_is_active(row, life_sequence)) {
+    if existing.is_some_and(|row| reaction_blocks_knockdown(row, life_sequence)) {
         None
     } else if front {
         Some(REACTION_FRONT_KNOCKDOWN)
@@ -424,6 +515,44 @@ mod tests {
     }
 
     #[test]
+    fn good_weight_boundaries_and_great_interrupts_flinch() {
+        let clips = [
+            (
+                MonsterReactionDefinition {
+                    id: "front.a",
+                    duration_us: 100,
+                },
+                30,
+            ),
+            (
+                MonsterReactionDefinition {
+                    id: "front.b",
+                    duration_us: 200,
+                },
+                70,
+            ),
+        ];
+        assert_eq!(weighted_reaction(&clips, 0).unwrap().id, "front.a");
+        assert_eq!(weighted_reaction(&clips, 29).unwrap().id, "front.a");
+        assert_eq!(weighted_reaction(&clips, 30).unwrap().id, "front.b");
+        assert_eq!(weighted_reaction(&clips, 99).unwrap().id, "front.b");
+        assert!(weighted_reaction(&clips, 100).is_none());
+        let flinch = MonsterReaction {
+            monster_id: 1,
+            monster_life_sequence: 7,
+            phase: REACTION_FRONT_DAMAGE,
+            phase_started_at_us: 100,
+            phase_ends_at_us: 200,
+            completed_at_tick_us: 0,
+        };
+        assert_eq!(
+            reaction_phase_to_start(Some(&flinch), 7, true),
+            Some(REACTION_FRONT_KNOCKDOWN)
+        );
+        assert!(!reaction_blocks_knockdown(&flinch, 7));
+    }
+
+    #[test]
     fn ordinary_force_uses_its_own_endpoint_and_shared_sampling() {
         let origin = open_test_origin();
         let first =
@@ -549,7 +678,7 @@ mod tests {
             phase_ends_at_us: 1_001_000,
             completed_at_tick_us: 0,
         };
-        assert!(reaction_is_active(&active, 7));
+        assert!(reaction_blocks_knockdown(&active, 7));
         assert_eq!(reaction_phase_to_start(Some(&active), 7, false), None);
         let published_before = (
             active.phase_started_at_us,
@@ -577,7 +706,7 @@ mod tests {
             ),
             published_before
         );
-        assert!(!reaction_is_active(&active, 8));
+        assert!(!reaction_blocks_knockdown(&active, 8));
         assert_eq!(
             reaction_phase_to_start(Some(&active), 8, false),
             Some(REACTION_BACK_KNOCKDOWN)
@@ -586,6 +715,6 @@ mod tests {
             phase: REACTION_COMPLETE,
             ..active
         };
-        assert!(!reaction_is_active(&complete, 7));
+        assert!(!reaction_blocks_knockdown(&complete, 7));
     }
 }

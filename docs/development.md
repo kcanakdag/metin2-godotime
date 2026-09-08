@@ -1957,3 +1957,13 @@ catalog through the actual live compiler without swapping imported client files.
 It emits Rust definitions for inspection; it does not install or publish content.
 See [skill authoring](skills.md#fixed-area-authoring-and-runtime) for the command,
 current area-handler coverage and remaining Three-Way Cut fidelity requirements.
+
+## Mob flinch compilation and QA
+
+`server/build_mob_reactions.rs` compiles GOOD damage clips from the presentation
+bytes already verified by the mob package loader. Its derived table is appended
+to the validated registry in build output; the original package stays unchanged.
+Default builds compile the small fixture's own presentation manifest. Native
+`tools/test_actors.py --scenario mobs` now also exercises every front/back damage
+variant through the actual PvE actor. These controlled rows verify clip selection
+and playback separately from multiplayer hit/reaction acceptance.

@@ -22,8 +22,12 @@ pub fn apply(
     now: i64,
 ) -> Result<(), String> {
     if reaction.hit_type == 2 {
-        // GOOD damage flinch is not yet represented by the mob reaction catalog.
-        return Ok(());
+        return crate::knockback::start_good(
+            ctx,
+            monster,
+            crate::knockback::is_front_hit(owner.heading, monster.heading),
+            now,
+        );
     }
     if reaction.hit_type != 1 {
         return Err("Unsupported skill reaction".into());

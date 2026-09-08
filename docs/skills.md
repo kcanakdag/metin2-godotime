@@ -341,3 +341,20 @@ separate implementations before their content can be enabled. Ten focused skill
 tests, seven compiler tests and strict library/example Clippy qualify this code;
 the prior 50 Sword Spin client checks cover the preceding build. Three-Way Cut
 is not installed, deployed or qualified in two real clients by this change.
+
+### GOOD flinch selection
+
+Normal skill hits now select original front/back damage clips from the verified
+mob presentation package. Both directions preserve their authored weight lists;
+missing back clips fall back to front. The default small fixture uses its own
+presentation manifest. Compilation rejects missing front clips, bad weights,
+duplicate actors/motions, invalid duration, loops and deferred events.
+
+GOOD flinches use phases 5/6 of the existing private reaction state, preserve attack
+locks and active knockdown/standup, and permit a later flinch or GREAT hit to replace
+a flinch. Clip completion returns the mob to idle through the shared lifecycle.
+The compiled definition is matched against the published action ID when validating
+an active flinch. No protocol columns changed. Native Godot actor QA includes all
+front/back damage variants and passed 1,622 checks across 44 mobs; it uses controlled
+state, not actual multiplayer flinch acceptance. Exact physics, targeting and
+Three-Way Cut casting/visual integration remain pending.

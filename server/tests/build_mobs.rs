@@ -9,7 +9,13 @@ fn package_requires_matching_bytes_and_gameplay_identities() {
     std::fs::create_dir(&dir).unwrap();
     let hash = "a".repeat(64);
     let gameplay = json!({"content_hash":hash,"mobs":[{"vnum":101}]}).to_string();
-    let presentation = json!({"gameplay_hash":hash}).to_string();
+    let presentation = json!({"gameplay_hash":hash,"actors":[{
+        "kind":"mob","vnum":101,"id":"actor.mob.test","modes":[{"id":"general","motions":[{
+            "action":"front_damage","action_id":"actor.mob.test.general.front_damage",
+            "duration_us":500000,"weight":100,"loop":false,"events":[]
+        }]}]
+    }]})
+    .to_string();
     let registry = "pub const MOBS: &[MobDefinition] = &[];";
     let digest = |text: &str| format!("{:x}", Sha256::digest(text.as_bytes()));
     let receipt = json!({"content_hash":hash,"catalog_sha256":digest(&gameplay),
@@ -24,7 +30,8 @@ fn package_requires_matching_bytes_and_gameplay_identities() {
     }
     let package = build_mobs::load(&dir).unwrap();
     assert_eq!(package.gameplay_hash, hash);
-    assert_eq!(package.registry, registry);
+    assert!(package.registry.starts_with(registry));
+    assert!(package.registry.contains("GOOD_REACTIONS"));
     assert_eq!(package.vnums, [101].into());
     for (name, original) in [
         ("gameplay.v1.json", gameplay.as_str()),
