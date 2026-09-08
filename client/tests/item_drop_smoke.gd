@@ -12,6 +12,8 @@ func _run() -> void:
 	root.size = Vector2i(1280, 800)
 	var world := Node3D.new()
 	root.add_child(world)
+	var labels := preload("res://scripts/ui/world_drop_labels.gd").new()
+	world.add_child(labels)
 	var camera := Camera3D.new()
 	world.add_child(camera)
 	var light := DirectionalLight3D.new()
@@ -28,7 +30,7 @@ func _run() -> void:
 		actor.loot_mode = true
 		actor.item_mode = true
 		world.add_child(actor)
-		actor.apply_state({"id": index + 1, "vnum": vnums[index], "x": (index - 1) * 2.0})
+		actor.apply_state({"id": index + 1, "vnum": vnums[index], "x": (index - 1) * 0.2})
 		actors.append(actor)
 		var state := actor.presentation_snapshot()
 		_check("catalog name %d" % vnums[index], state.label == names[index])
@@ -50,6 +52,14 @@ func _run() -> void:
 			)
 			_check("texture loaded %d" % vnums[index], actor.get("_loot_icon").texture != null)
 	await process_frame
+	labels._process(0)
+	_check("all ground names use shared layout", labels.get_child_count() == 3)
+	var occupied: Array[Rect2] = []
+	for label in labels.get_children():
+		_check("ground name visible", label.visible)
+		for previous in occupied:
+			_check("nearby ground names separated", not label.get_rect().intersects(previous, true))
+		occupied.append(label.get_rect())
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("user://item-drops.png")
 	actors[0].apply_state({"id": 1, "vnum": 27002})

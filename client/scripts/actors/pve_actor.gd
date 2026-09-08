@@ -61,6 +61,8 @@ func _ready() -> void:
 	_label.pixel_size = 0.006
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	add_child(_label)
+	if loot_mode:
+		_label.add_to_group(&"ground_item_labels")
 
 
 func apply_state(value: Dictionary, server_time_us := 0) -> void:

@@ -5,6 +5,30 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Shared ground-label layout — 2026-09-08
+
+`WorldDropLabels` now projects nearby ground names into a viewport-local canvas
+below the HUD. It uses five-pixel downward collision spacing and a bounded 20-pass
+adjustment, informed by the pinned original text-tail contract. The independent
+implementation places labels in stable scene order; it does not claim identical
+ordering to the original all-pairs arrangement. Extremely crowded piles can still
+reach the adjustment bound or extend beyond the viewport. Original font, owner
+text, visibility-key and label-click pickup parity remain pending.
+
+Only loot Label3Ds join the shared group; monster names remain unchanged. The
+overlay follows camera/viewport changes, ignores hidden/offscreen/behind-camera
+drops, removes freed entries and restores fallback labels on teardown. It never
+consumes pointer input and does not change server pickup or ownership validation.
+
+Evidence: `.local/items/drop-labels-r1/`. The focused lifecycle/layout scenario
+passes 21 checks headless and in native rendered Godot. The real converted-item
+fixture passes 30 checks, including separation of three nearby names; its rendered
+capture was reviewed. Initial isolated staging omitted the shared art helper's
+ItemCatalog dependency; correcting the staged inputs resolved the parser failure.
+GDScript lint passes. This is controlled native evidence: exported world/browser
+qualification and public deployment of this change are still pending. No connected
+editor was inspected because Godot MCP is not exposed in this session.
+
 ## Original ground models installed and exported — 2026-09-08
 
 `tools/install_ground_items.py` validates the normalized source identity and the

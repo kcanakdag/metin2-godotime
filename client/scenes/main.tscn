@@ -1,10 +1,11 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/world/dev_map.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/camera/orbit_camera.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/net/game_connection.gd" id="4"]
 [ext_resource type="Script" path="res://scripts/ui/dev_hud.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/ui/world_drop_labels.gd" id="6"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial"]
 sky_top_color = Color(0.35, 0.48, 0.58, 1)
@@ -62,3 +63,6 @@ script = ExtResource("4")
 
 [node name="DevHud" type="CanvasLayer" parent="."]
 script = ExtResource("5")
+
+[node name="WorldDropLabels" type="CanvasLayer" parent="."]
+script = ExtResource("6")

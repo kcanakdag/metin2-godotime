@@ -1,5 +1,11 @@
 # Third-party sources
 
+The independently authored ground-label layout uses the five-pixel spacing and
+20-adjustment bound observed in the pinned client's `PythonTextTail.cpp` as a
+behavioral reference. No original implementation was copied. It uses our shared
+Godot UI text styling; original font and full text-tail interaction parity remain
+unqualified.
+
 These are the source revisions used by the current project. Code licenses and
 original game asset rights remain separate.
 
