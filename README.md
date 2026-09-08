@@ -63,16 +63,18 @@ reward-free behavior are profile driven. It passes 16 native presentation checks
 45 live two-client checks and 82 actual Chrome/Linux checks, with matching exports. All 44 classic abilities have been discovered and
 converted for both appearances, but their full server mechanics are not yet live.
 
-The [town-NPC package](docs/world-content.md) is now live locally: 24 original
-NPC definitions at 33 placements, including the existing guard, merchants,
-teachers, blacksmith and fishermen. It passes 936 gallery checks, 39 isolated
-map-scene checks and 114 actual Chrome/Linux checks. Opening an NPC conversation
+The [town-NPC package](docs/world-content.md) is now live locally: 32 original
+NPC definitions at 41 placements, including the existing guard, merchants,
+teachers, blacksmith, fishermen and static landmarks. Its latest expanded build
+passes 53 isolated map-scene checks and 114 actual Chrome/Linux checks.
+Opening an NPC conversation
 also clears a previous combat target. Shops and quests remain pending.
 
-The next [NPC candidate](docs/world-content.md#remaining-original-point-placements)
+The [latest NPC expansion](docs/world-content.md#remaining-original-point-placements)
 adds six townspeople plus Weol Memorial and Nameless Flowers. The importer now
 supports explicit source folders, model-local textures and truly static models.
-This candidate has not yet replaced the served town build.
+Both actual export audits verify all 32 models; the browser route checks 23 entry
+NPCs. One initial native connection drop did not recur in the unchanged repeat.
 
 The current worktree is protocol 17 / trusted content schema 8 (item registry schema 2). Item actions
 carry the server item's revision, rejecting stale/replayed mutations. Quantity

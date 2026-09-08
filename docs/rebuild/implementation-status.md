@@ -9,6 +9,25 @@ or reclassify that scope.
 
 ### Remaining original point NPCs: candidate package
 
+Live follow-up: the expanded package now serves at `http://127.0.0.1:8186` on the
+preserved `mt2-p2-town-dev-r1-20260908` database. The published snapshot is
+`.local/npcs/points-module-r1.wasm`; matching exports are `exports/points-web-r1`
+and `exports/points-linux-r1`. Actual PCK audits cover all 32 NPC models, no clips
+for the two static landmarks, exact UI pixels, and 1,176 Web / 1,979 Linux paths.
+`points-browser-r2/report.json` passes **114 actual two-client checks**, including
+23 entry NPCs, private guard dialogue, movement, dummy combat and full account
+rejoin. Browser errors are empty; the dialogue capture was visually inspected.
+`make server-test` passes against the installed schema-2 package.
+
+The first exported run passed 111 checks but failed the final rejoin after an
+abnormal native WebSocket closure. No content mismatch or browser error occurred;
+the same exports/scenario passed on repeat. The cause of that initial transport
+drop is not established. Both reports and exact build hashes are retained in
+`.local/npcs/points-live-acceptance.json`. The exported route does not visit every
+remote placement. Public/Windows qualification and connected-editor inspection
+remain unproven. Prior packages, database state and source assets are preserved;
+only completed disposable QA project copies were pruned for disk space.
+
 The new `yongan-season1-npcs` profile selects eight NPCs, including six animated
 townspeople, Weol Memorial and Nameless Flowers. Conversion in
 `.local/npcs/yongan-season1-r3` preserves all 18 registered motions and exports the
@@ -34,7 +53,7 @@ normalization; logs are retained. The first map run exposed strict Array members
 for JSON float versions, fixed by numeric version comparisons. Reproducible map-QA
 project copies were pruned after terminal runs to recover disk space; reports,
 logs, source assets, databases and served builds are preserved.
-No new server or exported client has been deployed for this candidate. Remaining
+The later local integration is recorded above. Remaining
 random-area NPCs, shops, quests, full abilities and foliage are still unfinished.
 
 ### Skill mechanic metadata and dummy recheck

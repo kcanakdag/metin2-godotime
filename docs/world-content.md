@@ -294,6 +294,17 @@ Use your own completed conversion directories for the first two package inputs.
 The combined candidate contains 32 definitions at 41 placements. Candidate gallery
 QA passes 137 checks over eight actors and 18 motions; real Main/map QA passes
 53 checks with a simulated connection, including both static landmark chunks.
-The served build still has 24 definitions/33 placements. Installing this candidate
-requires matching server and client builds plus exported gameplay qualification.
+The package is now installed and served locally at `http://127.0.0.1:8186`, with
+the existing `mt2-p2-town-dev-r1-20260908` database preserved. Matching exports are
+`.local/npcs/exports/points-web-r1` and `points-linux-r1`; the published module is
+`.local/npcs/points-module-r1.wasm`. Actual PCK audits verify 32 models, both static
+models' empty clip sets, and 1,176 Web / 1,979 Linux paths.
+
+Use `tests/fixtures/yongan-points-route.json` and the `points-linux-r1` executable
+with the browser command above to check the 23 original entry NPCs. The accepted
+`.local/npcs/points-browser-r2/report.json` passes 114 checks without browser
+engine errors. The first run passed 111 checks before a native abnormal WebSocket
+closure failed the final rejoin; the unchanged repeat passed. Both reports remain.
+Remote landmark appearance is qualified by native map QA and pack audits; the
+browser route does not visit every remote placement. Public deployment is unchanged.
 Random-area NPC spawns, groups, warps, interactions, shops and quests remain work.
