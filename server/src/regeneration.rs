@@ -1,6 +1,15 @@
 //! Overworld regeneration state machine. Storage and spawning are supplied by callers.
 use std::collections::BTreeSet;
 
+/// Storage-neutral state. Callers must bind it to the exact entry/content identity.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EntrySnapshot {
+    pub next_tick_us: Option<i64>,
+    pub initial: bool,
+    pub owners: Vec<u64>,
+    pub last_owner: u64,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EntryState {
     interval_us: i64,
@@ -13,6 +22,48 @@ pub struct EntryState {
 }
 
 impl EntryState {
+    pub fn snapshot(&self) -> EntrySnapshot {
+        EntrySnapshot {
+            next_tick_us: self.next_tick_us,
+            initial: self.initial,
+            owners: self.owners.iter().copied().collect(),
+            last_owner: self.last_owner,
+        }
+    }
+
+    pub fn restore(
+        interval_us: i64,
+        capacity: usize,
+        jitter_seconds: u8,
+        snapshot: EntrySnapshot,
+    ) -> Result<Self, String> {
+        let mut state = Self::new(interval_us, capacity, jitter_seconds)?;
+        if snapshot.owners.len() > capacity
+            || snapshot
+                .owners
+                .iter()
+                .any(|id| *id == 0 || *id > snapshot.last_owner)
+            || snapshot.owners.windows(2).any(|ids| ids[0] >= ids[1])
+        {
+            return Err("Invalid saved regeneration owners".into());
+        }
+        if snapshot.initial {
+            if snapshot.next_tick_us.is_some()
+                || snapshot.last_owner != 0
+                || !snapshot.owners.is_empty()
+            {
+                return Err("Unstarted regeneration cannot have owners or a deadline".into());
+            }
+        } else if interval_us == 0 || !snapshot.next_tick_us.is_some_and(|due| due >= interval_us) {
+            return Err("Started regeneration requires an enabled entry and valid deadline".into());
+        }
+        state.initial = snapshot.initial;
+        state.next_tick_us = snapshot.next_tick_us;
+        state.last_owner = snapshot.last_owner;
+        state.owners = snapshot.owners.into_iter().collect();
+        Ok(state)
+    }
+
     pub fn new(interval_us: i64, capacity: usize, jitter_seconds: u8) -> Result<Self, String> {
         if !(0..=86_400_000_000).contains(&interval_us) || capacity > 1000 || jitter_seconds > 16 {
             return Err("Invalid overworld regeneration configuration".into());

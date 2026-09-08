@@ -53,6 +53,32 @@ growth case, not expected live density. It does not test placement, collision,
 combat or subscriptions. The three `--test regeneration` Rust tests cover timing,
 failed placement, exact owner destruction, stale tokens and atomic state planning.
 
+The scheduler also exports/restores a storage-neutral snapshot containing its
+deadline, startup flag, current owner tokens and highest issued token. Restoration
+validates capacity, sorted unique nonzero owners, issued-token bounds and deadline
+consistency. The storage caller must bind snapshots to their exact entry and
+content identity; the offline tool checks both against its inventory.
+
+Exercise a separate-process checkpoint/resume:
+
+```sh
+cargo run --manifest-path server/Cargo.toml --offline --features yongan \
+  --example regeneration_stress -- /path/to/population.v1.json \
+  --checkpoint /path/to/new-checkpoint.json
+cargo run --manifest-path server/Cargo.toml --offline --features yongan \
+  --example regeneration_stress -- /path/to/population.v1.json \
+  --resume /path/to/new-checkpoint.json
+```
+
+Checkpoints use new files only and are local developer fixtures, not authenticated
+server backups. The tool rejects another inventory, changed entry identities,
+invalid deadlines, reused cross-entry owners and regressed allocation counters.
+The checkpoint/resume acceptance run restores all 945 entries and matches the
+uninterrupted 4,981-member result. Five Rust tests and eight process-level checks
+pass in `.local/mobs/regeneration-restore-acceptance-r1.json`. This does not prove
+a SpacetimeDB restart: persisted tables and transactional live integration are
+still pending.
+
 `content/profiles/yongan-wildlife.json` explicitly selects Wild Dog 101, Wolf 102,
 Wild Boar 108, Bear 110 and Tiger 114. This is a candidate source inventory, not
 an installed runtime registry or a new spawn layout.

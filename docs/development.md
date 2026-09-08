@@ -51,6 +51,10 @@ regeneration_stress -- /path/to/population.v1.json`. The command checks inventor
 integrity and exercises leader destruction/refill using the reusable Rust scheduler.
 It never contacts a server or places actors on the map. See [mob regeneration](mobs.md)
 for the scenario assumptions and pending live integration.
+Append `--checkpoint NEW_FILE` to save the initialized stress fixture, then run
+the command in a separate process with `--resume FILE` to exercise restoration.
+The tool refuses to overwrite an existing checkpoint. These are offline developer
+files; they do not restore a live database.
 
 ## Classic character builds
 

@@ -22,6 +22,17 @@ evidence. No server or public deployment changed in this recheck.
 
 ### Original wildlife definitions in progress
 
+Regeneration restoration checkpoint: the scheduler now validates and restores
+storage-neutral snapshots without resetting deadlines or retired owner counters.
+The offline tool adds new-file checkpoint creation and a separate-process resume
+path tied to the inventory hash and entry identities. All 945 entries restore to
+the same 4,981-member stress result as uninterrupted execution. Five Rust tests,
+eight process-level checks and scoped strict Clippy pass. Negative checks cover
+overwrite, wrong inventory/entry, invalid deadlines/owners, regressed allocation
+counters and cross-entry owner reuse. Evidence:
+`.local/mobs/regeneration-restore-acceptance-r1.json`. SpacetimeDB persistence,
+transactional spawn/cleanup callbacks and a real server restart test remain pending.
+
 Regeneration core checkpoint: `server/src/regeneration.rs` now implements bounded
 entry refill planning, first-tick jitter, fixed subsequent intervals, failed-spawn
 retry and exact owner destruction. Monotonically allocated owner tokens reject
