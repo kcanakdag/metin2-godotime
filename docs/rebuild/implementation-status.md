@@ -25,9 +25,14 @@ passes 21 checks headless and in native rendered Godot. The real converted-item
 fixture passes 30 checks, including separation of three nearby names; its rendered
 capture was reviewed. Initial isolated staging omitted the shared art helper's
 ItemCatalog dependency; correcting the staged inputs resolved the parser failure.
-GDScript lint passes. This is controlled native evidence: exported world/browser
-qualification and public deployment of this change are still pending. No connected
-editor was inspected because Godot MCP is not exposed in this session.
+GDScript lint passes. Actual web/Linux exports completed and the two-client field
+combat/drop replay passed 49 checks with no browser engine errors:
+`.local/items/labels-live-r1/report.json`. Both post-kill captures were reviewed:
+the potion and 21-Yang names are visibly separated on the map. The replay now saves
+a fresh native drop capture as well as the browser capture. Three browser predicate
+tests pass. The local endpoint serves these exports; public deployment remains
+pending. No connected editor was inspected because Godot MCP is not exposed in
+this session. Broader performance and the earlier combat-return stall remain open.
 
 ## Original ground models installed and exported — 2026-09-08
 

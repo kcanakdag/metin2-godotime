@@ -136,6 +136,9 @@ def exercise_field(
             "native": desktop()["drop_presentations"],
         }
         page.screenshot(path=str(output / "ground-items-browser.png"))
+        native_command("capture")
+        wait("ground_native_capture_saved", lambda: (output / "desktop.png").is_file())
+        (output / "desktop.png").replace(output / "ground-items-native.png")
     if return_to_town:
         walk(list(reversed(points[:-1])), "field_route_return")
     return result

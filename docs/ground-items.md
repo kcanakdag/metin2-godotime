@@ -31,7 +31,8 @@ Do not expand the fixture to every game item implicitly.
 `normalized.v1.json` maps each vnum to a shared model ID and records source hashes
 and revision. `blender-report.json` records artifact hashes, geometry, metre bounds,
 textured meshes and converter/importer versions. The converter prepares assets; use the installer below for runtime content.
-Original drop motion/effects and label layout remain pending.
+Original drop motion/effects remain pending. Ground-name layout is handled by the
+shared client component described below.
 
 The default selection converts to two GLBs totalling 92,728 bytes. Parser tests
 cover shared selection, original fallback and invalid records. An offline normalized
@@ -79,3 +80,19 @@ The browser capture was reviewed and shows those models on the actual map; label
 still overlap. Six installer tests (including the existing mob installer) and three
 browser predicate tests pass. Evidence/hashes are in that run's `acceptance.json`.
 This release slice does not add pickup mechanics or change existing ownership rules.
+
+## Ground names
+
+`WorldDropLabels` in the Main scene projects loot names into a shared canvas below
+the HUD. Nearby names move downward to avoid overlap, using five-pixel spacing
+and at most 20 adjustments. Labels reproject with the camera, hide with streamed
+actors or when behind/offscreen, and are removed with their source drop. Their
+controls ignore pointer input. Standalone actor fixtures retain their Label3D
+fallback when no overlay is present. Text comes from the same item catalog or
+server-owned Yang amount as the underlying drop.
+
+`client/tests/world_drop_labels_smoke.gd` covers layout and lifecycle behavior;
+`client/tests/item_drop_smoke.gd` checks integration with real converted models.
+The exported `--ground-items` replay now retains both browser and native drop
+captures. Original font, owner text, visibility-key and click-pickup fidelity remain
+pending; this bounded layout can still overflow on exceptionally crowded piles.

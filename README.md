@@ -37,8 +37,9 @@ investigation. The public build remains protocol 19.
 Original coin-pile and red-potion ground models are now installed locally through
 [the reusable ground-item pipeline](docs/ground-items.md). The exported field/drop
 replay passes 48 checks. A shared screen-space loot-label layout now separates
-nearby names in native fixtures (21 layout and 30 item checks); exported-world
-qualification of the labels and original drop effects remain pending.
+nearby names in native fixtures (21 layout and 30 item checks) and reviewed browser/
+Linux field captures. The updated two-client replay passes 49 checks. Public
+deployment of this slice and original drop effects remain pending.
 
 Items, future quests, mobs and classes follow the
 [data-based content authoring contract](docs/rebuild/content-authoring.md):
