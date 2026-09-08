@@ -17,6 +17,14 @@ installing an incomplete gameplay catalog. Normal mob critical hits have a
 bounded percentage roll and checked damage doubling. Skill critical probability
 is a separate mechanic; these rules do not implicitly enable it.
 
+Ordinary mob spawning, health/level validation, movement and attack timing,
+XP/gold rewards, respawn, defending spheres and GREAT-hit recovery now consume
+`MobDefinition` records. The registry currently wraps the existing compiled dog
+fixture without changing its balance. Simulation rejects inconsistent persisted
+stats/presentation instead of resetting every ordinary actor to the dog's level.
+The dummy remains a separate validated passive definition. Original passive AI,
+item drop tables and the five-species catalog are not enabled by this refactor.
+
 Classic class presentation and combat share the installed character catalog
 (see [characters](characters.md)). The common Sword+0 and Fan+0 chains resolve each step
 from the server-owned character appearance and captured weapon vnum. All eight

@@ -1371,6 +1371,43 @@ fn main() {
     )
     .unwrap();
     emit_attack(&mut output, "MOB_ATTACK", mob_attack);
+    output.push_str(
+        r#"
+#[derive(Clone, Copy, Debug)]
+pub struct MobDefinition {
+    pub vnum: u32,
+    pub actor_id: &'static str,
+    pub name: &'static str,
+    pub model_key: &'static str,
+    pub motion_set: &'static str,
+    pub level: u8,
+    pub health: u16,
+    pub attack: AttackDefinition,
+    pub move_speed_mps: f32,
+    pub acquisition_range_m: f32,
+    pub chase_home_range_m: f32,
+    pub respawn_us: i64,
+    pub experience: u32,
+    pub gold_min: u32,
+    pub gold_max: u32,
+    pub defending_sphere: DefendingSphereDefinition,
+    pub front_knockdown: MonsterReactionDefinition,
+    pub front_standup: MonsterReactionDefinition,
+    pub back_knockdown: MonsterReactionDefinition,
+}
+pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
+    vnum: MOB_VNUM, actor_id: MOB_ACTOR_ID, name: MOB_NAME,
+    model_key: MOB_MODEL_KEY, motion_set: MOB_MOTION_SET,
+    level: MOB_LEVEL, health: MOB_MAX_HEALTH, attack: MOB_ATTACK,
+    move_speed_mps: MOB_MOVE_SPEED_MPS, acquisition_range_m: MOB_ACQUISITION_RANGE_M,
+    chase_home_range_m: MOB_CHASE_HOME_RANGE_M, respawn_us: MOB_RESPAWN_US,
+    experience: MOB_EXPERIENCE, gold_min: MOB_REWARD_GOLD_MIN, gold_max: MOB_REWARD_GOLD_MAX,
+    defending_sphere: MOB_STATIC_DEFENDING_SPHERE,
+    front_knockdown: MOB_GREAT_FRONT_KNOCKDOWN, front_standup: MOB_GREAT_FRONT_STANDUP,
+    back_knockdown: MOB_GREAT_BACK_KNOCKDOWN,
+}];
+"#,
+    );
     writeln!(
         output,
         "pub const COMBAT_FIXTURE_CONTENT_HASH: &str = {};",

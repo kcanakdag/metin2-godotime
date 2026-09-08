@@ -9,6 +9,23 @@ or reclassify that scope.
 
 ### Original wildlife definitions in progress
 
+Gameplay registry consumers now use `MobDefinition` for ordinary spawning,
+health/level, movement and attack timing, XP/gold, respawn, defending geometry
+and GREAT-hit recovery. Simulation no longer rewrites all ordinary levels to the
+dog's level; inconsistent persisted stats and presentation reject. The default
+registry still contains the existing dog, with the passive dummy separate.
+No new wildlife is live, and original passive AI and item drop tables remain
+unfinished.
+
+This follow-up passes **162 Rust tests**, strict Rust lint and **113 authenticated
+two-client checks** on `mt2-p2-mob-runtime-qa-r1-20260908`. Evidence is in
+`.local/mobs/runtime-registry-live-r1.json` and `runtime-registry-acceptance-r1.json`.
+The actual published schema matches committed protocol-18 bindings. The first
+lint run found an unused import left by the refactor; it was removed and the
+module rebuilt before live QA. Local served exports and the public build are
+unchanged. Next is compiling the converted species into complete gameplay records
+and connecting the matching client catalog and original population metadata.
+
 Physical registry checkpoint: ordinary damage now selects attacker/defender
 stats through a trusted vnum/actor registry. The default registry remains the dog;
 the candidate compiler emits all five wildlife definitions and preserves the

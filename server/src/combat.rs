@@ -191,10 +191,13 @@ pub(crate) fn trusted_spawn(id: u32) -> Option<MonsterSpawnDefinition> {
 pub(crate) fn validate_monster(monster: &Monster) -> Result<(), String> {
     let authored = crate::training_targets::validate(monster)?;
     let supported = authored.is_some()
-        || (monster.definition_vnum == definitions::MOB_VNUM
-            && monster.actor_id == definitions::MOB_ACTOR_ID
-            && monster.level == definitions::MOB_LEVEL
-            && monster.max_health == definitions::MOB_MAX_HEALTH);
+        || mob_definition(monster.definition_vnum).is_some_and(|d| {
+            monster.actor_id == d.actor_id
+                && monster.level == d.level
+                && monster.max_health == d.health
+                && monster.model_key == d.model_key
+                && monster.motion_set == d.motion_set
+        });
     if !supported
         || !trusted_spawn(monster.id)
             .is_some_and(|spawn| spawn.definition_vnum == monster.definition_vnum)
@@ -209,6 +212,17 @@ pub(crate) fn validate_monster(monster: &Monster) -> Result<(), String> {
     Ok(())
 }
 
+fn mob_definition(vnum: u32) -> Option<&'static definitions::MobDefinition> {
+    definitions::MOB_DEFINITIONS.iter().find(|d| d.vnum == vnum)
+}
+
+pub(crate) fn ordinary_definition(
+    monster: &Monster,
+) -> Result<&'static definitions::MobDefinition, String> {
+    validate_monster(monster)?;
+    mob_definition(monster.definition_vnum).ok_or("No ordinary mob definition for actor".into())
+}
+
 pub(crate) fn defending_sphere(monster: &Monster) -> definitions::DefendingSphereDefinition {
     if let Some(d) = crate::training_targets::definition(monster.id) {
         definitions::DefendingSphereDefinition {
@@ -218,7 +232,9 @@ pub(crate) fn defending_sphere(monster: &Monster) -> definitions::DefendingSpher
             radius_m: d.hit_radius_m,
         }
     } else {
-        definitions::MOB_STATIC_DEFENDING_SPHERE
+        ordinary_definition(monster)
+            .expect("defending monster must have a trusted definition")
+            .defending_sphere
     }
 }
 
@@ -230,27 +246,40 @@ fn fresh_monster(
     let x = spawn.home_x;
     let z = spawn.home_z;
     let training = crate::training_targets::definition(spawn.id);
+    let (actor_id, name, level, model_key, motion_set, attack_action_id, health) =
+        if let Some(d) = training {
+            assert_eq!(spawn.definition_vnum, d.vnum);
+            (
+                d.actor_id, d.name, d.level, d.actor_id, "general", "", d.health,
+            )
+        } else {
+            let d = mob_definition(spawn.definition_vnum)
+                .expect("compiled spawn must reference a registered mob");
+            (
+                d.actor_id,
+                d.name,
+                d.level,
+                d.model_key,
+                d.motion_set,
+                d.attack.id,
+                d.health,
+            )
+        };
     Monster {
         id: spawn.id,
         definition_vnum: spawn.definition_vnum,
-        actor_id: training
-            .map_or(definitions::MOB_ACTOR_ID, |d| d.actor_id)
-            .into(),
-        name: training.map_or(definitions::MOB_NAME, |d| d.name).into(),
-        level: training.map_or(definitions::MOB_LEVEL, |d| d.level),
-        model_key: training
-            .map_or(definitions::MOB_MODEL_KEY, |d| d.actor_id)
-            .into(),
-        motion_set: training
-            .map_or(definitions::MOB_MOTION_SET, |_| "general")
-            .into(),
-        attack_action_id: training.map_or(definitions::MOB_ATTACK.id, |_| "").into(),
+        actor_id: actor_id.into(),
+        name: name.into(),
+        level,
+        model_key: model_key.into(),
+        motion_set: motion_set.into(),
+        attack_action_id: attack_action_id.into(),
         x,
         y: content::height(x, z),
         z,
         heading: 0.0,
-        health: training.map_or(definitions::MOB_MAX_HEALTH, |d| d.health),
-        max_health: training.map_or(definitions::MOB_MAX_HEALTH, |d| d.health),
+        health,
+        max_health: health,
         activity: 0,
         attack_sequence,
         life_sequence,
@@ -787,10 +816,15 @@ pub(crate) fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, characte
     crate::combo::clear_chains_targeting(ctx, monster.id, monster.life_sequence);
     monster.activity = 3;
     monster.action_started_at_us = now;
-    monster.respawn_at_us = now.saturating_add(
-        crate::training_targets::definition(monster.id)
-            .map_or(definitions::MOB_RESPAWN_US, |d| d.respawn_us),
-    );
+    monster.respawn_at_us =
+        now.saturating_add(crate::training_targets::definition(monster.id).map_or_else(
+            || {
+                ordinary_definition(monster)
+                    .expect("defeated mob must be trusted")
+                    .respawn_us
+            },
+            |d| d.respawn_us,
+        ));
     monster.action_ends_at_us = monster.respawn_at_us;
     crate::targeting::clear_monster_targets(ctx, monster.id, monster.life_sequence)
         .unwrap_or_else(|error| panic!("cannot clear defeated monster targets: {error}"));
@@ -804,6 +838,7 @@ pub(crate) fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, characte
         clear_monster_damage(ctx, monster.id, monster.life_sequence);
         return;
     }
+    let definition = ordinary_definition(monster).expect("rewarded mob must be trusted");
     award_monster_experience(ctx, monster);
     inventory::drop_potion(ctx, character, monster.x, monster.y, monster.z);
     ctx.db.loot().insert(Loot {
@@ -811,11 +846,7 @@ pub(crate) fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, characte
         x: monster.x,
         y: monster.y,
         z: monster.z,
-        gold: roll_u32(
-            ctx,
-            definitions::MOB_REWARD_GOLD_MIN,
-            definitions::MOB_REWARD_GOLD_MAX,
-        ),
+        gold: roll_u32(ctx, definition.gold_min, definition.gold_max),
         owner: character,
         reserved_until_us: now.saturating_add(LOOT_RESERVED_US),
         expires_at_us: now.saturating_add(LOOT_EXPIRES_US),
@@ -1008,10 +1039,11 @@ fn award_monster_experience(ctx: &ReducerContext, monster: &Monster) {
             }
         }
     }
-    let shares = distribute_raw_experience(definitions::MOB_EXPERIENCE, &eligible)
+    let definition = ordinary_definition(monster).expect("experience source must be trusted");
+    let shares = distribute_raw_experience(definition.experience, &eligible)
         .unwrap_or_else(|error| panic!("cannot distribute monster experience: {error}"));
     for (recipient, share) in shares {
-        progression::apply_combat_experience(ctx, recipient, definitions::MOB_LEVEL, share)
+        progression::apply_combat_experience(ctx, recipient, definition.level, share)
             .unwrap_or_else(|error| panic!("cannot apply monster experience: {error}"));
     }
     clear_monster_damage(ctx, monster.id, monster.life_sequence);
@@ -1129,19 +1161,7 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
         }
     }
     for mut monster in ctx.db.monster().iter() {
-        if crate::training_targets::definition(monster.id).is_none()
-            && monster.level != definitions::MOB_LEVEL
-        {
-            monster.level = definitions::MOB_LEVEL;
-            let monster_id = monster.id;
-            ctx.db.monster().id().update(monster);
-            monster = ctx
-                .db
-                .monster()
-                .id()
-                .find(monster_id)
-                .expect("updated monster disappeared during one reducer");
-        }
+        validate_monster(&monster)?;
         if monster.health == 0 {
             if now >= monster.respawn_at_us {
                 let life_sequence = monster.life_sequence.wrapping_add(1);
@@ -1163,6 +1183,7 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
         if crate::training_targets::validate(&monster)?.is_some() {
             continue;
         }
+        let definition = ordinary_definition(&monster)?;
         if crate::knockback::locks_ai(ctx, monster.id, monster.life_sequence) {
             continue;
         }
@@ -1191,7 +1212,7 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
             within_reach(
                 (monster.x, monster.y, monster.z),
                 (player.x, player.y, player.z),
-                definitions::MOB_ATTACK.range_m,
+                definition.attack.range_m,
             )
         }) {
             monster.heading = (monster.x - player.x).atan2(monster.z - player.z);
@@ -1210,7 +1231,7 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
         } else if distance > 0.1 {
             monster.action_started_at_us = 0;
             monster.action_ends_at_us = 0;
-            let travel = (definitions::MOB_MOVE_SPEED_MPS * elapsed.clamp(0.0, 0.1)).min(distance);
+            let travel = (definition.move_speed_mps * elapsed.clamp(0.0, 0.1)).min(distance);
             let (x, z) = content::slide(
                 monster.x,
                 monster.z,
@@ -1241,17 +1262,16 @@ fn nearest_target(
     clock: &MonsterClock,
     bounds: &[crate::movement::Bounds],
 ) -> Option<crate::Player> {
+    let definition = ordinary_definition(monster).ok()?;
     ctx.db
         .player()
         .iter()
         .filter(|player| player.online && player.health > 0)
         .filter(|player| {
-            (player.x - clock.home_x).hypot(player.z - clock.home_z)
-                < definitions::MOB_CHASE_HOME_RANGE_M
+            (player.x - clock.home_x).hypot(player.z - clock.home_z) < definition.chase_home_range_m
         })
         .filter(|player| {
-            (player.x - monster.x).hypot(player.z - monster.z)
-                < definitions::MOB_ACQUISITION_RANGE_M
+            (player.x - monster.x).hypot(player.z - monster.z) < definition.acquisition_range_m
         })
         .filter(|player| content::clear_path(monster.x, monster.z, player.x, player.z, bounds))
         .min_by(|a, b| {
@@ -1269,16 +1289,17 @@ fn schedule_monster_hit(
     target_generation: u32,
     now: i64,
 ) -> Result<(), String> {
+    let definition = ordinary_definition(monster)?;
     let damage = crate::physical_damage::roll_monster_hit(ctx, monster, target)?;
-    clock.next_attack_us = now.saturating_add(definitions::MOB_ATTACK.cooldown_us);
-    clock.attack_until_us = now.saturating_add(definitions::MOB_ATTACK.duration_us);
+    clock.next_attack_us = now.saturating_add(definition.attack.cooldown_us);
+    clock.attack_until_us = now.saturating_add(definition.attack.duration_us);
     clock.pending_target = target;
     clock.pending_target_generation = target_generation;
     clock.pending_source_generation = monster.life_sequence;
-    clock.pending_hit_at_us = now.saturating_add(definitions::MOB_ATTACK.hit_start_us);
-    clock.pending_hit_until_us = now.saturating_add(definitions::MOB_ATTACK.hit_end_us);
+    clock.pending_hit_at_us = now.saturating_add(definition.attack.hit_start_us);
+    clock.pending_hit_until_us = now.saturating_add(definition.attack.hit_end_us);
     clock.pending_damage = damage;
-    monster.attack_action_id = definitions::MOB_ATTACK.id.into();
+    monster.attack_action_id = definition.attack.id.into();
     monster.attack_sequence = monster.attack_sequence.wrapping_add(1);
     monster.activity = 2;
     monster.action_started_at_us = now;
@@ -1288,6 +1309,9 @@ fn schedule_monster_hit(
 
 fn resolve_monster_hit(ctx: &ReducerContext, monster_id: u32, hit: PendingMonsterHit, now: i64) {
     let Some(monster) = ctx.db.monster().id().find(monster_id) else {
+        return;
+    };
+    let Ok(definition) = ordinary_definition(&monster) else {
         return;
     };
     let Some(mut player) = ctx.db.player().identity().find(hit.target) else {
@@ -1305,7 +1329,7 @@ fn resolve_monster_hit(ctx: &ReducerContext, monster_id: u32, hit: PendingMonste
         || !within_reach(
             (monster.x, monster.y, monster.z),
             (player.x, player.y, player.z),
-            definitions::MOB_ATTACK.range_m,
+            definition.attack.range_m,
         )
         || !content::clear_path(
             monster.x,
@@ -1383,6 +1407,26 @@ mod tests {
         assert!(super::validate_monster(&monster).is_ok());
         monster.id = spawn.id;
         assert!(super::validate_monster(&monster).is_err());
+    }
+
+    #[test]
+    fn persisted_mob_stats_and_presentation_cannot_drift_from_registry() {
+        let original = super::fresh_monster(super::definitions::MONSTER_SPAWNS[0], 0, 0);
+        for field in ["level", "health", "model", "motions"] {
+            let mut monster = super::fresh_monster(super::definitions::MONSTER_SPAWNS[0], 0, 0);
+            match field {
+                "level" => monster.level += 1,
+                "health" => monster.max_health += 1,
+                "model" => monster.model_key = "unregistered-model".into(),
+                "motions" => monster.motion_set = "unregistered-motions".into(),
+                _ => unreachable!(),
+            }
+            assert!(super::ordinary_definition(&monster).is_err(), "{field}");
+        }
+        assert!(super::ordinary_definition(&original).is_ok());
+        let dummy = super::fresh_monster(super::definitions::TRAINING_TARGET_SPAWNS[0], 0, 0);
+        assert!(super::validate_monster(&dummy).is_ok());
+        assert!(super::ordinary_definition(&dummy).is_err());
     }
 
     use super::*;

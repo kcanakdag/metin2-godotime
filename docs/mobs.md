@@ -101,3 +101,24 @@ adapter checkpoint passes 161 Rust tests, strict Rust lint and 113 checks with t
 authenticated clients in `physical-registry-live-r1.json`. Those live checks use
 the existing dog population on `mt2-p2-mob-physical-qa-r1-20260908`; they do not
 establish five-species gameplay or change the served client/server build.
+
+## Gameplay registry consumers
+
+`MobDefinition` now supplies ordinary spawning identity, presentation, health,
+level, movement/acquisition/chase parameters, attack timing, XP/gold ranges,
+respawn delay, defending sphere and knockdown/standup reactions. Runtime consumers
+resolve the actor's trusted vnum; they no longer substitute dog constants. Invalid
+persisted health, level, model or motion-set metadata rejects instead of being
+silently repaired. The registry still wraps the existing dog fixture; the dummy
+uses its own passive definition and cannot become an ordinary reward source.
+
+The follow-up passes 162 Rust tests and strict Rust lint. Actual authenticated
+two-client QA passes 113 checks on `mt2-p2-mob-runtime-qa-r1-20260908`, recorded in
+`.local/mobs/runtime-registry-live-r1.json`. The published schema matches the
+committed bindings; protocol 18 is unchanged. The acceptance receipt records
+module, report and schema hashes. No exports or served endpoint changed.
+
+Remaining integration includes compiling all five gameplay records from the
+converted catalog, matching client content identities, original spawn groups and
+passive/provoked AI. The existing potion drop remains a development fixture;
+per-definition XP/gold does not establish original item-drop-table parity.
