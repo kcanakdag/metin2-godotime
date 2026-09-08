@@ -119,6 +119,30 @@ func _run() -> void:
 			is_equal_approx(system.particles[1].rotation, -90.0)
 		)
 		_check("new particle uses new heading", is_zero_approx(system.particles[2].rotation))
+	var positions := [[0, 0, 0, 0], [1, 100, 0, 0], [2, 200, 0, 0]]
+	var controls := [[0, 100, 0], [], []]
+	_check(
+		"quadratic source control offset",
+		Motion.position_at(positions, 0.5, controls).is_equal_approx(Vector3(0.25, 0, -0.5))
+	)
+	_check(
+		"following direct segment",
+		Motion.position_at(positions, 1.5, controls).is_equal_approx(Vector3(1.5, 0, 0))
+	)
+	_check(
+		"quadratic exact endpoint",
+		Motion.position_at(positions, 1, controls).is_equal_approx(Vector3(1, 0, 0))
+	)
+	_check(
+		"quadratic clamps after last",
+		Motion.position_at(positions, 3, controls).is_equal_approx(Vector3(2, 0, 0))
+	)
+	_check(
+		"singleton ignores curve control",
+		Motion.position_at([[0, 100, 0, 0]], 0.5, [[999, 999, 999]]).is_equal_approx(
+			Vector3(1, 0, 0)
+		)
+	)
 	_exercise_catalog(catalog)
 	print(JSON.stringify({"checks": _checks, "failures": _failures}))
 	quit(0 if _failures.is_empty() else 1)

@@ -5,6 +5,30 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Complete Bash effect parsing and quadratic position curves — 2026-09-09
+
+`mixed_effects.parse_mixed_effect` validates both particle and mesh subtrees and
+retains every layer in source order. Unknown layer kinds or malformed content in
+either half reject the whole effect. Existing particle-only/mesh-only readers keep
+their strict entry points and share subtree validation with the mixed adapter.
+The original Bash script now parses as 12 particle systems plus three mesh layers;
+no layer is dropped. Candidate metadata: `.local/p6-skill-effects-r10/bash-mixed.json`.
+
+The script exposed original `MOVING_TYPE_BEZIER_CURVE` position records. The importer
+now preserves optional relative control points and Godot evaluates the original
+quadratic segments, including direct segments in the same track. Single-key curves
+remain constant as in the original client. Existing direct-only recipe output stays
+unchanged. Six particle, 13 mesh and two mixed-reader Python tests pass; the Godot
+motion scenario passes 102 checks, including control offsets, endpoints, following
+direct segments, clamping and singleton behavior. Evidence: `r10/motion/report.json`.
+Touched Python/GDScript lint and formatting pass.
+
+The selected pinned `gyeoksantau.mde` parses with the existing binary reader:
+31 frames, one 24-vertex geometry, referenced JPEG texture. Its SHA/source details
+are in `r10/mesh-inspection.json`. The mesh script uses 0.007-second frames and
+source-color/additive blending, which still need converter/runtime support; this is
+not a converted or rendered complete Bash effect. No runtime content was installed.
+
 ## Equipped original Warrior effect playback gallery — 2026-09-09
 
 The new `test_actors.py --scenario skill_effects` stages explicit particle resources

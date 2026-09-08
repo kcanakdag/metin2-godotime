@@ -87,6 +87,14 @@ class ParticleTests(unittest.TestCase):
         )
         self.assertEqual((p["AttachEnable"], p["StretchEnable"], p["TexAniType"]), (0, 1, 4))
 
+    def test_bezier_position_control_is_preserved(self):
+        text = fixture().replace(
+            "0 MOVING_TYPE_DIRECT 0 -2 0", "0 MOVING_TYPE_BEZIER_CURVE 0 -2 0 10 20 30"
+        )
+        recipe = parse_particle_mse(text, PATH)["systems"][0]
+        self.assertEqual(recipe["position_keys_cm"], [[0, 0, -2, 0]])
+        self.assertEqual(recipe["position_controls_cm"], [[10, 20, 30]])
+
     def test_curves_clamp_and_empty_defaults_to_zero(self):
         keys = [[0.25, 2], [0.75, 6]]
         self.assertEqual([sample_curve(keys, t) for t in (0, 0.25, 0.5, 0.75, 1)], [2, 2, 4, 6, 6])

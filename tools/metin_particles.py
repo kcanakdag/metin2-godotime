@@ -148,7 +148,11 @@ def parse_particle_mse(text, effect_path):
     effect_path = virtual_path(effect_path)
     if not effect_path.startswith("ymir work/") or not effect_path.endswith(".mse"):
         raise ValueError("Expected original virtual MSE path")
-    root = parse_legacy_script(text)
+    return parse_particle_root(parse_legacy_script(text), effect_path)
+
+
+def parse_particle_root(root, effect_path):
+    """Validate a particle-only syntax tree selected by a complete effect adapter."""
     shape(
         root,
         {"BoundingSphereRadius", "BoundingSpherePosition"},
@@ -179,13 +183,17 @@ def parse_particle_mse(text, effect_path):
         ):
             raise ValueError("Invalid particle position keys")
         position_keys = []
+        position_controls = []
         for row in positions.rows:
-            if len(row) != 5 or row[1] != "MOVING_TYPE_DIRECT":
+            direct = len(row) == 5 and row[1] == "MOVING_TYPE_DIRECT"
+            bezier = len(row) == 8 and row[1] == "MOVING_TYPE_BEZIER_CURVE"
+            if not direct and not bezier:
                 raise ValueError("Unsupported particle position interpolation")
             time = number(row[0], 0, 3600)
             if position_keys and time <= position_keys[-1][0]:
                 raise ValueError("Particle position times must strictly increase")
-            position_keys.append([time, *[number(v) for v in row[2:]]])
+            position_keys.append([time, *[number(v) for v in row[2:5]]])
+            position_controls.append([number(v) for v in row[5:]] if bezier else [])
         emitter = child(node, "EmitterProperty")
         shape(
             emitter,
@@ -233,6 +241,7 @@ def parse_particle_mse(text, effect_path):
             {
                 "start_seconds": start,
                 "position_keys_cm": position_keys,
+                **({"position_controls_cm": position_controls} if any(position_controls) else {}),
                 "emitter": emission,
                 "particle": presentation,
             }

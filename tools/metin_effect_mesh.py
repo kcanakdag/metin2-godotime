@@ -460,6 +460,11 @@ def parse_mse(text: str, *, blend_pairs=frozenset({(5, 2), (5, 6)})) -> MseFile:
         root = parse_legacy_script(text)
     except ValueError as error:
         raise EffectMeshFormatError(str(error)) from error
+    return parse_mesh_root(root, blend_pairs=blend_pairs)
+
+
+def parse_mesh_root(root: LegacyNode, *, blend_pairs=frozenset({(5, 2), (5, 6)})) -> MseFile:
+    """Validate a mesh-only syntax tree selected by a complete effect adapter."""
     _only_fields(root, {"BoundingSphereRadius", "BoundingSpherePosition"})
     _only_groups(root, {("group", "Mesh")})
     if not 1 <= len(root.groups) <= MAX_SCRIPT_MESHES:

@@ -437,3 +437,9 @@ Effect transform inspection follows `EterGrnLib/ThingInstance.cpp:GetBoneMatrix`
 `ModelInstanceModel.cpp:GetBoneMatrixPointer`, and the row-vector multiplication
 order in `GameLib/ActorInstanceAttach.cpp`. Original world-pose transforms were
 compared independently with installed GLB rest frames; no original code was copied.
+
+The Bash follow-up fetches only its referenced `gyeoksantau.mde` at the existing
+client pin (SHA-256 `0ddb1751f19613b49eaab3daee9b184547002ca5ef1c8777733d71d703fb0d2f`).
+The independently authored quadratic particle position adapter follows
+`EffectLib/EffectElementBase.cpp:GetPosition`: the control point is relative to the
+segment start and a singleton remains constant. No source implementation is copied.

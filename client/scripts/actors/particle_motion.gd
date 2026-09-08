@@ -9,7 +9,28 @@ static func source_vector(value: Array) -> Vector3:
 	return Vector3(float(value[0]), float(value[2]), -float(value[1])) * 0.01
 
 
-static func position_at(keys: Array, time: float) -> Vector3:
+static func position_at(keys: Array, time: float, controls: Array = []) -> Vector3:
+	if not controls.is_empty():
+		if time <= float(keys[0][0]):
+			return source_vector(keys[0].slice(1))
+		for index: int in range(1, keys.size()):
+			if time > float(keys[index][0]):
+				continue
+			var start := source_vector(keys[index - 1].slice(1))
+			var end := source_vector(keys[index].slice(1))
+			var weight := (
+				(time - float(keys[index - 1][0]))
+				/ (float(keys[index][0]) - float(keys[index - 1][0]))
+			)
+			if controls[index - 1].is_empty():
+				return start.lerp(end, weight)
+			var control := start + source_vector(controls[index - 1])
+			return (
+				start * pow(1 - weight, 2)
+				+ control * (2 * (1 - weight) * weight)
+				+ end * weight * weight
+			)
+		return source_vector(keys.back().slice(1))
 	var result: Array = []
 	for axis: int in range(1, 4):
 		var channel: Array = []
@@ -30,7 +51,7 @@ static func spawn(
 	var curves: Dictionary = emitter.curves
 	var time := float(birth.emitter_time)
 	var attached := int(recipe.particle.AttachEnable) != 0
-	var center := position_at(recipe.position_keys_cm, time)
+	var center := position_at(recipe.position_keys_cm, time, recipe.get("position_controls_cm", []))
 	var offset := _offset(emitter, time, rng)
 	var position := center + source_vector([offset.x, offset.y, offset.z])
 	if not attached:
