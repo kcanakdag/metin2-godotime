@@ -5,6 +5,19 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Regeneration catalog integration — 2026-09-08
+
+The regeneration stress command now consumes the same typed population catalog as
+placement. It rejects invalid group slots/leader flags, selector references,
+rectangles and aggression flags before counting or restoring owners. Previously
+its independent JSON interpretation omitted these checks. Evidence:
+`.local/mobs/regeneration-catalog-r1/acceptance.json`; fresh checkpoint plus a
+separate-process resume refill all 945 units, with 2,018 counted surviving
+followers (4,981 upper-bound members after refill). Five malformed but correctly
+rehashed inventories reject, and strict targeted example Clippy passes. This
+remains an offline upper-bound simulation, not database persistence or map
+placement evidence. No protocol, database or public deployment changed.
+
 ## Shared population catalog — 2026-09-08
 
 `server/src/population_catalog.rs` now validates typed group membership and leader

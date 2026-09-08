@@ -961,3 +961,14 @@ changed example/test. Seed 42 reproduces all previous positions/headings exactly
 forced aggression for every member. No protocol, database or deployment changed.
 This prepares shared data for live integration; persistent dynamic spawn origins,
 regeneration owners and surviving group members are still to be integrated.
+
+The regeneration stress command now consumes the same typed population catalog as
+placement. It rejects invalid group slots/leader flags, selector references,
+rectangles and aggression flags before counting or restoring owners. Previously
+its independent JSON interpretation omitted these checks. Evidence:
+`.local/mobs/regeneration-catalog-r1/acceptance.json`; fresh checkpoint plus a
+separate-process resume refill all 945 units, with 2,018 counted surviving
+followers (4,981 upper-bound members after refill). Five malformed but correctly
+rehashed inventories reject, and strict targeted example Clippy passes. This
+remains an offline upper-bound simulation, not database persistence or map
+placement evidence. No protocol, database or public deployment changed.

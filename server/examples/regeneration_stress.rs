@@ -4,7 +4,8 @@ mod regeneration;
 use regeneration::{EntrySnapshot, EntryState};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use std::collections::BTreeMap;
+#[path = "../src/population_catalog.rs"]
+mod population_catalog;
 use std::io::Write;
 
 fn snapshot(value: &Value) -> Result<EntrySnapshot, String> {
@@ -80,39 +81,8 @@ fn run() -> Result<Value, String> {
     } else {
         None
     };
-    let array = |key: &str| root[key].as_array().ok_or_else(|| format!("Missing {key}"));
-    let mut groups = BTreeMap::new();
-    for group in array("groups")? {
-        let id = group["vnum"].as_u64().ok_or("Invalid group ID")?;
-        let count = group["members"]
-            .as_array()
-            .ok_or("Missing group members")?
-            .len();
-        if !(1..=256).contains(&count) || groups.insert(id, count).is_some() {
-            return Err("Invalid or duplicate group".into());
-        }
-    }
-    let mut selectors = BTreeMap::new();
-    for selector in array("group_selectors")? {
-        let mut maximum = 0;
-        for variant in selector["variants"]
-            .as_array()
-            .ok_or("Missing selector variants")?
-        {
-            let id = variant["group_vnum"]
-                .as_u64()
-                .ok_or("Invalid group reference")?;
-            maximum = maximum.max(*groups.get(&id).ok_or("Unknown selector group")?);
-        }
-        let id = selector["vnum"].as_u64().ok_or("Invalid selector ID")?;
-        if maximum == 0 || selectors.insert(id, maximum).is_some() {
-            return Err("Empty or duplicate selector".into());
-        }
-    }
-    let entries = array("entries")?;
-    if entries.len() > 16384 {
-        return Err("Too many regeneration entries".into());
-    }
+    let catalog = population_catalog::Catalog::parse(&root)?;
+    let entries = &catalog.entries;
     let mut sequence = if let Some(saved) = &saved {
         if saved["entries"]
             .as_array()
@@ -134,21 +104,23 @@ fn run() -> Result<Value, String> {
     let mut initial_members = 0_usize;
     let mut initial_units = 0_usize;
     for (index, entry) in entries.iter().enumerate() {
-        let interval = entry["interval_us"].as_i64().ok_or("Invalid interval")?;
-        let capacity = usize::try_from(entry["max_live_units"].as_u64().ok_or("Invalid capacity")?)
-            .map_err(|e| e.to_string())?;
-        let id = entry["reference_vnum"]
-            .as_u64()
-            .ok_or("Invalid reference")?;
-        let members = match entry["family"].as_str() {
-            Some("m") => 1,
-            Some("g" | "ga") => *groups.get(&id).ok_or("Unknown group")?,
-            Some("r") => *selectors.get(&id).ok_or("Unknown selector")?,
-            _ => return Err("Unsupported family".into()),
+        let interval = entry.interval_us;
+        let capacity = entry.capacity;
+        let members = if entry.selector {
+            catalog.selectors[&entry.reference]
+                .iter()
+                .map(|group| catalog.groups[group].len())
+                .max()
+                .ok_or("Empty selector")?
+        } else {
+            catalog.groups[&entry.reference].len()
         };
+        // These fields are validated even though this upper-bound tool does not
+        // sample terrain or run AI; placement and live consumers must use them.
+        let _placement_policy = (entry.bounds_cm, entry.forced_aggressive);
         let state = if let Some(saved) = &saved {
             let row = &saved["entries"][index];
-            if row["source_line"] != entry["source_line"] {
+            if row["source_line"] != entry.source_line {
                 return Err("Checkpoint entry identity differs".into());
             }
             let restored = snapshot(row)?;
@@ -168,7 +140,7 @@ fn run() -> Result<Value, String> {
             return Err("Checkpoint owner belongs to multiple entries".into());
         }
         let row = state.snapshot();
-        checkpoint_rows.push(json!({"source_line":entry["source_line"],
+        checkpoint_rows.push(json!({"source_line":entry.source_line,
             "initial":row.initial,"next_tick_us":row.next_tick_us,
             "last_owner":row.last_owner,"owners":row.owners}));
         initial_units += state.owners().len();
