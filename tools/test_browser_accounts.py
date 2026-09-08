@@ -45,6 +45,7 @@ from test_browser_physical import exercise_physical
 from test_browser_progression import exercise_progression, exercise_progression_combat
 from test_browser_target import exercise_targeting
 from test_browser_training import exercise_training_dummy
+from test_probe_activation import exercise_ordinary_world
 
 ROOT = Path(__file__).resolve().parents[1]
 RENEWAL_INPUT_AUDIT = """() => {
@@ -215,6 +216,11 @@ def main() -> None:
     parser.add_argument("--native", type=Path, default=ROOT / "dist/linux-test/MT2Spacetime.x86_64")
     parser.add_argument("--output", type=Path)
     parser.add_argument(
+        "--ordinary-reload",
+        action="store_true",
+        help="After --field-only, verify an ordinary browser without the QA probe using its peer",
+    )
+    parser.add_argument(
         "--skills",
         action="store_true",
         help="Exercise K/Escape skill-panel input in exported clients",
@@ -230,6 +236,8 @@ def main() -> None:
         help="Exercise the authored dummy with real browser pointer and Space input",
     )
     args = parser.parse_args()
+    if args.ordinary_reload and not args.field_only:
+        parser.error("--ordinary-reload requires --field-only")
     if args.ground_items and not args.field_combat:
         parser.error("--ground-items requires --field-combat")
     if args.field_combat and not args.mob_route:
@@ -559,6 +567,7 @@ def main() -> None:
                 args=chrome_arguments,
             )
             context = browser.new_context(viewport={"width": 1280, "height": 800})
+            context.add_init_script("window.mt2ProbeEnabled = true;")
             page = context.new_page()
             page.on(
                 "console",
@@ -714,6 +723,10 @@ def main() -> None:
                     evidence=samples["field_mobs"],
                 )
                 if args.field_only:
+                    if args.ordinary_reload:
+                        samples["ordinary_world"] = exercise_ordinary_world(
+                            browser, context, page, desktop, wait, web_id, output
+                        )
                     assert not browser_errors, "Browser engine errors: " + "; ".join(
                         browser_errors[:3]
                     )

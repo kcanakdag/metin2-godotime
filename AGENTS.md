@@ -121,6 +121,15 @@ agent performs those same responsibilities sequentially.
 
 ## Commands and environments
 
+New test exports require explicit probe activation. Browser harnesses must use a
+context init script setting `window.mt2ProbeEnabled = true` before navigation;
+the standard browser runners already do so. Native harnesses use their existing
+`--probe-report` / `--probe-commands` arguments. Ordinary launches remove the
+probe before installing callbacks or producing snapshots. This does not grant or
+remove server privileges. See `docs/distribution.md#browser-test-builds` and
+`tools/test_probe_activation.py` for focused activation/ordinary-play checks.
+Do not mistake a deliberately absent `mt2Snapshot` for a broken ordinary client.
+
 Use the existing tools rather than inventing a second build/run workflow. Resolve
 installed executables locally; `GODOT`, `BLENDER`, `SPACETIME`, `SERVER_URL`, `DB`
 and related overrides are documented in `Makefile` and `docs/development.md`.

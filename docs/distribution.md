@@ -292,6 +292,27 @@ failure handling is separate from a complete backup restore drill.
 interface. It provides no privileged server writes; normal exports omit it.
 The development build is explicitly authorized to include this probe.
 
+In newly exported test builds, capture is opt-in at startup. Browser automation
+must install `window.mt2ProbeEnabled = true` with a context init script before
+loading the page; both standard browser runners do this, including on reload.
+Desktop capture activates with a nonempty `--probe-report` or `--probe-commands`
+argument. Without activation, the node frees itself before attaching connection
+signals, collecting histories, allocating snapshots or exposing the browser command
+bridge. This is a performance switch, not a permission boundary; server actions
+retain normal authorization. Normal release exports still omit the probe entirely.
+Previously exported/published builds retain their old activation behavior until
+rebuilt. The current public release predates this optimization.
+
+`tools/test_probe_activation.py --url <test-endpoint> --output <fresh-directory>`
+checks both browser startup modes with captures. The account runner's
+`--ordinary-reload --field-only --mob-route <route>` additionally transfers the
+same account's browser storage (including Godot's IndexedDB) in memory to a clean
+context without init scripts. It verifies reentry and keyboard movement through
+the independent native client's subscription. Five-second browser animation-frame
+cadence samples are reported separately from Godot FPS; short sequential samples
+are not a controlled release benchmark. Credential storage is never written to
+the report or an extra credentials file.
+
 ```sh
 make browser-setup
 make export-web SERVER_URL=https://kcanakdag.com:8443 DB=mt2-p1-v4 TEST_PROBE=--test-probe

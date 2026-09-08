@@ -27,6 +27,22 @@ var _last_screen_wave_fingerprint := ""
 
 
 func _ready() -> void:
+	if OS.has_feature("web"):
+		if JavaScriptBridge.get_interface("window").get("mt2ProbeEnabled") != true:
+			set_process(false)
+			queue_free()
+			return
+	else:
+		var args := OS.get_cmdline_user_args()
+		for i in range(args.size() - 1):
+			if args[i] == "--probe-report":
+				_report = args[i + 1]
+			if args[i] == "--probe-commands":
+				_commands = args[i + 1]
+		if _report.is_empty() and _commands.is_empty():
+			set_process(false)
+			queue_free()
+			return
 	get_parent().connection.reducer_failed.connect(_on_reducer_failed)
 	get_parent().connection.reducer_completed.connect(_on_reducer_completed)
 	get_parent().connection.players_changed.connect(_on_players_changed)
@@ -39,13 +55,6 @@ func _ready() -> void:
 		_publish_error_view()
 		_publish_own_action_view()
 		_publish_monster_health_view()
-	else:
-		var args := OS.get_cmdline_user_args()
-		for i in range(args.size() - 1):
-			if args[i] == "--probe-report":
-				_report = args[i + 1]
-			if args[i] == "--probe-commands":
-				_commands = args[i + 1]
 
 
 func _process(delta: float) -> void:

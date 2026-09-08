@@ -143,6 +143,7 @@ def main():
                 ],
             )
             context = browser.new_context(viewport={"width": 1280, "height": 800})
+            context.add_init_script("window.mt2ProbeEnabled = true;")
             page = context.new_page()
             samples["browser_lifecycle"] = []
             for emitter, event in [(page, "crash"), (page, "close"), (browser, "disconnected")]:

@@ -5,6 +5,39 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Opt-in export diagnostics — 2026-09-08
+
+New test exports remove the probe at startup unless browser automation explicitly
+sets `window.mt2ProbeEnabled = true` before loading, or a native launch supplies
+nonempty probe report/command arguments. The disabled path installs no connection
+hooks and produces no snapshots or command bridge. Both standard browser runners
+enable it through context init scripts, preserving reload behavior. Normal release
+exports still exclude the probe entirely; activation is not server authorization.
+
+Evidence: `.local/performance/probe-opt-in-r1/`. Native activation checks pass 20
+cases across disabled/report/commands modes. Actual browser exports pass enabled/
+disabled startup and reload checks; the ordinary entry capture was reviewed.
+The focused two-client field replay `field-qa-r3/report.json` passes all 45 checks.
+It restores the same account using an in-memory IndexedDB-inclusive storage
+transfer into a clean browser context without QA scripts, verifies absence of
+the probe, and proves reentry and keyboard movement through the independent
+native client's rendered subscription. The earlier ordinary-world capture was
+reviewed; the final run also retains its screenshot.
+
+Five-second browser animation-frame samples measured 28.9 frames/sec with capture
+and 60.1 without it. These are short sequential browser cadence measurements,
+not a controlled Godot/release benchmark. Instrumented Godot field median was
+29.5 FPS. Original map UID fallback warnings remain (876 warning/location messages
+retained); all were checked against the final strict classifier with zero unexpected
+errors. A regression test retains these warnings while rejecting engine/script
+and unknown console errors. The earlier run was stopped to correct missing
+IndexedDB transfer; another completed movement checks but failed the initial
+overbroad console-error collector. Those reports are retained.
+
+The local endpoint serves the new exports. Public release
+`20260908T170855056942Z` predates this optimization. Next: public rollout and
+continued performance/fidelity work. No connected editor inspection was available.
+
 ## Public original-population rollout — 2026-09-08
 
 The public endpoint now serves protocol 24, database
