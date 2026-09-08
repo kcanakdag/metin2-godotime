@@ -19,7 +19,8 @@ content hash. Its selected-registry training replay passed 74 checks, including
 leader replacement, surviving followers and reconnect. The original Yongan population now runs locally: 2,835 mobs across 44 species,
 with 22 two-client population/movement/reconnect checks passed. Full-population
 exports now boot locally in browser/Linux with matching population subscriptions.
-Field rendering, performance and complete export qualification remain pending. Nearby mob presentation now
+Both exports now render original mobs on a generated hunting-ground route.
+Performance, field combat and complete export qualification remain pending. Nearby mob presentation now
 uses the original view range; 41 focused Main-scene checks pass with a 2,800-row fixture. The [client package installer](docs/development.md#install-converted-mobs-in-the-client)
 now installs the selected 44-mob presentation catalog, 19 shared models and their
 projectile resources; the installed Main scene passed 31 controlled checks.

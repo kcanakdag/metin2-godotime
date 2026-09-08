@@ -5,6 +5,35 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Generated field route and exported mob baseline — 2026-09-08
+
+`server/examples/world_route.rs` adds a bounded offline route planner using the
+runtime terrain/footprint/clear-path functions. It emits map-hash-bound waypoints
+with segments up to 12 m, without changing game state. The selected path from
+(660,575) to (788.39,553.6) is in `tests/fixtures/yongan-hunting-route.json`.
+Repeated generation was identical; blocked destination (770,552) and out-of-bounds
+start were rejected. Focused Rust example Clippy and Python lint passed.
+
+`--mob-route` now walks both real exports out and back, requires common visible
+animated original mob IDs, captures both renders and records instrumented FPS.
+`.local/mobs/full-world-field-r1/acceptance.json` preserves 64 successful checks,
+no browser engine errors and the same frozen client/server builds as the previous
+export run. Both exports reached original Hungry Stray Dogs, rendered them, and
+returned to town; root reviewed browser/native field captures. The normal movement
+and invalid movement rejection checks also passed. The full scenario did not pass:
+it timed out at `foreign_character_selection_is_rejected` after native world leave,
+with no captured reducer error. Investigation remains required; this is neither
+proof of foreign access nor proof that rejection reached the client.
+
+Field samples recorded 40 instantiated mob actors, median Chrome 22 FPS and Xvfb
+native 7 FPS. Chrome used the AMD Radeon 860M through ANGLE; native execution uses
+its test display configuration. These are instrumented baselines, not release
+benchmarks or acceptable performance qualification. Existing debug snapshots are
+about 2 MB each, and simulation currently writes every live ordinary mob and clock
+unconditionally each tick. Next: suppress unchanged writes and measure their effect,
+investigate the lifecycle timeout, then field combat and public deployment. Public
+endpoint remains unchanged. The signup cooldown was respected before this run.
+
 ## Full-population browser/Linux exports and partial qualification — 2026-09-08
 
 Actual test exports from client source `fd25ed5` are frozen in

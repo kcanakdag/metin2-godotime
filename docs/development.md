@@ -1792,3 +1792,23 @@ contain over 2,000 unique ordinary mob IDs, every selected species, finite posit
 and the same ID-to-species mapping. The NPC walking route checks its own map, NPC
 positions, movement and dialogue; it no longer assumes an unrelated six-dog fixture.
 Do not use that population assertion for a deliberately smaller custom map.
+
+
+## Generate collision-clear developer walking routes
+
+Build `cargo build --manifest-path server/Cargo.toml --locked --offline --features
+yongan --example world_route`, then send JSON on stdin to
+`server/target/debug/examples/world_route`, for example
+`{"start":[660,575],"goal":[788.39,553.6]}`. The offline planner uses the actual
+server terrain, player footprint and clear-path function. Its bounded grid search
+emits map-hash-bound waypoints with collision-clear segments up to 12 metres.
+This is a developer route generator, not gameplay pathfinding or an admin teleport.
+It does not account for dynamic players/mobs or guarantee an optimal route.
+
+`tools/test_browser_accounts.py --mob-route tests/fixtures/yongan-hunting-route.json`
+walks both actual exported clients to the selected original hunting ground and
+back with normal validated movement. It checks common visible animated mob IDs,
+captures each exported render and records instrumented FPS samples. Combine with
+`--mob-catalog <compiled>/gameplay.v1.json` for full subscription checks. These field
+checks replace the old assumption that an authored dog can be rendered from town;
+the existing `--actors` fixture still targets its old nearby dog/model package.
