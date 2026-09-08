@@ -164,3 +164,13 @@ unit tests pass, including malformed intervals. Evidence is in
 `.local/p6-skill-windows-r1/qualification-r2/`. This is candidate compiler work:
 the live cast resolver still uses the single Sword Spin envelope and must be
 extended to consume these intervals, collision shapes and original hit limits.
+
+The server's shared `skill_hits` ledger now admits hits by monster ID, life and
+motion event, with independent per-life and total-hit limits. Event zero keeps
+the persisted `monster:life` receipt format; later events add an event suffix.
+Sword Spin uses event zero, a per-life limit of one and its existing total budget,
+so its accepted-hit policy remains unchanged. Receipt admission does not mutate
+state; the resolver records a receipt only after damage calculation succeeds.
+Three-event repeat limits, duplicate event rejection, respawn identity and invalid
+receipts/limits have focused unit coverage. This prepares shared runtime admission;
+additional skills still need event scheduling, collision geometry and live QA.

@@ -5,6 +5,20 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Shared skill hit admission — 2026-09-08
+
+`server/src/skill_hits.rs` now separates per-event deduplication, exact monster-life
+identity, per-life repeat limits and a total successful-hit budget. The existing
+Sword Spin resolver calls it with event zero and one hit per life, retaining the
+old persisted receipt format and catalog target budget. Five focused runtime tests
+pass (three ledger, two existing skill tests); this is local source work without a
+server publication or two-client casting replay. No additional ability is enabled.
+The first compile exposed a monster ID width mismatch, corrected to the runtime's
+u32 ID before the successful tests. Original source research distinguishes
+per-target repeat limits from animation event count; Three-Way Cut allows three
+in the pinned server's `CheckSkillHitCount`. Scheduling, collision shapes and
+source-specific limits still need integration before enabling multi-hit skills.
+
 ## Candidate multi-hit skill timing — 2026-09-08
 
 The full-class compiler previously discarded hit-window end times. It now emits

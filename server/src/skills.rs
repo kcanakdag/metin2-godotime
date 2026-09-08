@@ -332,8 +332,14 @@ pub fn simulate(ctx: &ReducerContext, now: i64) -> Result<(), String> {
             if cast.hit_lives.len() >= usize::from(d.max_targets) {
                 break;
             }
-            let life = format!("{}:{}", victim.id, victim.life_sequence);
-            if cast.hit_lives.contains(&life) {
+            if !crate::skill_hits::admits(
+                &cast.hit_lives,
+                victim.id,
+                victim.life_sequence,
+                0,
+                1,
+                u16::from(d.max_targets),
+            )? {
                 continue;
             }
             let amount = crate::physical_damage::roll_skill_hit(
@@ -344,7 +350,11 @@ pub fn simulate(ctx: &ReducerContext, now: i64) -> Result<(), String> {
                 cast.vitality,
                 &victim,
             )?;
-            cast.hit_lives.push(life);
+            cast.hit_lives.push(crate::skill_hits::receipt(
+                victim.id,
+                victim.life_sequence,
+                0,
+            ));
             combat::record_damage(
                 ctx,
                 victim.id,
