@@ -633,3 +633,21 @@ threat while both players live, and stops attacking after that victim disconnect
 This training-only fixture is explicitly selected at build time and rejected for
 Yongan builds. It does not install the original population or qualify restart,
 party behavior or wandering. See `docs/development.md` for the replay command.
+
+## Shared population catalog — 2026-09-08
+
+`server/src/population_catalog.rs` now validates typed group membership and leader
+ordering, equal-weight selector references, and regeneration entries (source line,
+rectangle, interval, capacity and forced aggression). The real-map
+`population_placement` tool consumes it instead of maintaining its own partial
+JSON interpretation. Hash/provenance validation remains the caller’s obligation.
+The current parser explicitly supports the selected group families g/ga/r;
+additional families require implementation, not silent fallback.
+
+Evidence: `.local/mobs/population-catalog-r1/acceptance.json`. Two targeted Rust
+tests cover preserved data and 15 malformed cases; strict Clippy passes for the
+changed example/test. Seed 42 reproduces all previous positions/headings exactly:
+945 groups, 2,853 members, zero failed units/followers. The report now also records
+forced aggression for every member. No protocol, database or deployment changed.
+This prepares shared data for live integration; persistent dynamic spawn origins,
+regeneration owners and surviving group members are still to be integrated.
