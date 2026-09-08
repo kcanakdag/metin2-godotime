@@ -129,11 +129,11 @@ static func _number(value: Variant, low: float, high: float) -> bool:
 static func _curve_valid(keys: Variant) -> bool:
 	if not keys is Array or keys.size() > 256:
 		return false
-	var previous := -1.0
+	var previous := -3600.0
 	for key: Variant in keys:
 		if not key is Array or key.size() != 2:
 			return false
-		if not _number(key[0], 0, 3600) or not _number(key[1], 0, 100000):
+		if not _number(key[0], -3600, 3600) or not _number(key[1], 0, 100000):
 			return false
 		if float(key[0]) < previous:
 			return false

@@ -31,6 +31,7 @@ func _recipe() -> Dictionary:
 
 func _run() -> void:
 	_duplicate_curves()
+	_negative_curves()
 	var system := Emission.new()
 	var recipe := _recipe()
 	_check("configure", system.configure(recipe))
@@ -125,3 +126,17 @@ func _exercise_catalog(path: String, expected_systems: int) -> void:
 			if int(recipe.emitter.CycleLoopEnable) == 0 or int(recipe.emitter.LoopCount) > 0:
 				_check("original finite emitter drains", state.finished and state.alive == 0)
 	_check("all selected original systems exercised", systems == expected_systems)
+
+
+func _negative_curves() -> void:
+	var keys := [[-0.5, 2.0], [0.5, 6.0]]
+	_check("negative scalar key validates", Emission._curve_valid(keys))
+	_check("negative scalar interpolates across zero", is_equal_approx(Emission.sample(keys, 0), 4))
+	_check("negative singleton stays constant", Emission.sample([[-0.5, 2]], 0) == 2)
+	_check("negative descending keys reject", not Emission._curve_valid([[0, 1], [-0.5, 2]]))
+	_check("negative key bound rejects", not Emission._curve_valid([[-3601, 1]]))
+	var recipe := _recipe()
+	recipe.emitter.curves.EmissionCountPerSecond = [[-0.5, 4], [0.5, 8]]
+	var system := Emission.new()
+	_check("negative emitter curve configures", system.configure(recipe))
+	_check("negative emitter key contributes at live time", system.advance(0.25).births.size() == 1)

@@ -109,7 +109,7 @@ def curve(node):
     for row in node.rows:
         if len(row) != 2:
             raise ValueError("Expected curve time/value pair")
-        time, value = number(row[0], 0, 3600), number(row[1])
+        time, value = number(row[0], -3600, 3600), number(row[1])
         if result and time < result[-1][0]:
             raise ValueError("Particle curve times must be nondecreasing")
         result.append([time, value])

@@ -461,3 +461,12 @@ and `ParticleSystemInstance.cpp:OnUpdate`; the clockwise detached rotation accou
 for [D3DXQuaternionMultiply's reversed product order](https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dxquaternionmultiply).
 No original implementation was copied. Original per-update angular timing is retained;
 full visual/cadence parity remains unqualified.
+
+
+Negative scalar particle key times were checked against the pinned client's
+`EffectLib/Type.cpp::GetTokenTimeEventFloat` and
+`EffectLib/Type.h::GetTimeEventBlendValue`: the loader retains signed floating
+key times and interpolation uses the surrounding keys. The independent parser
+now permits bounded negative scalar keys, matching the shared Godot sampler;
+no original implementation code was copied. This does not relax effect start
+delays or position-curve validation.

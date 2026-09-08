@@ -2261,3 +2261,10 @@ archive. The audit preserves every layer kind and parser failure with source has
 and links to affected skill events. `parsed-not-converted` means syntax/subset
 acceptance only: textures, geometry conversion and runtime rendering remain
 unqualified. Unknown layers are not discarded to make a partial effect pass.
+
+
+Scalar particle curves retain signed key times in [-3600, 3600]. Sampling at
+nonnegative effect time interpolates across a negative first key; do not clamp
+that key to zero during conversion. Start delays remain nonnegative. The existing
+particle emission fixture includes negative-key interpolation, ordering/bounds
+rejection and live emission checks.

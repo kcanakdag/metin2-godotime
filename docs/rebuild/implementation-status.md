@@ -5,6 +5,29 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Signed scalar particle times — 2026-09-09
+
+Original `EffectLib/Type.cpp` retains signed scalar times and `Type.h` samples
+between their neighbors. The Python parser and Godot emitter validator now accept
+bounded negative scalar keys, preserving cross-zero interpolation; scalar values,
+ordering, effect delays and position curves keep their existing validation.
+No time is clamped to zero. The existing sampler already performs the required
+interpolation, so its calculation did not change.
+
+Seven Python particle tests and 88 headless Godot emission checks pass, including
+negative-key interpolation, singleton behavior, descending/out-of-range rejection
+and actual emission. Evidence:
+`.local/p6-all-skill-effects-r1/negative-key-emission/`. The updated offline resource
+audit accepts 55 of 59 effects: Ninja `gyeonggong_start` and Sura
+`pabeopsul_making` now parse. Sura `yonggwonpa` advances past its negative key to
+an unsupported mesh ColorOperationType 6. Mesh BillboardType 3, ColorOperationType
+3 and the 24-element `tanhwan` mesh also remain outstanding. Report:
+`resource-audit-negative-keys.json` in the same evidence root.
+
+This changes parser/runtime validation, not installed assets or public builds.
+Rendering of the newly accepted effects remains unqualified; headless curve
+checks do not establish visual fidelity.
+
 ## All-class effect resource coverage — 2026-09-09
 
 `audit_skill_effect_resources.py` checks every distinct MSE referenced by the

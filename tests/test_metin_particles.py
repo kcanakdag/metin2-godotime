@@ -72,6 +72,17 @@ List TextureFiles
 
 
 class ParticleTests(unittest.TestCase):
+    def test_negative_scalar_keys_preserved_and_interpolated(self):
+        text = fixture().replace(
+            "List TimeEventScaleX\n{\n0 0.5\n1 1\n}", "List TimeEventScaleX\n{\n-0.5 2\n0.5 6\n}"
+        )
+        result = parse_particle_mse(text, PATH)
+        keys = result["systems"][0]["particle"]["curves"]["ScaleX"]
+        self.assertEqual(keys, [[-0.5, 2], [0.5, 6]])
+        self.assertEqual(sample_curve(keys, 0), 4)
+        with self.assertRaises(ValueError):
+            parse_particle_mse(text.replace("-0.5 2", "-3601 2"), PATH)
+
     def test_preserves_animation_order_attachment_and_packed_color_union(self):
         result = parse_particle_mse(fixture(), PATH)["systems"][0]
         self.assertEqual(result["position_keys_cm"], [[0, 0, -2, 0]])
