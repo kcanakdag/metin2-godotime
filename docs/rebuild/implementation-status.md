@@ -9,6 +9,28 @@ or reclassify that scope.
 
 ### Original wildlife definitions in progress
 
+Original population dependency checkpoint: inspection showed Yongan uses group
+selectors rather than direct mob IDs, so compiling species-only respawn defaults
+would preserve the wrong world lifecycle. `tools/discover_mob_population.py` now
+imports the dependency structure from pinned committed source blobs: **945
+entries, 10 selectors, 54 groups and 44 monster definitions** across 12 source
+model folders. The five selected definitions cover no complete original entry.
+The 39 missing definition IDs and source names/folders are explicit in the output.
+
+The importer preserves leader/member ordering, source rectangles/directions and
+per-entry intervals. It distinguishes source-declared selector weights from the
+pinned loader's effective unit weights and records the ignored percentage column.
+The **2,963 initial member upper bound** is not a live population cap; original
+regeneration is attached to group masters. This evidence changes the integration
+plan: expand the bounded map dependency set and implement group lifecycle rather
+than spawning a subset with species-wide respawn behavior.
+
+`.local/mobs/yongan-population-r3` and `r4` are byte-identical. Five new population
+tests plus ten existing mob tests and Python lint pass; evidence is recorded in
+`population-discovery-acceptance-r1.json`. No assets were expanded, no population
+was installed, and served builds remain unchanged. Full server registry and live
+client catalog integration remain unfinished.
+
 Wildlife presentation checkpoint: the candidate builder emits public actor/model
 metadata alongside gameplay. The real PvE renderer uses exact action IDs and the
 authoritative interval for slow/normal playback and late seeking, holds completed

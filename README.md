@@ -27,6 +27,10 @@ The wildlife presentation fixture now passes 125 rendered Godot checks across
 all five species and nine attacks, including slower playback, recovery and
 death/respawn. This uses controlled state rows; server population integration
 and exported multiplayer qualification remain pending.
+The original Yongan population audit resolves 945 regeneration entries into
+54 groups and 44 mob definitions across 12 source model folders. The current
+five-definition selection covers no complete original selector; see
+[population discovery](docs/mobs.md) before extending world spawns.
 Yongan's six authored Wild Dog homes pass **107 two-client checks** on a fresh
 local database. The original City Guard is installed in the playable map layer,
 with original placement, weighted idle animations and its attached weapon.

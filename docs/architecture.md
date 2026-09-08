@@ -42,6 +42,14 @@ resets rate to 1. Player playback retains its separate 100–170 speed validatio
 The candidate wildlife presentation payload is exercised in isolated fixtures;
 it is not automatically loaded into the live catalog without server hash gates.
 
+Original population identity has three separate layers: regeneration entry,
+group selector and group members. Yongan's `r` entries refer to selectors, not
+mob vnums. Respawn cadence belongs to the regeneration entry, and the original
+group leader owns its regeneration slot. The development fixture's per-species
+respawn field cannot represent that lifecycle without further integration.
+The offline population compiler preserves these references and reports missing
+definition dependencies rather than flattening groups into static single mobs.
+
 Classic class presentation and combat share the installed character catalog
 (see [characters](characters.md)). The common Sword+0 and Fan+0 chains resolve each step
 from the server-owned character appearance and captured weapon vnum. All eight

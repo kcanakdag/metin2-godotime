@@ -23,6 +23,12 @@ candidate through the real PvE actor in an isolated project. This runner merges
 the candidate into its disposable fixture only; it does not modify the installed
 manifest or establish server subscriptions.
 
+`tools/discover_mob_population.py --output NEW_DIR` audits original Yongan
+regeneration/group dependencies from the pinned local server checkout. Override
+`--source-checkout`, `--map` and `--profile` for another reviewed source map or
+definition selection. It reads committed blobs, records hashes and never installs
+spawns, fetches assets or alters a database. See [population discovery](mobs.md).
+
 ## Classic character builds
 
 Use `make characters-build` for the selected four-class/eight-appearance pipeline,

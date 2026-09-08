@@ -227,3 +227,51 @@ used isolated processes rather than the open editor. This is native component
 evidence, not new live species, actual subscriptions or browser/export proof.
 The live installer/hash gate and compiled five-species server registry remain
 unfinished; no served endpoint changed.
+
+## Original population dependency discovery
+
+```sh
+.local/venv-dev/bin/python tools/discover_mob_population.py \
+  --output .local/mobs/yongan-population
+```
+
+The command reads committed blobs from the pinned local server checkout; use
+`--source-checkout` to specify its location. `--map` selects the source map folder
+and `--profile` selects the definition coverage being audited. It does not fetch
+or convert additional assets, install a population, or change a database.
+Output includes source/code/profile hashes, numeric definition names/folders,
+centimetre rectangles, source directions, intervals and transitive group members.
+
+Yongan's `regen.txt` has **945 `r` entries**, referencing **10 group selectors,
+54 groups and 44 monster definitions**. These definitions use 12 source model
+folders, though sharing a folder alone does not prove identical client material
+or animation bindings. The current five selected definitions cover **zero complete
+entries**: every selector includes at least one additional variant. Choosing only
+available variants would change the original population distribution.
+
+The parser distinguishes direct mobs (`m`), groups (`g`/`ga`) and selectors (`r`).
+Group leaders and ordered member slots remain explicit. It follows the source
+loader's first-missing-slot termination and records ignored later slots. Missing
+or ambiguous referenced groups reject; unrelated duplicate IDs in the legacy
+files do not prevent auditing this map. Unsupported families and point-group
+entries reject rather than being interpreted as ordinary area groups.
+
+Pinned `LoadGroupGroup` reads the file's probability field but calls
+`AddMember(vnum)` without passing that probability. Output therefore preserves
+`source_weight` separately from `effective_weight: 1`. The regeneration reader
+also skips its percentage field; the importer records that distinction explicitly.
+Compound intervals such as `1m5s` remain supported, including zero for the source
+nonrepeating case. These are source semantics, not newly invented spawn chances.
+
+The initial member upper bound is **2,963**, assuming all initial slots succeed
+and each selector picks its largest group. It is not a steady-state live mob cap:
+the group master owns the original regeneration slot, while followers can remain
+alive. Cadence, group lifecycle, placement attempts, collision and passive/provoked
+AI still need runtime implementation before these entries can be installed.
+
+`yongan-population-r3` and `r4` are byte-identical. Five population-parser tests
+and the ten existing mob compiler/source tests pass, along with Python lint.
+`population-discovery-acceptance-r1.json` records the counts, hash and scope.
+Next, resolve the 39 additional definition dependencies through the bounded map
+selection, reuse verified identical model inputs where possible, and compile the
+server registry alongside a matching live client catalog and group population.
