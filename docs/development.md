@@ -56,6 +56,9 @@ project. Its source-bound report distinguishes emission checks from rendering
 and server integration, which are not exercised. See [emission lifecycle](mobs.md#godot-emission-lifecycle).
 Add `--scenario motion` to exercise the connected particle kinematics, moving
 emitters and deterministic replay; this is still non-rendering QA.
+`--scenario render` instead runs a native Linux/Xvfb Compatibility gallery with
+the converted textures and hashed captures. See [particle rendering](mobs.md#selected-particle-rendering)
+for its observed driver and remaining original-client/browser comparison work.
 
 `python3 tools/import_particle_effects.py --effect VIRTUAL_MSE --output NEW_DIR`
 converts explicitly selected particle recipes and their referenced textures.

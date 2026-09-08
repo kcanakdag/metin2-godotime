@@ -634,6 +634,48 @@ systems for 600 moving/rotating-emitter updates each. Godot reports no errors.
 The shared runner's emission regression also passes 90 checks in
 `particle-emission-r3`. Owned Python and GDScript lint pass.
 
-Rendering remains next: color/scale/rotation, texture-frame progression, billboards,
-stretched quads and original blend modes. These simulation checks establish neither
-visual fidelity nor projectile flight, combat, multiplayer or deployment acceptance.
+The renderer below now adds appearance around these states. Simulation checks alone
+establish neither visual fidelity nor projectile flight, combat, multiplayer or
+deployment acceptance.
+
+### Selected particle rendering
+
+`particle_style.gd` preserves packed-byte color interpolation, normalized scale
+curves, degree-based rotation and original texture-frame deadlines/wrapping.
+Random spin direction is selected once per emission batch, matching the source
+decorator cloning rule. `particle_effect.gd` batches world-space triangles by
+system/texture frame and renders the selected camera-facing or stretched quads.
+It supports the selected 5/2 additive and 5/6 alpha blend pairs with color operation
+4 and billboard types 0/1. Other render modes reject configuration rather than
+silently receiving a default. Recipes and texture resources are trusted imported
+content; a configured effect needs to be in a scene with an active camera.
+
+Run the gallery using the same runner:
+
+```sh
+python3 tools/test_particle_emission.py --scenario render --godot /path/to/godot \
+  --catalog .local/mobs/particle-effects-r3/effects.v1.json \
+  --output .local/mobs/particle-render-new
+```
+
+On Linux this uses `xvfb-run` and Godot's Compatibility renderer in an isolated
+project/user-data directory. Referenced PNGs are hash-checked before and after
+copying; the report binds code, catalog, log and captures. No editor or served
+package is modified. The accepted `.local/mobs/particle-render-r2/report.json`
+passes 62 checks and records 35 captures at frames 3, 6, 12, 24 and 36 for all
+seven effects. Early captures preserve the very brief impact flashes that had
+already faded at frame 12 in the initial `particle-render-r1` gallery. All seven
+early captures were visually inspected: flame projectiles, orange/pink/purple
+impact rings and sparks render without opaque texture rectangles. Later captures
+show their fading smoke/trails. `particle-render-review-r1.json` binds that review.
+
+The actual driver was Mesa llvmpipe; X11 input-method and unsupported VSync warnings
+were present, with no engine errors. The 89-check motion regression still passes
+in `particle-motion-r2`, and owned Python/GDScript lint passes.
+
+This is local component rendering evidence, not original-client pixel parity.
+The shader uses Godot's color-space/blend pipeline; gamma/blending must still be
+compared against original-client reference captures. No hardware/browser/export,
+depth-occlusion fixture, large-population performance, flight trajectory, server
+combat or multiplayer acceptance is claimed. Next connect the effects to the
+original flight definitions and live mob actions, then qualify those paths.

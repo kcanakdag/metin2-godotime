@@ -245,7 +245,8 @@ mesh conversion) and `558dee3` (flight-definition discovery). The interrupted
 follow-up initially researched particle runtime behavior. After the handoff request,
 work resumed: `client/scripts/actors/particle_emission.gd` implements emission
 and lifetime tracking, with `particle_motion.gd` and `particle_simulation.gd`
-adding kinematics. The renderer is not implemented yet.
+adding kinematics. `particle_style.gd`/`particle_effect.gd` now render the selected
+effects in an isolated native gallery; live projectile integration is unfinished.
 
 ### Playable state versus prepared content
 
@@ -301,7 +302,15 @@ seeded replay across all 22 systems. The emission regression passes 90 checks in
 `particle-emission-r3`. There is still no rendered or live-game qualification.
 Nonzero emitter angular orbit rejects explicitly; the selected systems use zero.
 
-Next implement color/scale/rotation, texture animation and rendering, then
+The selected renderer now passes 62 native Godot checks in
+`.local/mobs/particle-render-r2/report.json`, with 35 hashed captures. All seven
+early captures were visually inspected; see `particle-render-review-r1.json`.
+The runner's `--scenario render` uses Linux/Xvfb Compatibility (observed llvmpipe).
+Original-client gamma/blend comparison, hardware/browser exports, occlusion and
+population performance remain unqualified. Motion regression passes 89 checks
+in `particle-motion-r2`. These are component effects, not new live mobs/skills.
+
+Next integrate flight definitions/trajectories and attach the rendered effects, then
 flight attachment and authoritative magic/projectile combat so the prepared mobs
 can become playable. Do not keep substituting inventory reports for integration.
 The interrupted investigation inspected pinned primary files under

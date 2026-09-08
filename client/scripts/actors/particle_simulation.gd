@@ -3,6 +3,7 @@ extends RefCounted
 
 const Emission = preload("res://scripts/actors/particle_emission.gd")
 const Motion = preload("res://scripts/actors/particle_motion.gd")
+const Style = preload("res://scripts/actors/particle_style.gd")
 
 var particles: Dictionary = {}
 var _recipe: Dictionary = {}
@@ -40,7 +41,16 @@ func advance(delta: float, transform: Transform3D, emitting: bool = true) -> Dic
 	for id: int in result.deaths:
 		particles.erase(id)
 	for particle: Dictionary in particles.values():
+		Style.advance(particle, _recipe, delta, _rng)
 		Motion.advance(particle, _recipe, delta)
+	var rotation_speed := 0.0
+	var first := true
 	for birth: Dictionary in result.births:
-		particles[int(birth.id)] = Motion.spawn(_recipe, birth, transform, _rng, delta)
+		var particle := Motion.spawn(_recipe, birth, transform, _rng, delta)
+		Style.initialize(particle, _recipe, _rng)
+		if first:
+			rotation_speed = Style.batch_rotation(_recipe.particle, _rng)
+			first = false
+		particle.rotation_speed = rotation_speed
+		particles[int(birth.id)] = particle
 	return result

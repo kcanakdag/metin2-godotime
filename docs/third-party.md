@@ -24,6 +24,11 @@ The companion independently authored motion adapter also follows force order in
 `EffectUpdateDecorator.cpp`/`.h`, original shape/velocity sampling and attached
 versus world-space coordinates. Godot's seeded RNG supports repeatable QA, not
 original random-stream parity. No additional source assets were fetched for it.
+The selected Godot renderer adds independently authored interpretation of
+`ParticleInstance.cpp::Transform`, `EffectUpdateDecorator.h` texture/rotation
+timing and `Type.h::DWORDCOLOR` packed interpolation. It reuses only the already
+selected converted textures and does not import original rendering code. Godot
+color-space/blend parity still needs direct original-client comparison.
 
 The flight-discovery extension fetches only the four MSF definitions selected by
 the 26 White Oath launch declarations, at the existing client pin. It resolves
