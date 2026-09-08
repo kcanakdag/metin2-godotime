@@ -40,6 +40,7 @@ def exercise_field(
     *,
     return_to_town=True,
     profile_probe=False,
+    field_combat=False,
 ):
     for snapshot in (web(), desktop()):
         assert snapshot["world_info"] == {
@@ -121,6 +122,132 @@ def exercise_field(
             "web": web()["performance_profile"],
             "native": desktop()["performance_profile"],
         }
+    if field_combat:
+        result["combat"] = exercise_field_combat(page, web, desktop, wait, output)
     if return_to_town:
         walk(list(reversed(points[:-1])), "field_route_return")
     return result
+
+
+def exercise_field_combat(page, web, desktop, wait, output):
+    """Select a nearby original mob by pointer and hold Space through its death."""
+    from test_browser_target import _pick
+
+    state = web()
+    # This account scenario creates a Warrior with its original Sword+0 in cell 0.
+    sword = next(row for row in state["inventory"] if row["vnum"] == 10)
+    if not sword["equipped"]:
+        page.keyboard.press("i")
+        wait("field_inventory_opens", lambda: web()["ui"]["visible"])
+        origin = web()["ui"]["grid_origin"]
+        cell = int(sword["cell"])
+        page.mouse.click(
+            origin[0] + (cell % 5) * 32 + 16,
+            origin[1] + (cell % 45 // 5) * 32 + 16,
+            button="right",
+        )
+        wait(
+            "field_starter_weapon_equips_and_replicates",
+            lambda: (
+                any(row["id"] == sword["id"] and row["equipped"] for row in web()["inventory"])
+                and all(
+                    any(
+                        row["character_id"] == state["identity"] and row["weapon_vnum"] == 10
+                        for row in snapshot()["appearances"]
+                    )
+                    for snapshot in (web, desktop)
+                )
+            ),
+        )
+        page.keyboard.press("i")
+        wait("field_inventory_closes", lambda: not web()["ui"]["visible"])
+    state = web()
+    position = state["server_position"]
+    presentations = {int(row["row_id"]): row for row in state["monster_presentations"]}
+    candidates = [
+        row
+        for row in state["monsters"]
+        if int(row["health"]) > 0
+        and presentations.get(int(row["id"]), {})
+        .get("model_path", "")
+        .startswith("res://assets/imported/mobs/")
+        and _pick(state, int(row["id"]), int(row["life_sequence"])) is not None
+        and math.dist([row["x"], row["z"]], [position[0], position[2]]) < 6.0
+    ]
+    assert candidates, "Field route has no nearby pickable original mob"
+    target = min(
+        candidates, key=lambda row: math.dist([row["x"], row["z"]], [position[0], position[2]])
+    )
+    identity, life, health = int(target["id"]), int(target["life_sequence"]), int(target["health"])
+
+    def monster(snapshot):
+        return next((row for row in snapshot["monsters"] if int(row["id"]) == identity), {})
+
+    observed_before = {
+        side: max(
+            (
+                row.get("observed_at_ticks_ms", 0)
+                for row in snapshot().get("monster_health_history", [])
+            ),
+            default=0,
+        )
+        for side, snapshot in (("web", web), ("native", desktop))
+    }
+
+    def observed_damage(dead=False):
+        return all(
+            health_observed(snapshot(), identity, life, health, observed_before[side], dead=dead)
+            for side, snapshot in (("web", web), ("native", desktop))
+        )
+
+    point = _pick(state, identity, life)
+    page.mouse.click(*point)
+    wait(
+        "field_pointer_selects_original_mob_life",
+        lambda: (
+            web().get("combat_target", {}).get("target_id") == identity
+            and web()["combat_target"].get("target_life_sequence") == life
+        ),
+    )
+    page.keyboard.down("Space")
+    try:
+        wait(
+            "field_damage_replicates_to_both_exports",
+            observed_damage,
+            20,
+        )
+        wait(
+            "field_death_replicates_to_both_exports",
+            lambda: observed_damage(dead=True),
+            30,
+        )
+    finally:
+        page.keyboard.up("Space")
+    after = {"web": monster(web()), "native": monster(desktop())}
+    page.screenshot(path=str(output / "field-combat-browser.png"))
+    return {
+        "before": target,
+        "after": after,
+        "pointer": point,
+        "health_events": {
+            side: [
+                row
+                for row in snapshot().get("monster_health_history", [])
+                if row["id"] == identity
+                and row["life_sequence"] == life
+                and row["observed_at_ticks_ms"] > observed_before[side]
+            ]
+            for side, snapshot in (("web", web), ("native", desktop))
+        },
+    }
+
+
+def health_observed(snapshot, identity, life, health, after_ticks, *, dead=False):
+    """Keep short-lived corpse evidence across independently delayed subscriptions."""
+    return any(
+        row.get("id") == identity
+        and row.get("life_sequence") == life
+        and row.get("observed_at_ticks_ms", 0) > after_ticks
+        and (row.get("health") == 0 if dead else 0 <= row.get("health", health) < health)
+        for row in snapshot.get("monster_health_history", [])
+    )

@@ -1854,3 +1854,17 @@ centimetre distance calculation and loaded-terrain requirement are unchanged.
 The focused 2,800-row regression verifies one readiness call when one row is near,
 alongside range edges, malformed coordinates, terrain unload and latest-life
 re-entry. This is deterministic work-count evidence, not an FPS claim.
+
+Add `--field-combat` with `--mob-route` to exercise combat after reaching the
+original population. The current account fixture creates a Warrior; the replay
+equips its existing Sword+0 through the inventory UI and verifies the replicated
+appearance before combat. It chooses a living, pickable converted mob within six
+metres, clicks its actual screen projection, verifies server-confirmed selection
+of the exact instance/life, and holds Space until both exports observe damage
+and death. Input is released even on failure. Reports retain before/after rows,
+pointer coordinates, exact-life health subscription events and a browser capture.
+Damage/death checks require events newer than each client’s pre-attack baseline;
+corpse removal need not coincide across independently delayed clients. Combine with `--field-only` to omit
+unrelated account lifecycle checks; these actions affect the selected development
+world normally, without privileged damage or a database reset. This scenario
+covers the encountered mob, not every registered species or reward/drop rule.

@@ -5,6 +5,33 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Original field combat through exported input — 2026-09-08
+
+`--field-combat --field-only --mob-route <route>` now equips the current Warrior
+fixture's existing Sword+0 through the inventory UI, confirms both appearances,
+clicks a nearby original mob, verifies its exact selected life, and holds Space
+through replicated damage/death. No privileged damage or reset is used.
+`.local/mobs/field-combat-r3/report.json` passed all 47 exported checks: target
+900053, Hungry Stray Dog vnum 171, life 0, went from its full 101 HP to zero.
+Both clients recorded fresh health events 61, 41, 23, 3, 0. The reviewed browser
+capture shows the corpse and ongoing world rendering. No engine errors occurred.
+
+The first attempt left the starter sword unequipped and the player died before
+the mob. The second equipped replay killed the mob, but requiring both current
+snapshots to show a temporary corpse simultaneously timed out. The fixed checker
+uses each client's fresh exact-ID/life health subscription history, preserving
+short-lived observations across delayed clients. Two focused unit tests cover
+corpse removal, stale/wrong-life/wrong-ID events and nonlethal damage. Both earlier
+failed reports are preserved; they were not relabelled as passed.
+
+Evidence and frozen export/source hashes: `.local/mobs/field-combat-r3/acceptance.json`.
+This qualifies the selected encounter, not all species or reward/drop fidelity.
+Held attacks still show combo-queue rejection notices; loot visuals/overlapping
+labels need work. The run reused the previously audited debug-cost exports; the
+latest distance-before-terrain optimization remains separately native-qualified.
+Public endpoint and database schema are unchanged. Next: input pacing/presentation
+polish and an integrated public progress update.
+
 ## Reject distant rows before terrain lookup — 2026-09-08
 
 The shared presentation filter now performs the original distance calculation

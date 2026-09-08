@@ -23,7 +23,9 @@ Both exports now render original mobs on a generated hunting-ground route.
 The exported field/account lifecycle run now passes 110 checks. The focused performance replay now passes 42 checks; pausing test snapshots
 measured about 34 FPS in Chrome versus 18 with snapshots on this workstation.
 Hidden debug work and distant NPC instances are reduced. Release performance and
-field combat qualification remain pending. Nearby mob presentation now
+all-species combat qualification remain pending. The first original field encounter
+now passes 47 exported checks, including inventory equipment, pointer selection,
+held-Space damage and a full-health Hungry Stray Dog kill observed by both clients. Nearby mob presentation now
 uses the original view range; 41 focused Main-scene checks pass with a 2,800-row fixture. The [client package installer](docs/development.md#install-converted-mobs-in-the-client)
 now installs the selected 44-mob presentation catalog, 19 shared models and their
 projectile resources; the installed Main scene passed 31 controlled checks.
