@@ -30,6 +30,29 @@ validation must still validate actual sampled positions through the map adapter.
 not yet connected to live regeneration; the existing authored dog homes still
 use their current lifecycle.
 
+The reusable Rust scheduler is `server/src/regeneration.rs`. It plans a new entry
+state while a caller supplies successful spawn-owner tokens; the caller must
+persist that state and spawned rows in one transaction. Tokens increase and cannot
+be reused after destruction, preventing stale cleanup from freeing a replacement
+life's capacity. Failed placements consume only the current tick's bounded attempt;
+there is no catch-up burst after a delayed tick. This core is currently exercised
+offline and has not yet been connected to SpacetimeDB tables or combat cleanup.
+
+Run the offline lifecycle stress command with a freshly audited inventory:
+
+```sh
+cargo run --manifest-path server/Cargo.toml --offline --features yongan \
+  --example regeneration_stress -- /path/to/population.v1.json
+```
+
+This hash-checked scenario chooses each selector's largest group, assumes all
+placements succeed, destroys all initial owners and retains every follower before
+one refill. Yongan produces 945 initial units/2,963 members, 2,018 surviving
+followers and 4,981 members after refill. This deliberately exercises a population
+growth case, not expected live density. It does not test placement, collision,
+combat or subscriptions. The three `--test regeneration` Rust tests cover timing,
+failed placement, exact owner destruction, stale tokens and atomic state planning.
+
 `content/profiles/yongan-wildlife.json` explicitly selects Wild Dog 101, Wolf 102,
 Wild Boar 108, Bear 110 and Tiger 114. This is a candidate source inventory, not
 an installed runtime registry or a new spawn layout.

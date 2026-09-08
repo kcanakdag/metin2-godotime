@@ -22,6 +22,21 @@ evidence. No server or public deployment changed in this recheck.
 
 ### Original wildlife definitions in progress
 
+Regeneration core checkpoint: `server/src/regeneration.rs` now implements bounded
+entry refill planning, first-tick jitter, fixed subsequent intervals, failed-spawn
+retry and exact owner destruction. Monotonically allocated owner tokens reject
+reuse; stale destruction cannot release a replacement life. The core preserves
+the previous state when planning fails. Storage/spawn callbacks still need to be
+integrated transactionally with SpacetimeDB and combat destruction.
+
+The new `regeneration_stress` example exercises all 945 audited entries with
+largest-group selection and successful placements. It confirms 2,963 initial
+members can become 4,981 after all leaders are replaced while 2,018 followers
+survive. Three Rust lifecycle tests and scoped strict Clippy pass; tampered
+inventory is rejected. Final evidence is
+`.local/mobs/regeneration-core-acceptance-r1.json` and `regeneration-stress-r2.json`.
+This is offline lifecycle evidence, not map placement or live multiplayer proof.
+
 Regeneration contract checkpoint: the population compiler now records the
 reviewed overworld scheduling, group ownership and chained placement rules in
 `runtime_policy`. It fixes zero-interval entries incorrectly contributing to the

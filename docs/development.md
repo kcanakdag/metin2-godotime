@@ -43,6 +43,15 @@ both the unique Blender report and its expanded per-definition report. The exist
 gallery checks every alias against the actual shared GLB clips. See
 [mob conversion](mobs.md#convert-and-inspect-selected-wildlife) for report semantics.
 
+## Original population diagnostics
+
+For offline original-population lifecycle diagnostics, use
+`cargo run --manifest-path server/Cargo.toml --offline --features yongan --example
+regeneration_stress -- /path/to/population.v1.json`. The command checks inventory
+integrity and exercises leader destruction/refill using the reusable Rust scheduler.
+It never contacts a server or places actors on the map. See [mob regeneration](mobs.md)
+for the scenario assumptions and pending live integration.
+
 ## Classic character builds
 
 Use `make characters-build` for the selected four-class/eight-appearance pipeline,
