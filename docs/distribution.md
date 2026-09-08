@@ -5,7 +5,18 @@ Players do not install Blender, Rust, Python, Node or the SDK. The current
 development endpoint is [https://kcanakdag.com:8443](https://kcanakdag.com:8443/),
 on `159.195.213.9`. It may restart during updates.
 
-The current release is `20260908T180128789164Z`, source `4102a94`, on the same
+The current release is `20260908T181619790682Z`, source `e0e2b22`. It adds
+streamed-map UID restoration and preserves the protocol-24 database, accounts,
+characters and server module. Its web export and all 20 isolated map-section audits
+passed with no UID warnings. Evidence is in `.local/public-world-uids-r1/`;
+the targeted public browser/native field replay passed 43 checks. Ordinary browser
+reentry and WASD reached the native peer, with zero warning or error messages.
+Browser field and ordinary-world captures were reviewed. Short browser cadence
+measured 38.5 frames/sec with diagnostics and 60.1 without; this is not engine FPS
+or evidence of a performance gain from UID restoration. The unchanged native
+peer used the previous export. Full combat/lifecycle QA was not repeated.
+
+The preceding diagnostics release is `20260908T180128789164Z`, source `4102a94`, on the same
 protocol-24 database `mt2-public-population-v24-20260908`. The opt-in diagnostics
 update preserved the module, accounts and characters. Frozen exports, deployment
 log, served manifest and hashed acceptance are in `.local/public-probe-opt-in-r1/`.

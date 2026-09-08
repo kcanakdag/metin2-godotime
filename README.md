@@ -49,6 +49,11 @@ browser reentry and peer-observed movement without the probe. Short browser
 frame-cadence samples measured about 37 with capture and 59 without; this is not
 engine FPS or a controlled release benchmark. Accounts and characters were preserved.
 
+The latest public map-loading update also passes 43 focused two-client checks.
+Streamed scenery now restores its resource IDs before loading; the ordinary
+browser replay reports zero warnings or errors. All 20 isolated map sections pass
+texture/dependency audits. Accounts and characters remain unchanged.
+
 Items, future quests, mobs and classes follow the
 [data-based content authoring contract](docs/rebuild/content-authoring.md):
 versioned definitions select shared mechanics, with server-owned progress and

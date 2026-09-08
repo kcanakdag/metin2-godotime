@@ -20,8 +20,16 @@ the updated isolated audit, including original terrain data texels and prop text
 with no invalid-UID warnings. The native focused regression reports ten checks;
 GDScript formatting/lint and touched Python Ruff checks pass. These checks exercise
 real Godot resource loading, but not a rendered browser export or the connected
-editor. The public endpoint remains release `20260908T180128789164Z`; this loader
-change is local and awaits export/browser QA. No FPS improvement is claimed.
+editor. The fix is deployed as release `20260908T181619790682Z`, preserving the database
+and server module. `.local/public-world-uids-r1/acceptance.json` binds the export
+and final 43-check public report. Both clients completed the field route; ordinary
+browser reentry/WASD reached the native peer, with zero warnings/errors. Browser
+field and ordinary-world captures were reviewed. Short browser cadence was 38.5
+with diagnostics and 60.1 without; no FPS improvement from this fix is claimed.
+The native peer used the preceding export; native map loading was unchanged.
+The first export stopped on sandbox socket restrictions; the isolated retry with
+local socket access passed export and all 20 pack audits. Full combat/lifecycle
+QA was not repeated. The connected editor was not inspected.
 
 ## Opt-in export diagnostics — 2026-09-08
 
