@@ -5,6 +5,25 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Combat validation through private origins — 2026-09-08
+
+Target selection, physical attacker/victim snapshots, skill-area candidates,
+knockback/reactions, rewards and AI definition lookups now resolve a monster’s
+private origin before trusting its public state. The pure identity/stat check
+receives the resolved spawn; the previous independent fixed-spawn lookup in
+combat was removed. Simulation reuses the returned origin rather than querying
+it again. The origin resolver still accepts only the installed authored registry;
+this refactor prepares dynamic allocation without accepting arbitrary mob IDs.
+Application protocol remains 21 and no binding/schema changed.
+
+
+Evidence: `.local/mobs/combat-origin-r1/acceptance.json`, database
+`mt2-p2-combat-origin-r1-20260908`. All 108 two-account melee/lifecycle checks
+pass. The touched Rust areas pass 37 targeted checks (identity/presentation 2,
+physical damage 21, special area 8, knockback 6), plus strict library Clippy.
+No full-suite rerun was used. Dynamic population spawning and a live multi-target
+finisher replay are not established by these checks. Public protocol 19 is unchanged.
+
 ## Persisted spawn origins — 2026-09-08
 
 Protocol 21 adds the private `monster_origin` table, initialized from the installed

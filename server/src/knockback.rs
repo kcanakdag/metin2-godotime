@@ -151,10 +151,11 @@ pub(crate) fn is_front_hit(attacker_heading: f32, victim_heading: f32) -> bool {
 }
 
 fn reaction_definition(
+    ctx: &ReducerContext,
     monster: &crate::combat::Monster,
     phase: u8,
 ) -> Option<MonsterReactionDefinition> {
-    let definition = crate::combat::ordinary_definition(monster).ok()?;
+    let definition = crate::combat::ordinary_definition(ctx, monster).ok()?;
     match phase {
         REACTION_FRONT_KNOCKDOWN => Some(definition.front_knockdown),
         REACTION_FRONT_STANDUP => Some(definition.front_standup),
@@ -251,7 +252,7 @@ pub fn start(
         ctx.db.monster_reaction().monster_id().delete(monster.id);
         let ends_at_us = publish_reaction(
             monster,
-            reaction_definition(monster, phase)
+            reaction_definition(ctx, monster, phase)
                 .ok_or("The trusted monster reaction is missing.")?,
             start.now,
         )?;
@@ -324,7 +325,7 @@ fn advance_reaction(
         }
         return Ok(true);
     }
-    if reaction_definition(&victim, reaction.phase).is_none()
+    if reaction_definition(ctx, &victim, reaction.phase).is_none()
         || reaction.phase_started_at_us <= 0
         || reaction.phase_ends_at_us <= reaction.phase_started_at_us
     {
@@ -335,7 +336,7 @@ fn advance_reaction(
     }
     if reaction.phase == REACTION_FRONT_KNOCKDOWN {
         let started_at_us = reaction.phase_ends_at_us;
-        let standup = crate::combat::ordinary_definition(&victim)?.front_standup;
+        let standup = crate::combat::ordinary_definition(ctx, &victim)?.front_standup;
         let ends_at_us = publish_reaction(&mut victim, standup, started_at_us)?;
         reaction.phase = REACTION_FRONT_STANDUP;
         reaction.phase_started_at_us = started_at_us;

@@ -46,7 +46,7 @@ fn valid_target(ctx: &ReducerContext, target_id: u32, life: u32) -> Result<Monst
     if target.life_sequence != life || target.health == 0 {
         return Err("That combat target life is no longer active.".into());
     }
-    crate::combat::validate_monster(&target)?;
+    crate::combat::validate_monster(ctx, &target)?;
     Ok(target)
 }
 

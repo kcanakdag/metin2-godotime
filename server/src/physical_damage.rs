@@ -781,8 +781,11 @@ fn player_attacker_with_power(
     snapshot
 }
 
-fn mob_physical(monster: &Monster) -> Result<&'static definitions::MobPhysicalDefinition, String> {
-    crate::combat::validate_monster(monster)?;
+fn mob_physical(
+    ctx: &ReducerContext,
+    monster: &Monster,
+) -> Result<&'static definitions::MobPhysicalDefinition, String> {
+    crate::combat::validate_monster(ctx, monster)?;
     definitions::MOB_PHYSICAL_DEFINITIONS
         .iter()
         .find(|d| d.vnum == monster.definition_vnum && d.actor_id == monster.actor_id)
@@ -833,8 +836,8 @@ fn policy_victim(
     }
 }
 
-fn mob_victim(monster: &Monster) -> Result<PhysicalVictimSnapshot, String> {
-    crate::combat::validate_monster(monster)?;
+fn mob_victim(ctx: &ReducerContext, monster: &Monster) -> Result<PhysicalVictimSnapshot, String> {
+    crate::combat::validate_monster(ctx, monster)?;
     validate_generated_policy()?;
     if let Some(d) = crate::training_targets::validate(monster)? {
         return Ok(policy_victim(
@@ -847,7 +850,7 @@ fn mob_victim(monster: &Monster) -> Result<PhysicalVictimSnapshot, String> {
             d.fan_resistance,
         ));
     }
-    let d = mob_physical(monster)?;
+    let d = mob_physical(ctx, monster)?;
     Ok(mob_defender(d))
 }
 
@@ -973,7 +976,7 @@ pub fn roll_player_hit(
     captured: CapturedPlayerAttacker,
     monster: &Monster,
 ) -> Result<u16, String> {
-    roll_damage(ctx, player_attacker(captured)?, mob_victim(monster)?)
+    roll_damage(ctx, player_attacker(captured)?, mob_victim(ctx, monster)?)
 }
 
 pub fn roll_skill_hit(
@@ -985,7 +988,7 @@ pub fn roll_skill_hit(
     monster: &Monster,
 ) -> Result<u16, String> {
     let attacker = player_attacker(captured)?;
-    let victim = mob_victim(monster)?;
+    let victim = mob_victim(ctx, monster)?;
     let power = ctx
         .rng()
         .gen_range(attacker.power.power_min..=attacker.power.power_max);
@@ -1006,7 +1009,7 @@ pub fn roll_monster_hit(
     monster: &Monster,
     target: Identity,
 ) -> Result<u16, String> {
-    let definition = mob_physical(monster)?;
+    let definition = mob_physical(ctx, monster)?;
     let victim = player_victim(ctx, target)?;
     let defense = server_defense_grade(victim)
         .map_err(|error| format!("Invalid penetration defense: {error:?}"))?;
@@ -1014,7 +1017,7 @@ pub fn roll_monster_hit(
         u16::try_from(defense).map_err(|_| "Penetration defense exceeds supported range")?;
     let damage = roll_damage(ctx, mob_attacker(definition)?, victim)?;
     crate::mob_damage::finish_with_penetration(
-        crate::combat::ordinary_definition(monster)?.damage_kind,
+        crate::combat::ordinary_definition(ctx, monster)?.damage_kind,
         damage,
         0,
         definition.critical_percent,

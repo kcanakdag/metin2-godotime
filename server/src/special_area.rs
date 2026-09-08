@@ -248,10 +248,15 @@ fn clear_victims(ctx: &ReducerContext, character: Identity) {
 }
 
 fn seed_victims(ctx: &ReducerContext, area: &SpecialArea) {
-    let mut victims: Vec<_> = ctx.db.monster().iter().filter(trusted_victim).collect();
+    let mut victims: Vec<_> = ctx
+        .db
+        .monster()
+        .iter()
+        .filter(|monster| trusted_victim(ctx, monster))
+        .collect();
     victims.sort_by_key(|row| (row.id, row.life_sequence));
     for monster in victims {
-        let Some(center) = victim_center(&monster) else {
+        let Some(center) = victim_center(ctx, &monster) else {
             continue;
         };
         ctx.db.special_area_victim().insert(SpecialAreaVictim {
@@ -407,12 +412,12 @@ pub fn activate_due(ctx: &ReducerContext, now: i64) -> Result<(), String> {
     Ok(())
 }
 
-fn trusted_victim(monster: &crate::combat::Monster) -> bool {
-    monster.health > 0 && crate::combat::validate_monster(monster).is_ok()
+fn trusted_victim(ctx: &ReducerContext, monster: &crate::combat::Monster) -> bool {
+    monster.health > 0 && crate::combat::validate_monster(ctx, monster).is_ok()
 }
 
-fn victim_center(monster: &crate::combat::Monster) -> Option<[f64; 3]> {
-    let sphere = crate::combat::defending_sphere(monster);
+fn victim_center(ctx: &ReducerContext, monster: &crate::combat::Monster) -> Option<[f64; 3]> {
+    let sphere = crate::combat::defending_sphere(ctx, monster);
     if !sphere.local_center_y_m.is_finite()
         || !sphere.radius_m.is_finite()
         || sphere.radius_m <= 0.0
@@ -575,10 +580,15 @@ pub fn scan(ctx: &ReducerContext, now: i64) -> Result<(), String> {
         let definition = definitions::PLAYER_ONEHAND_COMBO[3]
             .special_area
             .ok_or("The trusted special-area definition is missing.")?;
-        let mut victims: Vec<_> = ctx.db.monster().iter().filter(trusted_victim).collect();
+        let mut victims: Vec<_> = ctx
+            .db
+            .monster()
+            .iter()
+            .filter(|monster| trusted_victim(ctx, monster))
+            .collect();
         victims.sort_by_key(|row| (row.id, row.life_sequence));
         for mut monster in victims {
-            let Some(current) = victim_center(&monster) else {
+            let Some(current) = victim_center(ctx, &monster) else {
                 continue;
             };
             let previous_row = matching_victim_row(ctx, &area, monster.id, monster.life_sequence);
@@ -593,7 +603,7 @@ pub fn scan(ctx: &ReducerContext, now: i64) -> Result<(), String> {
                 &area,
                 previous,
                 current,
-                crate::combat::defending_sphere(&monster).radius_m,
+                crate::combat::defending_sphere(ctx, &monster).radius_m,
             );
             let decision = victim_scan_decision(
                 area.hit_count,
