@@ -133,13 +133,13 @@ unused field. Finite Sura combo input times extending beyond the clip remain in
 source metadata; the playable common chain expires at clip end. Terminal input
 metadata never enables a fifth hit. Warrior/Ninja finishers use their original
 area-event timing and the shared validated area policy; the source's disabled
-ordinary 0..0 hit window cannot produce an extra hit. Sura and Shaman fourth hits currently
-use ordinary damage; their original force-15 knockback remains pending.
-Weapon attack-speed applies are not yet integrated; these chains use the
-unscaled authored clip and input times. Advanced
+ordinary 0..0 hit window cannot produce an extra hit. Sura and Shaman fourth hits use ordinary damage and source force-15
+knockback through the shared collision/recovery system. Sword+0/Fan+0 attack-speed
+applies now scale runtime clocks and playback using each server-captured rate;
+imported source timings remain unchanged. See the [timing contract](architecture.md). Advanced
 combo registrations are imported as data but are not enabled as gameplay.
 
-Skills, Ninja daggers/bows, Sura abilities, Shaman fans/bells, additional armor,
+Skills, Ninja daggers/bows, Sura abilities, Shaman bells, additional armor,
 hair styles and additional classes remain separate content/gameplay slices.
 The current catalog deliberately validates four classic classes and eight
 appearances. A future class extends those validators and the supported mechanics

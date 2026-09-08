@@ -504,6 +504,10 @@ func _observe_screen_waves(server_time_us: int) -> void:
 		var actor_position: Variant = _subscribed_position(row)
 		if not event is Dictionary or event.is_empty() or not actor_position is Vector3:
 			continue
+		event = event.duplicate()
+		event["activation_offset_us"] = preload("res://scripts/actors/attack_timing.gd").scaled_us(
+			int(event.get("activation_offset_us", 0)), int(row.get("attack_speed_percent", 100))
+		)
 		camera_rig.observe_screen_wave(
 			str(row.get("identity", "")),
 			row,

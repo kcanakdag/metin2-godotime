@@ -485,7 +485,7 @@ fn main() {
         .unwrap_or_else(|error| fail(format!("{} is not valid JSON ({error})", path.display())));
     let root = object(&payload, "root");
     if text(root, "schema", "root") != "mt2spacetime.trusted-action-definitions"
-        || u64_value(root, "schema_version", "root") != 7
+        || u64_value(root, "schema_version", "root") != 8
         || text(root, "profile_id", "root") != PROFILE
         || text(root, "time_unit", "root") != "microsecond"
         || text(root, "linear_unit", "root") != "meter"

@@ -26,7 +26,7 @@ fixture is simulated. A separate **103-check authenticated Web/Linux run**
 qualifies approach, dialogue, Close/Escape, WASD and account lifecycle. Another
 59 live checks cover private sessions, rejection, expiry and reconnect.
 The updated development build is served at **http://127.0.0.1:8186** against
-`mt2-p2-class-effects-r1-20260908`. Click the City Guard to approach and talk;
+`mt2-p2-attack-speed-r1-20260908`. Click the City Guard to approach and talk;
 Close or Escape dismisses the dialogue, and movement resumes normally.
 Character creation shows Warrior, Ninja, Sura and Shaman together, with the
 selected class in front, original intro idle animations, hair, titles and
@@ -45,12 +45,15 @@ classes without such events receive no invented shake. This follow-up passes
 Sura and Shaman fourth hits now knock surviving mobs back using their original
 GREAT-hit metadata and the shared collision/recovery system. Mob attacks also
 restore the correct normal animation after knockdown.
-Trees, new mob types, additional weapon modes, attack-speed modifiers and
-abilities remain pending. The local build uses a fresh
+Sword+0 and Fan+0 now apply their original +22/+26 attack-speed bonuses to
+server combat timing and client playback. Status and item tooltips expose those
+values; equipment changes cannot retime an accepted attack. This slice passes
+144 live two-client checks, 87 rendered actor checks and 106 Chrome/Linux checks.
+Trees, new mob types, additional weapon modes and abilities remain pending. The local build uses a fresh
 character database; previous databases and auth accounts are preserved. The public
 endpoint remains unchanged.
 
-The current worktree is protocol 14 / trusted content schema 7. Item actions
+The current worktree is protocol 15 / trusted content schema 8 (item registry schema 2). Item actions
 carry the server item's revision, rejecting stale/replayed mutations. Quantity
 changes have a private transactional audit history and an offline reconciliation
 tool. See the [item security contract](docs/architecture.md#item-integrity-and-replay-protection).

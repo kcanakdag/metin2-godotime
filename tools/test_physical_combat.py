@@ -164,6 +164,8 @@ def main() -> None:
             "display_attack_min",
             "display_attack_max",
             "display_defense",
+            "display_attack_speed",
+            "attack_speed_percent",
             "pending_attack_source_generation",
         )
         if any(name not in schema for name in required_schema):
@@ -173,6 +175,10 @@ def main() -> None:
             stage = Path(scratch)
             stage_project(stage)
             if options.scenario == "classes":
+                (stage / "scripts/actors").mkdir(parents=True, exist_ok=True)
+                (stage / "scripts/actors/attack_timing.gd").write_bytes(
+                    (ROOT / "client/scripts/actors/attack_timing.gd").read_bytes()
+                )
                 (stage / "tests/character-catalog.json").write_bytes(
                     (ROOT / "client/assets/imported/characters/catalog.v1.json").read_bytes()
                 )

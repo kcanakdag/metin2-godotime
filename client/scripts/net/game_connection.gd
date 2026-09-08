@@ -30,7 +30,7 @@ signal combat_target_changed(info: Dictionary)
 signal npc_interaction_changed(info: Dictionary)
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
-const EXPECTED_PROTOCOL_VERSION := 14
+const EXPECTED_PROTOCOL_VERSION := 15
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
 const TABLES := [

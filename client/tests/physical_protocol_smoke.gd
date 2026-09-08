@@ -1,5 +1,5 @@
 extends SceneTree
-## Isolated protocol-14 gate check; no generated schema or server is required.
+## Isolated protocol-15 gate check; no generated schema or server is required.
 
 var _checks := 0
 var _failed := false
@@ -10,23 +10,23 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 14, "client expects protocol 14")
+	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 15, "client expects protocol 15")
 	var legacy := GameConnection.new()
 	legacy._session = 1
-	legacy.world_info = {"protocol_version": 13}
+	legacy.world_info = {"protocol_version": 14}
 	legacy._on_subscription_applied(1)
-	_check(legacy.state == "error", "protocol 13 is rejected before joining")
+	_check(legacy.state == "error", "protocol 14 is rejected before joining")
 	_check(
 		legacy.state_message.contains("protocol mismatch"),
-		"protocol-13 rejection explains the incompatible client/server contract"
+		"protocol-14 rejection explains the incompatible client/server contract"
 	)
 	legacy.queue_free()
 
 	var current := GameConnection.new()
 	current._session = 1
-	current.world_info = {"protocol_version": 14}
+	current.world_info = {"protocol_version": 15}
 	current._on_subscription_applied(1)
-	_check(current.state != "error", "protocol 14 clears the protocol gate")
+	_check(current.state != "error", "protocol 15 clears the protocol gate")
 	current.queue_free()
 	if not _failed:
 		print("PHYSICAL_PROTOCOL_SMOKE PASS ", _checks, " checks")

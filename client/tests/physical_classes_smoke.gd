@@ -307,6 +307,7 @@ func _class_combo(
 ) -> bool:
 	var id := client.local_identity
 	var label := "class_combo_%d_%d" % [class_id, sex]
+	var speed := 126 if class_id == 3 else 122
 	var first := _motion(class_id, sex, true)
 	var sequence := int(_player(observer, id).attack_sequence)
 	if not await _raw_success(client, "perform_attack", [], [], label + "_start"):
@@ -316,16 +317,22 @@ func _class_combo(
 		return _check(label + "_first_step_replicates", false)
 	_check(
 		label + "_source_duration",
-		int(action.action_ends_at_us) - int(action.action_started_at_us) == int(first.duration_us)
+		(
+			(
+				int(action.action_ends_at_us) - int(action.action_started_at_us)
+				== _scaled_time(int(first.duration_us), speed)
+			)
+			and int(action.get("attack_speed_percent", 0)) == speed
+		)
 	)
 	for step in range(1, 4):
 		var motion := _motion(class_id, sex, true, step)
 		var input: Dictionary = motion.combo
 		var start := int(action.action_started_at_us)
 		# Exercise both queued and immediate links at the authored class windows.
-		var offset := int(input.pre_input_us) + 60000
+		var offset := _scaled_time(int(input.pre_input_us), speed) + 40000
 		if step == 2:
-			offset = int(input.direct_input_us) + 40000
+			offset = _scaled_time(int(input.direct_input_us), speed) + 30000
 		if not await _wait_server_time(observer, start + offset):
 			return _check(label + "_input_window", false)
 		if not await _raw_success(client, "perform_attack", [], [], label + "_link_%d" % step):
@@ -342,8 +349,11 @@ func _class_combo(
 		_check(
 			label + "_duration_%d" % (step + 1),
 			(
-				int(action.action_ends_at_us) - int(action.action_started_at_us)
-				== int(next.duration_us)
+				(
+					int(action.action_ends_at_us) - int(action.action_started_at_us)
+					== _scaled_time(int(next.duration_us), speed)
+				)
+				and int(action.get("attack_speed_percent", 0)) == speed
 			)
 		)
 		_class_actions.append(
@@ -411,6 +421,7 @@ func _class_attack(
 	client: GameConnection, observer: GameConnection, class_id: int, sex: int, armed: bool
 ) -> bool:
 	var id := client.local_identity
+	var speed := (126 if class_id == 3 else 122) if armed else 100
 	var motion := _motion(class_id, sex, armed)
 	var before := int(_player(observer, id).attack_sequence)
 	var result := await _raw_result(client, "perform_attack", [], [])
@@ -423,8 +434,20 @@ func _class_attack(
 		return false
 	_check(
 		label + "_source_duration",
-		int(action.action_ends_at_us) - int(action.action_started_at_us) == int(motion.duration_us)
+		(
+			(
+				int(action.action_ends_at_us) - int(action.action_started_at_us)
+				== _scaled_time(int(motion.duration_us), speed)
+			)
+			and int(action.get("attack_speed_percent", 0)) == speed
+		)
 	)
+	_check(
+		label + "_owner_speed_projection",
+		int(client.progression_for(id).get("display_attack_speed", 0)) == speed
+	)
+	if armed:
+		await _captured_speed_survives_unequip(client, observer, class_id, action)
 	_class_actions.append({"class_id": class_id, "sex": sex, "armed": armed, "action": action})
 	return _check(
 		label + "_finishes", await _wait_action_end(observer, id, int(action.action_ends_at_us))
@@ -526,4 +549,40 @@ func _class_reconnect(male: GameConnection, female: GameConnection) -> bool:
 	return _check(
 		"class_peer_disconnect_removes_presence",
 		await _wait_until(func(): return _player(male, peer_id).is_empty())
+	)
+
+
+func _scaled_time(source_us: int, speed: int) -> int:
+	return preload("res://scripts/actors/attack_timing.gd").scaled_us(source_us, speed)
+
+
+func _captured_speed_survives_unequip(
+	client: GameConnection, observer: GameConnection, class_id: int, action: Dictionary
+) -> void:
+	var id := client.local_identity
+	var item := _owned_starter_weapon(client, id, class_id)
+	client.unequip_item(int(item.id), 0)
+	_check(
+		"unequip_changes_next_attack_speed",
+		await _wait_until(
+			func(): return int(client.progression_for(id).get("display_attack_speed", 0)) == 100
+		)
+	)
+	var current := _player(observer, id)
+	_check(
+		"active_speed_and_deadline_are_frozen",
+		(
+			int(current.attack_sequence) == int(action.attack_sequence)
+			and int(current.get("attack_speed_percent", 0)) == int(action.attack_speed_percent)
+			and int(current.action_ends_at_us) == int(action.action_ends_at_us)
+		)
+	)
+	await _wait_action_end(observer, id, int(action.action_ends_at_us))
+	client.equip_item(int(item.id))
+	var speed := 126 if class_id == 3 else 122
+	_check(
+		"reequip_restores_next_attack_speed",
+		await _wait_until(
+			func(): return int(client.progression_for(id).get("display_attack_speed", 0)) == speed
+		)
 	)

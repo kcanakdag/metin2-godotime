@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 RECOVERY_POLICY = {
     "id": "item.recovery.pool.v1",
     "interval_us": 1_000_000,
@@ -28,6 +28,7 @@ FIELDS = {
     "minimum_level",
     "allowed_classes",
     "allowed_sexes",
+    "attack_speed_bonus",
     "kind",
     "weapon",
     "recovery",
@@ -49,7 +50,7 @@ def _object(value: object, fields: set[str], label: str) -> dict:
 
 def validate_catalog(catalog: object) -> None:
     catalog = _object(catalog, {"schema_version", "recovery_policy", "items"}, "item catalog")
-    integer(catalog["schema_version"], "item catalog schema", 1, SCHEMA_VERSION)
+    integer(catalog["schema_version"], "item catalog schema", SCHEMA_VERSION, SCHEMA_VERSION)
     policy = _object(catalog["recovery_policy"], set(RECOVERY_POLICY), "recovery policy")
     if any(type(policy[k]) is not type(v) or policy[k] != v for k, v in RECOVERY_POLICY.items()):
         raise ValueError("Unsupported recovery policy")
@@ -72,6 +73,7 @@ def validate_catalog(catalog: object) -> None:
         vnums.add(vnum)
         previous_vnum = vnum
         integer(item["revision"], content_id + " revision", 1, 65535)
+        integer(item["attack_speed_bonus"], content_id + " attack speed", 0, 1000)
         integer(item["height"], content_id + " height", 1, 9)
         integer(item["stack_limit"], content_id + " stack", 1, 200)
         integer(item["minimum_level"], content_id + " level", 0, 255)
@@ -129,7 +131,7 @@ def validate_catalog(catalog: object) -> None:
 
 def compile_catalog(selection: dict, proto_text: str, names_text: str, source: dict) -> dict:
     _object(selection, {"schema_version", "items"}, "item selection")
-    integer(selection["schema_version"], "item selection schema", 1, SCHEMA_VERSION)
+    integer(selection["schema_version"], "item selection schema", 1, 1)
     if not isinstance(selection["items"], list) or not selection["items"]:
         raise ValueError("An explicit item selection is required")
     rows: dict[int, list[tuple[int, list[str]]]] = {}
@@ -171,6 +173,7 @@ def compile_catalog(selection: dict, proto_text: str, names_text: str, source: d
             - sum(1 << index for flag, index in class_flags.items() if flag in flags),
             "allowed_sexes": 3
             - sum(1 << index for flag, index in sex_flags.items() if flag in flags),
+            "attack_speed_bonus": 0,
             "weapon": None,
             "recovery": None,
             "source": {**source, "row_number": number},
@@ -180,6 +183,11 @@ def compile_catalog(selection: dict, proto_text: str, names_text: str, source: d
             and row[3] in {"WEAPON_SWORD", "WEAPON_FAN"}
             and row[7] == "WEAR_WEAPON"
         ):
+            for apply_type, apply_value in zip(row[18:24:2], row[19:24:2], strict=True):
+                if apply_type == "APPLY_ATT_SPEED":
+                    item["attack_speed_bonus"] += int(apply_value)
+                elif apply_type != "APPLY_NONE" or int(apply_value) != 0:
+                    raise ValueError(f"Item {vnum} has an unsupported weapon apply")
             item["kind"] = "weapon"
             item["weapon"] = {
                 "class": {"WEAPON_SWORD": "sword", "WEAPON_FAN": "fan"}[row[3]],

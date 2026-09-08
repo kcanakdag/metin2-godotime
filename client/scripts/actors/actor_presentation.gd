@@ -41,8 +41,11 @@ func play_action(
 	sequence: int,
 	started_at_us: int = 0,
 	server_time_us: int = 0,
-	force := false
+	force := false,
+	attack_speed_percent: int = 100
 ) -> bool:
+	if attack_speed_percent < 100 or attack_speed_percent > 170:
+		return _fail("Actor attack speed is outside the supported range.")
 	var motion: Dictionary = catalog.motion(actor_id, mode_id, action_id, action)
 	if motion.is_empty() and not action.is_empty():
 		motion = catalog.select_motion(actor_id, mode_id, action, sequence)
@@ -68,11 +71,14 @@ func play_action(
 	current_motion = motion
 	current_mode = resolved_mode
 	current_sequence = sequence
+	animation_player.speed_scale = float(attack_speed_percent) / 100.0
 	animation_player.play(_clips[clip_name], 0.12)
 	var duration_seconds := float(int(motion.get("duration_us", 0))) / 1_000_000.0
 	var offset_seconds := 0.0
 	if started_at_us > 0 and server_time_us >= started_at_us:
-		offset_seconds = float(server_time_us - started_at_us) / 1_000_000.0
+		offset_seconds = (
+			float(server_time_us - started_at_us) / 1_000_000.0 * animation_player.speed_scale
+		)
 	if duration_seconds > 0.0 and offset_seconds > 0.0:
 		if bool(motion.get("loop", false)):
 			offset_seconds = fmod(offset_seconds, duration_seconds)
@@ -153,6 +159,7 @@ func snapshot() -> Dictionary:
 		"animation": str(animation_player.current_animation) if animation_player else "",
 		"animation_position":
 		animation_player.current_animation_position if animation_player else 0.0,
+		"animation_speed": animation_player.speed_scale if animation_player else 1.0,
 		"sequence": current_sequence,
 		"weapon_vnum": weapon_vnum,
 		"equipment_attached": is_instance_valid(_equipment),

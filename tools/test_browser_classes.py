@@ -1,5 +1,7 @@
 """Rendered original class creation and ordinary equipment/attack input checks."""
 
+from math import isclose
+
 from test_browser_actors import rendered_actor
 
 
@@ -92,6 +94,7 @@ def exercise_class_world(
         wait(f"{label}_inventory_closes", lambda: not web()["ui"]["visible"])
     before = local()["attack_sequence"]
     wave_before = int(web().get("screen_wave", {}).get("trigger_count", 0))
+    speed = {0: 1.0, 10: 1.22, 7000: 1.26}[weapon_vnum]
     expected = actor_id + (f".{mode}.combo_1" if weapon_vnum else ".general.normal_attack")
 
     def matching_attack():
@@ -105,6 +108,8 @@ def exercise_class_world(
             and remote.get("action_id") == current.get("action_id")
             and bool(current.get("animation"))
             and remote.get("animation") == current.get("animation")
+            and isclose(current.get("animation_speed", 0), speed, abs_tol=1e-6)
+            and isclose(remote.get("animation_speed", 0), speed, abs_tol=1e-6)
         )
 
     page.keyboard.down("Space")
@@ -121,7 +126,9 @@ def exercise_class_world(
                 wait(
                     f"{label}_held_space_reaches_step_{step}_on_both_clients",
                     lambda action=action: all(
-                        row.get("action_id") == action and bool(row.get("animation"))
+                        row.get("action_id") == action
+                        and bool(row.get("animation"))
+                        and isclose(row.get("animation_speed", 0), speed, abs_tol=1e-6)
                         for row in (local(), peer())
                     ),
                     5,

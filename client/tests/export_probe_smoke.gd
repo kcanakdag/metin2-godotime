@@ -97,7 +97,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 14, "client accepts only protocol 14")
+	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 15, "client accepts only protocol 15")
 	# Use the real scene without entering the tree, so this verifies the probe's
 	# node lookup without starting account flow or a game connection.
 	var scene := load("res://scenes/main.tscn") as PackedScene

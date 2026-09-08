@@ -31,7 +31,7 @@ func load_required(path := MANIFEST_PATH) -> bool:
 func load_document(document: Dictionary) -> bool:
 	_items = {}
 	error_message = ""
-	if document.size() != 2 or document.get("schema_version") != 1:
+	if document.size() != 2 or document.get("schema_version") != 2:
 		return _fail("Unsupported item catalog schema.")
 	var rows: Variant = document.get("items")
 	if not rows is Array or rows.is_empty() or rows.size() > 65535:
@@ -59,6 +59,8 @@ func definition(vnum: int) -> Dictionary:
 
 
 func _valid_item(row: Dictionary) -> bool:
+	if not _integer(row.get("attack_speed_bonus"), 0, 1000):
+		return false
 	var fields := [
 		"id",
 		"revision",
@@ -70,6 +72,7 @@ func _valid_item(row: Dictionary) -> bool:
 		"minimum_level",
 		"allowed_classes",
 		"allowed_sexes",
+		"attack_speed_bonus",
 		"kind",
 		"weapon",
 		"recovery"

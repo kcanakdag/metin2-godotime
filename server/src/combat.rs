@@ -299,10 +299,17 @@ pub fn start_player_action(
     now: i64,
 ) -> Result<(), String> {
     validate_player_action_start(ctx, controller, plan.definition, plan.target_id != 0, now)?;
+    let speed = crate::attack_timing::equipped_speed(ctx, controller.identity)?;
     let attack_until_us = now
-        .checked_add(plan.definition.duration_us)
+        .checked_add(crate::attack_timing::scaled_us(
+            plan.definition.duration_us,
+            speed,
+        )?)
         .ok_or("Attack timestamp is outside the supported range.")?;
-    let next_attack_us = fresh_action_not_before(now, plan.definition)?;
+    let source_cooldown = fresh_action_not_before(0, plan.definition)?;
+    let next_attack_us = now
+        .checked_add(crate::attack_timing::scaled_us(source_cooldown, speed)?)
+        .ok_or("Attack timestamp is outside the supported range.")?;
     let action_revision = controller
         .action_revision
         .checked_add(1)
@@ -348,10 +355,16 @@ pub fn start_player_action(
         (0, 0)
     } else {
         (
-            now.checked_add(plan.definition.hit_start_us)
-                .ok_or("Attack hit timestamp is outside the supported range.")?,
-            now.checked_add(plan.definition.hit_end_us)
-                .ok_or("Attack hit timestamp is outside the supported range.")?,
+            now.checked_add(crate::attack_timing::scaled_us(
+                plan.definition.hit_start_us,
+                speed,
+            )?)
+            .ok_or("Attack hit timestamp is outside the supported range.")?,
+            now.checked_add(crate::attack_timing::scaled_us(
+                plan.definition.hit_end_us,
+                speed,
+            )?)
+            .ok_or("Attack hit timestamp is outside the supported range.")?,
         )
     };
 
@@ -359,6 +372,7 @@ pub fn start_player_action(
     controller.direction_x = 0.0;
     controller.direction_z = 0.0;
     controller.attack_until_us = attack_until_us;
+    controller.attack_speed_percent = speed;
     controller.next_attack_us = next_attack_us;
     controller.action_revision = action_revision;
     controller.pending_attack_target_id = plan.target_id;
@@ -410,6 +424,7 @@ pub fn start_player_action(
         captured_attacker,
     )?;
     player.attack_sequence = attack_sequence;
+    player.attack_speed_percent = speed;
     player.attack_action_id = plan.definition.id.into();
     player.action_started_at_us = now;
     player.action_ends_at_us = attack_until_us;
@@ -1303,6 +1318,7 @@ mod tests {
             mode: 0,
             last_input_us: 0,
             attack_until_us: 2_000_000,
+            attack_speed_percent: 100,
             next_attack_us: 0,
             action_revision: 5,
             pending_attack_target_id: 7,

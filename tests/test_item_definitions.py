@@ -31,6 +31,9 @@ class ItemDefinitionsTests(unittest.TestCase):
             (sword["height"], sword["stack_limit"], sword["allowed_classes"]), (2, 1, 7)
         )
         self.assertEqual(sword["weapon"]["power_max"], 15)
+        self.assertEqual(
+            [item["attack_speed_bonus"] for item in self.catalog["items"]], [22, 26, 0, 0]
+        )
         self.assertEqual((fan["height"], fan["allowed_classes"], fan["allowed_sexes"]), (1, 8, 3))
         self.assertEqual(
             fan["weapon"], {"class": "fan", "power_min": 11, "power_max": 15, "refine_attack": 0}
@@ -63,6 +66,9 @@ class ItemDefinitionsTests(unittest.TestCase):
 
     def test_numeric_bounds_and_unsupported_handlers_fail_closed(self) -> None:
         mutations = [
+            ("attack_speed_bonus", -1),
+            ("attack_speed_bonus", True),
+            ("attack_speed_bonus", 1001),
             ("height", 0),
             ("height", 10),
             ("stack_limit", 201),

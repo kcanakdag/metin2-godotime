@@ -1,7 +1,8 @@
 # Extensible content authoring
 
-The first typed item registry is implemented for the selected Sword and two
-red potions. Quest execution, general class/mob registries and content packs
+The first typed item registry is implemented for the selected Sword, Fan and two
+red potions. The classic character catalog is also implemented. Quest execution,
+general mob registries and content packs
 remain upcoming work. These requirements continue to govern that expansion.
 
 Adding content that uses supported mechanics must require definitions and assets,
@@ -22,8 +23,11 @@ deferred by the current implementation priorities.
 The profile's `item_catalog` has schema version 1 and explicit selectors with
 `id`, `revision`, `vnum` and `icon`. `tools/item_definitions.py` resolves each
 selector against the pinned proto and English name catalogs. It derives height,
-stack limits, class/sex/level requirements, sword power and HP/SP recovery
-parameters. `server/build_items.rs` independently validates numeric bounds,
+stack limits, class/sex/level requirements, sword/fan power, attack-speed bonuses
+and HP/SP recovery parameters. Generated item catalogs use schema 2; the
+selector profile remains schema 1. Equipped weapon bonuses feed the shared
+server-captured attack clock, so another supported weapon can set its speed
+through its proto apply without an item-vnum branch. `server/build_items.rs` independently validates numeric bounds,
 handlers, uniqueness and links to combat/reward definitions before generating
 typed Rust records. The client receives public capabilities without source
 archives, provenance records or mutable effect pools.
@@ -37,7 +41,7 @@ consumption, timed recovery, rejection and disconnect without replay.
 
 New weapon definitions still need compatible imported presentation/motion data.
 New item mechanics need a handler and explicit validation. Other equipment
-slots, applies/attributes, prices, upgrades, general loadout authoring and
+slots, additional applies/attributes, prices, upgrades, general loadout authoring and
 item-instance migration tooling remain pending. Current instances resolve by
 stable vnum under the published definitions; incompatible identity/type/grid/stack
 changes require an explicit migration or fresh database.

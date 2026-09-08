@@ -49,7 +49,7 @@ SCHEMA = "mt2spacetime.normalized-content-manifest"
 SERVER_SCHEMA = "mt2spacetime.trusted-action-definitions"
 CLIENT_SCHEMA = "mt2spacetime.presentation-manifest"
 SCHEMA_VERSION = 1
-SERVER_SCHEMA_VERSION = 7
+SERVER_SCHEMA_VERSION = 8
 COMPILER_VERSION = "content-compiler-v1.6.0"
 DEFAULT_PROFILE = ROOT / "content/profiles/p0-warrior-dog.json"
 

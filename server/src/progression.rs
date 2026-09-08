@@ -31,6 +31,7 @@ pub struct CharacterProgression {
     pub display_attack_min: u16,
     pub display_attack_max: u16,
     pub display_defense: u16,
+    pub display_attack_speed: u16,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -208,6 +209,7 @@ pub fn create_character(
         display_attack_min: 0,
         display_attack_max: 0,
         display_defense: 0,
+        display_attack_speed: 100,
     };
     refresh_display_values(ctx, character_id, &mut row)?;
     validate_row(&row)?;
@@ -301,6 +303,7 @@ fn refresh_display_values(
     row.display_attack_min = display.attack_min;
     row.display_attack_max = display.attack_max;
     row.display_defense = display.defense;
+    row.display_attack_speed = crate::attack_timing::equipped_speed(ctx, character_id)?;
     Ok(())
 }
 
@@ -665,6 +668,7 @@ mod tests {
             display_attack_min: 10,
             display_attack_max: 10,
             display_defense: 5,
+            display_attack_speed: 100,
         }
     }
 

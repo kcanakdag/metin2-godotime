@@ -1,6 +1,8 @@
 extends RefCounted
 ## Held attack sends ordinary intents at source windows observed from server actions.
 
+const AttackTiming = preload("res://scripts/actors/attack_timing.gd")
+
 var held := false
 var _last_sequence := -1
 var _last_sent_ms := 0
@@ -49,10 +51,13 @@ func _in_combo_window(
 	var combo: Variant = motion.get("combo")
 	if not combo is Dictionary:
 		return false
+	var speed := int(row.get("attack_speed_percent", 100))
+	if speed < 100 or speed > 170:
+		return false
 	var elapsed := server_us - int(row.get("action_started_at_us", 0))
 	if (
-		elapsed <= int(combo.get("pre_input_us", 0)) + 30000
-		or elapsed > int(combo.get("input_limit_us", 0))
+		elapsed <= AttackTiming.scaled_us(int(combo.get("pre_input_us", 0)), speed) + 30000
+		or elapsed > AttackTiming.scaled_us(int(combo.get("input_limit_us", 0)), speed)
 	):
 		return false
 	return true

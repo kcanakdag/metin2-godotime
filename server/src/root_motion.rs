@@ -228,6 +228,13 @@ fn advance_character(
         clear(control);
         return Ok(());
     }
+    let root = RootMotionDefinition {
+        duration_us: crate::attack_timing::scaled_us(
+            root.duration_us,
+            control.attack_speed_percent,
+        )?,
+        ..root
+    };
     let Some(mut player) = ctx.db.player().identity().find(control.identity) else {
         clear(control);
         return Ok(());
@@ -389,6 +396,27 @@ mod tests {
             active_action_heading_state(0, 20, 20, 1_000_000, 150_000, 0.75),
             None
         );
+    }
+
+    #[test]
+    fn attack_speed_preserves_each_root_endpoint() {
+        for action in crate::characters::root_actions() {
+            let Some(original) = action.root_motion else {
+                continue;
+            };
+            for speed in [100, 122, 126, 170] {
+                let root = RootMotionDefinition {
+                    duration_us: crate::attack_timing::scaled_us(original.duration_us, speed)
+                        .unwrap(),
+                    ..original
+                };
+                let end =
+                    advance_position(root, 0.0, 600.0, 575.0, 0, root.duration_us, &[]).unwrap();
+                assert!((f64::from(end.x - 600.0) - original.endpoint_x_m).abs() < 0.002);
+                assert!((f64::from(end.z - 575.0) - original.endpoint_z_m).abs() < 0.002);
+                assert_eq!(end.consumed_elapsed_us, root.duration_us);
+            }
+        }
     }
 
     #[test]

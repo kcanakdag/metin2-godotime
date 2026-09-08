@@ -1040,6 +1040,14 @@
                   "name": {
                     "some": "display_defense"
                   }
+                },
+                {
+                  "algebraic_type": {
+                    "U16": []
+                  },
+                  "name": {
+                    "some": "display_attack_speed"
+                  }
                 }
               ]
             }
@@ -1343,6 +1351,14 @@
                   },
                   "name": {
                     "some": "attack_until_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U16": []
+                  },
+                  "name": {
+                    "some": "attack_speed_percent"
                   }
                 },
                 {
@@ -2871,6 +2887,14 @@
                   },
                   "name": {
                     "some": "attack_sequence"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U16": []
+                  },
+                  "name": {
+                    "some": "attack_speed_percent"
                   }
                 },
                 {

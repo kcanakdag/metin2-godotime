@@ -295,7 +295,10 @@ pub fn start(
         return Err("The trusted special-area action is invalid.".into());
     }
     let activation_at_us = now
-        .checked_add(area.activation_offset_us)
+        .checked_add(crate::attack_timing::scaled_us(
+            area.activation_offset_us,
+            controller.attack_speed_percent,
+        )?)
         .ok_or("Special-area timestamp is outside the supported range.")?;
     let expires_at_us = activation_at_us
         .checked_add(area.duration_us)

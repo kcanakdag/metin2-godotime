@@ -25,6 +25,7 @@ const table_names: Array[String] = ['character_progression']
 @export var display_attack_min: int
 @export var display_attack_max: int
 @export var display_defense: int
+@export var display_attack_speed: int
 
 #BSATN metadata
 const primary_key: StringName = &'character_id'
@@ -47,7 +48,8 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"max_sp": "U32",
 	"display_attack_min": "U16",
 	"display_attack_max": "U16",
-	"display_defense": "U16"
+	"display_defense": "U16",
+	"display_attack_speed": "U16"
 }
 
 ## 1. character_id: PackedByteArray[br]
@@ -69,7 +71,8 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 ## 17. display_attack_min: int[br]
 ## 18. display_attack_max: int[br]
 ## 19. display_defense: int[br]
-static func create(p_character_id: PackedByteArray, p_account: PackedByteArray, p_character_class: int, p_level: int, p_experience: int, p_next_exp: int, p_level_step: int, p_unspent_stat_points: int, p_strength: int, p_vitality: int, p_dexterity: int, p_intelligence: int, p_random_hp: int, p_random_sp: int, p_current_sp: int, p_max_sp: int, p_display_attack_min: int, p_display_attack_max: int, p_display_defense: int) -> GameCharacterProgression:
+## 20. display_attack_speed: int[br]
+static func create(p_character_id: PackedByteArray, p_account: PackedByteArray, p_character_class: int, p_level: int, p_experience: int, p_next_exp: int, p_level_step: int, p_unspent_stat_points: int, p_strength: int, p_vitality: int, p_dexterity: int, p_intelligence: int, p_random_hp: int, p_random_sp: int, p_current_sp: int, p_max_sp: int, p_display_attack_min: int, p_display_attack_max: int, p_display_defense: int, p_display_attack_speed: int) -> GameCharacterProgression:
 	var result: GameCharacterProgression = GameCharacterProgression.new()
 	result.character_id = p_character_id
 	result.account = p_account
@@ -90,4 +93,5 @@ static func create(p_character_id: PackedByteArray, p_account: PackedByteArray, 
 	result.display_attack_min = p_display_attack_min
 	result.display_attack_max = p_display_attack_max
 	result.display_defense = p_display_defense
+	result.display_attack_speed = p_display_attack_speed
 	return result

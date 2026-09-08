@@ -24,6 +24,7 @@ func _run() -> void:
 	var snapshot: Dictionary = status.snapshot()
 	_check(snapshot.values.attack == "28-31", "renders initial equipped owner attack range")
 	_check(snapshot.values.defense == "5", "renders initial owner display defense")
+	_check(snapshot.values.attack_speed == "122", "renders server-owned attack speed")
 	status.set_progression(_display_row(6, 10, 10, 5))
 	_check(status.snapshot().values.attack == "10", "renders unarmed one-value owner attack")
 	_check(
@@ -49,6 +50,10 @@ func _run() -> void:
 	_check(
 		_tooltip_text(tooltip).contains("Attack Value 13-15"),
 		"Sword+0 tooltip uses public item physical range"
+	)
+	_check(
+		_tooltip_text(tooltip).contains("Attack Speed +22%"),
+		"sword tooltip uses imported speed bonus"
 	)
 	tooltip.show_item({"vnum": 27001})
 	_check(
@@ -126,6 +131,7 @@ func _display_row(strength: int, attack_min: int, attack_max: int, defense: int)
 		"display_attack_min": attack_min,
 		"display_attack_max": attack_max,
 		"display_defense": defense,
+		"display_attack_speed": 122,
 	}
 
 

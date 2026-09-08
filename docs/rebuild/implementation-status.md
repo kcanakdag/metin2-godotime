@@ -30,6 +30,78 @@ feature records across 41 systems are a scope inventory with different sizes,
 dependencies and acceptance criteria, so their record counts do not support a
 meaningful percentage-complete claim.
 
+## Captured item attack speed — protocol 15
+
+The local endpoint **http://127.0.0.1:8186** now serves
+`mt2-p2-attack-speed-r1-20260908` with matching Web/Linux development exports.
+The previous class-effects database and all auth accounts are retained. Protocol
+15 adds captured attack speed to Player/Controller and the current equipment
+speed to owner-private progression; trusted content is schema 8 and the item
+registry is schema 2. This does not update the public protocol-4 deployment.
+
+The compiler imports Sword+0's +22 and Fan+0's +26 `APPLY_ATT_SPEED` values.
+Player speed is base 100, capped at 170; ordinary equipment produces 122/126.
+Shared code scales action duration, hit windows, cooldowns, combo windows,
+root-motion duration and area/camera activation using the speed captured at
+acceptance. Original source times and root endpoints remain unchanged. Godot
+playback/late seeking use the same rate, while idle resets to normal. Status
+shows current server-owned speed and original-item tooltips show their bonuses.
+Unequipping during a swing cannot retime it or bypass its cooldown.
+
+The precise microsecond clock deliberately follows the original client's
+speed/100 playback factor rather than legacy server integer-percent rounding.
+Slows, buffs, other equipment applies and full original DPS parity are pending.
+Ordinary-hit invulnerability, area/camera 200 ms lifetimes, mob timing and
+knockback remain on their existing clocks. Source references are the pinned
+client `InstanceBaseMovement.cpp`/`ActorInstanceBattle.cpp` and server
+`char.cpp::GetLimitPoint`/`utils.cpp::CalculateDuration`; this is a bounded
+modernized contract, not a claim of exact original-server arithmetic.
+
+Evidence under `.local/p4-attack-speed/`:
+
+- `shaman-r2.json`: **144 live checks**, two independent authenticated identities,
+  both Shaman sexes, source speed/durations, queued/direct/duplicate combo links,
+  active-swing unequip capture, current speed projection, damage/force/recovery,
+  movement, private records and disconnect/reconnect. Staged sources unchanged.
+- `native-fan-r1/report.json`: **87 rendered Godot checks** including 1.26 playback,
+  scaled late seeking, held fan input, bone attachment and idle reset. The reviewed
+  female combo-2 capture shows the original fan following its right-hand pose.
+- `components-r1/report.json`: **131 component checks** for content gating, probe,
+  waves, status/tooltips and protocol. `camera-speed-r1/report.json` separately
+  passes **42** dispatch checks with exact 81,968 us activation for a synthetic
+  100,000 us event at speed 122, unchanged duration and no replay across all eight
+  real class appearances. `protocol-r2` passes **4** explicit 14→15 gate checks.
+- `server-tests-r3.log`: **136 Rust checks**, including all compiled root endpoints
+  and combo windows at 100/122/126/170, integer boundaries and malformed rates.
+  Python: **198 checks** pass in the initial sandbox run; its 15 socket-bound
+  gateway checks pass separately in `python-gateway-tests.log` with local sockets
+  enabled (**213 total**). Lint passes in `lint-r2.log`.
+- Both actual exports pass PCK audits: **998 Web / 1,801 Linux paths**, all 238 UI
+  images, selected actors/items/effects, and exclusion of MCP, evaluators, identity
+  tokens and source archives. These are authorized development probe builds.
+- The first browser run stopped at an exact float comparison: the correct 1.22
+  animation rate is represented by Godot as `1.2200000286`. The runner now uses
+  a 1e-6 tolerance; this required no game/export change.
+- `browser-r2/report.json`: **106 passed Chrome/Linux checks**, actual held-Space
+  common sword chains for female Ninja and Warrior, both subscribers rendering
+  1.22 playback, the Warrior camera event, mutual presence/movement, reconnect,
+  reload and login/logout. Browser engine errors: none. The reviewed Warrior
+  capture shows both original characters and the equipped sword on Yongan.
+  This run does not repeat the separate four-minute token-refresh scenario.
+- `acceptance-r1.json` binds the final changed-source hashes, module, generated
+  content/bindings and accepted test/export evidence.
+
+The installed WASM is `module-r1.wasm`, SHA-256
+`075da5978d4f0455eb7e96e14107de05634f32e25d1ad7d6cc42d7f7e3a4eae3`.
+Gameplay definition hash is
+`6bb092453062392b807b57852071624fa6980ca3b5d61029f14457cbe914af0e`.
+Web `index.pck` is 23,181,384 bytes, SHA-256
+`3794031e4d639d93d582d530d2f0dd53b144b78a372e8b619b7b42cdf37dc7a8`;
+Linux `MT2Spacetime.pck` is 115,376,240 bytes, SHA-256
+`e0a6bdb07f1b44d14a1c26ea6f2371a33ad3c67c87f818dd3333c2bf6fd276ab`.
+Godot MCP was unavailable, so connected-editor inspection remains unverified;
+Windows execution and public gameplay qualification are also outside this run.
+
 ## Ordinary Sura/Shaman finisher force and mob recovery
 
 The tested server module is installed on the existing local development database

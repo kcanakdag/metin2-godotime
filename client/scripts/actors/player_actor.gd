@@ -96,7 +96,8 @@ func apply_state(
 			attack_sequence,
 			started_at_us,
 			server_time_us,
-			clock_became_ready
+			clock_became_ready,
+			int(row.get("attack_speed_percent", 100))
 		)
 	elif Time.get_ticks_usec() < _damage_until_ticks_us:
 		pass

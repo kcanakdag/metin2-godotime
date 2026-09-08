@@ -29,6 +29,7 @@ func show_item(row: Dictionary) -> void:
 		var minimum := int(physical.get("power_min", 0)) + int(physical.get("refine_attack", 0))
 		var maximum := int(physical.get("power_max", 0)) + int(physical.get("refine_attack", 0))
 		lines.append("Attack Value %s" % _attack_value_text(minimum, maximum))
+		lines.append("Attack Speed +%d%%" % int(definition.get("attack_speed_bonus", 0)))
 		var classes: Array[String] = []
 		var names := ["Warrior", "Assassin", "Sura", "Shaman"]
 		for index in names.size():

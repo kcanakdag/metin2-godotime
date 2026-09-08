@@ -12,6 +12,29 @@ Held Space is a client intent scheduler; it cannot choose damage or bypass those
 checks. The original common-chain registrations and bounded action timings are
 compiled into the server, while intro-only preview models use `intro.wait`.
 
+Player attack timing uses a server-captured `attack_speed_percent` in each public
+Player action and its private Controller. The private progression projection's
+`display_attack_speed` instead reflects current equipment. Base speed is 100;
+selected Sword+0/Fan+0 applies add 22/26 points, with a player cap of 170. Item
+registry schema 2 imports these values from the pinned proto. No reducer accepts
+client-supplied speed. Protocol 15 and trusted content schema 8 require matching
+bindings, generated metadata and exports.
+
+Source motion times remain immutable. At action start, the server converts clip,
+hit-window, fresh-cooldown, combo-input, root-motion and area-activation times
+using `ceil(source_us * 100 / captured_speed)`. The client uses the same integer
+rule for held input and camera activation; animation playback and late-subscription
+seeking use `captured_speed / 100`. Idle, damage and death playback reset to 1.
+Equipment changes update future speed without changing an active action's clocks.
+Existing captured weapon/revision checks still cancel invalid combo links.
+
+Root endpoints, ordinary-hit invulnerability, mob attack timing, knockback distance
+and duration, and 200 ms area/camera effect lifetimes remain unchanged. This clock
+contract follows the original client's precise playback factor, intentionally
+avoiding the legacy server `CalculateDuration` helper's coarse integer-percent
+rounding. Slows, buffs, other equipment applies and attack-speed-derived DPS parity
+with the full original system remain outside this selected slice.
+
 The game uses **standard Godot 4.7.2/GDScript** and a **Rust SpacetimeDB 2.8.3
 module**. The database owns identity, presence, positions, terrain height,
 collision, attacks, health, respawn, gold and item instances. Clients send intents and render

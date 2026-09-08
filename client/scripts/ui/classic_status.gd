@@ -237,10 +237,12 @@ func _refresh() -> void:
 			int(_progression.get("display_attack_max", 0))
 		)
 		_labels.defense.text = str(int(_progression.get("display_defense", 0)))
+	_labels.attack_speed.text = (
+		"—" if _progression.is_empty() else str(int(_progression.get("display_attack_speed", 100)))
+	)
 	_labels.attack.tooltip_text = "Equipped-weapon Attack. Actual damage depends on the target."
 	for key in [
 		"move",
-		"attack_speed",
 		"cast_speed",
 		"magic_attack",
 		"magic_defense",

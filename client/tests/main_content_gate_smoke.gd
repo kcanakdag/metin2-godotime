@@ -166,6 +166,7 @@ func _test_class_wave_dispatch() -> void:
 				"activity": 2,
 				"attack_action_id": str(variant.actor_id) + "." + mode + ".combo_4",
 				"attack_sequence": 1,
+				"attack_speed_percent": 122,
 				"action_started_at_us": 1000000,
 				"action_ends_at_us": 2000000,
 				"x": 0.0,
@@ -178,19 +179,32 @@ func _test_class_wave_dispatch() -> void:
 			)
 			camera.reset_screen_waves()
 			main.call("_observe_screen_waves", 1000000)
-			main.call("_observe_screen_waves", 1100000)
+			main.call("_observe_screen_waves", 1081967)
 			_check(
-				camera.screen_wave_snapshot().trigger_count == 1,
+				camera.screen_wave_snapshot().trigger_count == 0,
+				"scaled camera event does not fire early"
+			)
+			main.call("_observe_screen_waves", 1081968)
+			_check(
+				(
+					camera.screen_wave_snapshot().trigger_count == 1
+					and camera.screen_wave_snapshot().activation_us == 1081968
+					and camera.screen_wave_snapshot().duration_us == 200000
+				),
 				"remote wave resolves its own appearance: " + str(variant.actor_id)
 			)
-			main.call("_observe_screen_waves", 1100000)
+			main.call("_observe_screen_waves", 1081968)
 			_check(
-				camera.screen_wave_snapshot().trigger_count == 1,
+				(
+					camera.screen_wave_snapshot().trigger_count == 1
+					and camera.screen_wave_snapshot().activation_us == 1081968
+					and camera.screen_wave_snapshot().duration_us == 200000
+				),
 				"repeated class observation does not replay the wave"
 			)
 			camera.reset_screen_waves()
 			connection.appearances = []
-			main.call("_observe_screen_waves", 1100000)
+			main.call("_observe_screen_waves", 1081968)
 			_check(
 				camera.screen_wave_snapshot().trigger_count == 0,
 				"missing appearance cannot borrow a Warrior event"

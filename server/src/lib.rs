@@ -2,6 +2,7 @@
 mod accounts;
 mod admin;
 mod appearance;
+mod attack_timing;
 mod characters;
 mod combat;
 mod combo;
@@ -42,6 +43,7 @@ pub struct Player {
     pub activity: u8,
     pub online: bool,
     pub attack_sequence: u32,
+    pub attack_speed_percent: u16,
     pub life_sequence: u32,
     pub health: u16,
     pub max_health: u16,
@@ -113,6 +115,7 @@ pub struct Controller {
     pub mode: u8,
     pub last_input_us: i64,
     pub attack_until_us: i64,
+    pub attack_speed_percent: u16,
     pub next_attack_us: i64,
     pub action_revision: u64,
     pub pending_attack_target_id: u32,
@@ -169,7 +172,7 @@ pub struct TickSchedule {
 fn compiled_world_info() -> WorldInfo {
     WorldInfo {
         id: 1,
-        protocol_version: 14,
+        protocol_version: 15,
         npc_catalog_hash: definitions::NPC_CATALOG_HASH.into(),
         character_catalog_hash: definitions::CHARACTER_CATALOG_HASH.into(),
         map_name: if content::YONGAN {
@@ -293,6 +296,7 @@ fn create_player(ctx: &ReducerContext, character: Identity, name: &str, online: 
         activity: 0,
         online,
         attack_sequence: 0,
+        attack_speed_percent: 100,
         life_sequence: 0,
         health: 100,
         max_health: 100,
@@ -360,6 +364,7 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
             mode: 0,
             last_input_us: now_us(ctx),
             attack_until_us: 0,
+            attack_speed_percent: 100,
             next_attack_us: 0,
             action_revision: 0,
             pending_attack_target_id: 0,

@@ -37,14 +37,20 @@ func _shaman(sex: int) -> void:
 	for step in range(1, 5):
 		var motion := _catalog.motion(actor_id, "fan", "", "combo_%d" % step)
 		row.activity = 2
+		row.attack_speed_percent = 126
 		row.attack_sequence = step
 		row.attack_action_id = motion.action_id
 		row.action_started_at_us = 2_000_000
-		row.action_ends_at_us = 2_000_000 + int(motion.duration_us)
+		row.action_ends_at_us = 2_000_000 + _scaled(int(motion.duration_us))
 		player.apply_state(row, true, appearance, 2_300_000)
 		await process_frame
 		state = player.presentation_snapshot()
 		_check(state.action_id == motion.action_id and state.equipment_attached, "fan combo clip")
+		_check(is_equal_approx(float(state.animation_speed), 1.26), "captured fan playback rate")
+		_check(
+			absf(float(state.animation_position) - 0.378) < 0.08,
+			"late subscription seeks the sped-up pose"
+		)
 		_check(_skeleton_pose_is_sane(player), "Shaman attack remains in meter bounds")
 		var hit: Dictionary = motion.events.filter(func(event): return event.kind == "attack_window")[0]
 		var sample: Dictionary = hit.samples[int(hit.samples.size() / 2.0)]
@@ -93,7 +99,7 @@ func _shaman(sex: int) -> void:
 		)
 		var held := AttackInput.new()
 		held.pressed({"attack_sequence": step - 1}, 1000)
-		var pre := int(motion.combo.pre_input_us) if step < 4 else int(motion.duration_us)
+		var pre := _scaled(int(motion.combo.pre_input_us) if step < 4 else int(motion.duration_us))
 		_check(
 			not held.should_send(row, _catalog, 2_000_000 + pre, 1300, actor_id), "no early link"
 		)
@@ -110,5 +116,16 @@ func _shaman(sex: int) -> void:
 			not held.should_send(row, _catalog, 2_080_000 + pre, 1800, actor_id),
 			"release stops input"
 		)
+	row.activity = 0
+	row.action_ends_at_us = 0
+	player.apply_state(row, true, appearance, 4_000_000)
+	_check(
+		is_equal_approx(float(player.presentation_snapshot().animation_speed), 1.0),
+		"idle resets playback speed"
+	)
 	player.queue_free()
 	await process_frame
+
+
+func _scaled(source_us: int) -> int:
+	return preload("res://scripts/actors/attack_timing.gd").scaled_us(source_us, 126)

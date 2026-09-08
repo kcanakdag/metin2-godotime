@@ -317,6 +317,7 @@ pub fn handle_follow_up(
     )?
     .combo_input
     .ok_or("The trusted combo step has no input timing.")?;
+    let input = crate::attack_timing::combo_input(input, control.attack_speed_percent)?;
     match classify_follow_up(
         now,
         control.combo_action_started_at_us,
@@ -398,6 +399,45 @@ mod tests {
         definitions::PLAYER_ONEHAND_COMBO[0]
             .combo_input
             .expect("generated first combo input")
+    }
+
+    #[test]
+    fn sped_up_windows_keep_early_queue_direct_and_late_rejections() {
+        for action in crate::characters::root_actions() {
+            let Some(original) = action.combo_input else {
+                continue;
+            };
+            for speed in [100, 122, 126, 170] {
+                let input = crate::attack_timing::combo_input(original, speed).unwrap();
+                let start = 1_000_000;
+                let end =
+                    start + crate::attack_timing::scaled_us(action.duration_us, speed).unwrap();
+                assert_eq!(
+                    classify_follow_up(start + input.pre_input_us, start, end, false, input)
+                        .unwrap_err(),
+                    EARLY_ERROR
+                );
+                assert_eq!(
+                    classify_follow_up(start + input.pre_input_us + 1, start, end, false, input)
+                        .unwrap(),
+                    FollowUp::Queue {
+                        boundary_us: start + input.direct_input_us
+                    }
+                );
+                assert_eq!(
+                    classify_follow_up(start + input.direct_input_us + 1, start, end, false, input)
+                        .unwrap(),
+                    FollowUp::Transition
+                );
+                let after_limit = start + input.input_limit_us + 1;
+                let late = classify_follow_up(after_limit, start, end, false, input);
+                if after_limit >= end {
+                    assert_eq!(late.unwrap(), FollowUp::Expired);
+                } else {
+                    assert_eq!(late.unwrap_err(), LATE_ERROR);
+                }
+            }
+        }
     }
 
     #[test]
@@ -504,6 +544,7 @@ mod tests {
             mode: 2,
             last_input_us: 900,
             attack_until_us: 2_000,
+            attack_speed_percent: 100,
             next_attack_us: 1_850,
             action_revision: 9,
             pending_attack_target_id: 3,

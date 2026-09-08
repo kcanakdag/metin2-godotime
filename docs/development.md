@@ -1299,6 +1299,36 @@ and reports distinct from Yongan evidence. Exporting Linux or Web with
 `--test-probe` adds only the explicit local test interface; normal exports remove
 all `client/tests/` sources and MCP bridges.
 
+## Attack-speed qualification
+
+The local protocol-15 build at `http://127.0.0.1:8186` uses
+`mt2-p2-attack-speed-r1-20260908`. Previous databases are retained; this is a new
+schema, not an in-place data reset. Rebuild the selected content with the normal
+`content_compile.py build --offline --blender ...` command before compiling this
+server. Publish to a fresh database, regenerate bindings from it, and export
+matching clients. The gameplay hash includes item attack-speed applies.
+
+The focused `tools/test_physical_combat.py --scenario classes --class-id 3` run
+on separate `mt2-p2-attack-speed-qa-r1-20260908` passes 144 checks. It includes both
+Shaman appearances, scaled unarmed/fan durations, queued/direct combos, ordinary
+mob force/recovery, private speed projections, active-swing unequip capture,
+movement and disconnect/reconnect. Its runner stages the shared timing helper
+and parses all scripts before creating accounts. Use a fresh test database and
+ordinary accounts; respect the existing signup rate limit.
+
+`tools/test_actors.py --native --scenario fan` passes 87 rendered checks, including
+1.26 playback, late-subscription seeking, held-input boundaries and idle reset.
+`tools/test_target_client.py --suite content_gate` includes exact scaled camera
+activation, deduplication, per-appearance routing and unchanged 200 ms duration.
+The `--physical_ui` component tests the status value and original item bonus text.
+The exported `tools/test_browser_accounts.py --classes --warrior-effects` scenario
+passes 106 checks with actual held Space and both clients presenting 1.22 sword
+playback; it also covers the Warrior camera event and account lifecycle.
+Artifacts and detailed outcomes live under `.local/p4-attack-speed/`; see the
+[implementation ledger](rebuild/implementation-status.md) for final acceptance.
+Connected Godot editor/MCP inspection is unavailable in this session. Isolated
+native and exported-client evidence does not establish editor or Windows behavior.
+
 ## Focused physical-damage qualification
 
 For the protocol-10 physical-damage slice, run the focused test against a fresh
@@ -1350,7 +1380,7 @@ The recovery scenario earns its health deficit through ordinary dog attacks,
 then checks small/medium recovery timing, capped totals, exact item consumption,
 full/pending/foreign/unsupported rejections, mutual movement and reconnect without
 replaying recovery. Its source/schema preflight runs before account creation.
-Current application protocol is 13 with trusted content schema 7; the SpacetimeDB
+Current application protocol is 15 with trusted content schema 8 and item registry 2; the SpacetimeDB
 schema HTTP endpoint's `version=10` parameter is a separate wire/API version.
 
 For item integrity, select `--scenario security` against a fresh protocol-12

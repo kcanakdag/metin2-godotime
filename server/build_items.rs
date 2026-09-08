@@ -84,7 +84,7 @@ pub fn validate_links(root: &Value) -> Result<(), String> {
 
 pub fn generate(value: &Value) -> Result<String, String> {
     let root = object(value, &["schema_version", "recovery_policy", "items"])?;
-    number(&root["schema_version"], 1, 1)?;
+    number(&root["schema_version"], 2, 2)?;
     if root["recovery_policy"]
         != json!({
             "id": "item.recovery.pool.v1", "interval_us": 1_000_000,
@@ -105,7 +105,7 @@ pub fn generate(value: &Value) -> Result<String, String> {
          pub struct ItemDefinition {\n\
          pub id: &'static str, pub vnum: u32,\n\
          pub height: u8, pub stack_limit: u16, pub minimum_level: u8,\n\
-         pub allowed_classes: u8, pub allowed_sexes: u8, pub kind: ItemKind,\n\
+         pub attack_speed_bonus: u16, pub allowed_classes: u8, pub allowed_sexes: u8, pub kind: ItemKind,\n\
          pub weapon: Option<WeaponPhysicalDefinition> }\n\
          pub const RECOVERY_INTERVAL_US: i64 = 1_000_000;\n\
          pub const RECOVERY_PERCENT: u32 = 7;\n\
@@ -127,6 +127,7 @@ pub fn generate(value: &Value) -> Result<String, String> {
                 "minimum_level",
                 "allowed_classes",
                 "allowed_sexes",
+                "attack_speed_bonus",
                 "kind",
                 "weapon",
                 "recovery",
@@ -155,6 +156,7 @@ pub fn generate(value: &Value) -> Result<String, String> {
         let stack_limit = number(&row["stack_limit"], 1, 200)?;
         let minimum_level = number(&row["minimum_level"], 0, 255)?;
         let allowed_classes = number(&row["allowed_classes"], 1, 15)?;
+        let attack_speed_bonus = number(&row["attack_speed_bonus"], 0, 1000)?;
         let allowed_sexes = number(&row["allowed_sexes"], 1, 3)?;
         let name = row["name"].as_str().ok_or("item name must be text")?;
         if name.is_empty() || name.chars().count() > 80 || name.chars().any(|c| (c as u32) < 32) {
@@ -229,7 +231,7 @@ pub fn generate(value: &Value) -> Result<String, String> {
             }
             _ => return Err("unsupported item mechanic".into()),
         };
-        writeln!(output, "ItemDefinition {{ id: {id:?}, vnum: {vnum}, height: {height}, stack_limit: {stack_limit}, minimum_level: {minimum_level}, allowed_classes: {allowed_classes}, allowed_sexes: {allowed_sexes}, kind: {kind}, weapon: {weapon} }},").unwrap();
+        writeln!(output, "ItemDefinition {{ id: {id:?}, vnum: {vnum}, height: {height}, stack_limit: {stack_limit}, minimum_level: {minimum_level}, allowed_classes: {allowed_classes}, allowed_sexes: {allowed_sexes}, attack_speed_bonus: {attack_speed_bonus}, kind: {kind}, weapon: {weapon} }},").unwrap();
     }
     output.push_str("] ;\n");
     Ok(output)
