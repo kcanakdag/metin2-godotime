@@ -23,6 +23,7 @@ pub struct MonsterAllocationCursor {
 pub struct MonsterSpawnGroup {
     #[primary_key]
     pub owner: u64,
+    pub regeneration_entry: u32,
     pub first_id: u32,
     pub last_id: u32,
 }
@@ -128,6 +129,7 @@ fn validate(origin: &MonsterOrigin, expected: &MonsterSpawnDefinition) -> Result
 pub fn allocate_group(
     ctx: &ReducerContext,
     templates: &[MonsterSpawnDefinition],
+    regeneration_entry: u32,
 ) -> Result<Vec<MonsterSpawnDefinition>, String> {
     for template in templates {
         if !definitions::MOB_DEFINITIONS
@@ -158,6 +160,7 @@ pub fn allocate_group(
     }
     ctx.db.monster_spawn_group().insert(MonsterSpawnGroup {
         owner: allocation.owner(),
+        regeneration_entry,
         first_id: allocation.first,
         last_id: allocation.last,
     });

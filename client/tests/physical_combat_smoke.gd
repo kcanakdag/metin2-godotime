@@ -100,7 +100,11 @@ func _prove_retained_victim(
 
 
 func _enter_physical_world(
-	actor: GameConnection, observer: GameConnection, actor_id: String, observer_id: String
+	actor: GameConnection,
+	observer: GameConnection,
+	actor_id: String,
+	observer_id: String,
+	expected_mobs: int = 1
 ) -> bool:
 	actor.select_character(actor_id)
 	observer.select_character(observer_id)
@@ -124,8 +128,8 @@ func _enter_physical_world(
 					and observer.state == "connected"
 					and not _player(actor, observer_id).is_empty()
 					and not _player(observer, actor_id).is_empty()
-					and actor.monsters_for_definition(101).size() == 1
-					and observer.monsters_for_definition(101).size() == 1
+					and actor.monsters_for_definition(101).size() == expected_mobs
+					and observer.monsters_for_definition(101).size() == expected_mobs
 				),
 			20.0
 		)

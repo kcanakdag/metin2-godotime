@@ -165,8 +165,10 @@ fn visit_due_hits(events: &mut [DueHitEvent], mut visit: impl FnMut(DueHitEvent)
 pub fn initialize(ctx: &ReducerContext) {
     crate::monster_spawns::initialize(ctx);
     let bounds = collision_bounds(ctx);
-    let ordinary = if definitions::ALLOCATED_MOB_FIXTURE {
-        crate::monster_spawns::allocate_group(ctx, definitions::MONSTER_SPAWNS)
+    let ordinary = if definitions::REGENERATING_MOB_FIXTURE {
+        Vec::new()
+    } else if definitions::ALLOCATED_MOB_FIXTURE {
+        crate::monster_spawns::allocate_group(ctx, definitions::MONSTER_SPAWNS, 0)
             .expect("trusted training group allocation must succeed")
     } else {
         definitions::MONSTER_SPAWNS.to_vec()
@@ -183,6 +185,12 @@ pub fn initialize(ctx: &ReducerContext) {
         ctx.db.monster().insert(fresh_monster(*spawn, 0, 0));
         ctx.db.monster_clock().insert(fresh_monster_clock(*spawn));
     }
+    crate::mob_regeneration::initialize(ctx).expect("regeneration initialization must succeed");
+}
+
+pub(crate) fn insert_allocated_monster(ctx: &ReducerContext, spawn: MonsterSpawnDefinition) {
+    ctx.db.monster().insert(fresh_monster(spawn, 0, 0));
+    ctx.db.monster_clock().insert(fresh_monster_clock(spawn));
 }
 
 /// Resolve private origin before validating public combat state.
@@ -1192,6 +1200,12 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
         let spawn = validate_monster(ctx, &monster)?;
         if monster.health == 0 {
             if now >= monster.respawn_at_us {
+                if crate::mob_regeneration::destroy(ctx, monster.id)? {
+                    clear_monster_damage(ctx, monster.id, monster.life_sequence);
+                    ctx.db.monster_clock().id().delete(monster.id);
+                    ctx.db.monster().id().delete(monster.id);
+                    continue;
+                }
                 let life_sequence = monster.life_sequence.wrapping_add(1);
                 clear_monster_damage(ctx, monster.id, monster.life_sequence);
                 ctx.db.monster().id().update(fresh_monster(
@@ -1287,6 +1301,7 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
             resolve_due_monster_event(ctx, monster_id, now, now);
         }
     }
+    crate::mob_regeneration::tick(ctx)?;
     Ok(())
 }
 

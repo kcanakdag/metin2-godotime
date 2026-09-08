@@ -15,6 +15,7 @@ mod knockback;
 mod mob_actions;
 mod mob_aggro;
 pub mod mob_damage;
+mod mob_regeneration;
 pub mod mob_threat;
 mod monster_allocation;
 mod monster_spawns;
@@ -24,11 +25,12 @@ mod npc_spawns;
 mod npcs;
 mod physical_damage;
 mod progression;
+pub mod regeneration;
 mod root_motion;
 mod skills;
 mod training_targets;
 
-const PROTOCOL_VERSION: u32 = 22;
+const PROTOCOL_VERSION: u32 = 23;
 mod special_area;
 mod targeting;
 

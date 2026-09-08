@@ -7,6 +7,7 @@ const module_name : String = "Game"
 const table_names: Array[String] = []
 
 @export var owner: int
+@export var regeneration_entry: int
 @export var first_id: int
 @export var last_id: int
 
@@ -14,16 +15,19 @@ const table_names: Array[String] = []
 const primary_key: StringName = &'owner'
 const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"owner": "U64",
+	"regeneration_entry": "U32",
 	"first_id": "U32",
 	"last_id": "U32"
 }
 
 ## 1. owner: int[br]
-## 2. first_id: int[br]
-## 3. last_id: int[br]
-static func create(p_owner: int, p_first_id: int, p_last_id: int) -> GameMonsterSpawnGroup:
+## 2. regeneration_entry: int[br]
+## 3. first_id: int[br]
+## 4. last_id: int[br]
+static func create(p_owner: int, p_regeneration_entry: int, p_first_id: int, p_last_id: int) -> GameMonsterSpawnGroup:
 	var result: GameMonsterSpawnGroup = GameMonsterSpawnGroup.new()
 	result.owner = p_owner
+	result.regeneration_entry = p_regeneration_entry
 	result.first_id = p_first_id
 	result.last_id = p_last_id
 	return result

@@ -757,3 +757,36 @@ life sequence 1 after respawn/reentry. Six protocol checks reject 21 and accept 
 Focused origin tests, strict library Clippy, GDScript lint/format and generated
 binding parsing pass. This one-member fixture does not prove multi-member
 replacement, database restart, or regeneration leader-release behavior.
+
+## Live regeneration adapter — 2026-09-08
+
+Protocol 23 adds private `monster_regeneration` snapshots and a regeneration-entry
+reference on private spawn groups. The existing regeneration state machine now
+runs inside the server transaction: it restores the deadline/owner set, allocates
+replacement member IDs and writes members plus updated state atomically. Corpse
+destruction removes a member’s origin, clock, threat/damage and public row. Only
+leader destruction releases unit capacity; surviving followers retain their group
+membership. The group record is removed after its last member is destroyed.
+
+The explicit `regenerating-wild-dog-v1` fixture installs one two-member training
+group with a five-second regeneration interval, capacity one and startup jitter
+zero. It uses the existing development corpse lifetime, not a claim of original
+corpse timing. It is training-only and incompatible with population overrides.
+Ordinary authored mobs and the allocation-only fixture retain existing respawn
+behavior. This adapter is still bound to the selected fixture; the complete
+original catalog/configuration, random group placement, party AI and original
+population installation remain next work. Server-process restart is unqualified.
+
+Bindings contain 92 files, schema SHA-256
+`0fe5832ab4b175ae90c5df5564d075e5822e21a091373f7690b583068f8b7a64`.
+Public protocol 19 remains separate from worktree protocol 23.
+
+Evidence: `.local/mobs/regenerating-runtime-r2/acceptance.json`, database
+`mt2-p2-regenerating-runtime-r2-20260908`, frozen module retained under r1.
+All 66 real two-account checks pass: ordinary sword damage kills leader 900002,
+its corpse retains capacity until destruction, follower 900003 remains, and
+replacement members 900004/900005 appear in both subscriptions. Stale leader
+targeting rejects; disconnect/reconnect preserves the same three IDs. Six protocol
+checks reject 22/accept 23. Seven targeted allocator/scheduler tests and strict
+library Clippy pass, along with touched Python/GDScript checks. The initial r1
+scenario passed 64 checks before reconnect coverage was added; r2 is final evidence.

@@ -1683,3 +1683,15 @@ same auth/game-server options as the passive replay above. This exercises the
 normal two-client combat scenario against a database-allocated dog ID (900002).
 Do not deploy this training fixture to the public map. Protocol 22 is required.
 The fixture tests allocation and existing respawn, not original regeneration.
+
+## Two-member regeneration replay
+
+Build with `MT2_COMBAT_TEST_FIXTURE=regenerating-wild-dog-v1` and the local auth
+issuer/guest policy, without Yongan. Freeze and publish to a fresh `mt2-p2-`
+database, then run `tools/test_physical_combat.py --scenario regeneration` with
+the same auth/game-server options as the other combat replays. Protocol 23 is
+required. The scenario uses ordinary sword attacks to kill leader 900002, checks
+that follower 900003 survives and replacement members 900004/900005 appear, then
+checks stale-target rejection, disconnect and reconnect. Use a fresh database for
+each replay because successful runs advance the population. Never deploy this
+training fixture over the public map.
