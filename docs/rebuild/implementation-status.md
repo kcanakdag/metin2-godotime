@@ -5,6 +5,31 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Full-world skill exports and account lifecycle — 2026-09-08
+
+Both matching Web/Linux exports and their actor/UI/mob/world package audits pass
+for fresh local `mt2-p2-world-skills-v26-r1-20260908`. The module uses the original
+Yongan population, four selected skills, local issuer, guests disabled and no QA
+bootstrap identities. The local proxy on 8186 now serves this matching build.
+Hardware-rendered Chrome (AMD Radeon 860M, WebGL2) and the Linux export pass 76
+checks: two accounts, matching 2,831-mob/44-species subscriptions, rendered peers,
+skill-panel keyboard input, bidirectional movement, invalid actions, character
+switching with saved position, reconnect, page reload and logout/login. Browser
+engine errors are empty. The browser skill panel and final world capture were reviewed.
+This run does not exercise new-skill casting in the browser or all-species combat.
+
+The first software-rendered run passed 46 checks before timing out on second
+character entry. Its final snapshot remained loading at 2 FPS and 14.371 seconds
+snapshot age, with no browser engine errors. The hardware run completed after
+competing exports ended; this does not isolate the root cause or qualify software
+rendering performance. Both reports remain under `.local/p6-world-skills-r1/`.
+
+Public-issuer module and matching Web/Linux exports are prepared and audited in
+`.local/public-skills-v26-r1/`, targeting `mt2-public-skills-v26-20260908`, with
+bootstrap privileges absent. Public rollout and internet endpoint QA remain pending.
+Deployment tooling now accepts `--module` to archive an explicit frozen artifact
+without replacing the latest local WASM; 10 focused deployment artifact checks pass.
+
 ## Four-skill compatible batch — 2026-09-08
 
 Enabled Spirit Strike (16) and Bash (17) through the existing selected-content
