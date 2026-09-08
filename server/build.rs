@@ -437,7 +437,7 @@ fn attack_expression(attack: Attack<'_>) -> String {
         "None"
     };
     format!(
-        "AttackDefinition {{ id: {}, duration_us: {}, cooldown_us: {}, ordinary_hit_invulnerability_us: {}, hit_start_us: {}, hit_end_us: {}, range_m: {:?}, combo_input: {}, root_motion: {}, special_area: {}, screen_wave: {} }}",
+        "AttackDefinition {{ id: {}, duration_us: {}, cooldown_us: {}, ordinary_hit_invulnerability_us: {}, hit_start_us: {}, hit_end_us: {}, range_m: {:?}, combo_input: {}, root_motion: {}, special_area: {}, screen_wave: {}, ordinary_knockback: None }}",
         rust_string(attack.id),
         attack.duration_us,
         attack.cooldown_us,
@@ -1167,6 +1167,7 @@ fn main() {
          }\n\
          #[derive(Clone, Copy, Debug)]\n\
          pub struct AttackDefinition {\n\
+         \tpub ordinary_knockback: Option<KnockbackDefinition>,\n\
          \tpub id: &'static str,\n\
          \tpub duration_us: i64,\n\
          \tpub cooldown_us: i64,\n\

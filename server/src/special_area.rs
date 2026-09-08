@@ -2,6 +2,7 @@
 
 use crate::combat::{monster, monster_clock};
 use crate::definitions::{self, AttackDefinition, ScreenWaveDefinition, SpecialAreaDefinition};
+use crate::knockback::{force_direction, is_front_hit};
 use crate::{Controller, accounts, controller, player};
 use spacetimedb::{Identity, ReducerContext, Table};
 
@@ -468,23 +469,6 @@ fn area_hits(area: &SpecialArea, previous: [f64; 3], current: [f64; 3]) -> bool 
         previous,
         current,
     ) <= radius * radius
-}
-
-fn force_direction(attacker: (f32, f32), monster: &crate::combat::Monster) -> (f32, f32) {
-    let dx = monster.x - attacker.0;
-    let dz = monster.z - attacker.1;
-    let length = dx.hypot(dz);
-    if length > 0.000_1 && length.is_finite() {
-        (dx / length, dz / length)
-    } else {
-        // A zero-radius vector has no authoritative radial direction. Retain
-        // damage/reaction and omit force rather than invent client geometry.
-        (0.0, 0.0)
-    }
-}
-
-fn is_front_hit(attacker_heading: f32, victim_heading: f32) -> bool {
-    f64::from(attacker_heading - victim_heading).cos() < 0.0
 }
 
 fn apply_hit(

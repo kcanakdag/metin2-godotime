@@ -97,6 +97,7 @@ pub struct PlayerAttackPlan {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PendingPlayerHit {
+    action_revision: u64,
     target_id: u32,
     target_generation: u32,
     source_generation: u32,
@@ -483,6 +484,7 @@ pub fn take_due_player_hit(controller: &mut Controller, now: i64) -> Option<Pend
         && controller.pending_attack_action_revision != 0
         && controller.pending_attack_action_revision == controller.action_revision;
     let hit = still_valid.then_some(PendingPlayerHit {
+        action_revision: controller.pending_attack_action_revision,
         target_id: controller.pending_attack_target_id,
         target_generation: controller.pending_attack_target_generation,
         source_generation: controller.pending_attack_source_generation,
@@ -657,8 +659,23 @@ pub fn resolve_player_hit(ctx: &ReducerContext, character: Identity, hit: Pendin
         .identity()
         .find(character)
         .expect("a resolved player hit has an active controller");
+    if controller.action_revision != hit.action_revision {
+        return;
+    }
     player.heading = crate::root_motion::active_action_heading(&controller)
         .unwrap_or_else(|| (player.x - monster.x).atan2(player.z - monster.z));
+    let force = crate::characters::root_actions()
+        .find(|definition| definition.id == player.attack_action_id)
+        .and_then(|definition| definition.ordinary_knockback)
+        .map(|definition| crate::knockback::ForceStart {
+            source_character: character,
+            source_action_revision: hit.action_revision,
+            now,
+            front: crate::knockback::is_front_hit(player.heading, monster.heading),
+            direction: crate::knockback::force_direction((player.x, player.z), &monster),
+            distance_m: definition.unobstructed_distance_m,
+            duration_us: definition.duration_us,
+        });
     ctx.db.player().identity().update(player);
     record_damage(
         ctx,
@@ -673,6 +690,18 @@ pub fn resolve_player_hit(ctx: &ReducerContext, character: Identity, hit: Pendin
         .unwrap_or_else(|error| panic!("cannot set resolved monster hit cooldown: {error}"));
     if apply_damage(&mut monster.health, hit.damage) {
         kill_monster(ctx, &mut monster, character);
+    } else if let Some(force) = force {
+        let mut clock = ctx
+            .db
+            .monster_clock()
+            .id()
+            .find(monster.id)
+            .expect("a surviving monster has an action clock");
+        cancel_monster_hit(&mut clock);
+        clock.attack_until_us = 0;
+        ctx.db.monster_clock().id().update(clock);
+        crate::knockback::start(ctx, &mut monster, force)
+            .unwrap_or_else(|error| panic!("cannot apply ordinary GREAT hit: {error}"));
     }
     let target_id = monster.id;
     let target_life_sequence = monster.life_sequence;
@@ -1172,6 +1201,7 @@ fn schedule_monster_hit(
     clock.pending_hit_at_us = now.saturating_add(definitions::MOB_ATTACK.hit_start_us);
     clock.pending_hit_until_us = now.saturating_add(definitions::MOB_ATTACK.hit_end_us);
     clock.pending_damage = damage;
+    monster.attack_action_id = definitions::MOB_ATTACK.id.into();
     monster.attack_sequence = monster.attack_sequence.wrapping_add(1);
     monster.activity = 2;
     monster.action_started_at_us = now;
@@ -1414,6 +1444,7 @@ mod tests {
         let mut controller = controller_with_hit(1_192_308, 1_315_385);
         assert_eq!(take_due_player_hit(&mut controller, 1_192_307), None);
         let hit = take_due_player_hit(&mut controller, 1_250_000).unwrap();
+        assert_eq!(hit.action_revision, 5);
         assert_eq!(hit.target_id, 7);
         assert_eq!(hit.target_generation, 11);
         assert_eq!(hit.source_generation, 2);

@@ -609,7 +609,7 @@ Ordinary and area hits share a private exact-monster-life invulnerability
 deadline. Each successful hit writes its own generated duration; a rejected
 area scan remains eligible for a later scan during the same event, and a
 successful life can be hit only once by that area. A surviving GREAT hit starts
-a collision-clipped 4.732 m server force over one second using a named analytic
+a collision-clipped server force over one second using a named analytic
 quadratic ease-out approximation and 50 ms samples. Force ownership can be
 replaced after the shared cooldown, while an already active reaction keeps its
 published sequence and timestamps. Front hits publish the original Wild Dog
@@ -618,6 +618,20 @@ knockdown then idle because the selected source has no back-standup action.
 Clients render only subscribed monster action, position and health rows. The
 screen wave is derived locally from the accepted public `combo_4` action and is
 not a mutable server table.
+
+Area finishers use the accepted 4.732 m force-17 profile. Ordinary Sura/Shaman
+fourth hits compile their source GREAT/force-15 metadata to 3.675 m using the same
+movement policy (unit mass and friction 0.3 yield the unobstructed source sum
+14.7 + 14.4 + ... + 0.3 centimetres). This remains an approximation of original
+physics, not exact collision parity. First/second/third-hit small pushes remain
+unimplemented. No client field supplies a force or destination.
+
+The pending ordinary hit retains its accepted action revision. A stale revision,
+dead/replaced life, expired hit, range/path rejection or shared invulnerability
+prevents damage and force together. Lethal hits clear reaction state; surviving
+GREAT hits cancel the victim's pending attack and enter the shared reaction/AI
+lock. Normal mob attack scheduling explicitly republishes its normal action ID
+after recovery, so a new attack cannot replay a stale knockdown animation.
 
 The reviewed three-dog test selector is strictly build-time and training-only:
 `triple-wild-dog-finisher-v1` loads two nearby Wild Dogs and one outside the

@@ -130,6 +130,26 @@ fn advance_position(
     })
 }
 
+pub(crate) fn force_direction(
+    attacker: (f32, f32),
+    monster: &crate::combat::Monster,
+) -> (f32, f32) {
+    let dx = monster.x - attacker.0;
+    let dz = monster.z - attacker.1;
+    let length = dx.hypot(dz);
+    if length > 0.000_1 && length.is_finite() {
+        (dx / length, dz / length)
+    } else {
+        // A zero-radius vector has no authoritative radial direction. Retain
+        // damage/reaction and omit force rather than invent client geometry.
+        (0.0, 0.0)
+    }
+}
+
+pub(crate) fn is_front_hit(attacker_heading: f32, victim_heading: f32) -> bool {
+    f64::from(attacker_heading - victim_heading).cos() < 0.0
+}
+
 fn reaction_definition(phase: u8) -> Option<MonsterReactionDefinition> {
     match phase {
         REACTION_FRONT_KNOCKDOWN => Some(definitions::MOB_GREAT_FRONT_KNOCKDOWN),
@@ -394,6 +414,24 @@ mod tests {
         } else {
             (0.0, 0.0)
         }
+    }
+
+    #[test]
+    fn ordinary_force_uses_its_own_endpoint_and_shared_sampling() {
+        let origin = open_test_origin();
+        let first =
+            advance_position(origin, (1.0, 0.0), (3.675, 1_000_000), (0, 500_000), &[]).unwrap();
+        assert!((first.x - origin.0 - 3.675 * 0.75).abs() < 0.001);
+        let end = advance_position(
+            (first.x, first.z),
+            (1.0, 0.0),
+            (3.675, 1_000_000),
+            (500_000, 1_000_000),
+            &[],
+        )
+        .unwrap();
+        assert!((end.x - origin.0 - 3.675).abs() < 0.001);
+        assert_eq!(end.consumed_elapsed_us, 1_000_000);
     }
 
     #[test]

@@ -30,6 +30,61 @@ feature records across 41 systems are a scope inventory with different sizes,
 dependencies and acceptance criteria, so their record counts do not support a
 meaningful percentage-complete claim.
 
+## Ordinary Sura/Shaman finisher force and mob recovery
+
+The tested server module is installed on the existing local development database
+`mt2-p2-class-effects-r1-20260908`, served at **http://127.0.0.1:8186**. Publication
+used `--delete-data=never`; characters, inventory and prior databases are preserved.
+Protocol 14, catalog hashes and client assets are unchanged, so the existing
+Web/Linux class-effects exports remain in use. The public deployment is unchanged.
+
+Both Sura and Shaman appearances compile their original fourth-hit GREAT/force-15
+metadata into an ordinary knockback definition. Valid surviving hits use the
+shared collision-clipped, one-second ease-out force with a nominal unobstructed
+distance of 3.675 m. Hit revision, exact lives, range/path and invulnerability
+checks gate damage and force together. A surviving reaction cancels the victim's
+pending attack; a lethal hit clears force/reaction state. Ordinary non-GREAT
+small pushes and attack-speed modifiers remain pending.
+
+The live Sura test exposed a pre-existing recovery bug: a mob's next normal attack
+could retain its back-knockdown action ID. Normal attack scheduling now explicitly
+publishes the normal action ID. This fixes the recovery transition for shared
+area and ordinary reactions alike.
+
+Evidence in `.local/p4-ordinary-force/`:
+
+- `sura-final.json` and `shaman-final.json`: 134 checks each, using two independent
+  authenticated clients on `mt2-p2-ordinary-force-final-qa-20260908` and the exact
+  published module. Four real Wild Dogs survive the four finishers. Both clients
+  observe damage and reactions, and normal attacks resume after recovery. The
+  scenarios also cover movement, duplicate combo rejection, item ownership/stale
+  revisions and disconnect/reconnect. Staged source checks pass.
+- Recorded peak displacements: Sura male 3.675293 m, Sura female 3.587072 m;
+  Shaman male 3.674992 m, Shaman female 3.675206 m. Live checks allow bounded map
+  displacement; the exact unobstructed endpoint and collision consumption are
+  covered separately. Sura traces exercise back knockdown; Shaman traces include
+  front knockdown and front stand-up. All four finish with normal attack IDs.
+- `server-tests-r2.log`: 131 Rust checks pass. `training-force-tests.log`: six
+  focused force checks include the training-wall collision path. The Yongan
+  suite includes its authored-wall path and the new 3.675 m endpoint check.
+- `native-r3/report.json`: 88 rendered Godot actor checks, including normal attack
+  selection after back knockdown. The recovered-attack screenshot was inspected
+  after the ordinary 120 ms animation crossfade. This fixture uses authored
+  subscription-shaped rows, not a live server connection.
+- `lint-final.log` passes owned-source lint; `build-r2.log`,
+  `publish-final-qa.log` and `publish-development.log` record the module build and
+  non-destructive publications.
+
+Failed diagnostic runs remain available. The initial Sura run caught the stale
+action ID; an intervening retry hit the normal signup rate limit and waited for
+expiry without weakening it. The native fixture needed its required character
+catalog hash and a settled-blend capture. Earlier Shaman evidence predates the
+recovery fix; the final pair above uses the corrected module.
+
+Module SHA-256: `9b5a761b76f2d9e12fe5672d0bb0114541fb18761473eb0f857eeb595adc051b`.
+No new browser combat run, Windows execution or public internet qualification
+was performed for this server-only change. Godot editor MCP was unavailable.
+
 ## Original common-chain camera events
 
 The local endpoint **http://127.0.0.1:8186** now serves

@@ -173,6 +173,17 @@ fn basic_attacks(document: &Value) -> Result<String, String> {
                 if area_only && (step != 3 || start != 0 || end != 0 || hit["sample_count"] != 0) {
                     return Err(format!("Unsupported mixed ordinary/area hit: {id}"));
                 }
+                let parameters = &hit["source_parameters"];
+                let knockback = if !area_only && parameters["hitting_type"] == 1 {
+                    if step != 3 || weapon == 0 || parameters["external_force"] != 15.0 {
+                        return Err(format!("Unsupported ordinary GREAT hit: {id}"));
+                    }
+                    // Unit mass, friction 0.3: sum(14.7, 14.4, ..., 0.3) cm.
+                    // Reuse the accepted one-second, collision-clipped ease-out policy.
+                    "Some(KnockbackDefinition { source_external_force: 15.0, unobstructed_distance_m: 3.675, duration_us: 1000000 })"
+                } else {
+                    "None"
+                };
                 let invisible = number(&hit["source_parameters"], "invisible_us", 0, 1_000_000)?;
                 let invisible = if area_only { 0 } else { invisible };
                 let accumulation = motion["accumulation_m"]
@@ -221,7 +232,7 @@ fn basic_attacks(document: &Value) -> Result<String, String> {
                 } else {
                     "PLAYER_GENERAL_ATTACK.range_m"
                 };
-                records.push(format!("({actor_id:?}, {weapon}, AttackDefinition {{ id: {id:?}, duration_us: {duration}, cooldown_us: {duration}, ordinary_hit_invulnerability_us: {invisible}, hit_start_us: {start}, hit_end_us: {end}, range_m: {range}, combo_input: {combo}, root_motion: {root}, special_area: {area}, screen_wave: None }})"));
+                records.push(format!("({actor_id:?}, {weapon}, AttackDefinition {{ id: {id:?}, duration_us: {duration}, cooldown_us: {duration}, ordinary_hit_invulnerability_us: {invisible}, hit_start_us: {start}, hit_end_us: {end}, range_m: {range}, combo_input: {combo}, root_motion: {root}, special_area: {area}, screen_wave: None, ordinary_knockback: {knockback} }})"));
             }
         }
     }

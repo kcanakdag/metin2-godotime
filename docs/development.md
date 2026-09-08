@@ -20,6 +20,14 @@ when updating selected weapon models/icons. `tools/test_actors.py --scenario fan
 use `tools/test_physical_combat.py --scenario classes --class-id 3` with the usual
 explicit server, database, Godot and report arguments.
 
+The class-2 and class-3 scenarios now land ordinary fourth-hit knockback on
+separate real Wild Dogs for both sexes, then check subscribed displacement and
+recovery. Run against a fresh explicitly named disposable database; reusing a
+damaged dog is not a fresh replay. Their `CLASS_ACTION_EVIDENCE` log includes
+both clients' force traces. The native actor fixture additionally checks the
+normal attack clip after knockdown, with its normal animation blend allowed to
+settle before capture.
+
 Use separate `--work-dir` and `--output-dir` values when running Web/Linux exports
 concurrently. Each `tools/export_playable.py` invocation also supplies its own
 `TMPDIR`, since Godot uses a fixed `tmpproject.binary` name while exporting packs.

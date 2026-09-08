@@ -11,6 +11,7 @@ var _catalog: Dictionary = {}
 var _base_catalog: Dictionary = {}
 var _class_actions: Array = []
 var _last_class_id := 3
+var _active_dog_id := 1
 
 
 func _run() -> void:
@@ -298,7 +299,11 @@ func _motion(class_id: int, sex: int, armed: bool, step: int = 1) -> Dictionary:
 
 
 func _class_combo(
-	client: GameConnection, observer: GameConnection, class_id: int, sex: int
+	client: GameConnection,
+	observer: GameConnection,
+	class_id: int,
+	sex: int,
+	observe_force := false
 ) -> bool:
 	var id := client.local_identity
 	var label := "class_combo_%d_%d" % [class_id, sex]
@@ -344,8 +349,61 @@ func _class_combo(
 		_class_actions.append(
 			{"class_id": class_id, "sex": sex, "step": step + 1, "action": action}
 		)
+	var force_passed := true
+	if observe_force:
+		force_passed = await _observe_class_force(client, observer, class_id, sex)
+	return (
+		force_passed
+		and _check(
+			label + "_finishes", await _wait_action_end(observer, id, int(action.action_ends_at_us))
+		)
+	)
+
+
+func _observe_class_force(
+	client: GameConnection, observer: GameConnection, class_id: int, sex: int
+) -> bool:
+	var label := "ordinary_force_%d_%d" % [class_id, sex]
+	var trace: Array = []
+	var until := Time.get_ticks_msec() + 3500
+	while Time.get_ticks_msec() < until:
+		var local := _monster(client).duplicate(true)
+		var remote := _monster(observer).duplicate(true)
+		trace.append({"local": local, "remote": remote})
+		await create_timer(0.02).timeout
+	var reactions := trace.filter(
+		func(row):
+			return (
+				str(row.remote.get("attack_action_id", "")).contains("knockdown")
+				and int(row.remote.get("activity", 0)) == 2
+			)
+	)
+	_class_actions.append({"class_id": class_id, "sex": sex, "force_trace": trace})
+	if not _check(label + "_knockdown_replicates", not reactions.is_empty()):
+		return false
+	var origin := _position(reactions[0].remote)
+	var peak := 0.0
+	for row: Dictionary in reactions:
+		peak = maxf(peak, _position(row.remote).distance_to(origin))
+	var both := reactions.any(
+		func(row):
+			return (
+				row.local.get("attack_action_id") == row.remote.get("attack_action_id")
+				and int(row.local.get("health", 0)) == int(row.remote.get("health", -1))
+			)
+	)
+	_check(label + "_both_subscribers_observe_reaction", both)
+	_check(label + "_surviving_victim", int(reactions[0].remote.health) > 0)
+	_check(label + "_bounded_displacement", peak > 3.4 and peak < 3.8)
+	var final := _monster(observer)
+	var reaction := str(final.attack_action_id)
+	# Idle rows retain the last action ID; activity decides whether it is playing.
 	return _check(
-		label + "_finishes", await _wait_action_end(observer, id, int(action.action_ends_at_us))
+		label + "_recovery_completes",
+		(
+			int(final.activity) != 2
+			or (not reaction.contains("knockdown") and not reaction.contains("standup"))
+		)
 	)
 
 
@@ -376,6 +434,7 @@ func _class_attack(
 func _class_mob_hit(
 	client: GameConnection, observer: GameConnection, class_id: int, sex: int
 ) -> bool:
+	_active_dog_id = class_id + 1 + (2 if class_id >= 2 and sex == 1 else 0)
 	# Population homes are actual server rows. No admin teleport or damage fixture.
 	if not _check(
 		"class_mobs_subscribe", await _wait_until(func(): return observer.monsters.size() == 6)
@@ -392,7 +451,12 @@ func _class_mob_hit(
 	):
 		return false
 	var health := int(dog.health)
-	if not await _class_attack(client, observer, class_id, sex, true):
+	var landed := (
+		await _class_combo(client, observer, class_id, sex, true)
+		if class_id >= 2
+		else await _class_attack(client, observer, class_id, sex, true)
+	)
+	if not landed:
 		return false
 	if not _check(
 		"class_damage_seen_by_both_%d_%d" % [class_id, sex],
@@ -420,9 +484,8 @@ func _class_mob_hit(
 
 func _monster(client: GameConnection) -> Dictionary:
 	# Separate dogs avoid a respawn dependency across the eight character checks.
-	var class_id := int(client.appearance_for(client.local_identity).get("character_class", 0))
 	for row: Dictionary in client.monsters:
-		if int(row.id) == class_id + 1:
+		if int(row.id) == _active_dog_id:
 			return row
 	return {}
 

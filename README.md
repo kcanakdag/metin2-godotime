@@ -42,8 +42,11 @@ Both Warriors now use their original fourth-hit camera-wave timing and range.
 The shared catalog importer adds supported events from the pinned motion data;
 classes without such events receive no invented shake. This follow-up passes
 76 isolated Godot checks and 106 exported Chrome/Linux checks.
-Trees, new mob types, additional weapon modes, attack-speed modifiers, ordinary
-finisher knockback and abilities remain pending. The local build uses a fresh
+Sura and Shaman fourth hits now knock surviving mobs back using their original
+GREAT-hit metadata and the shared collision/recovery system. Mob attacks also
+restore the correct normal animation after knockdown.
+Trees, new mob types, additional weapon modes, attack-speed modifiers and
+abilities remain pending. The local build uses a fresh
 character database; previous databases and auth accounts are preserved. The public
 endpoint remains unchanged.
 

@@ -7,6 +7,15 @@ the public appearance projection drives the model shown by every client.
 
 ## Build selected original assets
 
+Ordinary Sura/Shaman common-chain finishers use their source GREAT-hit/force-15
+metadata in the server compiler. A surviving target receives the shared
+collision-clipped 3.675 m knockback and original Wild Dog reaction sequence;
+lethal or rejected hits do not start a force. This uses the existing one-second
+physics approximation. Small pushes on non-GREAT hits remain pending. The live
+`tools/test_physical_combat.py --scenario classes --class-id 2` and `--class-id 3`
+scenarios use separate real dogs for both appearances and record subscribed force
+traces, damage and recovery. Use a fresh named test database for each full replay.
+
 The catalog builder adapts source camera-wave events only for the registered
 common weapon chain. Both Warriors' fourth attacks carry a 200 ms wave, activated
 at 633,334 microseconds with a two-metre viewer range. The selected Ninja, Sura

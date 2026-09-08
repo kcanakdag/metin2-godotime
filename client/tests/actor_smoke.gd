@@ -89,6 +89,7 @@ func _test_catalog() -> void:
 				{
 					"definition_profile": ActorCatalog.PROFILE_ID,
 					"definition_hash": _catalog.gameplay_definition_hash(),
+					"character_catalog_hash": _catalog.characters.content_hash,
 				}
 			)
 		),
@@ -624,6 +625,24 @@ func _test_monster() -> void:
 	_check(
 		dog.presentation_snapshot().action_id == back_knockdown.action_id,
 		"an expired authoritative reaction row never falls back to local damage presentation"
+	)
+	var resumed := _catalog.motion(ActorCatalog.WILD_DOG_ID, "general", "", "normal_attack")
+	row.attack_sequence = 12
+	row.attack_action_id = str(resumed.action_id)
+	row.action_started_at_us = 7_000_000
+	row.action_ends_at_us = 7_000_000 + int(resumed.duration_us)
+	dog.apply_state(row, 7_300_000)
+	_check(
+		(
+			dog.presentation_snapshot().action_id == resumed.action_id
+			and dog.presentation_snapshot().clip == str(resumed.godot_name)
+		),
+		"a fresh authoritative normal attack replaces the completed knockdown clip"
+	)
+	# Let the normal 120 ms animation crossfade settle before inspecting the pose.
+	await create_timer(0.15).timeout
+	await _capture_from(
+		"dog-recovered-attack", dog.position + Vector3(2.4, 1.1, -3.0), dog.position
 	)
 	row.activity = 3
 	row.health = 0

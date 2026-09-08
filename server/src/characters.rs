@@ -144,6 +144,14 @@ mod tests {
                 assert_eq!(action.combo_input.is_some(), index < 3);
                 assert_eq!(combo_start(action.id), index == 0);
                 assert!(requires_weapon(action.id));
+                let ordinary_great = index == 3 && appearance.class_id >= 2;
+                assert_eq!(action.ordinary_knockback.is_some(), ordinary_great);
+                if let Some(force) = action.ordinary_knockback {
+                    assert!(action.special_area.is_none());
+                    assert_eq!(force.source_external_force, 15.0);
+                    assert_eq!(force.unobstructed_distance_m, 3.675);
+                    assert_eq!(force.duration_us, 1_000_000);
+                }
                 if let Some(input) = action.combo_input {
                     assert!(input.pre_input_us < input.direct_input_us);
                     assert!(input.direct_input_us <= input.input_limit_us);
