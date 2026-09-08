@@ -43,23 +43,24 @@ Republishing an existing database is not a supported population deployment
 workflow. Do not reuse IDs for unrelated spawns, remove persisted IDs or reset a
 database to make tests pass. Migration/reconciliation is an upcoming operator
 feature. The population layout itself adds no protocol fields. Current NPC interactions
-use application protocol 13.
+use application protocol 17.
 
 ## Convert original stationary NPCs
 
 `content/profiles/yongan-town-npcs.json` selects 23 additional original definitions
 at 32 source point placements: merchants, teachers, blacksmith, fishermen and
-other stationary townspeople. It is a candidate batch, not an installed population
-or working shop system. Use it with the same importer and batch gallery commands
+other stationary townspeople. It is installed in the local development build; shop transactions are not
+implemented yet. Use it with the same importer and batch gallery commands
 below. The gallery checks every actor and saves `npc-preview-<vnum>.png` for each.
 The corrected batch `.local/npcs/yongan-town-r7` contains 190 reachable clips.
 Native gallery `.local/npcs/yongan-town-qa-r3/report.json` passes 936 checks,
 including all 23 screenshots. The combined candidate catalog at
 `.local/npcs/yongan-town-catalog-r2/runtime` adds the existing guard for 24
-definitions / 33 placements; it has not replaced the live catalog.
+definitions / 33 placements. The matching catalog is installed via
+`.local/npcs/yongan-town-installed-r1`; its previous installation is preserved.
 The candidate's `yongan-town-world-r4/report.json` passes 39 real Main/map checks
 for activation, chunk reload, guard picking and lifecycle cleanup. Its connection
-is simulated; actual exported multiplayer verification is still required.
+is simulated. Separate actual exported multiplayer verification is recorded below.
 
 To exercise a candidate in an isolated copy of the real map scene:
 
@@ -220,6 +221,32 @@ Terrain adapters currently support training and Yongan. Additional playable maps
 need terrain, streaming metadata and transitions as well as another profile.
 
 ## Focused qualification
+
+The local endpoint `http://127.0.0.1:8186` serves
+`mt2-p2-town-dev-r1-20260908`, module `.local/npcs/town-module-r2.wasm` and Web
+`.local/npcs/exports/town-web-r2`. The matching native export is
+`.local/npcs/exports/town-linux-r2/MT2Spacetime.x86_64`.
+`town-browser-r2/report.json` passes 114 actual Chrome/Linux checks, with no
+browser engine errors. Both clients verify the 21 original NPCs on the entry
+chunk by stable ID, name, position, heading and playing idle, before and after
+the guard route. They also exercise dialogue/privacy, close/Escape/WASD,
+training-dummy combat, character switching, presence removal, reconnect and login.
+The two-client check does not visit all remote fisherman placements.
+
+The combined scenario found that NPC clicks retained a previously selected
+training dummy. The client now sends the normal clear-target intent when choosing
+an NPC; the server also clears the prior target when accepting a new conversation.
+The failed `town-browser-r1` is retained. All prior databases remain intact.
+These are local test-probe exports; public deployment and Windows execution are
+unchanged. Merchants do not yet implement shop transactions.
+
+```sh
+python3 tools/test_browser_accounts.py --url http://127.0.0.1:8186 \
+  --database mt2-p2-town-dev-r1-20260908 \
+  --native .local/npcs/exports/town-linux-r2/MT2Spacetime.x86_64 \
+  --world-npcs tests/fixtures/yongan-town-route.json --training-dummy --skills \
+  --hardware --headless --output .local/npcs/my-town-browser-check
+```
 
 ```sh
 python3 tools/test_physical_combat.py --scenario population \

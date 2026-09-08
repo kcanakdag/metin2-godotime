@@ -97,6 +97,7 @@ pub fn interact_npc(
     control.direction_x = 0.0;
     control.direction_z = 0.0;
     crate::combo::cancel_queued_link(&mut control);
+    crate::targeting::clear_character_target(ctx, &mut control)?;
     ctx.db.npc_interaction().insert(NpcInteraction {
         character_id: control.identity,
         account: accounts::owner_account(ctx, control.identity)

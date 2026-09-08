@@ -669,6 +669,7 @@ func _click_world(screen_position: Vector2) -> void:
 	if pick.get("kind") == "npc":
 		var npc: Variant = pick.get("actor")
 		if npc is NpcActor and _npcs.actors.values().has(npc):
+			connection.clear_combat_target()
 			_npc_approach.start(npc)
 			_marker_time = 0.0
 		return

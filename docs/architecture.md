@@ -65,6 +65,13 @@ walkable. The shared `valid_npc_position` function is used at server initializat
 and by the offline catalog inspector. Mob spawning and player movement retain
 their collision checks. This does not add a client placement reducer.
 
+Choosing an NPC sends the existing clear-combat-target intent before approach.
+When accepting a new NPC conversation, the server also clears the controller's
+target and its private target view in the same transaction as the interaction.
+The client displays the subscribed result; it does not clear authoritative state
+optimistically. A rejected interaction does not clear the server target as a
+side effect of that rejected reducer.
+
 This page describes the implemented prototype. The
 [full-game design](rebuild/architecture-and-delivery.md) separately proposes
 module boundaries, state machines, modern replication/privacy contracts and

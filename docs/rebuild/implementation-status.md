@@ -7,14 +7,30 @@ or reclassify that scope.
 
 ## P6: all-class abilities requested; training target delivered locally
 
-### Original town NPC population prepared and qualified in isolation
+### Original town NPC population delivered locally
+
+Live follow-up: `http://127.0.0.1:8186` now serves
+`mt2-p2-town-dev-r1-20260908` with `.local/npcs/town-module-r2.wasm` and matched
+`exports/town-web-r2` / `exports/town-linux-r2`. The actual exported run
+`.local/npcs/town-browser-r2/report.json` passes **114 checks**, without browser
+engine errors. Both clients verify 21 original entry-chunk NPCs, guard dialogue,
+movement, training-dummy combat and account/reconnect lifecycle. Remote fisherman
+placements have not all been visited in that run. All 24 NPC definitions pass
+the actual PCK audits: 1,140 Web and 1,943 Linux packaged paths, including exact
+UI pixel checks. `town-live-lint-r1.log` passes all lint groups.
+
+The first combined browser run exposed a stale prior combat target when choosing
+an NPC. The normal client clear-target intent and an authoritative clear on
+accepted conversation fix that transition; the failed run is retained. The
+catalog is installed with its previous installation preserved, and prior databases
+were not reset. Public deployment and Windows execution remain unchanged.
 
 `content/profiles/yongan-town-npcs.json` now selects 23 original stationary NPC
 definitions at 32 point placements, including merchants, eight teachers,
 blacksmith, fishermen and townspeople. `.local/npcs/yongan-town-r7` converts 190
 reachable original motions. Combined with the existing guard,
 `yongan-town-catalog-r2/runtime` builds a 24-definition / 33-placement candidate.
-It has not replaced the installed catalog, live database or exported clients.
+The subsequent live integration is recorded above.
 Shops, training interactions, NPC combat and quests remain unimplemented.
 
 The work fixes source-driven importer issues: GR2 face material assignments now
@@ -37,9 +53,8 @@ teacher and alchemist screenshots were inspected. `yongan-town-world-r4/report.j
 passes 39 real Main/map lifecycle and picking checks with a simulated connection.
 `town-server-r1.log` passes 146 Rust tests; `town-lint-r3.log` passes all groups.
 Focused Python suites pass 9 NPC, 4 GR2 and 2 world-authoring tests.
-No connected-editor, actual multiplayer, browser export or public-deployment
-qualification is claimed for this candidate. The next action is matched live
-server/client integration and exported-client verification.
+These isolated checks are separate from the live export evidence above.
+No connected-editor or public-deployment qualification is claimed for this slice.
 
 Failed attempts are retained: source material/motion restrictions, lost secondary
 material faces, incorrect idle duration expectation, blocked fisherman placement,

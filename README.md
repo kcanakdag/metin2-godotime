@@ -26,7 +26,7 @@ fixture is simulated. A separate **103-check authenticated Web/Linux run**
 qualifies approach, dialogue, Close/Escape, WASD and account lifecycle. Another
 59 live checks cover private sessions, rejection, expiry and reconnect.
 The updated development build is served at **http://127.0.0.1:8186** against
-`mt2-p2-dummy-dev-r1-20260908`. Click the City Guard to approach and talk;
+`mt2-p2-town-dev-r1-20260908`. Click the City Guard to approach and talk;
 Close or Escape dismisses the dialogue, and movement resumes normally.
 Character creation shows Warrior, Ninja, Sura and Shaman together, with the
 selected class in front, original intro idle animations, hair, titles and
@@ -63,10 +63,11 @@ reward-free behavior are profile driven. It passes 16 native presentation checks
 45 live two-client checks and 82 actual Chrome/Linux checks, with matching exports. All 44 classic abilities have been discovered and
 converted for both appearances, but their full server mechanics are not yet live.
 
-The next [town-NPC package](docs/world-content.md) is prepared: 23 additional
-original definitions, 32 placements and 190 converted motions. Its isolated
-Godot gallery passes 936 checks and the real map-scene fixture passes 39. Live
-integration is pending; these models do not yet provide shops or quests.
+The [town-NPC package](docs/world-content.md) is now live locally: 24 original
+NPC definitions at 33 placements, including the existing guard, merchants,
+teachers, blacksmith and fishermen. It passes 936 gallery checks, 39 isolated
+map-scene checks and 114 actual Chrome/Linux checks. Opening an NPC conversation
+also clears a previous combat target. Shops and quests remain pending.
 
 The current worktree is protocol 17 / trusted content schema 8 (item registry schema 2). Item actions
 carry the server item's revision, rejecting stale/replayed mutations. Quantity

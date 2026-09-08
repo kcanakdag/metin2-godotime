@@ -10,9 +10,34 @@ def npc(snapshot, spawn_id):
     return matches[0] if matches else {}
 
 
+def population_matches(snapshot, expected):
+    for definition in expected:
+        actual = npc(snapshot, definition["spawn_id"])
+        if (
+            not actual.get("playing")
+            or not actual.get("idle")
+            or actual.get("name") != definition["name"]
+            or len(actual.get("position", [])) != 3
+            or not all(math.isfinite(v) for v in actual["position"])
+            or math.dist(actual["position"], definition["position"]) > 0.02
+        ):
+            return False
+        angle = actual.get("yaw", math.nan) - definition["yaw"]
+        if not math.isfinite(angle) or abs(math.atan2(math.sin(angle), math.cos(angle))) > 0.0001:
+            return False
+    return True
+
+
 def exercise_npcs(page, web, desktop, web_command, native_command, wait, route, output):
     spawn_id = route["spawn_id"]
     expected = route["npc_position"]
+    population = route.get("entry_population", [])
+    if population:
+        wait(
+            f"both_exports_render_{len(population)}_original_entry_npcs",
+            lambda: all(population_matches(s, population) for s in (web(), desktop())),
+        )
+        page.screenshot(path=str(output / "town-entry-browser.png"))
     for snapshot in (web(), desktop()):
         assert snapshot["world_info"] == {
             "map_id": route["map_id"],
@@ -121,4 +146,9 @@ def exercise_npcs(page, web, desktop, web_command, native_command, wait, route, 
     finally:
         page.keyboard.up("KeyD")
     web_command("stop")
+    if population:
+        wait(
+            "town_population_preserved_after_guard_route_and_dialogue",
+            lambda: all(population_matches(s, population) for s in (web(), desktop())),
+        )
     return before
