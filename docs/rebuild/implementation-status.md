@@ -5,6 +5,28 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Shared actor motion-effect event playback — 2026-09-09
+
+`ActorPresentation` now dispatches optional typed `effects` from the actual
+AnimationPlayer source clock through `motion_effect_requested`. Event identities
+are consumed once per action/sequence; forced resync preserves consumption, a new
+action/reset clears it, and late entry suppresses past events while retaining an
+exact-boundary event. Completion drains events missed by a long frame, disabled
+source attachments do not dispatch, and signal payloads are copied. Existing
+projectile dispatch and catalogs without effects remain supported.
+
+The reusable isolated `tools/test_motion_effect_playback.py` runner passes 19
+headless Godot checks using real AnimationPlayer advancement, seek, speed scaling,
+finish signals, freeze/reset and projectile regression. Evidence:
+`.local/p6-skill-effects-r6/playback-regression/report.json`. Touched Python and
+GDScript lint/format checks pass. The first manual test had userdata-directory
+errors; the accepted runner isolates userdata and rejects engine errors.
+
+This is event-clock integration, not visible skill effect integration. Installed
+catalogs still contain no effect records. Resource linking, transforms, renderer
+lifecycle, Bash's complete mesh effects and rendered two-client QA remain required.
+No live content/server/public release changed.
+
 ## Original female Warrior missing-bone behavior — 2026-09-09
 
 The effect skeleton audit found `Bip01 Footsteps` absent from the female converted

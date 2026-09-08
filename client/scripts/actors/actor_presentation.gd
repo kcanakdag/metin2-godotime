@@ -2,6 +2,8 @@ class_name ActorPresentation
 extends Node3D
 ## Shared model, manifest motion, and bone-equipment presentation.
 
+signal motion_effect_requested(definition: Dictionary)
+
 signal projectile_launched(definition: Dictionary, origin: Vector3)
 
 var catalog: RefCounted
@@ -19,6 +21,7 @@ var _clips: Dictionary = {}
 var _equipment: Node3D
 var _frozen_pose := false
 var _consumed_launches: Dictionary = {}
+var _consumed_effects: Dictionary = {}
 
 
 func configure(value: RefCounted, definition_id: String) -> bool:
@@ -115,6 +118,7 @@ func _play_motion(
 	_frozen_pose = false
 	if not same:
 		_consumed_launches.clear()
+		_consumed_effects.clear()
 	current_motion = motion
 	current_mode = resolved_mode
 	current_sequence = sequence
@@ -136,13 +140,18 @@ func _play_motion(
 	for launch: Dictionary in current_motion.get("projectile_launches", []):
 		if int(launch.start_us) < int(round(offset_seconds * 1_000_000)):
 			_consumed_launches[str(launch.source_event)] = true
+	for effect: Dictionary in current_motion.get("effects", []):
+		if int(effect.start_us) < int(round(offset_seconds * 1_000_000)):
+			_consumed_effects[str(effect.source_event)] = true
 	return true
 
 
 func _process(_delta: float) -> void:
 	if animation_player == null or _frozen_pose or not animation_player.is_playing():
 		return
-	_emit_projectiles(int(round(animation_player.current_animation_position * 1_000_000)))
+	var source_time_us := int(round(animation_player.current_animation_position * 1_000_000))
+	_emit_projectiles(source_time_us)
+	_emit_motion_effects(source_time_us)
 
 
 func _emit_projectiles(source_time_us: int) -> void:
@@ -156,12 +165,23 @@ func _emit_projectiles(source_time_us: int) -> void:
 			projectile_launched.emit(launch.duplicate(true), origin.position)
 
 
+func _emit_motion_effects(source_time_us: int) -> void:
+	for effect: Dictionary in current_motion.get("effects", []):
+		var identity := str(effect.source_event)
+		if _consumed_effects.has(identity) or int(effect.start_us) > source_time_us:
+			continue
+		_consumed_effects[identity] = true
+		if bool(effect.get("enabled", true)):
+			motion_effect_requested.emit(effect.duplicate(true))
+
+
 func _on_animation_finished(clip: StringName) -> void:
 	if current_motion.is_empty() or _frozen_pose:
 		return
 	if clip == _clips.get(str(current_motion.get("godot_name", "")), ""):
 		# A long frame may finish playback before this node polls the clock.
 		_emit_projectiles(int(current_motion.duration_us))
+		_emit_motion_effects(int(current_motion.duration_us))
 
 
 func projectile_launch_origin(launch: Dictionary) -> Dictionary:
@@ -202,6 +222,7 @@ func reset_action() -> void:
 	current_mode = ""
 	current_sequence = -1
 	_consumed_launches.clear()
+	_consumed_effects.clear()
 	_frozen_pose = false
 	if animation_player:
 		animation_player.stop()

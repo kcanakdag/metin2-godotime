@@ -2109,3 +2109,8 @@ and converted metre offsets. Unknown fields/invalid flags reject; other unsuppor
 motion metadata is retained in the report. The output must not already exist.
 This command does not fetch assets, install content or enable gameplay. Link referenced
 MSE effects and converted skeleton bones before installing motion presentation.
+
+Run `python3 tools/test_motion_effect_playback.py --godot GODOT --output NEW_DIR`
+for isolated headless checks of ActorPresentation effect timing, resync, completion
+and legacy projectile dispatch. It records source hashes and rejects engine errors.
+This tests event signals with a real AnimationPlayer, not effect rendering or servers.
