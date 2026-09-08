@@ -1490,3 +1490,12 @@ The exported browser scenario adds `--training-dummy` to
 `tools/test_browser_accounts.py` and checks actual pointer/Space input against
 the normal authored target. The qualified dummy build is served locally on
 `mt2-p2-dummy-dev-r1-20260908`; previous databases and exports remain preserved.
+## NPC area placement qualification
+
+After converting `content/profiles/yongan-area-npcs.json`, run
+`python3 tools/test_npc_placements.py --content <conversion-directory> --seeds 100 --output <new-report-directory>`.
+The tool compiles the pinned offline Rust example and samples against the actual
+Yongan terrain. Outputs are explicitly preview data, not authoritative database
+rows. The report includes code, terrain and binary hashes; changing an input during
+qualification fails the run. This does not replace multiplayer placement,
+reconnect or disconnect tests when runtime subscriptions are implemented.

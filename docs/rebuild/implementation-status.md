@@ -9,6 +9,21 @@ or reclassify that scope.
 
 ### Original area-spawn townspeople: conversion and source contract
 
+Placement follow-up: `server/src/npc_placement.rs` implements the shared inclusive
+centimetre sampler, sixteen terrain attempts, post-success heading selection and
+original-to-Godot heading conversion. Malformed rectangles, out-of-range RNG values
+and nonfinite heights reject. Exhaustion returns no placement, never a center.
+The sampler is currently exercised through an offline Rust example, not connected
+to the live game module or persistent tables.
+
+`tools/test_npc_placements.py` qualifies converted definitions using real Yongan
+terrain. `.local/npcs/area-sampling-r2/report.json` passes **600 placements across
+100 seeds**, bound to actual terrain bytes, source files, Cargo lock and the binary.
+The Rust example suite passes 18 tests, including four sampler regressions and
+shared terrain/movement tests. Repository lint passes. No database or served
+client changed. Transactional persistence, regeneration scheduling, a synchronized
+protocol/client subscription change and two-client reconnect proof remain next.
+
 `content/profiles/yongan-area-npcs.json` selects six `NOMOVE` NPCs: Aranyo, Ah-Yu,
 Yonah, Mirine, Uriel and Baek-Go. Their original regeneration rectangles are
 preserved as inclusive centimetre bounds with 16 attempts and independent random

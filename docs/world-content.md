@@ -339,3 +339,25 @@ require supported textures. Mirine has a travelling run clip without MSA travel:
 for stationary NPCs only, the converter preserves and flags this unused embedded
 motion. It does not enable NPC locomotion or relax playable-character root checks.
 The served population remains 32 definitions at 41 placements.
+
+The shared Rust sampler is `server/src/npc_placement.rs`. It takes a server RNG
+callback and a terrain-height validator, samples inclusive centimetre coordinates,
+and draws a heading only after a position succeeds. Sixteen failed attempts return
+no placement; malformed RNG results or nonfinite terrain heights fail explicitly.
+Original headings 0 and 360 map to the same Godot yaw. Persistence, regeneration
+scheduling and client replication are not wired to this module yet.
+
+Qualify area content against the real Rust terrain implementation with:
+
+```sh
+python3 tools/test_npc_placements.py --content .local/npcs/area \
+  --seeds 100 --output .local/npcs/area-placement-qa
+cargo test --manifest-path server/Cargo.toml --offline --features yongan \
+  --example npc_placement
+```
+
+This is an offline developer check, with explicit preview seeds; it does not
+create or update a database. Its report checks every returned identity, centimetre
+coordinate and heading, and binds the definitions, actual terrain bytes, sampler,
+toolchain lock and compiled executable. Seed selection must remain an offline
+facility: live placements will use the reducer's RNG and persist once per spawn.

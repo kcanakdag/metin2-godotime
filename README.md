@@ -79,6 +79,9 @@ NPCs. One initial native connection drop did not recur in the unchanged repeat.
 Six further original townspeople are converted and pass 144 native gallery checks.
 Their [random-area spawn definitions](docs/world-content.md#original-area-spawn-npcs)
 are preserved for server-owned placement; they are not yet installed in the map.
+The shared placement sampler passes 600 offline samples against Yongan's terrain;
+the [developer command](docs/world-content.md#original-area-spawn-npcs) records
+reproducible seeds and input hashes. Persistent rows and replication remain pending.
 
 The current worktree is protocol 17 / trusted content schema 8 (item registry schema 2). Item actions
 carry the server item's revision, rejecting stale/replayed mutations. Quantity
