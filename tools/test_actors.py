@@ -74,7 +74,15 @@ def main() -> None:
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument(
         "--scenario",
-        choices=["actors", "fan", "class_skills", "equipped_skills", "training_dummy", "mobs"],
+        choices=[
+            "actors",
+            "fan",
+            "class_skills",
+            "equipped_skills",
+            "skill_effects",
+            "training_dummy",
+            "mobs",
+        ],
         default="actors",
     )
     parser.add_argument(
@@ -88,10 +96,16 @@ def main() -> None:
         action="store_true",
         help="Exercise the actor PNG policy through an Xvfb editor 3D-scene negative control.",
     )
+    parser.add_argument("--effect-catalog", type=Path)
+    parser.add_argument("--effect-links", type=Path)
     parser.add_argument("--output", type=Path, default=ROOT / ".local/actors")
     options = parser.parse_args()
     if (options.scenario == "mobs") != (options.mob_content is not None):
         parser.error("The mobs scenario requires --mob-content exclusively")
+    if options.scenario == "skill_effects" and (
+        not options.effect_catalog or not options.effect_links
+    ):
+        parser.error("skill_effects requires --effect-catalog and --effect-links")
     options.output = options.output.resolve()
     options.output.mkdir(parents=True, exist_ok=True)
     report_path = options.output / "report.json"
@@ -104,7 +118,7 @@ def main() -> None:
             "Missing target-effect catalog; run import_target_effects.py --install first."
         )
     texture_editor_check = options.texture_editor_check or (
-        options.native and options.scenario not in ("training_dummy", "mobs")
+        options.native and options.scenario not in ("training_dummy", "mobs", "skill_effects")
     )
     if texture_editor_check and not shutil.which("xvfb-run"):
         raise SystemExit("Actor texture editor import verification requires xvfb-run.")
@@ -119,6 +133,25 @@ def main() -> None:
         shutil.copy2(
             ROOT / "client/scripts/world/world_picker.gd", stage / "scripts/world/world_picker.gd"
         )
+        if options.scenario == "skill_effects":
+            shutil.copy2(
+                ROOT / "client/scripts/world/world_motion_effects.gd",
+                stage / "scripts/world/world_motion_effects.gd",
+            )
+            effects = stage / "effect-candidate"
+            effects.mkdir()
+            shutil.copy2(options.effect_catalog, effects / "effects.v1.json")
+            shutil.copy2(options.effect_links, effects / "links.json")
+            for texture in json.loads(options.effect_catalog.read_text())["textures"].values():
+                relative = Path(texture["path"])
+                if relative.is_absolute() or ".." in relative.parts:
+                    raise ValueError("Unsafe effect texture path")
+                source = options.effect_catalog.resolve().parent / relative
+                if sha256(source) != texture["sha256"]:
+                    raise ValueError("Effect texture hash mismatch")
+                destination = effects / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, destination)
         shutil.copytree(ACTOR_PROFILE, stage / "assets/imported/content/p0-warrior-dog")
         shutil.copytree(options.character_package, stage / "assets/imported/characters")
         shutil.copytree(TARGET_EFFECT_PROFILE, stage / "assets/imported/content/p2-target-effects")
@@ -153,6 +186,7 @@ def main() -> None:
             "fan": "fan_actor_smoke.gd",
             "class_skills": "class_skill_actor_smoke.gd",
             "equipped_skills": "equipped_skill_actor_smoke.gd",
+            "skill_effects": "skill_effect_actor_smoke.gd",
             "training_dummy": "training_dummy_smoke.gd",
             "mobs": "mob_actor_smoke.gd",
         }[options.scenario]
@@ -250,6 +284,12 @@ def main() -> None:
         if options.authored_package:
             tested_files["authored_manifest"] = sha256(authored / "manifest.v1.json")
             tested_files["authored_model"] = sha256(authored / "training-dummy.glb")
+        if options.scenario == "skill_effects":
+            tested_files["effect_catalog"] = sha256(options.effect_catalog)
+            tested_files["effect_links"] = sha256(options.effect_links)
+            tested_files["world_motion_effects"] = sha256(
+                stage / "scripts/world/world_motion_effects.gd"
+            )
         environment = {
             **os.environ,
             "XDG_DATA_HOME": str(stage / ".data"),

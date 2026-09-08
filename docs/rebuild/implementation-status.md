@@ -5,6 +5,28 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Equipped original Warrior effect playback gallery — 2026-09-09
+
+The new `test_actors.py --scenario skill_effects` stages explicit particle resources
+and motion links without modifying installed catalogs. The actual male/female
+Warrior models, original swords and original Three-Way Cut/Sword Spin/Spirit Strike
+clips drive event dispatch and attached renderers. All 55 checks pass, with 18
+captures, source events emitted once, bounded deformation/equipment and no attachment
+simulation errors. Evidence: `.local/p6-skill-effects-r9/actors-r2/report.json` and
+captures; input links are `../links.json`. The first fixture run used float-formatted
+JSON skill IDs in action names; the corrected fixture explicitly casts IDs to ints.
+
+Reviewed captures show the male Sword Spin effect aligned along the equipped blade
+and the female Spirit Strike charge at the body. This is Linux native Compatibility
+rendering, not pixel comparison against the original client or browser multiplayer.
+The fixture intentionally uses local PNG decoding; shipping resource loading is still
+required. No connected editor was inspected. Touched Python/GDScript lint passes.
+
+Bash is excluded as a whole until its mixed particle/mesh effect is converted.
+No partial Bash effect was installed, and installed/live catalogs remain unchanged.
+Next: complete mixed effects and package/link these resources for actual world loading,
+then run two-client/exported acceptance and update the public development build.
+
 ## Actor-triggered effect renderer lifecycle — 2026-09-09
 
 `world_motion_effects.gd` binds actor effect signals to the existing particle

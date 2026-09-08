@@ -2119,3 +2119,18 @@ The particle `--scenario render` gallery also exercises `WorldMotionEffects`
 with real renderer instances and synthetic actor/bone poses: signal spawning,
 follow/capture transforms, actor exit and natural effect completion. This does not
 replace equipped animated-character or exported multiplayer effect qualification.
+
+For the actual equipped Warrior effect gallery, run:
+
+```sh
+python3 tools/test_actors.py --scenario skill_effects --native --godot GODOT \
+  --effect-catalog PARTICLE_CATALOG --effect-links SELECTED_LINKS_JSON --output NEW_DIR
+```
+
+The links are selected `{actor_id, skill_vnum, effects}` records from the source
+adapter/resolver. The current fixture selects complete effects for skills 1, 2 and
+16 across both Warrior sexes. It runs actual clips and source event clocks with
+original swords, captures three frames per appearance/skill and checks deformation
+and renderer errors. Candidate events are injected only into the isolated test;
+no installed catalog is rewritten. This scenario keeps texture import/3D checks,
+but the editor texture negative control is opt-in because asset importing is unchanged.
