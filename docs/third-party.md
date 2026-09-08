@@ -380,3 +380,8 @@ source or binary is bundled. This adapter is qualified against the installed
 Godot 4.7.2 Compatibility renderer; engine changes require rerunning the rendered
 256-step pixel ramp. Nonlinear tone mapping, fog, other renderers and original
 client pixel parity are not covered by that qualification.
+
+The independently authored ordinary-mob damage finalizer uses the existing pinned
+server reference (`battle.cpp` and `char_battle.cpp`) to distinguish NPC normal,
+normal-range and magic damage, including floor, resistance and critical ordering.
+No original implementation is copied or new reference dependency downloaded.

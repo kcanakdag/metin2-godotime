@@ -1210,3 +1210,20 @@ The target resolver uses the exact subscribed player identity/life and transform
 converted body bounds center, excluding equipment. Source removal forgets launch
 deduplication without destroying an existing flight. These visual callbacks never
 apply damage; authoritative ranged/magic damage remains separate unfinished work.
+
+## Ordinary mob damage kinds
+
+Ordinary mob damage dispatch now uses a typed field on the trusted mob definition.
+The installed dog selects Normal; the shared `mob_damage` finalizer also implements
+NormalRange and Magic under the current zero-bonus policy. NPC magic repeats the
+low-damage floor after melee calculation, applies magic resistance, and uses the
+reduced skill critical probability. NormalRange uses bow resistance and full
+normal critical probability. Resistance truncates before critical doubling;
+bounded arithmetic and invalid RNG rejection prevent wrapping or invalid rolls.
+Source reference: pinned server `battle.cpp` CalcMagicDamage/CalcBattleDamage and
+`char_battle.cpp` FuncShoot/CHARACTER::Damage. This is independently authored logic.
+The magic and range branches are covered by deterministic arithmetic tests, not
+live enemies. Their action scheduling, canonical resistance adapters, population
+registry installation and live two-client qualification still remain unfinished.
+Party/affect/penetration and hit/skill bonus stages are not implemented by this
+finalizer; the installed policy keeps them at zero. No server was republished.

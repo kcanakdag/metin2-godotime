@@ -1,3 +1,6 @@
+#[path = "../src/mob_damage.rs"]
+mod mob_damage;
+
 #[allow(dead_code)]
 mod definitions {
     include!(concat!(env!("OUT_DIR"), "/trusted_definitions.rs"));

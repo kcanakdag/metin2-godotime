@@ -1004,29 +1004,13 @@ pub fn roll_monster_hit(
 ) -> Result<u16, String> {
     let definition = mob_physical(monster)?;
     let damage = roll_damage(ctx, mob_attacker(definition)?, player_victim(ctx, target)?)?;
-    if definition.critical_percent == 0 {
-        return Ok(damage);
-    }
-    normal_mob_critical(
+    crate::mob_damage::finish(
+        crate::combat::ordinary_definition(monster)?.damage_kind,
         damage,
+        0,
         definition.critical_percent,
-        ctx.rng().gen_range(1..=100),
+        |low, high| ctx.rng().gen_range(low..=high),
     )
-}
-
-// Original normal-hit path: roll 1..100 against the full critical percentage,
-// then double damage. Skill-critical probability follows a different formula.
-fn normal_mob_critical(damage: u16, percent: u8, roll: u8) -> Result<u16, String> {
-    if percent > 100 || !(1..=100).contains(&roll) {
-        return Err("Invalid normal mob critical roll.".into());
-    }
-    if roll <= percent {
-        damage
-            .checked_mul(2)
-            .ok_or("Critical damage exceeds the supported range.".into())
-    } else {
-        Ok(damage)
-    }
 }
 
 pub fn display_values(
@@ -1074,20 +1058,6 @@ pub fn display_values(
 mod tests {
     use super::*;
     use std::cell::Cell;
-
-    #[test]
-    fn normal_mob_critical_uses_full_percentage_and_bounded_doubling() {
-        for roll in 1..=100 {
-            assert_eq!(
-                normal_mob_critical(37, 5, roll).unwrap(),
-                if roll <= 5 { 74 } else { 37 }
-            );
-            assert_eq!(normal_mob_critical(37, 0, roll).unwrap(), 37);
-        }
-        assert!(normal_mob_critical(37, 101, 1).is_err());
-        assert!(normal_mob_critical(37, 5, 0).is_err());
-        assert!(normal_mob_critical(u16::MAX, 100, 1).is_err());
-    }
 
     #[test]
     fn mob_stat_adapters_change_both_sides_of_the_real_damage_calculation() {

@@ -1377,6 +1377,7 @@ fn main() {
 pub struct WeightedMobAttack { pub attack: AttackDefinition, pub weight: u8 }
 #[derive(Clone, Copy, Debug)]
 pub struct MobDefinition {
+    pub damage_kind: crate::mob_damage::Kind,
     pub vnum: u32,
     pub actor_id: &'static str,
     pub name: &'static str,
@@ -1399,6 +1400,7 @@ pub struct MobDefinition {
     pub back_knockdown: MonsterReactionDefinition,
 }
 pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
+    damage_kind: crate::mob_damage::Kind::Normal,
     vnum: MOB_VNUM, actor_id: MOB_ACTOR_ID, name: MOB_NAME,
     model_key: MOB_MODEL_KEY, motion_set: MOB_MOTION_SET,
     level: MOB_LEVEL, health: MOB_MAX_HEALTH,

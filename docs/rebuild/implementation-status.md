@@ -22,6 +22,24 @@ evidence. No server or public deployment changed in this recheck.
 
 ### Original wildlife definitions in progress
 
+Ordinary mob damage dispatch now uses a typed field on the trusted mob definition.
+The installed dog selects Normal; the shared `mob_damage` finalizer also implements
+NormalRange and Magic under the current zero-bonus policy. NPC magic repeats the
+low-damage floor after melee calculation, applies magic resistance, and uses the
+reduced skill critical probability. NormalRange uses bow resistance and full
+normal critical probability. Resistance truncates before critical doubling;
+bounded arithmetic and invalid RNG rejection prevent wrapping or invalid rolls.
+Source reference: pinned server `battle.cpp` CalcMagicDamage/CalcBattleDamage and
+`char_battle.cpp` FuncShoot/CHARACTER::Damage. This is independently authored logic.
+The magic and range branches are covered by deterministic arithmetic tests, not
+live enemies. Their action scheduling, canonical resistance adapters, population
+registry installation and live two-client qualification still remain unfinished.
+Party/affect/penetration and hit/skill bonus stages are not implemented by this
+finalizer; the installed policy keeps them at zero. All-target Rust tests and
+strict all-feature Clippy pass; evidence is `.local/mobs/damage-dispatch-r1`
+(141 library tests plus the builder/generated-definition/example suites).
+No server was republished.
+
 Main-scene projectile checkpoint: Main now loads the required package, connects
 real PveActor launch signals and resolves the rendered player's transformed body
 bounds center. `.local/mobs/projectile-main-r4/report.json` passes 31 native checks

@@ -13,6 +13,7 @@ mod item_effects;
 mod item_security;
 mod knockback;
 mod mob_actions;
+pub mod mob_damage;
 mod movement;
 pub mod npc_placement;
 mod npc_spawns;
