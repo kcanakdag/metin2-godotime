@@ -231,3 +231,10 @@ the nested `SkillEventTiming` type; an actual BSATN round-trip preserves event
 order/timing. This requires a fresh database rather than destructive migration of
 the public world. Three-Way Cut content and fixed-area activation dispatch are
 still pending; the schema alone does not make it playable.
+
+Protocol-25 Sword Spin runtime acceptance now passes on a fresh local Yongan
+world: 35 authenticated skill checks plus 15 real combat checks, including damage
+observed by both clients and one hit per monster life. Evidence:
+`.local/p6-skill-cast-r1/acceptance.json`. These are headless Godot clients, not
+rendered browser exports; additional abilities remain disabled. The isolated QA
+module contains a local bootstrap identity and must not be used for public rollout.

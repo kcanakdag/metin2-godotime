@@ -5,6 +5,29 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Protocol-25 live Sword Spin acceptance — 2026-09-08
+
+Fresh Yongan database `mt2-p2-skill-cast-v25-r1-20260908` passes 35 real
+authenticated skill checks and 15 combat checks on runtime source `32e0109`.
+Both headless Godot identities observe casting and damage; learning, stale-rank
+rejection, SP spending, operator permission, cooldown persistence, disconnect/
+reconnect and private skill state pass. The combat continuation checks movement
+in both directions, actual dog damage replicated to both clients, one hit per
+monster life and return movement. Evidence: `.local/p6-skill-cast-r1/acceptance.json`.
+This is Sword Spin acceptance, not rendered/exported browser QA or Three-Way Cut.
+
+The initial sign-in failed with local HTTP 502. Listener inspection confirmed the
+auth process was stopped. Read-only account-presence checks identified the existing
+`.local/p1/auth` database; restarting its existing service on loopback 13224 restored
+sign-in without resetting accounts or keys. Existing private QA accounts were copied
+into an owner-only fixture and reused. The new module authorizes only the previously
+configured QA operator identity; it is not a public deployment artifact. The default
+WASM build now contains this local-auth Yongan QA module with bootstrap privileges.
+Do not publish it publicly. Public protocol-24 release remains unchanged.
+
+Next: install candidate motions and connect Three-Way Cut's compiled events/shapes
+to accepted cast state and original reaction/target limits before enabling it.
+
 ## Protocol-25 persisted skill events — 2026-09-08
 
 Pending skill state now stores an ordered list of event deadline records plus a

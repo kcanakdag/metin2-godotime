@@ -16,6 +16,7 @@ world database has a separate character roster. See [deployment evidence](docs/d
 The local worktree now expects protocol 25 for persisted multi-event skill casts.
 The public endpoint remains protocol 24. Use matching regenerated bindings and a
 fresh test database for this local change; do not overwrite the public world.
+The new state passes 35 authenticated Sword Spin checks and 15 real combat checks.
 Additional skills are not enabled by the schema change alone.
 
 Local mob threat behavior now has a reusable two-account passive
