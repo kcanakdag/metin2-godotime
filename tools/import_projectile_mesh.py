@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""Convert a selected mesh-only projectile effect; retain its original render recipe."""
+
+import argparse
+import hashlib
+import json
+from dataclasses import asdict
+from pathlib import Path, PurePosixPath
+
+from content_compile import ROOT, source_archive
+from content_formats import virtual_path
+from import_target_effects import audit_glb, convert_image, frame_payload, run_blender
+from metin_effect_mesh import parse_mde, parse_mse
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--effect", required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--blender", type=Path, required=True)
+    parser.add_argument("--offline", action="store_true")
+    args = parser.parse_args()
+    effect = virtual_path(args.effect)
+    if not effect.startswith("ymir work/") or not effect.endswith(".mse"):
+        raise ValueError("Select an original mesh-effect path")
+    output = args.output.resolve()
+    output.mkdir(parents=True, exist_ok=False)
+    frozen = {
+        str(ROOT / "tools" / n): hashlib.sha256((ROOT / "tools" / n).read_bytes()).hexdigest()
+        for n in (
+            "import_projectile_mesh.py",
+            "import_target_effects.py",
+            "metin_effect_mesh.py",
+            "blender_target_effects.py",
+            "content_formats.py",
+            "content_compile.py",
+            "metin_archive.py",
+        )
+    }
+    archive = source_archive(args.offline)
+    source_files = {}
+
+    def fetch(path):
+        result = archive.get(archive.resolve(path))
+        source_files[str(result)] = hashlib.sha256(result.read_bytes()).hexdigest()
+        return result
+
+    mse = parse_mse(fetch(effect).read_text(), blend_pairs={(3, 8), (5, 2), (5, 6)})
+    assets, originals, recipes = [], [], []
+    for index, mesh in enumerate(mse.meshes):
+        if len(mesh.position_events) != 1 or mesh.frame_delay != 0.02:
+            raise ValueError(
+                "Mesh converter currently needs a fixed offset and 50 FPS source frames"
+            )
+        mde = parse_mde(fetch(str(PurePosixPath(effect).parent / mesh.mesh_file)).read_bytes())
+        if len(mesh.elements) != len(mde.geometries):
+            raise ValueError("Mesh effect element count differs from geometry")
+        geometries = []
+        for geometry in mde.geometries:
+            texture_path = virtual_path(geometry.texture_path)
+            texture = f"textures/{hashlib.sha256(texture_path.encode()).hexdigest()[:16]}.png"
+            convert_image(fetch(texture_path), output / texture)
+            geometries.append(
+                {
+                    "name": geometry.name,
+                    "texture_resource": texture,
+                    "frames": [frame_payload(f) for f in geometry.frames],
+                }
+            )
+        identity = f"mesh-{index}"
+        assets.append(
+            {
+                "id": identity,
+                "position_cm": mesh.position_events[0].position,
+                "frames": list(range(mde.frame_count)),
+                "geometries": geometries,
+            }
+        )
+        originals.append(mde)
+        recipes.append(asdict(mesh))
+    input_path = output / "blender-input.json"
+    input_path.write_text(json.dumps({"assets": assets}, indent=2) + "\n")
+    run_blender(args.blender.resolve(), input_path, output, output)
+    audits = [
+        audit_glb(
+            output / "models" / f"mesh-{i}.glb",
+            mde,
+            position_cm=mse.meshes[i].position_events[0].position,
+            frame_delay=mse.meshes[i].frame_delay,
+        )
+        for i, mde in enumerate(originals)
+    ]
+    for path, digest in {**frozen, **source_files}.items():
+        if hashlib.sha256(Path(path).read_bytes()).hexdigest() != digest:
+            raise ValueError("Mesh conversion inputs changed")
+    report = {
+        "status": "geometry-converted-not-runtime-qualified",
+        "source_effect": effect,
+        "source_files": source_files,
+        "tools": frozen,
+        "models": audits,
+        "render_recipes": recipes,
+        "runtime_requirements": ["original-blend-and-color-recipe", "flight-attachment-rendering"],
+    }
+    (output / "receipt.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    print(json.dumps({"models": len(audits), "status": report["status"]}))
+
+
+if __name__ == "__main__":
+    main()

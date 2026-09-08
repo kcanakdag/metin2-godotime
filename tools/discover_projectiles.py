@@ -78,7 +78,9 @@ def main():
     }
     result["content_hash"] = hashlib.sha256(canonical_bytes(result)).hexdigest()
     args.output.mkdir(parents=True, exist_ok=False)
-    (args.output / "inventory.v1.json").write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+    (args.output / "inventory.v1.json").write_text(
+        json.dumps(result, indent=2, sort_keys=True) + "\n"
+    )
     print(
         json.dumps(
             {

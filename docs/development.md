@@ -50,6 +50,12 @@ gallery checks every alias against the actual shared GLB clips. See
 
 ## Original population diagnostics
 
+`tools/import_projectile_mesh.py --effect VIRTUAL_MSE --blender BLENDER --output NEW_DIR`
+converts selected mesh-only projectile geometry through the shared Blender path.
+Use `--offline` once its MSE/MDE/texture sources are cached. The output retains
+the original material recipe and marks runtime rendering requirements; it is not
+installed automatically. See [projectile meshes](mobs.md#projectile-mesh-conversion).
+
 `python3 tools/discover_projectiles.py --catalog GAMEPLAY_JSON --offline --output NEW_DIR`
 discovers the exact MSF set selected by the candidate mob attacks. Omit `--offline`
 when those pinned text assets need fetching. The hash-bound inventory records flight

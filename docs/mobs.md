@@ -1,5 +1,34 @@
 # Original mob pipeline
 
+## Projectile mesh conversion
+
+```sh
+python3 tools/import_projectile_mesh.py --offline \
+  --effect 'ymir work/pc/assassin/effect/arrow_01.mse' \
+  --blender /path/to/blender --output /path/to/new-arrow-package
+```
+
+The selected arrow effect uses one five-frame MDE mesh and its original TGA.
+The importer reuses background Blender conversion, converts the texture, retains
+the MSE render recipe and audits every exported frame/UV against source geometry.
+It currently accepts fixed-position, 50 FPS mesh effects with reviewed blend
+metadata. Reading a blend pair does not add renderer support: the ordinary target
+effect parser still defaults to its existing supported subset. The arrow's 3/8
+blend pair remains an explicit runtime requirement.
+
+The generalized GLB audit now supports sparse morph accessors, variable source
+frame/geometry counts and explicit offsets. An initial arrow audit rejected
+Blender's sparse zero-delta frames; the reader was corrected, not the exported
+model. Both installed click-effect GLBs still pass the same full geometry audit.
+
+`.local/mobs/arrow-mesh-r2` contains the converted arrow and source-bound receipt.
+The isolated native Godot probe in `arrow-native-r1` verifies four morph targets,
+all five frame-weight states and a 0.1-second loop; the textured arrow was visually
+inspected. Sixteen Python tests and Python lint pass. This is geometry/animation
+evidence, not original blending, in-flight attachment, particle effects or live
+combat qualification. Seven of the eight referenced MSE files are particle systems
+and still need the shared particle importer/renderer.
+
 ## Flight-definition discovery
 
 ```sh

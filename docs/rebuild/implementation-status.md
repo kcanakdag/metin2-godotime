@@ -22,6 +22,16 @@ evidence. No server or public deployment changed in this recheck.
 
 ### Original wildlife definitions in progress
 
+Projectile arrow checkpoint: the selected original `arrow_01.mse`/MDE/TGA now
+convert through a reusable mesh-effect command. Export auditing supports sparse
+morph data, source frame/geometry counts and explicit offsets; both existing
+click-effect GLBs pass its regression audit. The first arrow audit's sparse-accessor
+failure is retained, followed by successful `arrow-mesh-r2` conversion.
+`arrow-native-r1` passes its native Godot frame/weight/duration assertions and the
+textured model was inspected. Sixteen Python tests and Python lint pass. The
+original 3/8 blend mode, flight attachment, seven particle-based effect scripts and
+live projectile combat remain pending; the model is not installed or deployed.
+
 Flight metadata checkpoint: `discover_projectiles.py` resolves the exact four MSF
 definitions used by the 26 White Oath launches, with five attachments and eight
 MSE dependencies. Pinned source hashes and loader defaults are recorded; no MSE

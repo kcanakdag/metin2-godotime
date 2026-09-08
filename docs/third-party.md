@@ -3,6 +3,12 @@
 These are the source revisions used by the current project. Code licenses and
 original game asset rights remain separate.
 
+The projectile effect follow-up fetches the eight previously resolved MSE scripts
+and the arrow's referenced `arrow_01.mde`/TGA at the existing client pin. The arrow
+geometry is converted offline with our shared Blender tool; original blend metadata
+is retained without claiming renderer parity. Seven MSE files contain particle
+systems and remain unconverted. Source files and converted models remain ignored.
+
 The flight-discovery extension fetches only the four MSF definitions selected by
 the 26 White Oath launch declarations, at the existing client pin. It resolves
 eight MSE dependency paths without fetching their contents. Loader/default and

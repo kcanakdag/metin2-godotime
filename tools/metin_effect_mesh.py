@@ -343,7 +343,7 @@ def _parse_alpha_events(node: LegacyNode) -> tuple[AlphaEvent, ...]:
     return tuple(events)
 
 
-def _parse_element(node: LegacyNode) -> MeshElement:
+def _parse_element(node: LegacyNode, blend_pairs) -> MeshElement:
     allowed = {
         "BillboardType",
         "BlendingEnable",
@@ -365,7 +365,7 @@ def _parse_element(node: LegacyNode) -> MeshElement:
         raise EffectMeshFormatError(f"Unsupported BillboardType {billboard}")
     source = _integer(_field(node, "BlendingSrcType")[0], "BlendingSrcType", 0, 255)
     destination = _integer(_field(node, "BlendingDestType")[0], "BlendingDestType", 0, 255)
-    if source != 5 or destination not in {2, 6}:
+    if (source, destination) not in blend_pairs:
         raise EffectMeshFormatError(f"Unsupported blend pair {source}/{destination}")
     color_operation = _integer(_field(node, "ColorOperationType")[0], "ColorOperationType", 0, 255)
     if color_operation != 4:
@@ -401,7 +401,7 @@ def _parse_element(node: LegacyNode) -> MeshElement:
     )
 
 
-def _parse_mesh(node: LegacyNode) -> MeshScript:
+def _parse_mesh(node: LegacyNode, blend_pairs) -> MeshScript:
     allowed = {
         "StartTime",
         "MeshFileName",
@@ -448,11 +448,11 @@ def _parse_mesh(node: LegacyNode) -> MeshScript:
             "MeshAnimationFrameDelay",
             minimum=0.000_001,
         ),
-        elements=tuple(_parse_element(group) for group in actual_elements),
+        elements=tuple(_parse_element(group, blend_pairs) for group in actual_elements),
     )
 
 
-def parse_mse(text: str) -> MseFile:
+def parse_mse(text: str, *, blend_pairs=frozenset({(5, 2), (5, 6)})) -> MseFile:
     """Parse the strict mesh-only subset used by click_select target effects."""
     if not isinstance(text, str):
         raise TypeError("MSE input must be text")
@@ -473,5 +473,5 @@ def parse_mse(text: str) -> MseFile:
     return MseFile(
         bounding_sphere_radius=radius,
         bounding_sphere_position=position,
-        meshes=tuple(_parse_mesh(group) for group in root.groups),
+        meshes=tuple(_parse_mesh(group, blend_pairs) for group in root.groups),
     )

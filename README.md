@@ -51,6 +51,9 @@ need runtime integration; no additional enemy is live yet.
 The [flight-definition importer](docs/mobs.md#flight-definition-discovery) now
 resolves their four shared flight scripts and eight effect dependencies, preserving
 original parameters and explicitly recording malformed source trails.
+The original arrow mesh now converts through the shared Blender pipeline and passes
+native Godot frame/geometry checks. Original blending and particle effects remain
+pending; the projectile is not yet live.
 Yongan's six authored Wild Dog homes pass **107 two-client checks** on a fresh
 local database. The original City Guard is installed in the playable map layer,
 with original placement, weighted idle animations and its attached weapon.

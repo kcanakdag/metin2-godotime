@@ -284,23 +284,75 @@ def parse_glb(path: Path) -> tuple[dict, bytes]:
 
 def accessor_floats(document: dict, binary: bytes, index: int) -> tuple[float, ...]:
     accessor = document["accessors"][index]
-    if accessor["componentType"] != 5126 or accessor.get("sparse"):
-        raise ValueError("Expected dense float GLB accessor")
+    if accessor["componentType"] != 5126:
+        raise ValueError("Expected float GLB accessor")
     components = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}[accessor["type"]]
-    view = document["bufferViews"][accessor["bufferView"]]
-    stride = view.get("byteStride", components * 4)
-    start = view.get("byteOffset", 0) + accessor.get("byteOffset", 0)
-    result = []
-    for item in range(accessor["count"]):
-        result.extend(struct.unpack_from(f"<{components}f", binary, start + item * stride))
+    count = accessor["count"]
+    if type(count) is not int or not 0 <= count <= 1_000_000:
+        raise ValueError("Invalid GLB accessor count")
+
+    def read(view_id, offset, items, width, code, size, *, packed=False):
+        view = document["bufferViews"][view_id]
+        stride = view.get("byteStride", width * size)
+        start = view.get("byteOffset", 0)
+        length = view["byteLength"]
+        if (
+            view.get("buffer", 0) != 0
+            or min(offset, start, length) < 0
+            or stride < width * size
+            or (packed and stride != width * size)
+            or start + length > len(binary)
+            or offset + (items - 1) * stride + width * size > length
+        ):
+            raise ValueError("GLB accessor exceeds its buffer view")
+        result = []
+        for item in range(items):
+            result.extend(
+                struct.unpack_from(f"<{width}{code}", binary, start + offset + item * stride)
+            )
+        return result
+
+    result = (
+        read(accessor["bufferView"], accessor.get("byteOffset", 0), count, components, "f", 4)
+        if "bufferView" in accessor
+        else [0.0] * (count * components)
+    )
+    if sparse := accessor.get("sparse"):
+        amount = sparse["count"]
+        if type(amount) is not int or not 1 <= amount <= count:
+            raise ValueError("Invalid sparse GLB count")
+        indices, values = sparse["indices"], sparse["values"]
+        code, size = {5121: ("B", 1), 5123: ("H", 2), 5125: ("I", 4)}[indices["componentType"]]
+        slots = read(
+            indices["bufferView"], indices.get("byteOffset", 0), amount, 1, code, size, packed=True
+        )
+        if any(i >= count for i in slots) or any(
+            a >= b for a, b in zip(slots, slots[1:], strict=False)
+        ):
+            raise ValueError("Sparse GLB indices must increase within the accessor")
+        replacements = read(
+            values["bufferView"],
+            values.get("byteOffset", 0),
+            amount,
+            components,
+            "f",
+            4,
+            packed=True,
+        )
+        for item, slot in enumerate(slots):
+            result[slot * components : (slot + 1) * components] = replacements[
+                item * components : (item + 1) * components
+            ]
     return tuple(result)
 
 
-def audit_glb(path: Path, mde: MdeFile) -> dict:
+def audit_glb(
+    path: Path, mde: MdeFile, *, position_cm=(0.0, 0.0, 41.60334), frame_delay=0.02
+) -> dict:
     document, binary = parse_glb(path)
     meshes = document.get("meshes", [])
-    if len(meshes) != 1 or len(meshes[0].get("primitives", [])) != 2:
-        raise ValueError(f"GLB must retain two material primitives: {path}")
+    if len(meshes) != 1 or len(meshes[0].get("primitives", [])) != len(mde.geometries):
+        raise ValueError(f"GLB must retain its source material primitives: {path}")
     scenes = document.get("scenes", [])
     nodes = document.get("nodes", [])
     scene_index = document.get("scene")
@@ -373,18 +425,24 @@ def audit_glb(path: Path, mde: MdeFile) -> dict:
         target_count = primitive_targets if target_count is None else target_count
         if primitive_targets != target_count:
             raise ValueError("GLB primitives disagree on morph-target count")
-    if target_count != 10:
-        raise ValueError(f"Expected ten GLB morph targets, got {target_count}")
+    if target_count != mde.frame_count - 1:
+        raise ValueError(f"Expected {mde.frame_count - 1} GLB morph targets, got {target_count}")
     max_position_error_m = 0.0
     for geometry in mde.geometries:
-        if len(position_frames[geometry.name]) != 11:
+        if len(position_frames[geometry.name]) != mde.frame_count:
             raise ValueError(f"GLB frame count changed for {geometry.name}")
         for frame_index, actual_values in enumerate(position_frames[geometry.name]):
             source_frame = geometry.frames[frame_index]
             expected_values = []
             for position_index in source_frame.position_indices:
                 x, y, z = source_frame.positions[position_index]
-                expected_values.extend((x / 100.0, (z + 41.60334) / 100.0, -y / 100.0))
+                expected_values.extend(
+                    (
+                        (x + position_cm[0]) / 100.0,
+                        (z + position_cm[2]) / 100.0,
+                        -(y + position_cm[1]) / 100.0,
+                    )
+                )
             if len(actual_values) != len(expected_values):
                 raise ValueError(
                     f"GLB position count changed in {geometry.name} frame {frame_index}"
@@ -412,7 +470,11 @@ def audit_glb(path: Path, mde: MdeFile) -> dict:
     for animation in animations:
         for sampler in animation["samplers"]:
             times.extend(accessor_floats(document, binary, sampler["input"]))
-    if not times or abs(min(times)) > 1e-7 or abs(max(times) - 0.22) > 1e-6:
+    if (
+        not times
+        or abs(min(times)) > 1e-7
+        or abs(max(times) - mde.frame_count * frame_delay) > 1e-6
+    ):
         raise ValueError(f"GLB animation boundary mismatch: {min(times)}..{max(times)}")
     weight_samplers = [
         animation["samplers"][channel["sampler"]]
@@ -424,10 +486,11 @@ def audit_glb(path: Path, mde: MdeFile) -> dict:
         raise ValueError(f"Expected one GLB weight sampler, got {len(weight_samplers)}")
     weights = accessor_floats(document, binary, weight_samplers[0]["output"])
     expected_weights = []
-    for timeline_frame in range(12):
-        active_frame = timeline_frame if timeline_frame < 11 else 0
+    for timeline_frame in range(mde.frame_count + 1):
+        active_frame = timeline_frame if timeline_frame < mde.frame_count else 0
         expected_weights.extend(
-            1.0 if source_frame == active_frame else 0.0 for source_frame in range(1, 11)
+            1.0 if source_frame == active_frame else 0.0
+            for source_frame in range(1, mde.frame_count)
         )
     if tuple(weights) != tuple(expected_weights):
         raise ValueError("GLB morph-weight sequence is not the expected discrete frame cycle")
@@ -451,7 +514,7 @@ def audit_glb(path: Path, mde: MdeFile) -> dict:
         },
         "max_position_readback_error_m": max_position_error_m,
         "position_readback_tolerance_m": 0.000_02,
-        "morph_weight_sequence": "frames 0..10 one-hot, frame 11 returns to frame 0",
+        "morph_weight_sequence": f"frames 0..{mde.frame_count - 1} one-hot, frame {mde.frame_count} returns to frame 0",
     }
 
 
