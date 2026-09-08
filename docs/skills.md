@@ -100,6 +100,29 @@ Shared gameplay handlers, specialization selection, bow/dagger equipment, timed
 buffs/status effects, friendly targeting, UI integration and multiplayer acceptance
 are still required. The requested scope remains all classic abilities.
 
+The candidate Rust compiler preserves the source damage attribute (normal, melee,
+ranged or magic), primary/secondary affect identifiers, learning limits and the
+catalog's rank-power table. Shared handlers must consume these fields when they
+are integrated; an imported skill must not silently become physical damage or lose
+its secondary buff. Unknown damage attributes, malformed affect IDs and invalid
+rank progression fail compilation. This remains candidate tooling, not additional
+live skills.
+
+Qualify a linked catalog before integration:
+
+```sh
+python3 tools/test_class_skill_catalog.py --catalog /path/to/catalog.v2.json \
+  --output .local/class-skill-qualification
+cargo test --manifest-path server/Cargo.toml --features yongan --offline \
+  --example compile_class_skills
+```
+
+The runner executes generated Rust, compares all 44 skills' mechanic metadata to
+the input, and uses the compiled rank powers for formula evaluation. Its receipt
+binds the catalog, compiler, interpreter and harness; changes during the run fail
+qualification. The current candidate passes 21,120 formula evaluations and 221
+metadata assertions. These checks do not replace two-client casting tests.
+
 Five Shaman normal registrations reference missing filenames in the pinned pack.
 The discovery tool explicitly selects the available `_me.msa` self-cast variant
 for Blessing, Reflect, Dragon Strength, Cure and Swiftness and records the original

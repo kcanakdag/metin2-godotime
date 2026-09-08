@@ -36,7 +36,34 @@ def main():
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     catalog = args.catalog.resolve()
-    initial = hashlib.sha256(catalog.read_bytes()).hexdigest()
+    inputs = {
+        "catalog": catalog,
+        "runtime": ROOT / "server/src/skill_formula.rs",
+        "compiler": ROOT / "server/build_class_skills.rs",
+        "harness": Path(__file__).resolve(),
+    }
+    hashes = {name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in inputs.items()}
+    initial = hashes["catalog"]
+    source = json.loads(catalog.read_bytes())
+    metadata_checks = []
+    for skill in source["skills"]:
+        attribute = {"NORMAL": "Normal", "MELEE": "Melee", "RANGE": "Range", "MAGIC": "Magic"}[
+            skill["attribute"]
+        ]
+        affects = [
+            f"Some({int(skill[field])})" if skill[field] else "None"
+            for field in ("affect", "secondary_affect")
+        ]
+        metadata_checks.append(
+            "{ let skill = definitions::CLASS_SKILLS.iter().find(|s|s.vnum == "
+            + str(skill["vnum"])
+            + ").unwrap();\n"
+            + f"assert_eq!(skill.minimum_level, {skill['minimum_level']});\n"
+            + f"assert_eq!(skill.maximum_rank, {skill['maximum_rank']});\n"
+            + f"assert_eq!(skill.attribute, definitions::SkillAttribute::{attribute});\n"
+            + f"assert_eq!(skill.affect, {affects[0]});\n"
+            + f"assert_eq!(skill.secondary_affect, {affects[1]}); }}\n"
+        )
     generated = output / "definitions.rs"
     run(
         [
@@ -61,15 +88,18 @@ def main():
         + json.dumps(str(ROOT / "server/src/skill_formula.rs"))
         + "] pub mod skill_formula;\n"
         "pub mod definitions { include!(" + json.dumps(str(generated)) + "); }\n"
-        """fn main() {
+        "fn main() {\n"
+        + "".join(metadata_checks)
+        + f"assert_eq!(definitions::CLASS_SKILL_RANK_POWERS, {source['rank_power_percent']});\n"
+        + """
     assert_eq!(definitions::CLASS_SKILLS.len(),44);
     assert_eq!(definitions::CLASS_SKILL_MOTIONS.len(),88);
-    let powers = [0.0,5.0,6.0,8.0,10.0,12.0,14.0,16.0,18.0,20.0,22.0,24.0,26.0,28.0,30.0,32.0,34.0,36.0,38.0,40.0,50.0];
+    let powers = definitions::CLASS_SKILL_RANK_POWERS;
     let mut checks = 0;
     for skill in definitions::CLASS_SKILLS {
         for power in powers.iter().skip(1) {
             for mut vars in [[60.0,6.0,3.0,4.0,0.0,5.0,6.0,15.0,0.8,0.0], [10000.0,90.0,90.0,90.0,0.0,99.0,90.0,10000.0,1.0,6.0]] {
-                vars[4] = power / 100.0;
+                vars[4] = f64::from(*power) / 100.0;
                 for program in [skill.programs.amount, skill.programs.secondary, skill.programs.duration, skill.programs.secondary_duration, skill.programs.upkeep, skill.programs.splash_scale] {
                     let low = skill_formula::evaluate(program, &vars, |lo,_|lo).unwrap();
                     let high = skill_formula::evaluate(program, &vars, |_,hi|hi).unwrap();
@@ -89,17 +119,19 @@ def main():
         output / "rustc.log",
     )
     checks = int(run([str(binary)], output / "runtime.log").strip())
-    if hashlib.sha256(catalog.read_bytes()).hexdigest() != initial:
-        raise RuntimeError("Candidate catalog changed during qualification")
+    for name, path in inputs.items():
+        if hashlib.sha256(path.read_bytes()).hexdigest() != hashes[name]:
+            raise RuntimeError(f"Class skill {name} changed during qualification")
     report = {
         "passed": True,
         "skills": 44,
         "appearances": 88,
         "formula_checks": checks,
+        "metadata_checks": len(metadata_checks) * 5 + 1,
         "catalog_sha256": initial,
-        "runtime_sha256": hashlib.sha256(
-            (ROOT / "server/src/skill_formula.rs").read_bytes()
-        ).hexdigest(),
+        "runtime_sha256": hashes["runtime"],
+        "compiler_sha256": hashes["compiler"],
+        "harness_sha256": hashes["harness"],
     }
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report))

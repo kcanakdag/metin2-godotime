@@ -10,6 +10,19 @@ fn integer(value: &Value, low: u64, high: u64) -> Result<u64, String> {
         .ok_or("Invalid class skill integer".into())
 }
 
+fn affect(value: &Value) -> Result<Option<u16>, String> {
+    let text = value.as_str().ok_or("Invalid skill affect identifier")?;
+    if text.is_empty() {
+        return Ok(None);
+    }
+    let id = text
+        .parse::<u16>()
+        .ok()
+        .filter(|id| *id > 0 && id.to_string() == text)
+        .ok_or("Invalid skill affect identifier")?;
+    Ok(Some(id))
+}
+
 pub fn program(value: &Value) -> Result<String, String> {
     let ops = value
         .as_array()
@@ -79,6 +92,18 @@ pub fn validate(root: &Value) -> Result<(), String> {
     if root["schema"] != "mt2spacetime.skills" || root["version"] != 2 {
         return Err("Unsupported class skill catalog".into());
     }
+    let powers = root["rank_power_percent"]
+        .as_array()
+        .filter(|values| values.len() == 21)
+        .ok_or("Expected 21 skill rank powers")?;
+    let mut previous_power = 0;
+    for (rank, value) in powers.iter().enumerate() {
+        let power = integer(value, 0, 100)?;
+        if (rank == 0 && power != 0) || (rank > 0 && power <= previous_power) {
+            return Err("Skill rank powers must start at zero and strictly increase".into());
+        }
+        previous_power = power;
+    }
     let skills = root["skills"]
         .as_array()
         .filter(|a| a.len() == 44)
@@ -92,6 +117,16 @@ pub fn validate(root: &Value) -> Result<(), String> {
         if id <= base || id > base + if class < 2 { 5 } else { 6 } || !ids.insert(id) {
             return Err("Invalid or duplicate class/group skill identity".into());
         }
+        integer(&skill["minimum_level"], 1, 99)?;
+        integer(&skill["maximum_rank"], 1, 20)?;
+        if !matches!(
+            skill["attribute"].as_str(),
+            Some("NORMAL" | "MELEE" | "RANGE" | "MAGIC")
+        ) {
+            return Err("Unsupported skill damage attribute".into());
+        }
+        affect(&skill["affect"])?;
+        affect(&skill["secondary_affect"])?;
         if !matches!(
             skill["handler"].as_str(),
             Some("damage" | "periodic_damage" | "buff" | "healing")
@@ -182,8 +217,20 @@ pub fn generate(root: &Value) -> Result<String, String> {
     let mut out = String::from("use crate::skill_formula::Op;\n");
     out.push_str("#[derive(Clone,Copy,Debug,PartialEq,Eq)] pub enum SkillHandler { Damage, PeriodicDamage, Buff, Healing }\n");
     out.push_str("#[derive(Clone,Copy,Debug,PartialEq,Eq)] pub enum SkillTarget { SelfOnly, Monster, Friendly }\n");
+    out.push_str("#[derive(Clone,Copy,Debug,PartialEq,Eq)] pub enum SkillAttribute { Normal, Melee, Range, Magic }\n");
+    writeln!(
+        out,
+        "pub const CLASS_SKILL_RANK_POWERS: [u8; 21] = {:?};",
+        root["rank_power_percent"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|value| value.as_u64().unwrap())
+            .collect::<Vec<_>>()
+    )
+    .unwrap();
     out.push_str("#[derive(Clone,Copy,Debug)] pub struct SkillPrograms { pub amount:&'static [Op],pub secondary:&'static [Op],pub duration:&'static [Op],pub secondary_duration:&'static [Op],pub upkeep:&'static [Op],pub splash_scale:&'static [Op] }\n");
-    out.push_str("#[derive(Clone,Copy,Debug)] pub struct ClassSkillDefinition { pub vnum:u16,pub class_id:u8,pub group:u8,pub handler:SkillHandler,pub target:SkillTarget,pub point:&'static str,pub secondary_point:&'static str,pub flags:&'static [&'static str],pub weapon_limits:&'static [&'static str],pub rank_costs:[u32;21],pub rank_cooldowns_us:[i64;21],pub programs:SkillPrograms,pub radius_m:f32,pub range_m:f32,pub max_targets:u8 }\n");
+    out.push_str("#[derive(Clone,Copy,Debug)] pub struct ClassSkillDefinition { pub vnum:u16,pub class_id:u8,pub group:u8,pub minimum_level:u8,pub maximum_rank:u8,pub handler:SkillHandler,pub target:SkillTarget,pub attribute:SkillAttribute,pub affect:Option<u16>,pub secondary_affect:Option<u16>,pub point:&'static str,pub secondary_point:&'static str,pub flags:&'static [&'static str],pub weapon_limits:&'static [&'static str],pub rank_costs:[u32;21],pub rank_cooldowns_us:[i64;21],pub programs:SkillPrograms,pub radius_m:f32,pub range_m:f32,pub max_targets:u8 }\n");
     out.push_str("#[derive(Clone,Copy,Debug)] pub struct ClassSkillMotion {pub skill_vnum:u16,pub actor_id:&'static str,pub action_id:&'static str,pub duration_us:i64,pub root_m:[f32;3],pub activation_us:&'static [i64]}\n");
     let mut definitions = Vec::new();
     let mut motions = Vec::new();
@@ -191,6 +238,16 @@ pub fn generate(root: &Value) -> Result<String, String> {
         let id = skill["vnum"].as_u64().unwrap();
         let class = skill["class_id"].as_u64().unwrap();
         let group = skill["group"].as_u64().unwrap();
+        let minimum_level = skill["minimum_level"].as_u64().unwrap();
+        let maximum_rank = skill["maximum_rank"].as_u64().unwrap();
+        let attribute = match skill["attribute"].as_str().unwrap() {
+            "MELEE" => "Melee",
+            "RANGE" => "Range",
+            "MAGIC" => "Magic",
+            _ => "Normal",
+        };
+        let primary_affect = affect(&skill["affect"])?;
+        let secondary_affect = affect(&skill["secondary_affect"])?;
         let handler = match skill["handler"].as_str().unwrap() {
             "damage" => "Damage",
             "periodic_damage" => "PeriodicDamage",
@@ -248,7 +305,7 @@ pub fn generate(root: &Value) -> Result<String, String> {
         .map(|(name, source)| program(&skill["programs"][source]).map(|p| format!("{name}:{p}")))
         .collect::<Result<Vec<_>, _>>()?
         .join(",");
-        definitions.push(format!("ClassSkillDefinition{{vnum:{id},class_id:{class},group:{group},handler:SkillHandler::{handler},target:SkillTarget::{target},point:{point:?},secondary_point:{secondary:?},flags:&{flags:?},weapon_limits:&{weapons:?},rank_costs:{costs:?},rank_cooldowns_us:{cooldowns:?},programs:SkillPrograms{{{fields}}},radius_m:{radius:?},range_m:{range:?},max_targets:{max_targets}}}"));
+        definitions.push(format!("ClassSkillDefinition{{vnum:{id},class_id:{class},group:{group},minimum_level:{minimum_level},maximum_rank:{maximum_rank},handler:SkillHandler::{handler},target:SkillTarget::{target},attribute:SkillAttribute::{attribute},affect:{primary_affect:?},secondary_affect:{secondary_affect:?},point:{point:?},secondary_point:{secondary:?},flags:&{flags:?},weapon_limits:&{weapons:?},rank_costs:{costs:?},rank_cooldowns_us:{cooldowns:?},programs:SkillPrograms{{{fields}}},radius_m:{radius:?},range_m:{range:?},max_targets:{max_targets}}}"));
         for variant in skill["variants"].as_array().unwrap() {
             let actor = variant["actor_id"].as_str().unwrap();
             let action = variant["action_id"].as_str().unwrap();
@@ -281,4 +338,97 @@ pub fn generate(root: &Value) -> Result<String, String> {
     )
     .unwrap();
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn catalog() -> Value {
+        let mut skills = Vec::new();
+        for (class, name) in ["warrior", "ninja", "sura", "shaman"].iter().enumerate() {
+            for group in 1..=2 {
+                for slot in 1..=if class < 2 { 5 } else { 6 } {
+                    let id = class * 30 + (group - 1) * 15 + slot;
+                    let variants = ["male", "female"].map(|sex| {
+                        let actor = format!("actor.player.{name}-{sex}");
+                        json!({"actor_id":actor,"action_id":format!("{actor}.general.skill_{id}"),
+                            "duration_us":1_000_000,"root_m":[0,0,0],"activation_us":[0]})
+                    });
+                    let programs = [
+                        "formula",
+                        "sp_cost",
+                        "duration",
+                        "sp_upkeep",
+                        "cooldown",
+                        "secondary_formula",
+                        "secondary_duration",
+                        "splash_scale",
+                    ]
+                    .map(|field| (field.to_string(), json!([{"op":"constant","value":1}])));
+                    skills.push(json!({
+                        "vnum":id,"class_id":class,"group":group,"minimum_level":5,
+                        "maximum_rank":20,"handler":"damage","target":"monster",
+                        "attribute":"MAGIC","affect":"14","secondary_affect":"",
+                        "rank_costs":vec![1;21],"rank_cooldowns_us":vec![1_000_000;21],
+                        "programs":programs.into_iter().collect::<serde_json::Map<_,_>>(),
+                        "variants":variants,"point":"HP","secondary_point":"NONE",
+                        "flags":["ATTACK"],"weapon_limits":[],"splash_radius_cm":200,
+                        "target_range_cm":300,"max_targets":12
+                    }));
+                }
+            }
+        }
+        json!({"schema":"mt2spacetime.skills","version":2,
+            "rank_power_percent":(0..=20).collect::<Vec<_>>(),"skills":skills})
+    }
+
+    #[test]
+    fn complete_catalog_compiles_with_primary_and_secondary_effects() {
+        let mut root = catalog();
+        for attribute in ["NORMAL", "MELEE", "RANGE", "MAGIC"] {
+            root["skills"][0]["attribute"] = json!(attribute);
+            root["skills"][0]["secondary_affect"] = json!("30");
+            assert!(generate(&root).is_ok());
+        }
+    }
+
+    #[test]
+    fn invalid_mechanic_metadata_and_learning_limits_reject() {
+        for (field, values) in [
+            ("attribute", vec![json!("SCRIPT"), Value::Null]),
+            ("minimum_level", vec![json!(0), json!(100), json!(true)]),
+            ("maximum_rank", vec![json!(0), json!(21)]),
+            (
+                "affect",
+                vec![
+                    json!(14),
+                    json!("0"),
+                    json!("014"),
+                    json!("-1"),
+                    json!("65536"),
+                ],
+            ),
+            ("secondary_affect", vec![json!("custom()"), Value::Null]),
+        ] {
+            for value in values {
+                let mut root = catalog();
+                root["skills"][0][field] = value;
+                assert!(generate(&root).is_err(), "accepted invalid {field}");
+            }
+        }
+    }
+
+    #[test]
+    fn rank_power_table_requires_zero_unlearned_and_bounded_progression() {
+        for (rank, value) in [(0, 1), (1, 0), (20, 101), (10, 9)] {
+            let mut root = catalog();
+            root["rank_power_percent"][rank] = json!(value);
+            assert!(generate(&root).is_err());
+        }
+        let mut root = catalog();
+        root["rank_power_percent"].as_array_mut().unwrap().pop();
+        assert!(generate(&root).is_err());
+    }
 }

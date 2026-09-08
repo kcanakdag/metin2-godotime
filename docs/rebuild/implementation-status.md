@@ -7,6 +7,26 @@ or reclassify that scope.
 
 ## P6: all-class abilities requested; training target delivered locally
 
+### Skill mechanic metadata and dummy recheck
+
+The full-class candidate Rust generator previously omitted damage attributes,
+primary/secondary affect IDs, learning limits and rank powers. It now preserves
+these fields with bounded validation, so later shared handlers can distinguish
+magic/ranged/melee damage and apply the correct source effects. This does not
+activate the other 43 abilities; the live catalog still supports Sword Spin only.
+The new qualification uses compiled rank powers and checks metadata against the
+candidate input. `.local/p6-class-skills/formulas-metadata-r2/report.json` passes
+21,120 formula evaluations and 221 metadata assertions, with hashes of all inputs.
+Three compiler tests cover valid effects and rejection of malformed mechanic and
+rank metadata. Repository lint passes (`metadata-lint-r2.log`), and all 227 Python
+tool tests pass (`metadata-tools-r2.log`). The first tool-suite attempt could not
+bind sandboxed loopback sockets; the authorized local-socket rerun passes.
+
+The existing Blender-authored dummy passes a fresh 16-check native Godot run in
+`.local/p6-class-skills/dummy-actors-current-r1`; its rendered model was inspected.
+No game endpoint, database or runtime content was changed in this follow-up.
+The unrelated explicit-registration/static-NPC importer work remains unfinished.
+
 ### Original town NPC population delivered locally
 
 Live follow-up: `http://127.0.0.1:8186` now serves
