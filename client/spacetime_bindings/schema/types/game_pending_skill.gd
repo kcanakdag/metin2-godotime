@@ -12,8 +12,8 @@ const table_names: Array[String] = []
 @export var rank: int
 @export var action_revision: int
 @export var source_life: int
-@export var hit_at_us: int
-@export var hit_until_us: int
+@export var events: Array[GameSkillEventTiming]
+@export var per_life_limit: int
 @export var attacker: GameCapturedPlayerAttacker
 @export var vitality: int
 @export var hit_lives: Array[String]
@@ -27,8 +27,8 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"rank": "U8",
 	"action_revision": "U64",
 	"source_life": "U32",
-	"hit_at_us": "I64",
-	"hit_until_us": "I64",
+	"events": "vec_GameSkillEventTiming",
+	"per_life_limit": "U8",
 	"attacker": "GameCapturedPlayerAttacker",
 	"vitality": "U8",
 	"hit_lives": "vec_String"
@@ -40,12 +40,12 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 ## 4. rank: int[br]
 ## 5. action_revision: int[br]
 ## 6. source_life: int[br]
-## 7. hit_at_us: int[br]
-## 8. hit_until_us: int[br]
+## 7. events: Array[GameSkillEventTiming][br]
+## 8. per_life_limit: int[br]
 ## 9. attacker: GameCapturedPlayerAttacker[br]
 ## 10. vitality: int[br]
 ## 11. hit_lives: Array[String][br]
-static func create(p_character_id: PackedByteArray, p_connection_id: PackedByteArray, p_skill_vnum: int, p_rank: int, p_action_revision: int, p_source_life: int, p_hit_at_us: int, p_hit_until_us: int, p_attacker: GameCapturedPlayerAttacker, p_vitality: int, p_hit_lives: Array[String]) -> GamePendingSkill:
+static func create(p_character_id: PackedByteArray, p_connection_id: PackedByteArray, p_skill_vnum: int, p_rank: int, p_action_revision: int, p_source_life: int, p_events: Array[GameSkillEventTiming], p_per_life_limit: int, p_attacker: GameCapturedPlayerAttacker, p_vitality: int, p_hit_lives: Array[String]) -> GamePendingSkill:
 	var result: GamePendingSkill = GamePendingSkill.new()
 	result.character_id = p_character_id
 	result.connection_id = p_connection_id
@@ -53,8 +53,8 @@ static func create(p_character_id: PackedByteArray, p_connection_id: PackedByteA
 	result.rank = p_rank
 	result.action_revision = p_action_revision
 	result.source_life = p_source_life
-	result.hit_at_us = p_hit_at_us
-	result.hit_until_us = p_hit_until_us
+	result.events = p_events
+	result.per_life_limit = p_per_life_limit
 	result.attacker = p_attacker
 	result.vitality = p_vitality
 	result.hit_lives = p_hit_lives

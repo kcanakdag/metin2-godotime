@@ -198,7 +198,14 @@ def main() -> None:
         action="store_true",
         help="Continue ordinary authenticated Wild Dog kills through level 2.",
     )
+    parser.add_argument(
+        "--network-only",
+        action="store_true",
+        help="Check account/network lifecycle without the legacy basic-combat fixture.",
+    )
     options = parser.parse_args()
+    if options.network_only and options.progression:
+        parser.error("--network-only cannot be combined with --progression")
     report_path = options.report.resolve()
     report_path.parent.mkdir(parents=True, exist_ok=True)
     (ROOT / ".local").mkdir(exist_ok=True)
@@ -281,6 +288,7 @@ def main() -> None:
                         "server": game_server,
                         "database": options.database,
                         "tokens": tokens,
+                        "network_only": options.network_only,
                         "definition_hash": definition_hash,
                         "report": str(private_report),
                     },
@@ -301,7 +309,11 @@ def main() -> None:
                 )
             finally:
                 if private_report.is_file():
-                    report_path.write_text(auth.redact(private_report.read_text()))
+                    scoped_report = json.loads(auth.redact(private_report.read_text()))
+                    scoped_report["scope"] = (
+                        "account-network" if options.network_only else "account-combat"
+                    )
+                    report_path.write_text(json.dumps(scoped_report, indent=2) + "\n")
             if not private_report.is_file():
                 raise RuntimeError("Godot did not produce its account report.")
             report = json.loads(report_path.read_text())

@@ -26,6 +26,17 @@ must run in a clean project containing the helper, without an imported map UID
 cache. It covers namespace/missing-resource rejection, collision preservation,
 successful registration, repeat calls and actual chunk instantiation.
 
+## Account/network-only qualification
+
+`tools/test_accounts.py --network-only` exercises authenticated ownership,
+subscriptions, bidirectional movement, rejected intents, character switching,
+disconnect and reconnect without invoking the older basic-combat fixture. Reports
+label this scope `account-network`; the default remains `account-combat` and the
+flag cannot be combined with `--progression`. It does not qualify skill casting.
+Use it for protocol/schema work and run the relevant combat replay separately.
+The legacy combat fixture still expects one-second basic swings and fixed 35
+physical damage; its failures must not be reported as passing network-only QA.
+
 ## Test scope and passive mob replay
 
 The original-population browser replay distinguishes installed catalog species

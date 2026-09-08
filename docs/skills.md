@@ -222,3 +222,12 @@ Front targets yield three distinct receipts; rear/elevated targets miss and repe
 ticks do not add hits. This is an offline collision/admission replay: it does not
 run server subscriptions, damage, knockback, activation capture or the client.
 Evidence: `.local/p6-skill-area-r1/`. Six compiler tests also pass.
+
+Protocol 25 now persists the ordered event list and per-life hit limit in
+`pending_skill`. The resolver selects each active event and uses its event ID for
+hit deduplication, retaining controller/action/life cancellation. Sword Spin still
+captures one event with a one-hit-per-life limit. Generated Godot bindings include
+the nested `SkillEventTiming` type; an actual BSATN round-trip preserves event
+order/timing. This requires a fresh database rather than destructive migration of
+the public world. Three-Way Cut content and fixed-area activation dispatch are
+still pending; the schema alone does not make it playable.

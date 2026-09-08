@@ -1,5 +1,16 @@
 # Architecture
 
+Protocol 25 replaces the private pending skill's single deadline pair with an
+ordered list of `SkillEventTiming` records and a captured per-life hit limit.
+The resolver checks the saved controller connection, action revision and owner
+life before selecting active events. Hit receipts include event identity while
+event zero retains its existing encoding. Sword Spin still captures one event
+and one hit per life, preserving its current radial handler and total-hit budget.
+This is a breaking schema change: use a fresh development database and matching
+regenerated bindings; do not reset or republish over the protocol-24 public world.
+New abilities still require content, activation placement and collision dispatch.
+
+
 Compiled monster placements retain their `definition_vnum` alongside instance ID
 and home coordinates. The population parser validates membership in an explicit
 registry of distinct positive vnums, preserving mixed definitions rather than

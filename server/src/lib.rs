@@ -32,7 +32,7 @@ mod skill_hits;
 mod skills;
 mod training_targets;
 
-const PROTOCOL_VERSION: u32 = 24;
+const PROTOCOL_VERSION: u32 = 25;
 mod special_area;
 mod targeting;
 

@@ -4,6 +4,7 @@ extends "res://tests/multiplayer_smoke.gd"
 var _tokens: Array = []
 var _name_suffix := ""
 var _expected_definition_hash := ""
+var _network_only := false
 
 
 func _initialize() -> void:
@@ -21,6 +22,7 @@ func _initialize() -> void:
 	_database = str(config.get("database", _database))
 	_report_path = str(config.get("report", "user://account-smoke.json"))
 	_tokens = config.tokens
+	_network_only = bool(config.get("network_only", false))
 	_expected_definition_hash = str(config.get("definition_hash", ""))
 	_name_suffix = Crypto.new().generate_random_bytes(6).hex_encode()
 	if _tokens.size() != 2 or str(_tokens[0]).is_empty() or str(_tokens[1]).is_empty():
@@ -229,7 +231,7 @@ func _run() -> void:
 		"invalid_movement_rejected",
 		"between"
 	)
-	if not await _authenticated_pve(first, second, first_id, sword):
+	if not _network_only and not await _authenticated_pve(first, second, first_id, sword):
 		_finish()
 		return
 	var post_pve := _player(second, first_id)

@@ -21,6 +21,7 @@ const Monster = Types.Monster
 const NpcInteraction = Types.NpcInteraction
 const NpcSpawn = Types.NpcSpawn
 const Obstacle = Types.Obstacle
+const SkillEventTiming = Types.SkillEventTiming
 const CapturedPlayerAttacker = Types.CapturedPlayerAttacker
 const Player = Types.Player
 const PlayerAppearance = Types.PlayerAppearance

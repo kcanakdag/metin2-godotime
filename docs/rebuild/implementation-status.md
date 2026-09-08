@@ -5,6 +5,35 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Protocol-25 persisted skill events — 2026-09-08
+
+Pending skill state now stores an ordered list of event deadline records plus a
+captured per-life hit limit. The simulator visits each active event with its stable
+index and retains connection/action/life validation, total budgets and receipt
+ordering. Sword Spin still supplies one event and one hit per life; Three-Way Cut
+is not yet installed or enabled. Client protocol expectation and gate tests are
+updated; all 93 bindings were generated from the actual fresh database and parsed
+by Godot. Schema SHA-256:
+`0908670e47ef6ebdae5b2482671a3ea19e878147474585f92455ec21a85a425c`.
+
+Evidence: `.local/p6-skill-state-r1/acceptance.json`. Eight focused Rust skill tests
+pass, including actual BSATN event-list round-trip; strict Clippy and six Godot
+protocol checks pass. Fresh guest-disabled database
+`mt2-p2-skill-state-v25-r2-20260908` passes 74 real authenticated account/network
+checks, including bidirectional movement, rejected intents and reconnect. The
+network-only scope does not exercise actual skill casting. The preceding guest
+smoke failed character ownership; the full authenticated replay reached movement
+then failed obsolete basic-combat expectations (one-second swing/fixed 35 damage).
+Both failure reports are retained; they are not reported as passing combat QA.
+The protocol gate's first import was blocked by sandbox sockets; its isolated retry
+passed with local socket access. Signup cooldown was respected between account runs.
+
+Existing development/public databases were preserved. The public endpoint still
+serves protocol 24; protocol 25 requires a fresh world and matching exports before
+any rollout. The default local WASM output is now the guest-disabled protocol-25
+Training module; do not deploy it as the public Yongan module. Next: live skill-cast
+qualification, candidate motion installation and multi-event area dispatch.
+
 ## Compiled skill area resolution — 2026-09-08
 
 Candidate fixed-area geometry now calls the shared server rotation/sphere sweep.

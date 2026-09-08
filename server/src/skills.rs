@@ -23,6 +23,12 @@ pub struct CharacterSkill {
 const OWN_SKILLS: Filter =
     Filter::Sql("SELECT * FROM character_skill WHERE character_skill.account = :sender");
 
+#[derive(Clone, Debug, spacetimedb::SpacetimeType)]
+pub struct SkillEventTiming {
+    pub starts_at_us: i64,
+    pub ends_at_us: i64,
+}
+
 #[spacetimedb::table(accessor = pending_skill)]
 pub struct PendingSkill {
     #[primary_key]
@@ -32,8 +38,8 @@ pub struct PendingSkill {
     pub rank: u8,
     pub action_revision: u64,
     pub source_life: u32,
-    pub hit_at_us: i64,
-    pub hit_until_us: i64,
+    pub events: Vec<SkillEventTiming>,
+    pub per_life_limit: u8,
     pub attacker: crate::physical_damage::CapturedPlayerAttacker,
     pub vitality: u8,
     pub hit_lives: Vec<String>,
@@ -276,8 +282,14 @@ pub fn cast_skill(
         rank: state.rank,
         action_revision: control.action_revision,
         source_life: player.life_sequence,
-        hit_at_us: events[0][0],
-        hit_until_us: events[0][1],
+        events: events
+            .into_iter()
+            .map(|[starts_at_us, ends_at_us]| SkillEventTiming {
+                starts_at_us,
+                ends_at_us,
+            })
+            .collect(),
+        per_life_limit: 1,
         attacker,
         vitality: p.vitality,
         hit_lives: Vec::new(),
@@ -303,69 +315,80 @@ pub fn simulate(ctx: &ReducerContext, now: i64) -> Result<(), String> {
                 && p.life_sequence == cast.source_life
                 && accounts::controller_has_active_lease(ctx, c)
         });
-        if !valid || now > cast.hit_until_us {
+        let windows: Vec<_> = cast
+            .events
+            .iter()
+            .map(|event| [event.starts_at_us, event.ends_at_us])
+            .collect();
+        if !valid || windows.iter().all(|window| now > window[1]) {
             clear(ctx, cast.character_id);
             continue;
         }
-        if crate::skill_hits::active_events(&[[cast.hit_at_us, cast.hit_until_us]], now)? == 0 {
+        let active = crate::skill_hits::active_events(&windows, now)?;
+        if active == 0 {
             continue;
         }
         let owner = owner.expect("validated owner");
         let d = definition(cast.skill_vnum)?;
         let bounds = crate::collision_bounds(ctx);
-        let mut victims: Vec<_> = ctx
-            .db
-            .monster()
-            .iter()
-            .filter(|m| {
-                m.health > 0
-                    && m.x.is_finite()
-                    && m.z.is_finite()
-                    && (m.x - owner.x).hypot(m.z - owner.z) <= d.radius_m
-                    && crate::content::clear_path(owner.x, owner.z, m.x, m.z, &bounds)
-            })
-            .collect();
-        victims.sort_by_key(|m| m.id);
-        for mut victim in victims {
-            if cast.hit_lives.len() >= usize::from(d.max_targets) {
-                break;
-            }
-            if !crate::skill_hits::admits(
-                &cast.hit_lives,
-                victim.id,
-                victim.life_sequence,
-                0,
-                1,
-                u16::from(d.max_targets),
-            )? {
+        for event_index in 0..windows.len() {
+            if active & (1 << event_index) == 0 {
                 continue;
             }
-            let amount = crate::physical_damage::roll_skill_hit(
-                ctx,
-                d,
-                cast.rank,
-                cast.attacker,
-                cast.vitality,
-                &victim,
-            )?;
-            cast.hit_lives.push(crate::skill_hits::receipt(
-                victim.id,
-                victim.life_sequence,
-                0,
-            ));
-            combat::record_damage(
-                ctx,
-                victim.id,
-                victim.life_sequence,
-                cast.character_id,
-                cast.connection_id,
-                u32::from(amount),
-                crate::mob_threat::DamageKind::MeleeSkill,
-            )?;
-            if combat::apply_damage(&mut victim.health, amount) {
-                combat::kill_monster(ctx, &mut victim, cast.character_id);
+            let mut victims: Vec<_> = ctx
+                .db
+                .monster()
+                .iter()
+                .filter(|m| {
+                    m.health > 0
+                        && m.x.is_finite()
+                        && m.z.is_finite()
+                        && (m.x - owner.x).hypot(m.z - owner.z) <= d.radius_m
+                        && crate::content::clear_path(owner.x, owner.z, m.x, m.z, &bounds)
+                })
+                .collect();
+            victims.sort_by_key(|m| m.id);
+            for mut victim in victims {
+                if cast.hit_lives.len() >= usize::from(d.max_targets) {
+                    break;
+                }
+                if !crate::skill_hits::admits(
+                    &cast.hit_lives,
+                    victim.id,
+                    victim.life_sequence,
+                    event_index as u8,
+                    cast.per_life_limit,
+                    u16::from(d.max_targets),
+                )? {
+                    continue;
+                }
+                let amount = crate::physical_damage::roll_skill_hit(
+                    ctx,
+                    d,
+                    cast.rank,
+                    cast.attacker,
+                    cast.vitality,
+                    &victim,
+                )?;
+                cast.hit_lives.push(crate::skill_hits::receipt(
+                    victim.id,
+                    victim.life_sequence,
+                    event_index as u8,
+                ));
+                combat::record_damage(
+                    ctx,
+                    victim.id,
+                    victim.life_sequence,
+                    cast.character_id,
+                    cast.connection_id,
+                    u32::from(amount),
+                    crate::mob_threat::DamageKind::MeleeSkill,
+                )?;
+                if combat::apply_damage(&mut victim.health, amount) {
+                    combat::kill_monster(ctx, &mut victim, cast.character_id);
+                }
+                ctx.db.monster().id().update(victim);
             }
-            ctx.db.monster().id().update(victim);
         }
         ctx.db.pending_skill().character_id().update(cast);
     }
@@ -374,6 +397,38 @@ pub fn simulate(ctx: &ReducerContext, now: i64) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn event_list_survives_bsatn_with_stable_event_order() {
+        let captured =
+            crate::skill_hits::capture_events(&[[10, 20], [30, 40], [50, 60]], 1_000).unwrap();
+        let events: Vec<_> = captured
+            .iter()
+            .map(|&[starts_at_us, ends_at_us]| SkillEventTiming {
+                starts_at_us,
+                ends_at_us,
+            })
+            .collect();
+        let bytes = spacetimedb::sats::bsatn::to_vec(&events).unwrap();
+        let restored: Vec<SkillEventTiming> = spacetimedb::sats::bsatn::from_slice(&bytes).unwrap();
+        let windows: Vec<_> = restored
+            .iter()
+            .map(|event| [event.starts_at_us, event.ends_at_us])
+            .collect();
+        assert_eq!(windows, captured);
+        assert_eq!(
+            crate::skill_hits::active_events(&windows, 1_035).unwrap(),
+            2
+        );
+        assert_eq!(
+            crate::skill_hits::active_events(&windows, 1_045).unwrap(),
+            0
+        );
+        assert_eq!(
+            crate::skill_hits::active_events(&windows, 1_055).unwrap(),
+            4
+        );
+    }
+
     #[test]
     fn progression_budget_and_rank_boundaries() {
         let d = definition(2).unwrap();
