@@ -9,6 +9,27 @@ or reclassify that scope.
 
 ### Original wildlife definitions in progress
 
+Wildlife presentation checkpoint: the candidate builder emits public actor/model
+metadata alongside gameplay. The real PvE renderer uses exact action IDs and the
+authoritative interval for slow/normal playback and late seeking, holds completed
+actions and resets on idle/new life. Player attack-speed validation is unchanged.
+Original death registration names map to the renderer's canonical actions without
+changing IDs or clips.
+
+`.local/mobs/gameplay-presentation-r3` passes **125 rendered Godot checks** for
+five species/nine attacks, recovery, death/respawn and targeting. Five textured
+model captures were inspected. `playback-regression-r1` passes **116 existing
+headless actor checks**; ten Python tests and Python/GDScript lint pass. The first
+two native runs exposed the missing resource-directory entry and death-action
+mapping; both were fixed before the third run. `playback-acceptance-r1.json`
+records the reports and reviewed images.
+
+The wildlife catalog is merged only in the isolated test fixture, using controlled
+state rows. This is not multiplayer subscription, browser or export evidence.
+No Godot MCP was exposed, so no connected-editor claim is made. Live catalog
+installation/hash gating, full server definitions and original population/AI
+remain pending; served builds are unchanged.
+
 Weighted action runtime checkpoint: mob definitions now expose bounded weighted
 attack lists. The authoritative start chooses once and retains the chosen ID and
 timings; hit resolution looks up that species' accepted action. Invalid totals,

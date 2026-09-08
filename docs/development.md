@@ -17,6 +17,11 @@ After wildlife conversion, `tools/build_mob_catalog.py --content CONVERTED_DIR
 against the conversion receipt and exact Blender animation report. See
 [mob tooling](mobs.md) for its source timing policies and remaining runtime work.
 The command is offline and does not install content or restart services.
+It also writes `presentation.v1.json`. Use `tools/test_actors.py --scenario mobs
+--mob-content CONVERTED_DIR --native --godot GODOT --output NEW_DIR` to check the
+candidate through the real PvE actor in an isolated project. This runner merges
+the candidate into its disposable fixture only; it does not modify the installed
+manifest or establish server subscriptions.
 
 ## Classic character builds
 

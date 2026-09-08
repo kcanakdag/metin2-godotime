@@ -460,6 +460,7 @@ func _valid_resource_path(path: String) -> bool:
 		(
 			path.begins_with("res://assets/imported/content/%s/" % PROFILE_ID)
 			or path.begins_with("res://assets/imported/characters/actors/")
+			or path.begins_with("res://assets/imported/mobs/actors/")
 			or path.begins_with("res://assets/imported/authored/")
 		)
 		and path.ends_with(".glb")

@@ -34,6 +34,14 @@ timing reject. A one-entry list does not consume a selection RNG draw. The curre
 installed dog remains a 100-weight single action until the matching multi-variant
 content package is integrated. This internal change adds no protocol fields.
 
+The PvE renderer uses the exact subscribed mob action ID and derives animation
+rate from source clip duration divided by the authoritative action interval.
+Late arrivals seek with that rate, and completed actions hold their final pose
+until a new state arrives. Recovery clips use their own source duration; idle
+resets rate to 1. Player playback retains its separate 100–170 speed validation.
+The candidate wildlife presentation payload is exercised in isolated fixtures;
+it is not automatically loaded into the live catalog without server hash gates.
+
 Classic class presentation and combat share the installed character catalog
 (see [characters](characters.md)). The common Sword+0 and Fan+0 chains resolve each step
 from the server-owned character appearance and captured weapon vnum. All eight

@@ -125,10 +125,11 @@ func apply_state(value: Dictionary, server_time_us := 0) -> void:
 		# Authoritative attacks and reactions own the pose. A late subscription may
 		# already be past its clip end; it must not be replaced by health-delta damage.
 		_damage_until_ticks_us = 0
-		if ends_at_us > server_time_us:
-			_presentation.play_action(
-				mode, action_id, "", sequence, started_at_us, server_time_us, clock_became_ready
-			)
+		if _presentation.play_mob_action(
+			mode, action_id, sequence, started_at_us, ends_at_us, server_time_us, clock_became_ready
+		):
+			if ends_at_us <= server_time_us:
+				_presentation.freeze_at_end()
 	elif Time.get_ticks_usec() < _damage_until_ticks_us:
 		pass
 	elif _last_health >= 0 and health < _last_health:

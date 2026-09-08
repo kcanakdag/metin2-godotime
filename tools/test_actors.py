@@ -10,6 +10,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -72,12 +73,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument(
-        "--scenario", choices=["actors", "fan", "class_skills", "training_dummy"], default="actors"
+        "--scenario",
+        choices=["actors", "fan", "class_skills", "training_dummy", "mobs"],
+        default="actors",
     )
     parser.add_argument(
         "--character-package", type=Path, default=ROOT / "client/assets/imported/characters"
     )
     parser.add_argument("--authored-package", type=Path)
+    parser.add_argument("--mob-content", type=Path, help="Converted wildlife for the mobs scenario")
     parser.add_argument("--native", action="store_true", help="Render under Xvfb and save a PNG.")
     parser.add_argument(
         "--texture-editor-check",
@@ -86,6 +90,8 @@ def main() -> None:
     )
     parser.add_argument("--output", type=Path, default=ROOT / ".local/actors")
     options = parser.parse_args()
+    if (options.scenario == "mobs") != (options.mob_content is not None):
+        parser.error("The mobs scenario requires --mob-content exclusively")
     options.output = options.output.resolve()
     options.output.mkdir(parents=True, exist_ok=True)
     report_path = options.output / "report.json"
@@ -98,7 +104,7 @@ def main() -> None:
             "Missing target-effect catalog; run import_target_effects.py --install first."
         )
     texture_editor_check = options.texture_editor_check or (
-        options.native and options.scenario != "training_dummy"
+        options.native and options.scenario not in ("training_dummy", "mobs")
     )
     if texture_editor_check and not shutil.which("xvfb-run"):
         raise SystemExit("Actor texture editor import verification requires xvfb-run.")
@@ -121,12 +127,37 @@ def main() -> None:
             authored.mkdir(parents=True)
             for name in ("training-dummy.glb", "manifest.v1.json"):
                 shutil.copy2(options.authored_package / name, authored / name)
+        if options.mob_content:
+            generated = stage / "mob-candidate"
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "tools/build_mob_catalog.py"),
+                    "--content",
+                    str(options.mob_content.resolve()),
+                    "--output",
+                    str(generated),
+                ],
+                check=True,
+            )
+            public = json.loads((generated / "presentation.v1.json").read_text())
+            ids = {a["id"] for a in public["actors"]}
+            base_manifest = stage / "assets/imported/content/p0-warrior-dog/manifest.v1.json"
+            document = json.loads(base_manifest.read_text())
+            # Isolated fixture merge only: live catalog/hash gates are not bypassed.
+            for key in ("actors", "artifacts"):
+                document[key] = [a for a in document[key] if a["id"] not in ids] + public[key]
+            base_manifest.write_text(json.dumps(document, indent=2) + "\n")
+            shutil.copytree(options.mob_content / "generated", stage / "assets/imported/mobs")
+            shutil.copy2(generated / "gameplay.v1.json", stage / "mob-gameplay.json")
         (stage / "tests").mkdir()
+        shutil.copy2(ROOT / "client/tests/mob_actor_smoke.gd", stage / "tests/mob_actor_smoke.gd")
         selected_smoke = {
             "actors": "actor_smoke.gd",
             "fan": "fan_actor_smoke.gd",
             "class_skills": "class_skill_actor_smoke.gd",
             "training_dummy": "training_dummy_smoke.gd",
+            "mobs": "mob_actor_smoke.gd",
         }[options.scenario]
         shutil.copy2(
             ROOT / "client/tests/training_dummy_smoke.gd", stage / "tests/training_dummy_smoke.gd"
@@ -194,6 +225,7 @@ def main() -> None:
             ),
             "actor_catalog": sha256(stage / "scripts/content/actor_catalog.gd"),
             "actor_node": sha256(stage / "scripts/actors/pve_actor.gd"),
+            "actor_presentation": sha256(stage / "scripts/actors/actor_presentation.gd"),
             "target_effect_catalog": sha256(stage / "scripts/content/target_effect_catalog.gd"),
             "target_effect_node": sha256(stage / "scripts/actors/target_effect.gd"),
             "target_effect_runtime_catalog": sha256(staged_target_catalog),
@@ -214,6 +246,9 @@ def main() -> None:
                 else {}
             ),
         }
+        if options.mob_content:
+            tested_files["mob_gameplay"] = sha256(stage / "mob-gameplay.json")
+            tested_files["mob_presentation"] = sha256(stage / "mob-candidate/presentation.v1.json")
         if options.authored_package:
             tested_files["authored_manifest"] = sha256(authored / "manifest.v1.json")
             tested_files["authored_model"] = sha256(authored / "training-dummy.glb")

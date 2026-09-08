@@ -8,6 +8,7 @@ from pathlib import Path
 
 from content_compile import ROOT
 from mob_gameplay import compile_catalog, validate_actor_reports
+from mob_presentation import compile_presentation
 
 
 def main():
@@ -23,7 +24,12 @@ def main():
     ]
     files.extend(
         ROOT / "tools" / name
-        for name in ("mob_gameplay.py", "build_mob_catalog.py", "content_compile.py")
+        for name in (
+            "mob_gameplay.py",
+            "mob_presentation.py",
+            "build_mob_catalog.py",
+            "content_compile.py",
+        )
     )
     frozen = {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
     normalized = json.loads(files[0].read_text())
@@ -60,9 +66,15 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     target = output / "gameplay.v1.json"
     target.write_text(json.dumps(catalog, indent=2) + "\n")
+    presentation = output / "presentation.v1.json"
+    presentation.write_text(
+        json.dumps(compile_presentation(normalized, report, catalog["content_hash"]), indent=2)
+        + "\n"
+    )
     receipt = {
         "status": "candidate-not-installed",
         "inputs": frozen,
+        "presentation_sha256": hashlib.sha256(presentation.read_bytes()).hexdigest(),
         "catalog_sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
         "content_hash": catalog["content_hash"],
         "mob_count": len(catalog["mobs"]),

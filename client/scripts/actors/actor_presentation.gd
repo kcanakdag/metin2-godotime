@@ -56,6 +56,48 @@ func play_action(
 				% [actor_id, mode_id, action_id, action]
 			)
 		)
+	return _play_motion(
+		motion,
+		mode_id,
+		sequence,
+		started_at_us,
+		server_time_us,
+		force,
+		float(attack_speed_percent) / 100.0
+	)
+
+
+func play_mob_action(
+	mode_id: String,
+	action_id: String,
+	sequence: int,
+	started_at_us: int,
+	ends_at_us: int,
+	server_time_us: int,
+	force := false
+) -> bool:
+	if str(_definition.get("kind", "")) != "mob":
+		return _fail("Timed mob playback requires an ordinary mob actor.")
+	var motion: Dictionary = catalog.motion(actor_id, mode_id, action_id, "")
+	var source_us := int(motion.get("duration_us", 0))
+	var elapsed_us := ends_at_us - started_at_us
+	if motion.is_empty() or started_at_us <= 0 or elapsed_us <= 0 or elapsed_us > 60_000_000:
+		return _fail("Invalid authoritative mob action interval.")
+	var rate := float(source_us) / float(elapsed_us)
+	if not is_finite(rate) or rate < 0.01 or rate > 2.0:
+		return _fail("Mob playback rate is outside the supported range.")
+	return _play_motion(motion, mode_id, sequence, started_at_us, server_time_us, force, rate)
+
+
+func _play_motion(
+	motion: Dictionary,
+	mode_id: String,
+	sequence: int,
+	started_at_us: int,
+	server_time_us: int,
+	force: bool,
+	playback_rate: float
+) -> bool:
 	var resolved_mode := str(motion.get("mode_id", mode_id))
 	var same := (
 		str(current_motion.get("action_id", "")) == str(motion.get("action_id", ""))
@@ -71,7 +113,7 @@ func play_action(
 	current_motion = motion
 	current_mode = resolved_mode
 	current_sequence = sequence
-	animation_player.speed_scale = float(attack_speed_percent) / 100.0
+	animation_player.speed_scale = playback_rate
 	animation_player.play(_clips[clip_name], 0.12)
 	var duration_seconds := float(int(motion.get("duration_us", 0))) / 1_000_000.0
 	var offset_seconds := 0.0

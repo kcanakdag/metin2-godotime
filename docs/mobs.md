@@ -189,3 +189,41 @@ weighted-variant test. The module's schema matches committed protocol-18 binding
 exports and served endpoints are unchanged. The candidate catalog still needs
 build-time integration and matching client playback before additional actions
 or species can be enabled.
+
+## Godot wildlife presentation
+
+The catalog builder also emits `presentation.v1.json`, containing public actor
+models, animation metadata, converted artifact hashes and the gameplay hash.
+Original `front_dead`/`back_dead` registrations map to the renderer's canonical
+`front_death`/`back_death` actions while retaining original IDs and clip names.
+The shared actor reader accepts only the dedicated `assets/imported/mobs/actors/`
+GLB directory, alongside its existing roots; traversal remains rejected.
+
+```sh
+.local/venv-dev/bin/python tools/test_actors.py --scenario mobs \
+  --mob-content .local/mobs/wildlife-converted --native --godot /path/to/godot \
+  --output .local/mobs/gameplay-presentation
+```
+
+The runner verifies conversion receipts, generates candidate catalogs and merges
+their actors into a disposable fixture. Real PvE nodes receive controlled state
+rows. The installed manifest and live world content checks are untouched.
+Mob attacks now use `source_duration / (ends_at - starts_at)` for playback,
+supporting slow original attacks without relaxing player speed bounds. Late
+subscriptions seek at the same rate; completed actions hold the final pose.
+Idle and new lives release that pose and reset playback speed.
+
+`gameplay-presentation-r3` passes 125 rendered Godot checks across all five species,
+nine exact attack variants, slowed/late playback, source recovery clips, death,
+respawn and targeting. The five textured model captures were visually inspected.
+`playback-regression-r1` passes 116 existing actor checks in headless Godot,
+including player/skill presentation and the installed dog. Ten Python tests and
+GDScript/Python lint pass. `playback-acceptance-r1.json` records evidence hashes.
+
+The first render caught the missing model-directory allowlist entry; the second
+caught the original death-action naming difference. Both failed runs are retained,
+and the successful third run includes the fixes. No Godot MCP was exposed; tests
+used isolated processes rather than the open editor. This is native component
+evidence, not new live species, actual subscriptions or browser/export proof.
+The live installer/hash gate and compiled five-species server registry remain
+unfinished; no served endpoint changed.

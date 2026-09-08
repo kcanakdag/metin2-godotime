@@ -23,6 +23,10 @@ stats and converts five models with 68 reachable clips. Native asset QA passes
 304 checks. The candidate gameplay compiler links nine weighted attack variants,
 per-species movement and recovery timing to those converted models; additional
 enemy gameplay is not live yet.
+The wildlife presentation fixture now passes 125 rendered Godot checks across
+all five species and nine attacks, including slower playback, recovery and
+death/respawn. This uses controlled state rows; server population integration
+and exported multiplayer qualification remain pending.
 Yongan's six authored Wild Dog homes pass **107 two-client checks** on a fresh
 local database. The original City Guard is installed in the playable map layer,
 with original placement, weighted idle animations and its attached weapon.

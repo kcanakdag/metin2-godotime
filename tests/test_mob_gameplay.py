@@ -7,6 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from content_compile import canonical_bytes
 from mob_gameplay import compile_catalog, legacy_duration, playback_duration, validate_actor_reports
+from mob_presentation import public_motion
 
 
 def sealed(value):
@@ -93,6 +94,17 @@ def fixture():
 
 
 class MobGameplayTests(unittest.TestCase):
+    def test_source_death_names_map_without_replacing_motion_identity(self):
+        for action in ("front_dead", "back_dead", "normal_attack"):
+            motion = copy.deepcopy(fixture()["actors"][0]["modes"][0]["motions"][0])
+            motion.update(action=action, variant=1, fallback_mode=None)
+            expected = action.replace("_dead", "_death")
+            public = public_motion(motion)
+            self.assertEqual(public["action"], expected)
+            self.assertEqual(public["action_id"], motion["action_id"])
+            self.assertEqual(public["godot_name"], motion["godot_name"])
+            self.assertEqual(motion["action"], action)
+
     def test_converted_report_must_match_exact_actor_clips(self):
         actors = fixture()["actors"]
         actors[0]["output"] = "actors/boar.glb"
