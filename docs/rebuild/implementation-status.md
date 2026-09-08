@@ -9,6 +9,21 @@ or reclassify that scope.
 
 ### Original wildlife definitions in progress
 
+Weighted action runtime checkpoint: mob definitions now expose bounded weighted
+attack lists. The authoritative start chooses once and retains the chosen ID and
+timings; hit resolution looks up that species' accepted action. Invalid totals,
+duplicates, unsupported action features and invalid windows reject. The default
+dog still has its existing single 100-weight attack, preserving live balance and
+RNG behavior until the matching content catalog is installed.
+
+All **164 Rust tests**, strict Rust lint and **113 actual two-client checks** pass.
+The Rust selection test covers every roll of a two-variant fixture; the live run
+uses the existing single-action dog on `mt2-p2-mob-actions-qa-r1-20260908`.
+Reports are `.local/mobs/weighted-actions-live-r1.json` and
+`weighted-actions-acceptance-r1.json`. Actual module schema matches the committed
+protocol-18 bindings. No client changes, new exports or served endpoint update
+occurred. Multi-variant catalog integration and client playback remain next.
+
 The converted wildlife now has an offline gameplay-catalog compiler:
 `tools/build_mob_catalog.py` links five species and all nine weighted attack
 variants to the exact Blender report, preserving hit samples, distinct defending

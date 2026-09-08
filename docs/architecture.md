@@ -25,6 +25,15 @@ stats/presentation instead of resetting every ordinary actor to the dog's level.
 The dummy remains a separate validated passive definition. Original passive AI,
 item drop tables and the five-species catalog are not enabled by this refactor.
 
+Ordinary mob definitions now contain bounded weighted attack lists. The server
+selects one entry at action acceptance and publishes its exact ID; the same entry
+supplies duration, cooldown and pending hit window. Resolution looks up that ID
+within the actor's own definition, rather than using a default species attack.
+Weights must total 100; duplicate IDs, unsupported action features and invalid
+timing reject. A one-entry list does not consume a selection RNG draw. The current
+installed dog remains a 100-weight single action until the matching multi-variant
+content package is integrated. This internal change adds no protocol fields.
+
 Classic class presentation and combat share the installed character catalog
 (see [characters](characters.md)). The common Sword+0 and Fan+0 chains resolve each step
 from the server-owned character appearance and captured weapon vnum. All eight

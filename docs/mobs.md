@@ -167,3 +167,25 @@ mobs/nine attacks. Six compiler regressions and three mob-source tests pass, as
 does Python lint. A real CLI check rejects altered converted metadata before
 creating output. `gameplay-catalog-acceptance-r1.json` records this evidence.
 No model, live module, exported client or served endpoint changed.
+
+## Authoritative weighted action selection
+
+The shared runtime now accepts up to 16 weighted ordinary attacks per definition,
+with a required total of 100 and a shared validated range. Selection occurs once
+when an attack starts. Its published action ID, duration and delayed hit window
+come from that entry; hit resolution rejects an action absent from the species'
+registry. Single-action definitions retain the existing RNG behavior.
+
+The current compiled dog remains one 100-weight attack. Rust tests exhaust all
+100 rolls for a two-variant fixture, including distinct original dog windows,
+and reject missing weights, duplicate IDs and invalid windows. These variants
+are not installed into live content by this checkpoint.
+
+All 164 Rust tests and strict lint pass. `weighted-actions-live-r1.json` passes
+113 authenticated two-client checks against `mt2-p2-mob-actions-qa-r1-20260908`.
+That live run exercises the existing single-attack population, not a distributed
+weighted-variant test. The module's schema matches committed protocol-18 bindings;
+`weighted-actions-acceptance-r1.json` records hashes and limitations. Client code,
+exports and served endpoints are unchanged. The candidate catalog still needs
+build-time integration and matching client playback before additional actions
+or species can be enabled.

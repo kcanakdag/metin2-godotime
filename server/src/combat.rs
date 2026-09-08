@@ -261,7 +261,7 @@ fn fresh_monster(
                 d.level,
                 d.model_key,
                 d.motion_set,
-                d.attack.id,
+                d.attacks[0].attack.id,
                 d.health,
             )
         };
@@ -1212,7 +1212,7 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
             within_reach(
                 (monster.x, monster.y, monster.z),
                 (player.x, player.y, player.z),
-                definition.attack.range_m,
+                definition.attack_range_m,
             )
         }) {
             monster.heading = (monster.x - player.x).atan2(monster.z - player.z);
@@ -1290,16 +1290,22 @@ fn schedule_monster_hit(
     now: i64,
 ) -> Result<(), String> {
     let definition = ordinary_definition(monster)?;
+    let roll = if definition.attacks.len() == 1 {
+        1
+    } else {
+        ctx.rng().gen_range(1..=100)
+    };
+    let attack = crate::mob_actions::select(definition, roll)?;
     let damage = crate::physical_damage::roll_monster_hit(ctx, monster, target)?;
-    clock.next_attack_us = now.saturating_add(definition.attack.cooldown_us);
-    clock.attack_until_us = now.saturating_add(definition.attack.duration_us);
+    clock.next_attack_us = now.saturating_add(attack.cooldown_us);
+    clock.attack_until_us = now.saturating_add(attack.duration_us);
     clock.pending_target = target;
     clock.pending_target_generation = target_generation;
     clock.pending_source_generation = monster.life_sequence;
-    clock.pending_hit_at_us = now.saturating_add(definition.attack.hit_start_us);
-    clock.pending_hit_until_us = now.saturating_add(definition.attack.hit_end_us);
+    clock.pending_hit_at_us = now.saturating_add(attack.hit_start_us);
+    clock.pending_hit_until_us = now.saturating_add(attack.hit_end_us);
     clock.pending_damage = damage;
-    monster.attack_action_id = definition.attack.id.into();
+    monster.attack_action_id = attack.id.into();
     monster.attack_sequence = monster.attack_sequence.wrapping_add(1);
     monster.activity = 2;
     monster.action_started_at_us = now;
@@ -1312,6 +1318,9 @@ fn resolve_monster_hit(ctx: &ReducerContext, monster_id: u32, hit: PendingMonste
         return;
     };
     let Ok(definition) = ordinary_definition(&monster) else {
+        return;
+    };
+    let Ok(attack) = crate::mob_actions::by_id(definition, &monster.attack_action_id) else {
         return;
     };
     let Some(mut player) = ctx.db.player().identity().find(hit.target) else {
@@ -1329,7 +1338,7 @@ fn resolve_monster_hit(ctx: &ReducerContext, monster_id: u32, hit: PendingMonste
         || !within_reach(
             (monster.x, monster.y, monster.z),
             (player.x, player.y, player.z),
-            definition.attack.range_m,
+            attack.range_m,
         )
         || !content::clear_path(
             monster.x,

@@ -12,6 +12,7 @@ mod item_catalog;
 mod item_effects;
 mod item_security;
 mod knockback;
+mod mob_actions;
 mod movement;
 mod npc_placement;
 mod npc_spawns;
