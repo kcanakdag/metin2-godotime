@@ -8,18 +8,22 @@ const table_names: Array[String] = []
 
 @export var starts_at_us: int
 @export var ends_at_us: int
+@export var placement: Option
 
 #BSATN metadata
 const primary_key: StringName = &''
 const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"starts_at_us": "I64",
-	"ends_at_us": "I64"
+	"ends_at_us": "I64",
+	"placement": "opt_GameSkillAreaPlacement"
 }
 
 ## 1. starts_at_us: int[br]
 ## 2. ends_at_us: int[br]
-static func create(p_starts_at_us: int, p_ends_at_us: int) -> GameSkillEventTiming:
+## 3. placement: Option[br]
+static func create(p_starts_at_us: int, p_ends_at_us: int, p_placement: Option) -> GameSkillEventTiming:
 	var result: GameSkillEventTiming = GameSkillEventTiming.new()
 	result.starts_at_us = p_starts_at_us
 	result.ends_at_us = p_ends_at_us
+	result.placement = p_placement
 	return result

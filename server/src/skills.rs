@@ -24,9 +24,29 @@ const OWN_SKILLS: Filter =
     Filter::Sql("SELECT * FROM character_skill WHERE character_skill.account = :sender");
 
 #[derive(Clone, Debug, spacetimedb::SpacetimeType)]
+pub struct SkillAreaVictim {
+    pub monster_id: u32,
+    pub life_sequence: u32,
+    pub center_x: f64,
+    pub center_y: f64,
+    pub center_z: f64,
+}
+
+#[derive(Clone, Debug, spacetimedb::SpacetimeType)]
+pub struct SkillAreaPlacement {
+    pub origin_x: f64,
+    pub origin_y: f64,
+    pub origin_z: f64,
+    pub heading: f32,
+    pub activated_at_us: i64,
+    pub victims: Vec<SkillAreaVictim>,
+}
+
+#[derive(Clone, Debug, spacetimedb::SpacetimeType)]
 pub struct SkillEventTiming {
     pub starts_at_us: i64,
     pub ends_at_us: i64,
+    pub placement: Option<SkillAreaPlacement>,
 }
 
 #[spacetimedb::table(accessor = pending_skill)]
@@ -291,6 +311,7 @@ pub fn cast_skill(
             .map(|[starts_at_us, ends_at_us]| SkillEventTiming {
                 starts_at_us,
                 ends_at_us,
+                placement: None,
             })
             .collect(),
         per_life_limit: d.hits_per_life,
@@ -306,25 +327,81 @@ pub fn clear(ctx: &ReducerContext, character: Identity) {
     ctx.db.pending_skill().character_id().delete(character);
 }
 
+fn controlling_owner(
+    ctx: &ReducerContext,
+    cast: &PendingSkill,
+) -> Option<(crate::Controller, crate::Player)> {
+    ctx.db
+        .controller()
+        .identity()
+        .find(cast.character_id)
+        .zip(ctx.db.player().identity().find(cast.character_id))
+        .filter(|(control, owner)| {
+            control.connection_id == cast.connection_id
+                && control.action_revision == cast.action_revision
+                && owner.online
+                && owner.health > 0
+                && owner.life_sequence == cast.source_life
+                && accounts::controller_has_active_lease(ctx, control)
+        })
+}
+
+/// Capture at event boundaries before the normal root-motion advance for this tick.
+pub fn activate_due(ctx: &ReducerContext, now: i64) -> Result<(), String> {
+    let casts: Vec<_> = ctx.db.pending_skill().iter().collect();
+    for mut cast in casts {
+        let Some((mut control, _)) = controlling_owner(ctx, &cast) else {
+            clear(ctx, cast.character_id);
+            continue;
+        };
+        let mut changed = false;
+        for event in &mut cast.events {
+            if event.placement.is_some() || now < event.starts_at_us || now >= event.ends_at_us {
+                continue;
+            }
+            crate::root_motion::advance_for_event(ctx, &mut control, event.starts_at_us)?;
+            let owner = ctx
+                .db
+                .player()
+                .identity()
+                .find(cast.character_id)
+                .ok_or("Skill owner disappeared")?;
+            let placement = crate::area_lifecycle::Placement::capture(
+                [f64::from(owner.x), f64::from(owner.y), f64::from(owner.z)],
+                owner.heading,
+                now,
+            )?;
+            event.placement = Some(SkillAreaPlacement {
+                origin_x: placement.origin[0],
+                origin_y: placement.origin[1],
+                origin_z: placement.origin[2],
+                heading: placement.heading,
+                activated_at_us: placement.activated_at_us,
+                victims: Vec::new(),
+            });
+            changed = true;
+        }
+        if changed {
+            ctx.db.controller().identity().update(control);
+            ctx.db.pending_skill().character_id().update(cast);
+        }
+    }
+    Ok(())
+}
+
 pub fn simulate(ctx: &ReducerContext, now: i64) -> Result<(), String> {
     let casts: Vec<_> = ctx.db.pending_skill().iter().collect();
     for mut cast in casts {
-        let control = ctx.db.controller().identity().find(cast.character_id);
-        let owner = ctx.db.player().identity().find(cast.character_id);
-        let valid = control.as_ref().zip(owner.as_ref()).is_some_and(|(c, p)| {
-            c.connection_id == cast.connection_id
-                && c.action_revision == cast.action_revision
-                && p.online
-                && p.health > 0
-                && p.life_sequence == cast.source_life
-                && accounts::controller_has_active_lease(ctx, c)
-        });
+        let Some((_, owner)) = controlling_owner(ctx, &cast) else {
+            clear(ctx, cast.character_id);
+            continue;
+        };
         let windows: Vec<_> = cast
             .events
             .iter()
             .map(|event| [event.starts_at_us, event.ends_at_us])
             .collect();
-        if !valid || windows.iter().all(|window| now > window[1]) {
+        if windows.iter().all(|window| now > window[1]) {
             clear(ctx, cast.character_id);
             continue;
         }
@@ -332,7 +409,6 @@ pub fn simulate(ctx: &ReducerContext, now: i64) -> Result<(), String> {
         if active == 0 {
             continue;
         }
-        let owner = owner.expect("validated owner");
         let d = definition(cast.skill_vnum)?;
         let bounds = crate::collision_bounds(ctx);
         for event_index in 0..windows.len() {
@@ -405,19 +481,49 @@ mod tests {
     fn event_list_survives_bsatn_with_stable_event_order() {
         let captured =
             crate::skill_hits::capture_events(&[[10, 20], [30, 40], [50, 60]], 1_000).unwrap();
-        let events: Vec<_> = captured
+        let mut events: Vec<_> = captured
             .iter()
             .map(|&[starts_at_us, ends_at_us]| SkillEventTiming {
                 starts_at_us,
                 ends_at_us,
+                placement: None,
             })
             .collect();
+        events[1].placement = Some(SkillAreaPlacement {
+            origin_x: 10.25,
+            origin_y: -0.5,
+            origin_z: 20.75,
+            heading: -std::f32::consts::FRAC_PI_2,
+            activated_at_us: 1_031,
+            victims: vec![SkillAreaVictim {
+                monster_id: 900_001,
+                life_sequence: 7,
+                center_x: 8.25,
+                center_y: 1.0,
+                center_z: 20.75,
+            }],
+        });
         let bytes = spacetimedb::sats::bsatn::to_vec(&events).unwrap();
         let restored: Vec<SkillEventTiming> = spacetimedb::sats::bsatn::from_slice(&bytes).unwrap();
         let windows: Vec<_> = restored
             .iter()
             .map(|event| [event.starts_at_us, event.ends_at_us])
             .collect();
+        assert!(restored[0].placement.is_none());
+        assert!(restored[2].placement.is_none());
+        let placement = restored[1].placement.as_ref().unwrap();
+        assert_eq!(placement.origin_x, 10.25);
+        assert_eq!(placement.origin_y, -0.5);
+        assert_eq!(placement.origin_z, 20.75);
+        assert_eq!(placement.heading, -std::f32::consts::FRAC_PI_2);
+        assert_eq!(placement.activated_at_us, 1_031);
+        assert_eq!(placement.victims.len(), 1);
+        let victim = &placement.victims[0];
+        assert_eq!((victim.monster_id, victim.life_sequence), (900_001, 7));
+        assert_eq!(
+            [victim.center_x, victim.center_y, victim.center_z],
+            [8.25, 1.0, 20.75]
+        );
         assert_eq!(windows, captured);
         assert_eq!(
             crate::skill_hits::active_events(&windows, 1_035).unwrap(),

@@ -275,3 +275,16 @@ geometry and receipt checks. Four area replays and ten focused Rust area checks
 pass; strict Clippy passes. Evidence: `.local/p6-area-lifecycle-r1/`. The live skill
 pending state still needs these per-event placements before fixed-area dispatch
 can be enabled; the existing combo uses the shared lifecycle now.
+
+### Protocol-26 placement state
+
+Each persisted skill event now carries an optional activation placement and a
+list of exact-life target samples. Activation captures origin and heading before
+the tick's normal root-motion advancement, once per event, after verifying the
+controller lease, connection, action revision and owner life. The target list is
+currently empty: live area sampling and geometry dispatch are the next step.
+Sword Spin retains its radial resolver. The fresh local database
+`mt2-p2-area-state-v26-r1-20260908` passes 35 skill and 15 combat checks with two
+authenticated clients; this does not establish Three-Way Cut or browser fidelity.
+The module in `.local/p6-area-state-r1/module.wasm` embeds local QA authorization
+and must not be deployed publicly.

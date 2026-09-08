@@ -3412,7 +3412,7 @@
                 },
                 {
                   "algebraic_type": {
-                    "Ref": 38
+                    "Ref": 40
                   },
                   "name": {
                     "some": "attacker"
@@ -3456,6 +3456,137 @@
                   },
                   "name": {
                     "some": "ends_at_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Sum": {
+                      "variants": [
+                        {
+                          "algebraic_type": {
+                            "Ref": 38
+                          },
+                          "name": {
+                            "some": "some"
+                          }
+                        },
+                        {
+                          "algebraic_type": {
+                            "Product": {
+                              "elements": []
+                            }
+                          },
+                          "name": {
+                            "some": "none"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "placement"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "F64": []
+                  },
+                  "name": {
+                    "some": "origin_x"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F64": []
+                  },
+                  "name": {
+                    "some": "origin_y"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F64": []
+                  },
+                  "name": {
+                    "some": "origin_z"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "heading"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "activated_at_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Array": {
+                      "Ref": 39
+                    }
+                  },
+                  "name": {
+                    "some": "victims"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "monster_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "life_sequence"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F64": []
+                  },
+                  "name": {
+                    "some": "center_x"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F64": []
+                  },
+                  "name": {
+                    "some": "center_y"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F64": []
+                  },
+                  "name": {
+                    "some": "center_z"
                   }
                 }
               ]
@@ -4379,7 +4510,7 @@
             "scope": [],
             "source_name": "TickSchedule"
           },
-          "ty": 43
+          "ty": 45
         },
         {
           "custom_ordering": true,
@@ -4427,7 +4558,7 @@
             "scope": [],
             "source_name": "CapturedPlayerAttacker"
           },
-          "ty": 38
+          "ty": 40
         },
         {
           "custom_ordering": true,
@@ -4467,7 +4598,7 @@
             "scope": [],
             "source_name": "PlayerAppearance"
           },
-          "ty": 40
+          "ty": 42
         },
         {
           "custom_ordering": true,
@@ -4515,7 +4646,7 @@
             "scope": [],
             "source_name": "SimulationClock"
           },
-          "ty": 44
+          "ty": 46
         },
         {
           "custom_ordering": true,
@@ -4523,7 +4654,7 @@
             "scope": [],
             "source_name": "SpecialAreaVictim"
           },
-          "ty": 46
+          "ty": 48
         },
         {
           "custom_ordering": true,
@@ -4531,7 +4662,7 @@
             "scope": [],
             "source_name": "Session"
           },
-          "ty": 42
+          "ty": 44
         },
         {
           "custom_ordering": true,
@@ -4539,7 +4670,7 @@
             "scope": [],
             "source_name": "SpecialArea"
           },
-          "ty": 45
+          "ty": 47
         },
         {
           "custom_ordering": true,
@@ -4625,7 +4756,7 @@
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "Player"
+            "source_name": "SkillAreaVictim"
           },
           "ty": 39
         },
@@ -4636,6 +4767,14 @@
             "source_name": "MonsterReaction"
           },
           "ty": 27
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "Player"
+          },
+          "ty": 41
         },
         {
           "custom_ordering": true,
@@ -4673,17 +4812,17 @@
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "ProgressionOperator"
+            "source_name": "SkillAreaPlacement"
           },
-          "ty": 41
+          "ty": 38
         },
         {
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "WorldInfo"
+            "source_name": "ProgressionOperator"
           },
-          "ty": 47
+          "ty": 43
         },
         {
           "custom_ordering": true,
@@ -4708,6 +4847,14 @@
             "source_name": "Loot"
           },
           "ty": 20
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "WorldInfo"
+          },
+          "ty": 49
         }
       ]
     },
@@ -4988,7 +5135,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 44,
+          "product_type_ref": 46,
           "sequences": [],
           "source_name": "simulation_clock",
           "table_access": {
@@ -5046,7 +5193,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 46,
+          "product_type_ref": 48,
           "sequences": [
             {
               "column": 0,
@@ -5851,7 +5998,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 40,
+          "product_type_ref": 42,
           "sequences": [],
           "source_name": "player_appearance",
           "table_access": {
@@ -5896,7 +6043,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 41,
+          "product_type_ref": 43,
           "sequences": [],
           "source_name": "progression_operator",
           "table_access": {
@@ -6012,7 +6159,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 45,
+          "product_type_ref": 47,
           "sequences": [],
           "source_name": "special_area",
           "table_access": {
@@ -6726,7 +6873,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 42,
+          "product_type_ref": 44,
           "sequences": [],
           "source_name": "session",
           "table_access": {
@@ -6771,7 +6918,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 43,
+          "product_type_ref": 45,
           "sequences": [
             {
               "column": 0,
@@ -6833,7 +6980,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 47,
+          "product_type_ref": 49,
           "sequences": [],
           "source_name": "world_info",
           "table_access": {
@@ -6968,7 +7115,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 39,
+          "product_type_ref": 41,
           "sequences": [],
           "source_name": "player",
           "table_access": {
@@ -8042,7 +8189,7 @@
             "elements": [
               {
                 "algebraic_type": {
-                  "Ref": 43
+                  "Ref": 45
                 },
                 "name": {
                   "some": "_schedule"

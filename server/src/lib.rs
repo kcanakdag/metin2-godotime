@@ -33,7 +33,7 @@ mod skill_hits;
 mod skills;
 mod training_targets;
 
-const PROTOCOL_VERSION: u32 = 25;
+const PROTOCOL_VERSION: u32 = 26;
 mod special_area;
 mod targeting;
 
@@ -579,6 +579,7 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
     clock.last_tick = ctx.timestamp;
     ctx.db.simulation_clock().id().update(clock);
     special_area::activate_due(ctx, now)?;
+    skills::activate_due(ctx, now)?;
     root_motion::advance_all(ctx, now)?;
     combat::resolve_due_hits(ctx, now);
     knockback::advance_all(ctx, now)?;

@@ -5,6 +5,23 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Persisted skill-area placement — 2026-09-08
+
+Protocol 26 stores optional activation origin, heading, tick and exact-life target
+samples per skill event. Activation validates the controlling lease/action/life,
+advances root motion to the event boundary and captures placement once. Target
+sampling and live fixed-area collision dispatch remain pending; Sword Spin still
+uses its radial handler. Its regression replay passes 35 skill and 15 combat
+checks with two authenticated Godot clients. The separate account/network replay
+passes 74 checks, including rejected intents, movement, disconnect and reconnect.
+Eight Rust skill tests (including nested placement BSATN round-trip), six protocol
+checks, strict library Clippy, formatting and changed-source GDScript lint pass.
+Generated 95 bindings from fresh database `mt2-p2-area-state-v26-r1-20260908`.
+Evidence: `.local/p6-area-state-r1/`. No browser/exported or connected-editor QA is
+claimed. Public protocol 24 is unchanged. The default WASM and frozen local module
+contain QA bootstrap permissions and the local auth issuer; do not publish them
+publicly. Next: populate target samples and connect original fixed-area geometry.
+
 ## Shared fixed-area activation lifecycle — 2026-09-08
 
 Extracted the existing combo fixed-area activation phase rules and introduced
