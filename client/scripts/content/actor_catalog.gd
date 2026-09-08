@@ -11,6 +11,7 @@ const SWORD_ID := "item.weapon.sword-10"
 const SWORD_POWER_MIN := 13
 const SWORD_POWER_MAX := 15
 const SWORD_REFINE_ATTACK := 0
+const MOB_PATH := "res://assets/imported/mobs/presentation.v1.json"
 const AUTHORED_PATH := "res://assets/imported/authored/training-dummy/manifest.v1.json"
 const CharacterCatalogScript := preload("res://scripts/content/character_catalog.gd")
 
@@ -18,6 +19,7 @@ var manifest: Dictionary = {}
 var error_message := ""
 var report_errors := true
 var training_target_hash := ""
+var mob_gameplay_hash := ""
 var characters := CharacterCatalogScript.new()
 var skills := SkillCatalog.new()
 var _actors: Dictionary = {}
@@ -33,7 +35,10 @@ func load_required(path := MANIFEST_PATH, intro_models := false) -> bool:
 	if not FileAccess.file_exists(path):
 		return _fail("Required actor profile is missing: %s. Run the P1 content build." % path)
 	var document: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if not document is Dictionary:
+	var mobs: Variant = {}
+	if FileAccess.file_exists(MOB_PATH):
+		mobs = JSON.parse_string(FileAccess.get_file_as_string(MOB_PATH))
+	if not document is Dictionary or not mobs is Dictionary:
 		return _fail("Required actor profile is not valid JSON: " + path)
 	if not skills.load_required():
 		return _fail(skills.error_message)
@@ -45,18 +50,19 @@ func load_required(path := MANIFEST_PATH, intro_models := false) -> bool:
 		if not extra is Dictionary or extra.get("schema_version") != 1:
 			return _fail("Invalid authored actor manifest")
 		authored = extra
-	return load_document(document, characters.document, intro_models, authored)
+	return load_document(document, characters.document, intro_models, authored, mobs)
 
 
 func load_document(
 	document: Dictionary,
 	character_document: Dictionary = {},
 	intro_models := false,
-	authored: Dictionary = {}
+	authored: Dictionary = {},
+	mobs: Dictionary = {}
 ) -> bool:
 	_clear()
 	var indexed_document: Dictionary = document.duplicate(true)
-	if not _validate_header(indexed_document):
+	if not _merge_mobs(indexed_document, mobs) or not _validate_header(indexed_document):
 		return false
 	var artifacts: Array = indexed_document.get("artifacts")
 	var actors: Array = indexed_document.get("actors")
@@ -89,6 +95,58 @@ func load_document(
 	_freeze_variant(_motions_by_action_id)
 	_freeze_variant(_motions_by_action)
 	manifest = indexed_document
+	return true
+
+
+func _mob_ids(mobs: Dictionary) -> Dictionary:
+	if (
+		mobs.get("schema") != "mt2spacetime.mob-presentation-candidate"
+		or mobs.get("version") != 1
+		or not _is_sha256(mobs.get("gameplay_hash"))
+	):
+		_fail("Installed mob catalog schema or gameplay hash is invalid")
+		return {}
+	if not mobs.get("actors") is Array or mobs.actors.is_empty() or mobs.actors.size() > 128:
+		_fail("Installed mob catalog requires 1..128 actors")
+		return {}
+	var ids: Dictionary = {}
+	for actor: Variant in mobs.actors:
+		if (
+			not actor is Dictionary
+			or actor.get("kind") != "mob"
+			or not str(actor.get("id", "")).begins_with("actor.mob.")
+			or ids.has(actor.id)
+		):
+			_fail("Installed mob catalog contains an invalid or duplicate actor")
+			return {}
+		ids[actor.id] = true
+	if not mobs.get("artifacts") is Array:
+		_fail("Installed mob catalog has no artifact list")
+		return {}
+	for artifact: Variant in mobs.artifacts:
+		if not artifact is Dictionary or not ids.has(artifact.get("id", "")):
+			_fail("Installed mob artifact does not belong to its actor registry")
+			return {}
+	return ids
+
+
+func _merge_mobs(document: Dictionary, mobs: Dictionary) -> bool:
+	if mobs.is_empty():
+		return true
+	var ids := _mob_ids(mobs)
+	if ids.is_empty():
+		return false
+	for key in ["actors", "artifacts"]:
+		if not document.get(key) is Array:
+			return _fail("Base actor profile has no " + key)
+		var retained: Array = []
+		for value: Variant in document[key]:
+			if not value is Dictionary:
+				return _fail("Base actor profile contains an invalid entry")
+			if not ids.has(value.get("id", "")):
+				retained.append(value)
+		document[key] = retained + mobs[key].duplicate(true)
+	mob_gameplay_hash = mobs.gameplay_hash
 	return true
 
 
@@ -177,8 +235,13 @@ func validate_world(info: Dictionary) -> bool:
 		return _fail(
 			"Server and client skill or training catalogs differ. Rebuild and republish together."
 		)
-	if str(info.get("definition_profile", "")) != PROFILE_ID:
-		return _fail("Server and client actor profiles differ. Rebuild the client content.")
+	if (
+		str(info.get("mob_catalog_hash", "")) != mob_gameplay_hash
+		or str(info.get("definition_profile", "")) != PROFILE_ID
+	):
+		return _fail(
+			"Server and client actor profiles or mob catalogs differ. Install matching content."
+		)
 	if str(info.get("definition_hash", "")) != gameplay_definition_hash():
 		return _fail("Server and client action definitions differ. Rebuild and republish together.")
 	if (
@@ -503,6 +566,7 @@ func _is_sha256(value: Variant) -> bool:
 func _clear() -> void:
 	manifest = {}
 	training_target_hash = ""
+	mob_gameplay_hash = ""
 	error_message = ""
 	_actors = {}
 	_items = {}

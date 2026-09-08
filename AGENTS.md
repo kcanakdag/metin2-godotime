@@ -894,3 +894,26 @@ linkage. Three focused Python tests, a pursuit-policy Rust test and strict libra
 Clippy pass. No new live replay was run: existing live content still selects the
 authored policy, while the new candidate policy has only unit/type evidence.
 No protocol, database or public deployment changed.
+
+## Installed client mob catalog loader — 2026-09-08
+
+`ActorCatalog.load_required` now optionally reads
+`assets/imported/mobs/presentation.v1.json`. The normal catalog indexes its mob
+actors/artifacts alongside the unchanged base character/item manifest, replacing
+matching mob entries. Mob manifests cannot replace player actor IDs or introduce
+artifacts outside their mob registry. Existing catalog validation still checks
+model/motion links and duplicate definitions. `mob_gameplay_hash` is retained
+separately; world compatibility rejects a missing/different `mob_catalog_hash`
+when an installed manifest is present. Without a manifest, the existing empty-hash
+path is retained. The server does not advertise that new field yet: a matching
+server/package installation remains pending, and no manifest was installed into
+the working client or public endpoint by this change.
+
+The `test_actors.py --scenario mobs` staging workflow now installs the separate
+manifest instead of rewriting the base profile. Evidence:
+`.local/mobs/installed-loader-r1/acceptance.json` and `report.json`; all 1,446 native
+Godot checks pass across 44 mobs, including matching/missing/wrong hash behavior
+and a player-ID replacement rejection. Root reviewed captures for vnums 301 and
+397 (models/materials visible through the normal loader). This remains controlled
+actor-state rendering, not original-world multiplayer/export qualification. No
+connected editor was inspected, and protocol/database/public deployment are unchanged.

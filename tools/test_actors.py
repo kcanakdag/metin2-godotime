@@ -140,15 +140,11 @@ def main() -> None:
                 ],
                 check=True,
             )
-            public = json.loads((generated / "presentation.v1.json").read_text())
-            ids = {a["id"] for a in public["actors"]}
-            base_manifest = stage / "assets/imported/content/p0-warrior-dog/manifest.v1.json"
-            document = json.loads(base_manifest.read_text())
-            # Isolated fixture merge only: live catalog/hash gates are not bypassed.
-            for key in ("actors", "artifacts"):
-                document[key] = [a for a in document[key] if a["id"] not in ids] + public[key]
-            base_manifest.write_text(json.dumps(document, indent=2) + "\n")
             shutil.copytree(options.mob_content / "generated", stage / "assets/imported/mobs")
+            shutil.copy2(
+                generated / "presentation.v1.json",
+                stage / "assets/imported/mobs/presentation.v1.json",
+            )
             shutil.copy2(generated / "gameplay.v1.json", stage / "mob-gameplay.json")
         (stage / "tests").mkdir()
         shutil.copy2(ROOT / "client/tests/mob_actor_smoke.gd", stage / "tests/mob_actor_smoke.gd")

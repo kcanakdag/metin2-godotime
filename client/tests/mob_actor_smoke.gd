@@ -5,11 +5,12 @@ extends "res://tests/actor_smoke.gd"
 func _run() -> void:
 	create_timer(45.0).timeout.connect(func(): quit(1))
 	root.size = Vector2i(1280, 800)
-	_check(_catalog.load_required(), "merged wildlife fixture catalog loads")
+	_check(_catalog.load_required(), "installed wildlife catalog loads through normal loader")
 	_check(_effect_catalog.load_required(), "target effects load")
 	if _failed:
 		_finish()
 		return
+	_test_catalog_gate()
 	_build_stage()
 	var document: Dictionary = JSON.parse_string(
 		FileAccess.get_file_as_string("res://mob-gameplay.json")
@@ -18,6 +19,34 @@ func _run() -> void:
 		await _test_species(definition)
 	await _capture_named("wildlife-overview")
 	_finish()
+
+
+func _test_catalog_gate() -> void:
+	var info := {
+		"definition_profile": ActorCatalog.PROFILE_ID,
+		"definition_hash": _catalog.gameplay_definition_hash(),
+		"skill_catalog_hash": _catalog.skills.content_hash,
+		"character_catalog_hash": _catalog.characters.content_hash,
+		"training_target_hash": _catalog.training_target_hash,
+		"mob_catalog_hash": _catalog.mob_gameplay_hash,
+	}
+	_check(not _catalog.mob_gameplay_hash.is_empty(), "installed mob gameplay hash is retained")
+	_check(_catalog.validate_world(info), "matching mob hash accepted")
+	_catalog.report_errors = false
+	info.erase("mob_catalog_hash")
+	_check(not _catalog.validate_world(info), "missing server mob hash rejects installed catalog")
+	info.mob_catalog_hash = "0".repeat(64)
+	_check(not _catalog.validate_world(info), "wrong server mob hash rejects installed catalog")
+	info.mob_catalog_hash = _catalog.mob_gameplay_hash
+	_check(_catalog.validate_world(info), "matching hash restores compatibility")
+	_catalog.report_errors = true
+	var document: Dictionary = JSON.parse_string(
+		FileAccess.get_file_as_string(ActorCatalog.MOB_PATH)
+	)
+	var probe := ActorCatalog.new()
+	probe.report_errors = false
+	document.actors[0].id = ActorCatalog.WARRIOR_ID
+	_check(probe._mob_ids(document).is_empty(), "mob overlay cannot replace a player actor")
 
 
 func _test_species(definition: Dictionary) -> void:
