@@ -5,6 +5,33 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Three-Way Cut installed and two-client damage accepted — 2026-09-08
+
+The selected profile now enables original Three-Way Cut alongside Sword Spin.
+Installed skill catalog SHA-256:
+`a83222d77a4b9742045f835c731db9dcb5a7c70d62c383ebf5de360ecdbfc31d`.
+The client accepts the area handler. Original discovered skill icons were imported;
+default UI rebuilding now also reads installed skill icons, so future rebuilds
+retain the selected abilities without manual importer edits.
+
+Fresh local database `mt2-p2-three-way-v26-r1-20260908` passes 25 real authenticated
+two-client checks: learn/equip, missing target rejection preserving SP/revision,
+peer-observed approach, stale-life rejection, accepted target/cast, exactly three
+matching health transitions on one dummy life, server facing and replay/cooldown
+rejection. Initial replay failed at a nested-lambda Godot parser error; extracting
+a helper fixed the script before the accepted run. Native skills-panel QA passes
+14 checks; reviewed capture shows both original icons and skill names. Eleven
+focused Rust skill and nine compiler checks pass, as does strict library Clippy.
+The malformed-input compiler fixture now selects Sword Spin by vnum, removing its
+old assumption that it was the first installed row. Evidence:
+`.local/p6-three-way-r1/` (accepted replay is `replay-r2.json`).
+
+No connected-editor MCP inspection or exported/browser acceptance is claimed.
+Training dummies intentionally do not react, so this run does not qualify real-mob
+flinches/knockback. Equipped weapon animation review for both Warrior appearances
+and real-mob reaction acceptance are next. No public update; frozen/default WASM
+contains local QA bootstrap permissions and must not be deployed publicly.
+
 ## Required skill targets and normalized area clocks — 2026-09-08
 
 Area skill targeting now compiles from original flags/range data. Three-Way Cut

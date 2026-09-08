@@ -38,6 +38,12 @@ fn fixed_areas_require_one_valid_shape_per_event() {
         "../../client/assets/imported/skills/catalog.v1.json"
     ))
     .unwrap();
+    // This malformed-input fixture starts from the explicit single-window skill,
+    // independent of installed catalog ordering or additional playable skills.
+    catalog["skills"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|row| row["vnum"] == 2);
     catalog["skills"][0]["handler"] = json!("physical_area_v1");
     let area = json!({"kind":"attack_area", "coordinate_space":"output_actor_local_godot",
         "hitting_type":2,"invisible_us":100000,"stiffen_us":0,"external_force":0,

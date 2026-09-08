@@ -1967,3 +1967,27 @@ Default builds compile the small fixture's own presentation manifest. Native
 `tools/test_actors.py --scenario mobs` now also exercises every front/back damage
 variant through the actual PvE actor. These controlled rows verify clip selection
 and playback separately from multiplayer hit/reaction acceptance.
+
+## Three-Way Cut two-client replay
+
+`tools/test_progression_admin.py three_way_cut` uses the existing private two-account
+fixture against a fresh QA-operator database. It creates/selects characters, raises
+the operator character to level five, learns skill 1 and equips the starter sword.
+It validates missing/stale targets, walks to the training dummy through normal
+movement, casts once, and compares three health transitions observed by both clients.
+Run on fresh characters with skill 1 unlearned; it is not a database-reset command.
+Pass the same `--server`, `--game-server`, `--database`, `--godot`, `--fixture` and
+`--report` arguments as the other progression replays. Dummy checks do not establish
+ordinary mob reactions; use a separate real-mob replay for those.
+
+Build selected skill data before refreshing UI art:
+
+```sh
+python3 tools/build_skill_catalog.py --offline
+python3 tools/import_metin_ui.py --offline
+```
+
+The UI importer includes the installed catalog's original icons automatically.
+`--skill-inventory` additionally includes an explicitly discovered pinned inventory.
+The skill hash changes when the selected profile changes, so use a matching module
+and export; an old server is expected to fail the client content gate.

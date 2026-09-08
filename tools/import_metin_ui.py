@@ -350,6 +350,16 @@ def main():
     archive = Archive(offline=args.offline)
     archive.inventory()
     icons = []
+    skill_catalog = ROOT / "client/assets/imported/skills/catalog.v1.json"
+    if skill_catalog.is_file():
+        catalog = json.loads(skill_catalog.read_text())
+        if (
+            catalog.get("schema") != "mt2spacetime.skills"
+            or catalog.get("version") != 1
+            or catalog.get("source_revision") != METIN_COMMIT
+        ):
+            raise ValueError("Expected pinned installed skill catalog")
+        icons.extend(skill["icon"] for skill in catalog["skills"])
     if args.skill_inventory:
         inventory = json.loads(args.skill_inventory.read_text())
         if (
@@ -357,7 +367,7 @@ def main():
             or inventory.get("source_revision") != METIN_COMMIT
         ):
             raise ValueError("Expected pinned class skill inventory")
-        icons = [skill["icon"] for skill in inventory["skills"]]
+        icons.extend(skill["icon"] for skill in inventory["skills"])
     convert(archive, skill_icons=icons, output_root=args.output)
 
 

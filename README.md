@@ -17,9 +17,10 @@ The local worktree now expects protocol 26 for persisted skill-event placements.
 The public endpoint remains protocol 24. Use matching regenerated bindings and a
 fresh test database for this local change; do not overwrite the public world.
 The protocol-26 state passes 35 authenticated Sword Spin checks and 15 real combat checks.
-Additional skills are not enabled by the schema change alone. The local fixed-area
-resolver and candidate Three-Way Cut compiler are implemented; target requirements,
-hit reactions and live ability qualification remain pending.
+Three-Way Cut is now enabled locally alongside Sword Spin. Its two-client dummy
+replay passes 25 checks, including three replicated hits, target validation and
+cooldown rejection. Original icons pass native UI QA. Real-mob reaction and
+exported browser qualification remain pending; the public build is unchanged.
 
 Local mob threat behavior now has a reusable two-account passive
 retaliation and target-switching scenario (42 checks passed). See the

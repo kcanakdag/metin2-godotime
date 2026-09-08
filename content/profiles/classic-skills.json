@@ -2,6 +2,17 @@
   "schema_version": 1,
   "skills": [
     {
+      "id": "skill.warrior.three-way-cut",
+      "vnum": 1,
+      "class_id": 0,
+      "minimum_level": 5,
+      "maximum_rank": 20,
+      "handler": "physical_area_v1",
+      "motion": "skill_1",
+      "weapon_class": "sword",
+      "hits_per_life": 3
+    },
+    {
       "id": "skill.warrior.sword-spin",
       "vnum": 2,
       "class_id": 0,

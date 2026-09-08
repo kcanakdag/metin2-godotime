@@ -21,7 +21,10 @@ func load_required() -> bool:
 		return false
 	var ids: Dictionary = {}
 	for row: Variant in rows:
-		if not row is Dictionary or row.get("handler") != "physical_splash_v1":
+		if (
+			not row is Dictionary
+			or row.get("handler") not in ["physical_splash_v1", "physical_area_v1"]
+		):
 			return false
 		var id := int(row.get("vnum", 0))
 		if id < 1 or id > 255 or ids.has(id) or int(row.get("maximum_rank", 0)) not in range(1, 21):

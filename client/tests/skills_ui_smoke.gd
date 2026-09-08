@@ -22,23 +22,28 @@ func _run() -> void:
 	panel.show()
 	_check(panel.snapshot().points == "Skill points: 1", "level five shows one point")
 	var slot: Control = panel._list.get_child(1)
-	_check(slot._icon.texture != null, "original Sword Spin icon loads")
+	_check(slot._icon.texture != null, "original Three-Way Cut icon loads")
+	var spin_slot: Control = panel._list.get_child(6)
+	_check(
+		spin_slot.row.skill_vnum == 2 and spin_slot._icon.texture != null,
+		"Sword Spin remains available with original icon"
+	)
 	_check(slot._get_drag_data(Vector2.ZERO) == null, "unlearned skill cannot drag")
 	var plus: TextureButton = panel._list.get_child(4)
 	_check(not plus.disabled, "level five permits learning")
 	var requested: Array = []
 	panel.learn_requested.connect(func(vnum): requested.append(vnum))
 	plus.pressed.emit()
-	_check(requested == [2], "learn button emits skill intent")
+	_check(requested == [1], "learn button emits skill intent")
 	_check(panel.snapshot().rows.is_empty(), "learning waits for server subscription")
-	var learned := [{"skill_vnum": 2, "rank": 1, "points_spent": 1, "ready_at_us": 15000000}]
+	var learned := [{"skill_vnum": 1, "rank": 1, "points_spent": 1, "ready_at_us": 15000000}]
 	panel.set_state({"character_class": 0, "level": 5}, learned)
 	_check(panel.snapshot().points == "Skill points: 0", "subscription spends displayed point")
 	plus = panel._list.get_child(4)
 	_check(plus.disabled, "spent points disable upgrade")
 	bar.set_skills(learned, 1000000)
-	bar.bind_skill(0, 2)
-	_check(bar.item_at(0).skill_vnum == 2, "quickslot binds learned skill")
+	bar.bind_skill(0, 1)
+	_check(bar.item_at(0).skill_vnum == 1, "quickslot binds learned skill")
 	_check(bar.item_at(0).cooldown_seconds == 14, "quickslot uses server cooldown clock")
 	bar.update_skill_clock(16000000)
 	_check(bar.item_at(0).cooldown_seconds == 0, "cooldown display expires")

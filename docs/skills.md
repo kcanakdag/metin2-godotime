@@ -382,3 +382,13 @@ single window and unchanged catalog bytes. Nine live-compiler and eleven focused
 skill checks pass, along with strict library Clippy and Ruff. The full candidate
 compiles; target reducer acceptance and Three-Way Cut multiplayer/exported behavior
 still require the next live integration run. No public update is included.
+
+### Enabled local Three-Way Cut
+
+The live selected profile now includes vnum 1 (Three-Way Cut) and vnum 2 (Sword
+Spin). Both original icons are installed, and the panel accepts the area handler.
+Three-Way Cut passes 25 real two-client checks on a fresh local database, including
+three matching dummy health transitions and rejected missing/stale targets and
+replayed/cooling casts. Native panel QA passes 14 checks and its capture was reviewed.
+This does not qualify ordinary mob flinches/knockback, equipped animation fidelity,
+or an exported browser build. The public world remains on its existing release.

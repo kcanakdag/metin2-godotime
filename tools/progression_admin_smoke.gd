@@ -64,6 +64,8 @@ func _run() -> void:
 		await _verify_skills(first, second)
 	elif str(_config.mode) == "training_dummy":
 		await _verify_training_dummy(first, second)
+	elif str(_config.mode) == "three_way_cut":
+		await _verify_three_way_cut(first, second)
 	elif str(_config.mode) == "skill_combat":
 		await _verify_skill_combat(first, second)
 	else:
@@ -817,3 +819,118 @@ func _finish() -> void:
 		file.close()
 	_config.clear()
 	quit(0 if _errors.is_empty() else 1)
+
+
+func _prepare_three_way_cut(first: GameConnection) -> bool:
+	first.admin_raise_progression_level(_request_id(), "5")
+	if not _check(
+		"three_way_level_five",
+		await _wait_until(func(): return int(first.selected_progression().get("level", 0)) >= 5)
+	):
+		return false
+	_check("three_way_learn", await _raw_success(first, "learn_skill", [1, 0], [&"U16", &"U32"]))
+	if not _check(
+		"three_way_rank_subscribed", await _wait_until(func(): return first.skill_revision(1) > 0)
+	):
+		return false
+	var swords := first.inventory.filter(func(item): return int(item.vnum) == 10)
+	if not _check("three_way_sword_available", swords.size() == 1):
+		return false
+	var sword_id := int(swords[0].id)
+	first.equip_item(sword_id)
+	if not _check(
+		"three_way_sword_equipped",
+		await _wait_until(func(): return _has_equipped_item(first, sword_id))
+	):
+		return false
+	return true
+
+
+func _verify_three_way_cut(first: GameConnection, second: GameConnection) -> void:
+	if not await _prepare_three_way_cut(first):
+		return
+	var revision := first.skill_revision(1)
+	var sp := int(first.selected_progression().current_sp)
+	_check(
+		"three_way_missing_target_rejects",
+		not await _raw_success(first, "cast_skill", [1, revision], [&"U16", &"U32"])
+	)
+	_check(
+		"three_way_rejection_preserves_sp_and_revision",
+		int(first.selected_progression().current_sp) == sp and first.skill_revision(1) == revision
+	)
+	if not _check(
+		"three_way_dummy_subscribed",
+		await _wait_until(func(): return not _dog(second, 900001).is_empty())
+	):
+		return
+	var dummy := _dog(second, 900001).duplicate(true)
+	var destination := _xz(dummy) + Vector2(-2.0, 0.0)
+	first.move_to(destination.x, destination.y)
+	if not _check(
+		"three_way_approach_replicates",
+		await _wait_until(
+			func():
+				return (
+					_xz(_player_row(second, first.local_identity)).distance_to(destination) < 0.15
+				),
+			15.0
+		)
+	):
+		return
+	first.stop_moving()
+	_check(
+		"three_way_stale_life_rejects",
+		not await _raw_success(
+			first, "select_combat_target", [900001, int(dummy.life_sequence) + 1], [&"U32", &"U32"]
+		)
+	)
+	_check(
+		"three_way_target_accepted",
+		await _raw_success(
+			first, "select_combat_target", [900001, dummy.life_sequence], [&"U32", &"U32"]
+		)
+	)
+	if not _check(
+		"three_way_cast_accepted",
+		await _raw_success(first, "cast_skill", [1, revision], [&"U16", &"U32"])
+	):
+		return
+	var histories: Array = [[int(dummy.health)], [int(dummy.health)]]
+	for _tick in 90:
+		for index in 2:
+			var connection := first if index == 0 else second
+			var health := int(_dog(connection, 900001).health)
+			if health != int(histories[index][-1]):
+				histories[index].append(health)
+		await create_timer(0.02).timeout
+	_check(
+		"three_way_three_hits_each_client", histories[0].size() == 4 and histories[1].size() == 4
+	)
+	_check("three_way_identical_health_history", histories[0] == histories[1])
+	_check(
+		"three_way_same_dummy_life",
+		(
+			_dog(first, 900001).life_sequence == dummy.life_sequence
+			and _dog(second, 900001).life_sequence == dummy.life_sequence
+		)
+	)
+	_check(
+		"three_way_faces_target",
+		absf(float(_player_row(second, first.local_identity).heading) + PI / 2.0) < 0.1
+	)
+	_check(
+		"three_way_replay_rejects",
+		not await _raw_success(first, "cast_skill", [1, revision], [&"U16", &"U32"])
+	)
+	_check(
+		"three_way_cooldown_rejects",
+		not await _raw_success(first, "cast_skill", [1, first.skill_revision(1)], [&"U16", &"U32"])
+	)
+
+
+func _has_equipped_item(connection: GameConnection, item_id: int) -> bool:
+	for item in connection.inventory:
+		if int(item.id) == item_id and bool(item.equipped):
+			return true
+	return false
