@@ -5,6 +5,29 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Spirit Strike and Bash ordinary-mob reactions — 2026-09-08
+
+The shared `skill_reactions` replay now accepts `--reaction-skill 1|16|17`, with
+Three-Way Cut as the default. Expected hit counts, GOOD flinch and force endpoints
+are explicit scenario data. The approach uses two normal movement destinations
+so self-targeted Bash faces the defender without granting a heading or position.
+Nondefault skills are learned at level 6 using authorized setup and normal skill
+reducers; setup retains the operator mutation limit. The option rejects use with
+unrelated phases. No production combat handler, asset or public deployment changed.
+
+Fresh selected-registry training databases for 16 and 17 each pass 30 checks with
+two independent authenticated Godot clients. Original Grey Wolf 106 retains 412 HP
+and original stats/AI. Spirit Strike: both observe health 412→359 and a
+3.67500019073486 m push. Bash: both observe health 412→360 and exactly zero push.
+Both observe original front knockdown and standup, recovery and a surviving exact
+life. Evidence: `.local/p6-batch-reactions-r1/acceptance.json`, `skill-16.json` and
+`skill-17.json`. Targeted Ruff/GDScript lint and the actual Godot runs pass.
+
+These are rank-1 male-Warrior, single-species network replays, not rendered/browser
+casting, all-species/rank balance or exact original physics qualification. The
+frozen local module has QA bootstrap authorization and must not be deployed.
+Next: exercise new-skill learning, quickslots and casting in the exported client.
+
 ## Public four-skill rollout accepted — 2026-09-08
 
 Release `20260908T212416762304Z` is live on the public HTTPS endpoint, database

@@ -187,7 +187,17 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument("--fixture", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
-    return parser.parse_args()
+    parser.add_argument(
+        "--reaction-skill",
+        type=int,
+        choices=(1, 16, 17),
+        default=None,
+        help="Skill qualified by skill_reactions (default: Three-Way Cut, 1)",
+    )
+    options = parser.parse_args()
+    if options.reaction_skill is not None and options.phase != "skill_reactions":
+        parser.error("--reaction-skill requires the skill_reactions phase")
+    return options
 
 
 def main() -> None:
@@ -236,6 +246,7 @@ def main() -> None:
                 stage,
                 {
                     "mode": mode,
+                    "reaction_skill": options.reaction_skill or 1,
                     "server": game_server,
                     "database": options.database,
                     "tokens": [first_token, second_token],

@@ -419,3 +419,12 @@ The batch passes 52 authenticated two-client dummy checks, 132 native equipped
 animation checks, 18 native UI checks (including wheel input) and nine compiler
 checks. New-skill ordinary-mob reactions and exported browser QA remain pending.
 See the implementation ledger for evidence paths and the exact installed hash.
+
+### New-skill ordinary-mob acceptance
+
+Spirit Strike and Bash each pass 30 two-client checks against an original-stat
+Grey Wolf. Both clients observe one damage transition (412→359 and 412→360,
+respectively), original front knockdown/standup, recovery and the same surviving
+life. Spirit Strike pushes 3.675 m; Bash has zero displacement. These observations
+cover a rank-1 male Warrior and one species, not broad balance or browser casting.
+Use the reusable `skill_reactions --reaction-skill 16|17` progression replay.

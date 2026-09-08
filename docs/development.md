@@ -2036,3 +2036,22 @@ all selected Warrior skills on both appearances. Run
 `tools/test_target_client.py --suite skills_ui --native` for icon, quickslot and
 scroll-panel input coverage. The current UI fixture expects the four-skill profile.
 Browser and ordinary-mob reaction acceptance remain separate checks.
+
+## Select the ordinary-mob skill reaction replay
+
+`tools/test_progression_admin.py skill_reactions --reaction-skill 16` tests Spirit
+Strike; use `17` for Bash or omit the option for Three-Way Cut. Supply the usual
+explicit auth/game endpoints, Godot, private fixture and output report. Build the
+selected original mob registry with
+`MT2_POPULATION_PROFILE=content/worlds/training.skill-reactions.population.json`
+(use its absolute path), without Yongan or an original-population override. Each
+run needs fresh character progression in a separate disposable database; reuse
+the existing private test accounts and preserve previous databases.
+
+The expected hit/flinch/push records live in `tools/skill_reaction_smoke.gd`.
+Extend these explicit acceptance expectations when adding another supported
+reaction scenario. They are independent expected outcomes, not values copied
+from the running server. Spirit Strike and Bash each passed 30 two-client checks
+against original Grey Wolf health, knockdown/standup and recovery. No rendering is
+performed by this headless network replay; equipped native and browser QA remain
+separate scopes.
