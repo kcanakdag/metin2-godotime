@@ -59,7 +59,10 @@ func _run() -> void:
 	material.set_shader_parameter("source_texture", ramp_texture)
 	(swatch.mesh as QuadMesh).size = Vector2(256.0 / 240, 1)
 	var max_error := 0.0
-	for background: Color in [Color(0.8, 0.1, 0.2), Color(0.1, 0.8, 0.2)]:
+	for case: int in range(6):
+		var operation: int = [3, 4, 6][case / 2]
+		var background: Color = [Color(0.8, 0.1, 0.2), Color(0.1, 0.8, 0.2)][case % 2]
+		material.set_shader_parameter("color_operation", operation)
 		environment.environment.background_color = background
 		swatch.visible = false
 		await process_frame
@@ -71,9 +74,10 @@ func _run() -> void:
 		var capture := root.get_texture().get_image()
 		for index: int in range(256):
 			var pixel := capture.get_pixel(272 + index, 240)
-			var expected := Vector3(
-				index * index / 255.0, (255 - index) ** 2 / 255.0, 64 * 64 / 255.0
-			)
+			var source := Vector3(index, 255 - index, 64) / 255.0
+			if operation == 6:
+				source = (source * 4).clamp(Vector3.ZERO, Vector3.ONE)
+			var expected := source * source * 255
 			expected = (expected + Vector3(base.r, base.g, base.b) * 255).clamp(
 				Vector3.ZERO, Vector3.ONE * 255
 			)

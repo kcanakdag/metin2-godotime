@@ -8,6 +8,7 @@ const SHADER := """shader_type spatial;
 render_mode blend_mix, unshaded, cull_disabled, depth_draw_never;
 // Intentionally sample encoded RGB: original fixed-function blending squares it.
 uniform sampler2D source_texture : repeat_enable, filter_linear;
+uniform int color_operation = 4;
 vec3 decode_srgb(vec3 value) {
     return mix(value / 12.92, pow((value + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), value));
 }
@@ -26,6 +27,8 @@ vec3 compatibility_input(vec3 encoded) {
 }
 void fragment() {
     vec3 source = texture(source_texture, UV).rgb;
+    // Current renderer accepts white TFACTOR: select-arg2 and modulate agree.
+    if (color_operation == 6) source = min(source * 4.0, vec3(1.0));
     vec3 result = source * source;
     ALBEDO = OUTPUT_IS_SRGB ? compatibility_input(result) : decode_srgb(result);
     ALPHA = 1.0;
@@ -71,6 +74,9 @@ func configure(definition: Dictionary, scene: PackedScene, texture: Texture2D) -
 	var material := ShaderMaterial.new()
 	material.shader = shader
 	material.set_shader_parameter("source_texture", texture)
+	material.set_shader_parameter(
+		"color_operation", int(definition.recipe.elements[0].color_operation)
+	)
 	mesh.material_override = material
 	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(model)
@@ -130,7 +136,7 @@ static func _supported(definition: Dictionary) -> bool:
 		and element.blending_enabled
 		and int(element.blending_source) == 3
 		and int(element.blending_destination) in [2, 8]
-		and int(element.color_operation) == 4
+		and int(element.color_operation) in [3, 4, 6]
 		and element.color_factor == [1.0, 1.0, 1.0, 1.0]
 		and element.alpha_events.is_empty()
 		and int(element.texture_start_frame) == 0

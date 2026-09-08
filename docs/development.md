@@ -2268,3 +2268,9 @@ nonnegative effect time interpolates across a negative first key; do not clamp
 that key to zero during conversion. Start delays remain nonnegative. The existing
 particle emission fixture includes negative-key interpolation, ordering/bounds
 rejection and live emission checks.
+
+
+The native `skill_mesh` scenario now sweeps selected mesh color operations 3, 4
+and 6 against two framebuffer backgrounds. The renderer retains its white-factor,
+opaque-texture restrictions; parser acceptance alone does not imply other material
+combinations render. Preserve this distinction when selecting new effects.

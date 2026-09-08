@@ -368,7 +368,7 @@ def _parse_element(node: LegacyNode, blend_pairs) -> MeshElement:
     if (source, destination) not in blend_pairs:
         raise EffectMeshFormatError(f"Unsupported blend pair {source}/{destination}")
     color_operation = _integer(_field(node, "ColorOperationType")[0], "ColorOperationType", 0, 255)
-    if color_operation != 4:
+    if color_operation not in (3, 4, 6):
         raise EffectMeshFormatError(f"Unsupported ColorOperationType {color_operation}")
     color = tuple(
         _finite(value, "ColorFactor component") for value in _field(node, "ColorFactor", 4)

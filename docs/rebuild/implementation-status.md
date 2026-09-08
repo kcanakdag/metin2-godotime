@@ -5,6 +5,27 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Selected mesh color operations — 2026-09-09
+
+The MSE parser now preserves ColorOperationType 3/4/6. The source-color Godot mesh
+renderer accepts these under its existing white-factor, opaque-texture and blend
+restrictions; operation 6 clamps the fourfold texture product before source-color
+blending. Other factor/alpha/material combinations are still rejected. Source
+argument order and Microsoft operation definitions are recorded in third-party notes.
+
+Fourteen Python mesh-format tests pass. The native `skill_mesh` fixture passes
+1,569 checks with all 256 RGB ramp entries for each operation against two measured
+framebuffer backgrounds, plus existing Bash mesh animation/geometry checks.
+Evidence: `.local/p6-all-skill-effects-r1/mesh-color-modes/report.json`; the retained
+Bash mesh capture was reviewed. This is native Compatibility evidence, not browser
+qualification of newly imported full effects. Godot MCP was unavailable.
+
+The updated offline audit parses 57/59 selected effect definitions. Sura
+`muyeong_make` and `yonggwonpa` now pass syntax validation; their resource conversion
+and complete rendering remain pending. The remaining parser gaps are Shaman mesh
+BillboardType 3 and Warrior `tanhwan`'s 24 mesh elements. Report:
+`.local/p6-all-skill-effects-r1/resource-audit-color-modes.json`. Public unchanged.
+
 ## Signed scalar particle times — 2026-09-09
 
 Original `EffectLib/Type.cpp` retains signed scalar times and `Type.h` samples

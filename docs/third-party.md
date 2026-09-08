@@ -470,3 +470,13 @@ key times and interpolation uses the surrounding keys. The independent parser
 now permits bounded negative scalar keys, matching the shared Godot sampler;
 no original implementation code was copied. This does not relax effect start
 delays or position-curve validation.
+
+
+Mesh color operations 3/4/6 use the original `EffectInstance.cpp` argument order
+(TFACTOR, texture) and `EffectMeshInstance.cpp` operation selection. Microsoft's
+[D3DTEXTUREOP reference](https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dtextureop)
+defines select-argument-2, modulation and fourfold modulation respectively. For the
+currently accepted white factor, the first two use texture RGB unchanged; operation
+6 clamps four times texture RGB before source-color blending. The independent
+Godot shader retains encoded-RGB blending and the existing engine transfer fix.
+No original renderer code was copied.

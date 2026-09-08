@@ -145,6 +145,15 @@ class MdeTests(unittest.TestCase):
 
 
 class MseTests(unittest.TestCase):
+    def test_selected_color_operations_are_preserved(self):
+        for operation in (3, 4, 6):
+            parsed = parse_mse(
+                MSE_FIXTURE.replace("ColorOperationType 4", f"ColorOperationType {operation}")
+            )
+            self.assertEqual(parsed.meshes[0].elements[0].color_operation, operation)
+        with self.assertRaises(ValueError):
+            parse_mse(MSE_FIXTURE.replace("ColorOperationType 4", "ColorOperationType 7"))
+
     def test_d3dx_color_packing_clamps_and_rounds_source_visibility(self):
         self.assertEqual(d3dx_color_byte(-0.34704768657684326), 0)
         self.assertEqual(d3dx_color_byte(0.0), 0)
