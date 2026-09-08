@@ -183,3 +183,11 @@ weapon windows remain as authored; no fallback shape is invented. The qualificat
 harness compares all 88 generated geometry arrays to input records and hashes the
 separate geometry compiler as an input. Six compiler tests pass. Runtime shape
 sampling, attack/reaction parameters and two-client acceptance remain pending.
+
+The server's existing fixed-area combo resolver now shares `combat_geometry`
+rotation and full-3D sphere-sweep math with future skill resolution. The checked
+intersection entry point rejects nonfinite input, negative radii and overflow;
+ordinary finite geometry retains the previous inclusive boundary and crossing
+behavior. Eight existing area tests and two geometry tests pass. Compiled skill
+shapes are not yet dispatched through this runtime path; multi-event activation
+state and original hit/reaction policies remain to be integrated.

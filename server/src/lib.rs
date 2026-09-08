@@ -5,6 +5,7 @@ mod appearance;
 mod attack_timing;
 mod characters;
 mod combat;
+mod combat_geometry;
 mod combo;
 mod content;
 mod inventory;

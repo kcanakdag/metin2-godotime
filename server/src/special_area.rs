@@ -1,6 +1,9 @@
 //! Trusted combo4 fixed-area damage and activation lifecycle.
 
 use crate::combat::{monster, monster_clock};
+#[cfg(test)]
+use crate::combat_geometry::squared_distance_to_segment;
+use crate::combat_geometry::{rotate, swept_sphere_intersects};
 use crate::definitions::{self, AttackDefinition, ScreenWaveDefinition, SpecialAreaDefinition};
 use crate::knockback::{force_direction, is_front_hit};
 use crate::{Controller, accounts, controller, player};
@@ -191,47 +194,6 @@ pub fn validate_action_definition(definition: &AttackDefinition) -> Result<(), S
         }
         _ => Err("The trusted special action definition is invalid.".into()),
     }
-}
-
-fn rotate(local_x: f64, local_z: f64, heading: f32) -> Option<(f32, f32)> {
-    if !local_x.is_finite() || !local_z.is_finite() || !heading.is_finite() {
-        return None;
-    }
-    let (sin, cos) = f64::from(heading).sin_cos();
-    let x = cos * local_x + sin * local_z;
-    let z = -sin * local_x + cos * local_z;
-    let result = (x as f32, z as f32);
-    (result.0.is_finite() && result.1.is_finite()).then_some(result)
-}
-
-fn squared_distance_to_segment(point: [f64; 3], start: [f64; 3], end: [f64; 3]) -> f64 {
-    let segment = [end[0] - start[0], end[1] - start[1], end[2] - start[2]];
-    let relative = [
-        point[0] - start[0],
-        point[1] - start[1],
-        point[2] - start[2],
-    ];
-    let length_squared = segment
-        .iter()
-        .map(|component| component * component)
-        .sum::<f64>();
-    let t = if length_squared <= f64::EPSILON {
-        0.0
-    } else {
-        relative
-            .iter()
-            .zip(segment)
-            .map(|(left, right)| left * right)
-            .sum::<f64>()
-            / length_squared
-    }
-    .clamp(0.0, 1.0);
-    (0..3)
-        .map(|index| {
-            let delta = start[index] + segment[index] * t - point[index];
-            delta * delta
-        })
-        .sum()
 }
 
 fn clear_victims(ctx: &ReducerContext, character: Identity) {
@@ -463,7 +425,7 @@ fn area_hits(
         .special_area
         .expect("selected combo4 has a validated special area");
     let radius = definition.radius_m + victim_radius;
-    squared_distance_to_segment(
+    swept_sphere_intersects(
         [
             f64::from(area.center_x),
             f64::from(area.center_y),
@@ -471,7 +433,8 @@ fn area_hits(
         ],
         previous,
         current,
-    ) <= radius * radius
+        radius,
+    )
 }
 
 fn apply_hit(

@@ -5,6 +5,17 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Shared runtime collision primitives — 2026-09-08
+
+The existing combo fixed-area resolver now uses shared rotation and full-3D
+sphere-sweep functions in `server/src/combat_geometry.rs`. Its existing geometry
+is unchanged, with explicit rejection added for nonfinite inputs, invalid radii
+and overflowing squared values. Eight area regressions and two focused geometry
+tests pass. The first compile found test-only references to the extracted distance
+helper; a test-only import fixed those before the successful run. This is a local
+runtime refactor, without protocol changes or server deployment. Skill shapes
+still need event-state/activation integration; no extra live skill is claimed.
+
 ## Candidate skill collision geometry — 2026-09-08
 
 The full-class compiler now emits typed attack-area spheres and weapon-window
