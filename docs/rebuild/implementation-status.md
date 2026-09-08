@@ -9,6 +9,21 @@ or reclassify that scope.
 
 ### Original wildlife definitions in progress
 
+Conversion follow-up: `tools/import_mob_content.py` reuses the pinned Blender
+actor converter for the five selected wildlife definitions. The candidate
+`.local/mobs/wildlife-converted-r1` contains five models, 68 reachable motions and
+zero deferred motion events. `.local/mobs/wildlife-actors-r1` passes 304 native
+Godot checks. Wolf, Wild Boar, Bear and Tiger were visually inspected from four
+angles; front orientation is -Z. The original dog has one unreachable second
+back-damage entry after a 100-weight registration, explaining 69 source entries
+versus 68 converted clips. No source weights were replaced.
+
+The original dog model has a shared ambient/diffuse texture. The material
+resolver now accepts that exact case while rejecting a separate ambient map;
+the regression and Python lint pass. The failed initial conversion is retained.
+No mob gameplay or served build changed. The next step remains the per-definition
+runtime registry and two-client combat qualification.
+
 The [mob source pipeline](../mobs.md) selects Wild Dog, Wolf, Wild Boar, Bear and
 Tiger using explicit vnums and pinned server/client metadata. It preserves stats,
 rewards, resistances, enchantments, flags and special fields without assigning

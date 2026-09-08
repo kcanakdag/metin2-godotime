@@ -134,6 +134,15 @@ class NpcDefinitionsTests(unittest.TestCase):
             ]
         }
         self.assertEqual(self.npc.material_paths(raw), ["ymir work/npc/shared/weapon.dds"])
+        shared = copy.deepcopy(raw)
+        ambient_maps = shared["Meshes"][0]["MaterialBindings"][0]["Material"]["Maps"]
+        ambient = copy.deepcopy(ambient_maps[0])
+        ambient["Usage"] = "Ambient Color"
+        ambient_maps.append(ambient)
+        self.assertEqual(self.npc.material_paths(shared), self.npc.material_paths(raw))
+        ambient["Map"]["Texture"]["FromFileName"] = "different.dds"
+        with self.assertRaisesRegex(ValueError, "Separate ambient"):
+            self.npc.material_paths(shared)
         masked = copy.deepcopy(raw)
         maps = masked["Meshes"][0]["MaterialBindings"][0]["Material"]["Maps"]
         opacity = copy.deepcopy(maps[0])

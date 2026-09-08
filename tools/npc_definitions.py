@@ -32,11 +32,21 @@ def material_paths(raw: dict) -> list[str]:
                 continue
             diffuse = [m for m in maps if m["Usage"] == "Diffuse Color"]
             opacity = [m for m in maps if m["Usage"] == "Opacity"]
-            if len(diffuse) != 1 or len(opacity) > 1 or len(maps) != 1 + len(opacity):
-                raise ValueError("NPC material requires diffuse and optional shared opacity")
+            ambient = [m for m in maps if m["Usage"] == "Ambient Color"]
+            if (
+                len(diffuse) != 1
+                or len(opacity) > 1
+                or len(ambient) > 1
+                or len(maps) != 1 + len(opacity) + len(ambient)
+            ):
+                raise ValueError(
+                    "Actor material requires diffuse and optional shared opacity/ambient"
+                )
             path = virtual_path(diffuse[0]["Map"]["Texture"]["FromFileName"])
             if opacity and virtual_path(opacity[0]["Map"]["Texture"]["FromFileName"]) != path:
                 raise ValueError("Separate NPC opacity textures require another material handler")
+            if ambient and virtual_path(ambient[0]["Map"]["Texture"]["FromFileName"]) != path:
+                raise ValueError("Separate ambient texture requires another material handler")
             paths.add(path)
     if not 1 <= len(paths) <= 32:
         raise ValueError("NPC texture dependency count is outside the supported bound")

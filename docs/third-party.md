@@ -41,6 +41,12 @@ from the pinned server `item_proto.txt` row 1164. These use the existing ignored
 source and conversion directories and retain hashes in the generated receipts;
 this selection does not alter the original assets' terms.
 
+The wildlife profile selects vnums 101, 102, 108, 110 and 114, with the original
+`monster/stray_dog`, `wolf`, `wild_boar`, `bear` and `tiger` model folders, their
+reachable motions and bound textures. The pinned proto/name/client registrations
+and conversion receipts retain provenance. These narrow original-asset selections
+remain in ignored source/generated directories under the same asset terms.
+
 The [full-game source audits](full-rebuild-plan.md#source-and-coverage-discipline)
 record exact paths/symbols, feature flags, source-tree/registry metadata and
 known gaps. Research snapshots stay under ignored `.cache/full-game-research/`;
