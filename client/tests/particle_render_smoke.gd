@@ -1,6 +1,8 @@
 extends SceneTree
 
 const Effect = preload("res://scripts/actors/particle_effect.gd")
+const WorldEffects = preload("res://scripts/world/world_motion_effects.gd")
+const Actor = preload("res://scripts/actors/actor_presentation.gd")
 const Style = preload("res://scripts/actors/particle_style.gd")
 var _checks := 0
 var _failures: Array[String] = []
@@ -74,6 +76,7 @@ func _run() -> void:
 		effect.queue_free()
 		await process_frame
 		await RenderingServer.frame_post_draw
+	await _attachment_lifecycle(world, camera, catalog, textures)
 	print(JSON.stringify({"checks": _checks, "failures": _failures}))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -149,3 +152,65 @@ func _geometry_checks(world: Node3D, camera: Camera3D, source: Dictionary) -> vo
 	corners = effect._corners(particle, recipe, camera)
 	_check("attached ground center follows emitter", corners[0].is_equal_approx(Vector3(11, 3, 2)))
 	effect.queue_free()
+
+
+func _attachment_lifecycle(
+	world: Node3D, camera: Camera3D, catalog: Dictionary, textures: Dictionary
+) -> void:
+	var manager := WorldEffects.new()
+	world.add_child(manager)
+	_check("world effect catalog", manager.configure(catalog.effects, textures))
+	var actor := Actor.new()
+	world.add_child(actor)
+	_check("bind effect actor", manager.bind_actor(actor, 180))
+	_check("duplicate binding rejected", not manager.bind_actor(actor, 180))
+	var event := {
+		"effect_path": catalog.effects[0].effect_path,
+		"attachment": "follow_root",
+		"position_m": [1, 0, 0],
+		"bone": ""
+	}
+	actor.motion_effect_requested.emit(event)
+	event.attachment = "capture_root"
+	actor.motion_effect_requested.emit(event)
+	_check("two instances spawned", manager._instances.size() == 2)
+	actor.model = Node3D.new()
+	actor.add_child(actor.model)
+	var skeleton := Skeleton3D.new()
+	actor.model.add_child(skeleton)
+	skeleton.add_bone("hand")
+	skeleton.set_bone_pose_position(0, Vector3(0, 2, 0))
+	event.attachment = "follow_bone"
+	event.bone = "hand"
+	actor.motion_effect_requested.emit(event)
+	_check("bone instance spawned", manager._instances.size() == 3)
+	actor.position = Vector3(2, 0, 0)
+	_check("effect simulation step", manager.advance(1.0 / 60, camera))
+	_check(
+		"follow transform updates",
+		manager._instances[0].node.global_position.is_equal_approx(Vector3(1, 0, 0))
+	)
+	_check(
+		"capture preserves spawn transform",
+		manager._instances[1].node.global_position.is_equal_approx(Vector3(-1, 0, 0))
+	)
+	skeleton.set_bone_pose_position(0, Vector3(0, 3, 0))
+	_check("animated bone simulation step", manager.advance(1.0 / 60, camera))
+	_check(
+		"bone follows animated pose and actor",
+		manager._instances[2].node.global_position.is_equal_approx(Vector3(1, 3, 0))
+	)
+	actor.queue_free()
+	await actor.tree_exited
+	_check("owner removal cleans following effect", manager._instances.size() == 1)
+	_check("owner binding removed", manager._bindings.is_empty())
+	_check("captured effect survives owner", manager.advance(1.0 / 60, camera))
+	for unused: int in range(1200):
+		if manager._instances.is_empty():
+			break
+		manager.advance(1.0 / 60, camera)
+	_check("finite captured effect drains", manager._instances.is_empty())
+	_check("no lifecycle errors", manager.error_message.is_empty())
+	_check("invalid timestep rejects", not manager.advance(NAN, camera))
+	manager.queue_free()
+	await process_frame

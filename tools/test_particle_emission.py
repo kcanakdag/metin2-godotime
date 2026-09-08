@@ -58,6 +58,8 @@ def main():
         files += ["scripts/actors/particle_style.gd"]
     if args.scenario in ("render", "projectile", "package"):
         files += ["scripts/actors/particle_effect.gd"]
+    if args.scenario == "render":
+        files += ["scripts/world/world_motion_effects.gd", "scripts/actors/actor_presentation.gd"]
     if args.scenario in ("projectile", "package"):
         files += [
             "scripts/actors/projectile_flight.gd",

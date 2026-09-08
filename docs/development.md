@@ -2114,3 +2114,8 @@ Run `python3 tools/test_motion_effect_playback.py --godot GODOT --output NEW_DIR
 for isolated headless checks of ActorPresentation effect timing, resync, completion
 and legacy projectile dispatch. It records source hashes and rejects engine errors.
 This tests event signals with a real AnimationPlayer, not effect rendering or servers.
+
+The particle `--scenario render` gallery also exercises `WorldMotionEffects`
+with real renderer instances and synthetic actor/bone poses: signal spawning,
+follow/capture transforms, actor exit and natural effect completion. This does not
+replace equipped animated-character or exported multiplayer effect qualification.

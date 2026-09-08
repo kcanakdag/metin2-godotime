@@ -5,6 +5,30 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Actor-triggered effect renderer lifecycle — 2026-09-09
+
+`world_motion_effects.gd` binds actor effect signals to the existing particle
+renderer using injected trusted recipes/textures and explicit source yaw. Following
+instances refresh root/bone transforms; captured instances retain their spawn
+transform. Actor tree exit removes following effects and bindings while captured
+effects continue to natural completion, matching the original untracked capture
+branches. Completed instances release their scene nodes. Unknown resources, invalid
+placements and renderer failures are reported; repeated actor binding rejects.
+The world must supply the simulation/render clock; Main is not wired yet.
+
+The isolated Warrior gallery/lifecycle test passes 67 checks, including changing
+bone poses, owner movement, capture stability, actor removal and finite drain.
+Evidence: `.local/p6-skill-effects-r8/render-exit/report.json`. The earlier root-only
+run passed 64 checks; a later test inspected queued removal before actual tree exit.
+The final test waits for `tree_exited`; no production workaround was added.
+Existing projectile gallery/lifecycle replay passed 83 checks at
+`render-projectiles/report.json`. Touched Python/GDScript lint and format pass.
+
+The lifecycle fixture uses real renderer instances and synthetic actor/skeleton
+poses. It does not yet demonstrate effects on exported Warrior animations or in two
+networked clients. Complete Bash mesh resources, installed motion/resource links,
+Main wiring and public qualification remain unfinished. No deployment changed.
+
 ## Effect attachment transform conventions — 2026-09-09
 
 `ActorPresentation.motion_effect_transform` resolves explicit root/bone modes into
