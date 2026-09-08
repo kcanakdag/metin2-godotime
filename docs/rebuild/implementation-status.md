@@ -23,9 +23,9 @@ content changed, and this is not a new export or multiplayer qualification.
 The requested 44 playable abilities remain incomplete; existing conversion and
 formula evidence must not be described as runtime skill integration.
 
-The separate protocol-18 area-NPC changes remain uncommitted work in progress:
-the candidate catalog and Wasm build exist, but bindings, live subscription QA
-and matching exports are not yet accepted. The served build remains protocol 17.
+The separate protocol-18 area-NPC changes now have generated bindings, live
+subscription QA and native map evidence as recorded below. Matching exports
+remain pending. The served build remains protocol 17.
 
 ### Original area-spawn townspeople: conversion and source contract
 
@@ -33,16 +33,37 @@ Placement follow-up: `server/src/npc_placement.rs` implements the shared inclusi
 centimetre sampler, sixteen terrain attempts, post-success heading selection and
 original-to-Godot heading conversion. Malformed rectangles, out-of-range RNG values
 and nonfinite heights reject. Exhaustion returns no placement, never a center.
-The sampler is currently exercised through an offline Rust example, not connected
-to the live game module or persistent tables.
+The sampler is now connected to the game module's public `npc_spawn` table;
+private retry timestamps retain the source interval after failed attempts.
 
 `tools/test_npc_placements.py` qualifies converted definitions using real Yongan
 terrain. `.local/npcs/area-sampling-r2/report.json` passes **600 placements across
 100 seeds**, bound to actual terrain bytes, source files, Cargo lock and the binary.
 The Rust example suite passes 18 tests, including four sampler regressions and
-shared terrain/movement tests. Repository lint passes. No database or served
-client changed. Transactional persistence, regeneration scheduling, a synchronized
-protocol/client subscription change and two-client reconnect proof remain next.
+shared terrain/movement tests. This earlier offline evidence is complemented by
+the runtime qualification below.
+
+Protocol 18 / catalog schema 3 adds persistent area rows and Godot subscriptions.
+The installed candidate contains 38 definitions, 41 fixed placements and six areas.
+The module `.local/npcs/area-module-r2.wasm` is published to the isolated database
+`mt2-p2-npc-areas-qa-r1-20260908`; the served development database is preserved.
+Bindings were generated from that module and validated in isolated Godot.
+
+`.local/npcs/area-live-r1.json` and `area-live-r2.json` each pass 51 actual
+authenticated two-client checks. The latter additionally captures public spawn
+rows for scene QA. Coverage includes identical positions/headings, mutual movement,
+rejected forged interactions, disconnect presence removal, repeated reconnects
+and unchanged rows after both clients leave. No server-process restart was tested.
+
+`area-world-r1/report.json` passes 122 native Main/map checks with those captured
+rows and an explicit offline connection spy. All six area NPC screenshots were
+inspected, including Ah-Yu's baby and Yonah's pot. Row removal/restoration, original
+names, position/heading, idle playback and picking-only collision are covered.
+Python NPC tests pass 16 cases; Rust NPC compiler tests pass three cases;
+`make server-test` passes. Lint passes after a Python formatting correction.
+The formatter-only tool change followed the rendered run; gameplay inputs did
+not change. Matching exports, browser QA and deployment remain next. The local
+served build and public endpoint have not changed.
 
 `content/profiles/yongan-area-npcs.json` selects six `NOMOVE` NPCs: Aranyo, Ah-Yu,
 Yonah, Mirine, Uriel and Baek-Go. Their original regeneration rectangles are

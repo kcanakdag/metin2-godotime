@@ -32,7 +32,8 @@ Use separate `--work-dir` and `--output-dir` values when running Web/Linux expor
 concurrently. Each `tools/export_playable.py` invocation also supplies its own
 `TMPDIR`, since Godot uses a fixed `tmpproject.binary` name while exporting packs.
 
-The current application protocol is 17. Class-aware creation and progression
+The current application protocol is 18; the served town build remains protocol 17
+until matching exports are qualified. Class-aware creation and progression
 require regenerated bindings and the same installed character catalog used for
 the server build. Publish incompatible schemas to a fresh database and preserve
 existing data. A local auth issuer build must stay on its matching local endpoint.

@@ -19,6 +19,7 @@ const ItemDrop = Types.ItemDrop
 const Loot = Types.Loot
 const Monster = Types.Monster
 const NpcInteraction = Types.NpcInteraction
+const NpcSpawn = Types.NpcSpawn
 const Obstacle = Types.Obstacle
 const CapturedPlayerAttacker = Types.CapturedPlayerAttacker
 const Player = Types.Player

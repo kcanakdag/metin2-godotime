@@ -15,6 +15,7 @@ const ItemDrop = preload('res://spacetime_bindings/schema/types/game_item_drop.g
 const Loot = preload('res://spacetime_bindings/schema/types/game_loot.gd')
 const Monster = preload('res://spacetime_bindings/schema/types/game_monster.gd')
 const NpcInteraction = preload('res://spacetime_bindings/schema/types/game_npc_interaction.gd')
+const NpcSpawn = preload('res://spacetime_bindings/schema/types/game_npc_spawn.gd')
 const Obstacle = preload('res://spacetime_bindings/schema/types/game_obstacle.gd')
 const CapturedPlayerAttacker = preload('res://spacetime_bindings/schema/types/game_captured_player_attacker.gd')
 const Player = preload('res://spacetime_bindings/schema/types/game_player.gd')

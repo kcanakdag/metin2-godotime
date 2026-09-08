@@ -13,6 +13,8 @@ mod item_effects;
 mod item_security;
 mod knockback;
 mod movement;
+mod npc_placement;
+mod npc_spawns;
 mod npcs;
 mod physical_damage;
 mod progression;
@@ -20,7 +22,7 @@ mod root_motion;
 mod skills;
 mod training_targets;
 
-const PROTOCOL_VERSION: u32 = 17;
+const PROTOCOL_VERSION: u32 = 18;
 mod special_area;
 mod targeting;
 
@@ -254,6 +256,8 @@ pub fn init(ctx: &ReducerContext) {
     });
     combat::initialize(ctx);
     npcs::validate_content();
+    npc_spawns::validate_content();
+    npc_spawns::maintain(ctx).expect("Initialize area NPC placement");
     admin::initialize();
 }
 
@@ -626,6 +630,7 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
     combat::simulate(ctx, elapsed)?;
     item_effects::simulate(ctx, now);
     npcs::maintain(ctx, now);
+    npc_spawns::maintain(ctx)?;
     Ok(())
 }
 

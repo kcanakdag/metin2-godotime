@@ -2838,6 +2838,98 @@
               "elements": [
                 {
                   "algebraic_type": {
+                    "String": []
+                  },
+                  "name": {
+                    "some": "spawn_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "String": []
+                  },
+                  "name": {
+                    "some": "actor_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "String": []
+                  },
+                  "name": {
+                    "some": "map_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I32": []
+                  },
+                  "name": {
+                    "some": "x_cm"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I32": []
+                  },
+                  "name": {
+                    "some": "z_cm"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "height_m"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U16": []
+                  },
+                  "name": {
+                    "some": "heading_degrees"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "F32": []
+                  },
+                  "name": {
+                    "some": "yaw"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "String": []
+                  },
+                  "name": {
+                    "some": "spawn_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "next_attempt_us"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
                     "U32": []
                   },
                   "name": {
@@ -2986,7 +3078,7 @@
                 },
                 {
                   "algebraic_type": {
-                    "Ref": 29
+                    "Ref": 31
                   },
                   "name": {
                     "some": "attacker"
@@ -3915,7 +4007,7 @@
             "scope": [],
             "source_name": "TickSchedule"
           },
-          "ty": 34
+          "ty": 36
         },
         {
           "custom_ordering": true,
@@ -3947,7 +4039,7 @@
             "scope": [],
             "source_name": "CapturedPlayerAttacker"
           },
-          "ty": 29
+          "ty": 31
         },
         {
           "custom_ordering": true,
@@ -3971,7 +4063,7 @@
             "scope": [],
             "source_name": "PendingSkill"
           },
-          "ty": 28
+          "ty": 30
         },
         {
           "custom_ordering": true,
@@ -3979,7 +4071,7 @@
             "scope": [],
             "source_name": "Obstacle"
           },
-          "ty": 27
+          "ty": 29
         },
         {
           "custom_ordering": true,
@@ -3987,7 +4079,7 @@
             "scope": [],
             "source_name": "PlayerAppearance"
           },
-          "ty": 31
+          "ty": 33
         },
         {
           "custom_ordering": true,
@@ -4019,7 +4111,7 @@
             "scope": [],
             "source_name": "SimulationClock"
           },
-          "ty": 35
+          "ty": 37
         },
         {
           "custom_ordering": true,
@@ -4027,7 +4119,7 @@
             "scope": [],
             "source_name": "SpecialAreaVictim"
           },
-          "ty": 37
+          "ty": 39
         },
         {
           "custom_ordering": true,
@@ -4035,7 +4127,7 @@
             "scope": [],
             "source_name": "Session"
           },
-          "ty": 33
+          "ty": 35
         },
         {
           "custom_ordering": true,
@@ -4043,7 +4135,7 @@
             "scope": [],
             "source_name": "SpecialArea"
           },
-          "ty": 36
+          "ty": 38
         },
         {
           "custom_ordering": true,
@@ -4060,6 +4152,14 @@
             "source_name": "Controller"
           },
           "ty": 13
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "NpcSpawn"
+          },
+          "ty": 27
         },
         {
           "custom_ordering": true,
@@ -4107,7 +4207,7 @@
             "scope": [],
             "source_name": "Player"
           },
-          "ty": 30
+          "ty": 32
         },
         {
           "custom_ordering": true,
@@ -4155,7 +4255,7 @@
             "scope": [],
             "source_name": "ProgressionOperator"
           },
-          "ty": 32
+          "ty": 34
         },
         {
           "custom_ordering": true,
@@ -4163,7 +4263,7 @@
             "scope": [],
             "source_name": "WorldInfo"
           },
-          "ty": 38
+          "ty": 40
         },
         {
           "custom_ordering": true,
@@ -4172,6 +4272,14 @@
             "source_name": "AdminAudit"
           },
           "ty": 3
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "NpcSpawnRetry"
+          },
+          "ty": 28
         },
         {
           "custom_ordering": true,
@@ -4460,7 +4568,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 35,
+          "product_type_ref": 37,
           "sequences": [],
           "source_name": "simulation_clock",
           "table_access": {
@@ -4518,7 +4626,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 37,
+          "product_type_ref": 39,
           "sequences": [
             {
               "column": 0,
@@ -4625,7 +4733,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 28,
+          "product_type_ref": 30,
           "sequences": [],
           "source_name": "pending_skill",
           "table_access": {
@@ -4819,7 +4927,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 27,
+          "product_type_ref": 29,
           "sequences": [],
           "source_name": "obstacle",
           "table_access": {
@@ -5278,7 +5386,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 31,
+          "product_type_ref": 33,
           "sequences": [],
           "source_name": "player_appearance",
           "table_access": {
@@ -5323,7 +5431,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 32,
+          "product_type_ref": 34,
           "sequences": [],
           "source_name": "progression_operator",
           "table_access": {
@@ -5368,7 +5476,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 36,
+          "product_type_ref": 38,
           "sequences": [],
           "source_name": "special_area",
           "table_access": {
@@ -5700,7 +5808,7 @@
                 }
               },
               "source_name": {
-                "some": "world_info_id_key"
+                "some": "npc_spawn_retry_spawn_id_key"
               }
             }
           ],
@@ -5708,7 +5816,7 @@
           "indexes": [
             {
               "accessor_name": {
-                "some": "id"
+                "some": "spawn_id"
               },
               "algorithm": {
                 "BTree": [
@@ -5716,7 +5824,7 @@
                 ]
               },
               "source_name": {
-                "some": "world_info_id_idx_btree"
+                "some": "npc_spawn_retry_spawn_id_idx_btree"
               }
             }
           ],
@@ -5724,9 +5832,54 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 38,
+          "product_type_ref": 28,
           "sequences": [],
-          "source_name": "world_info",
+          "source_name": "npc_spawn_retry",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "npc_spawn_spawn_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "spawn_id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "npc_spawn_spawn_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 27,
+          "sequences": [],
+          "source_name": "npc_spawn",
           "table_access": {
             "Public": []
           },
@@ -5769,7 +5922,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 34,
+          "product_type_ref": 36,
           "sequences": [
             {
               "column": 0,
@@ -5940,6 +6093,51 @@
                 }
               },
               "source_name": {
+                "some": "world_info_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "world_info_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 40,
+          "sequences": [],
+          "source_name": "world_info",
+          "table_access": {
+            "Public": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
                 "some": "session_connection_id_key"
               }
             }
@@ -5964,7 +6162,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 33,
+          "product_type_ref": 35,
           "sequences": [],
           "source_name": "session",
           "table_access": {
@@ -6054,7 +6252,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 30,
+          "product_type_ref": 32,
           "sequences": [],
           "source_name": "player",
           "table_access": {
@@ -7128,7 +7326,7 @@
             "elements": [
               {
                 "algebraic_type": {
-                  "Ref": 34
+                  "Ref": 36
                 },
                 "name": {
                   "some": "_schedule"
@@ -7462,8 +7660,14 @@
           },
           {
             "Table": {
-              "canonical_name": "world_info",
-              "source_name": "world_info"
+              "canonical_name": "npc_spawn_retry",
+              "source_name": "npc_spawn_retry"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "npc_spawn",
+              "source_name": "npc_spawn"
             }
           },
           {
@@ -7482,6 +7686,12 @@
             "Table": {
               "canonical_name": "command_feedback",
               "source_name": "command_feedback"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "world_info",
+              "source_name": "world_info"
             }
           },
           {

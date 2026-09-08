@@ -56,6 +56,7 @@ func _ready() -> void:
 	_npcs.name = "WorldNpcs"
 	add_child(_npcs)
 	_npcs.failed.connect(_on_npc_failure)
+	connection.npc_spawns_changed.connect(_npcs.set_spawn_rows)
 	_npc_approach = NpcApproach.new()
 	add_child(_npc_approach)
 	_npc_approach.configure(connection)
@@ -572,6 +573,7 @@ func _prepare_world(info: Dictionary) -> void:
 	if not _npcs.prepare(info, _stream.ready_at):
 		_on_npc_failure(_npcs.error_message)
 		return
+	_npcs.set_spawn_rows(connection.npc_spawns)
 	connection.enter_loaded_world()
 
 

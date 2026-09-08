@@ -100,7 +100,7 @@ def finite(value: object, minimum: float, maximum: float) -> bool:
 def validate_public(document: dict) -> None:
     """Used before installation and export; no source paths/receipts may ship."""
     exact(document, "schema version actors maps")
-    if document["schema"] != "mt2spacetime.static-npcs" or document["version"] not in (1, 2):
+    if document["schema"] != "mt2spacetime.static-npcs" or document["version"] not in (1, 2, 3):
         raise ValueError("Unsupported NPC catalog")
     actors, maps = document["actors"], document["maps"]
     if not isinstance(actors, list) or not 1 <= len(actors) <= 256:
@@ -110,7 +110,7 @@ def validate_public(document: dict) -> None:
         exact(
             actor,
             "id vnum name model sha256 label_height idle"
-            + (" presentation" if document["version"] == 2 else ""),
+            + (" presentation" if document["version"] >= 2 else ""),
         )
         if (
             not re.fullmatch(r"actor\.npc\.[a-z0-9-]+", actor["id"])
@@ -156,16 +156,37 @@ def validate_public(document: dict) -> None:
         raise ValueError("Expected 1..32 NPC map layouts")
     map_ids, spawn_ids = set(), set()
     for world in maps:
-        exact(world, "id content_hash placements")
+        exact(world, "id content_hash placements" + (" areas" if document["version"] == 3 else ""))
         if (
             not re.fullmatch(r"[a-z0-9_]+", world["id"])
             or world["id"] in map_ids
             or not re.fullmatch(r"[a-f0-9]{64}", world["content_hash"])
             or not isinstance(world["placements"], list)
-            or not 1 <= len(world["placements"]) <= 4096
+            or not 0 <= len(world["placements"]) <= 4096
         ):
             raise ValueError("Invalid NPC map layout")
         map_ids.add(world["id"])
+        areas = world.get("areas", [])
+        if not isinstance(areas, list) or not 1 <= len(areas) + len(world["placements"]) <= 4096:
+            raise ValueError("Invalid NPC spawn count")
+        for area in areas:
+            exact(area, "id actor_id bounds_cm respawn_interval_us")
+            bounds = area["bounds_cm"]
+            if (
+                not re.fullmatch(r"spawn\.[a-z0-9.-]+", area["id"])
+                or area["id"] in spawn_ids
+                or area["actor_id"] not in ids
+                or not isinstance(bounds, list)
+                or len(bounds) != 4
+                or any(type(v) is not int or not 0 <= v <= 2**31 - 1 for v in bounds)
+                or bounds[0] > bounds[2]
+                or bounds[1] > bounds[3]
+                or bounds[:2] == bounds[2:]
+                or type(area["respawn_interval_us"]) is not int
+                or not 1_000_000 <= area["respawn_interval_us"] <= 86_400_000_000
+            ):
+                raise ValueError("Invalid NPC area definition")
+            spawn_ids.add(area["id"])
         for spawn in world["placements"]:
             exact(spawn, "id actor_id position yaw")
             if (
@@ -246,12 +267,6 @@ def build(contents: list[Path], profiles: list[Path], output: Path) -> dict:
         inputs[str(path)] = sha256(path)
     for directory in contents:
         manifest, artifacts = converted(directory)
-        if any(
-            spawn.get("position_policy") == "server-random-area" for spawn in manifest["spawns"]
-        ):
-            raise ValueError(
-                "Area NPCs require server-owned sampled placements; cannot install them as fixed points"
-            )
         for name in ("conversion-receipt.json", "normalized.v1.json", "blender-report.json"):
             inputs[str(directory / name)] = sha256(directory / name)
         for actor in manifest["actors"]:
@@ -270,14 +285,30 @@ def build(contents: list[Path], profiles: list[Path], output: Path) -> dict:
         selected = [row for row in spawns if row["map_id"] == profile["map_id"]]
         if not selected:
             raise ValueError("Population profile has no selected NPC placements")
+        fixed = [s for s in selected if s.get("position_policy") != "server-random-area"]
+        areas = [s for s in selected if s.get("position_policy") == "server-random-area"]
+        points = [{"id": s["id"], "x": s["x_m"], "z": s["z_m"]} for s in fixed]
+        for area in areas:
+            if (
+                area["position_step_cm"] != 1
+                or area["spawn_attempts"] != 16
+                or area["heading_policy"] != "random-integer-degree"
+                or area["heading_bounds_degrees"] != [0, 360]
+            ):
+                raise ValueError("Unsupported original NPC area policy")
+            x0, z0, x1, z1 = area["bounds_cm"]
+            points.extend(
+                {"id": area["id"] + f".corner-{i}", "x": x / 100, "z": z / 100}
+                for i, (x, z) in enumerate(((x0, z0), (x0, z1), (x1, z0), (x1, z1)))
+            )
         report = validate(
             profile,
             inspector(profile["map_id"]),
-            [{"id": s["id"], "x": s["x_m"], "z": s["z_m"]} for s in selected],
+            points,
             point_policy="static_npc",
         )
         placements = []
-        for spawn, point in zip(selected, report["points"], strict=True):
+        for spawn, point in zip(fixed, report["points"][: len(fixed)], strict=True):
             placements.append(
                 {
                     "id": spawn["id"],
@@ -287,18 +318,26 @@ def build(contents: list[Path], profiles: list[Path], output: Path) -> dict:
                 }
             )
             covered.add(spawn["map_id"])
+        covered.add(profile["map_id"])
         maps.append(
             {
                 "id": report["map_id"],
                 "content_hash": report["map_content_hash"],
                 "placements": sorted(placements, key=lambda s: s["id"]),
+                "areas": sorted(
+                    [
+                        {k: s[k] for k in ("id", "actor_id", "bounds_cm", "respawn_interval_us")}
+                        for s in areas
+                    ],
+                    key=lambda s: s["id"],
+                ),
             }
         )
     if covered != {s["map_id"] for s in spawns}:
         raise ValueError("Every NPC map needs a population profile for terrain validation")
     document = {
         "schema": "mt2spacetime.static-npcs",
-        "version": 2,
+        "version": 3,
         "actors": sorted(actors, key=lambda a: a["id"]),
         "maps": sorted(maps, key=lambda m: m["id"]),
     }

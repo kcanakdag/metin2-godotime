@@ -2,7 +2,7 @@
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::{collections::BTreeSet, fmt::Write as _};
-const TYPE: &str = "pub struct NpcDefinition { pub id: &'static str, pub name: &'static str, pub body: &'static str, pub x: f32, pub y: f32, pub z: f32 }\n";
+const TYPE: &str = "pub struct NpcDefinition { pub id: &'static str, pub name: &'static str, pub body: &'static str, pub x: f32, pub y: f32, pub z: f32 }\n pub struct NpcAreaDefinition { pub id: &'static str, pub actor_id: &'static str, pub bounds_cm: [i32;4], pub respawn_interval_us: i64 }\n";
 
 fn exact(value: &Value, keys: &[&str]) -> Result<(), String> {
     let object = value.as_object().ok_or("Expected an NPC object")?;
@@ -15,7 +15,7 @@ fn exact(value: &Value, keys: &[&str]) -> Result<(), String> {
 pub fn generate(catalog: &[u8], actions: &Value, map_hash: &str) -> Result<String, String> {
     let doc: Value = serde_json::from_slice(catalog).map_err(|e| e.to_string())?;
     if doc["schema"] != "mt2spacetime.static-npcs"
-        || !matches!(doc["version"].as_u64(), Some(1 | 2))
+        || !matches!(doc["version"].as_u64(), Some(1..=3))
     {
         return Err("Unsupported static NPC catalog".into());
     }
@@ -93,6 +93,50 @@ pub fn generate(catalog: &[u8], actions: &Value, map_hash: &str) -> Result<Strin
         writeln!(output, "NpcDefinition {{ id: {id:?}, name: {name:?}, body: {body:?}, x: {:?}, y: {:?}, z: {:?} }},", coordinates[0], coordinates[1], coordinates[2]).unwrap();
     }
     output.push_str("];\n");
+    output.push_str("pub const NPC_AREAS: &[NpcAreaDefinition] = &[\n");
+    let mut spawn_ids: BTreeSet<&str> =
+        placements.iter().filter_map(|p| p["id"].as_str()).collect();
+    if doc["version"] == 3 {
+        let areas = worlds[0]["areas"]
+            .as_array()
+            .filter(|a| a.len() + placements.len() <= 4096)
+            .ok_or("Invalid NPC areas")?;
+        for area in areas {
+            exact(
+                area,
+                &["id", "actor_id", "bounds_cm", "respawn_interval_us"],
+            )?;
+            let id = area["id"]
+                .as_str()
+                .filter(|s| s.starts_with("spawn.") && s.len() <= 128)
+                .ok_or("Invalid NPC area id")?;
+            let actor = area["actor_id"].as_str().ok_or("Missing NPC area actor")?;
+            if !spawn_ids.insert(id) || actors.iter().filter(|a| a["id"] == actor).count() != 1 {
+                return Err("Duplicate area or unknown NPC actor".into());
+            }
+            let values = area["bounds_cm"]
+                .as_array()
+                .filter(|a| a.len() == 4)
+                .ok_or("Invalid area bounds")?;
+            let mut bounds = [0_i32; 4];
+            for (slot, v) in bounds.iter_mut().zip(values) {
+                *slot = i32::try_from(
+                    v.as_u64()
+                        .ok_or("NPC bounds must be nonnegative integers")?,
+                )
+                .map_err(|_| "NPC bounds exceed i32")?;
+            }
+            if bounds[0] > bounds[2] || bounds[1] > bounds[3] || bounds[..2] == bounds[2..] {
+                return Err("NPC area must be an ordered non-point rectangle".into());
+            }
+            let interval = area["respawn_interval_us"]
+                .as_i64()
+                .filter(|v| (1_000_000..=86_400_000_000).contains(v))
+                .ok_or("Invalid NPC retry interval")?;
+            writeln!(output,"NpcAreaDefinition {{ id: {id:?}, actor_id: {actor:?}, bounds_cm: {bounds:?}, respawn_interval_us: {interval} }},").unwrap();
+        }
+    }
+    output.push_str("];\n");
     Ok(output)
 }
 
@@ -100,7 +144,7 @@ pub fn build() -> String {
     println!("cargo:rerun-if-changed=build_npcs.rs");
     if std::env::var_os("CARGO_FEATURE_YONGAN").is_none() {
         return TYPE.to_owned()
-            + "pub const NPC_CATALOG_HASH: &str = \"\";\npub const NPCS: &[NpcDefinition] = &[];\n";
+            + "pub const NPC_CATALOG_HASH: &str = \"\";\npub const NPCS: &[NpcDefinition] = &[];\npub const NPC_AREAS: &[NpcAreaDefinition] = &[];\n";
     }
     let catalog = "../client/assets/imported/npcs/catalog.v1.json";
     let actions = "../content/worlds/yongan.interactions.json";

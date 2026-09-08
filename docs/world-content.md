@@ -307,7 +307,8 @@ engine errors. The first run passed 111 checks before a native abnormal WebSocke
 closure failed the final rejoin; the unchanged repeat passed. Both reports remain.
 Remote landmark appearance is qualified by native map QA and pack audits; the
 browser route does not visit every remote placement. Public deployment is unchanged.
-Random-area NPC spawns, groups, warps, interactions, shops and quests remain work.
+Area spawning is qualified separately below. Groups, warps, additional interactions,
+shops and quests remain work.
 
 ## Original area-spawn NPCs
 
@@ -321,9 +322,9 @@ bounds, one-centimetre sampling, 16 placement attempts and random integer headin
 from 0 through 360. The original range-spawn path ignores the record's fixed
 direction, unlike point spawning; the original direction remains recorded as
 provenance. No sampled position is chosen by the importer or client, and the
-fixed-point catalog builder rejects these candidates rather than placing them at
-an invented center. Server-owned persisted positions and client subscriptions
-must be implemented before installing this population.
+schema-3 catalog builder retains these rectangles separately from fixed placements.
+The server persists successful placements by spawn ID, and Godot renders those
+subscribed rows. No invented center is installed.
 
 ```sh
 python3 tools/import_npc_content.py --profile content/profiles/yongan-area-npcs.json \
@@ -344,8 +345,10 @@ The shared Rust sampler is `server/src/npc_placement.rs`. It takes a server RNG
 callback and a terrain-height validator, samples inclusive centimetre coordinates,
 and draws a heading only after a position succeeds. Sixteen failed attempts return
 no placement; malformed RNG results or nonfinite terrain heights fail explicitly.
-Original headings 0 and 360 map to the same Godot yaw. Persistence, regeneration
-scheduling and client replication are not wired to this module yet.
+Original headings 0 and 360 map to the same Godot yaw. `npc_spawns.rs` uses the
+reducer RNG and public `npc_spawn` rows, with a private retry timestamp after
+exhausting the attempts. Reconnects do not reroll established positions. There is
+no client placement reducer; stationary NPCs do not yet have combat/death logic.
 
 Qualify area content against the real Rust terrain implementation with:
 
@@ -360,4 +363,29 @@ This is an offline developer check, with explicit preview seeds; it does not
 create or update a database. Its report checks every returned identity, centimetre
 coordinate and heading, and binds the definitions, actual terrain bytes, sampler,
 toolchain lock and compiled executable. Seed selection must remain an offline
-facility: live placements will use the reducer's RNG and persist once per spawn.
+facility: live placements use the reducer's RNG and persist once per spawn.
+
+
+The protocol-18 candidate has 38 definitions, 41 fixed placements and six areas.
+`.local/npcs/area-live-r2.json` passes 51 two-client checks on
+`mt2-p2-npc-areas-qa-r1-20260908`: identical rows, mutual movement, reducer
+rejections, presence removal, repeated reconnects and an empty-world reconnect.
+The public rows captured by that scenario drive `.local/npcs/area-world-r1`, which
+passes 122 native Main/map checks. All six screenshots were inspected. This scene
+uses an offline connection spy; the separate live scenario proves subscriptions.
+Server-process restart persistence and exported browser presentation remain untested.
+The served endpoint and its existing database are unchanged.
+
+```sh
+python3 tools/test_physical_combat.py --scenario npc_spawns \
+  --server http://127.0.0.1:8186 --game-server http://127.0.0.1:13223 \
+  --database mt2-p2-npc-areas-qa-r1-20260908 --godot /path/to/godot \
+  --report .local/npcs/area-live.json
+python3 tools/test_world_npcs.py --native --godot /path/to/godot \
+  --spawn-rows /path/to/public-npc-snapshot.json --output .local/npcs/area-world
+```
+
+`NPC_SPAWN_SNAPSHOT` in the live scenario log contains only public NPC rows;
+save that JSON array for `--spawn-rows`. The rendered fixture validates integer
+columns and records the snapshot hash. It checks row removal/restoration, original
+names, positions, headings, idle playback and picking-only collision proxies.

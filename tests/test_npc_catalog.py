@@ -25,6 +25,38 @@ from build_npc_catalog import (
 
 
 class NpcCatalogTests(unittest.TestCase):
+    def test_area_definitions_preserve_bounds_and_reject_ambiguous_identity(self):
+        doc = self.document()
+        doc["version"] = 3
+        doc["actors"][0]["presentation"] = "animated"
+        area = {
+            "id": "spawn.area",
+            "actor_id": "actor.npc.guard",
+            "bounds_cm": [100, 200, 300, 400],
+            "respawn_interval_us": 60_000_000,
+        }
+        doc["maps"][0]["areas"] = [area]
+        validate_public(doc)
+        for key, value in (
+            ("id", "spawn.guard"),
+            ("actor_id", "actor.npc.missing"),
+            ("bounds_cm", [100, 200, 100, 200]),
+            ("bounds_cm", [300, 200, 100, 400]),
+            ("bounds_cm", [True, 200, 300, 400]),
+            ("bounds_cm", [0, 0, 2147483648, 400]),
+            ("respawn_interval_us", 0),
+            ("respawn_interval_us", 1_000_000.5),
+        ):
+            bad = copy.deepcopy(doc)
+            bad["maps"][0]["areas"][0][key] = value
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                validate_public(bad)
+        doc["maps"][0]["placements"] = []
+        validate_public(doc)
+        doc["maps"][0]["areas"] = []
+        with self.assertRaises(ValueError):
+            validate_public(doc)
+
     def test_static_presentation_is_explicit_and_cannot_discard_idle_variants(self):
         doc = self.document()
         doc["version"] = 2

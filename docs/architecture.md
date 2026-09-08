@@ -65,6 +65,16 @@ walkable. The shared `valid_npc_position` function is used at server initializat
 and by the offline catalog inspector. Mob spawning and player movement retain
 their collision checks. This does not add a client placement reducer.
 
+Protocol 18 adds public `npc_spawn` rows for original rectangular NPC areas.
+Catalog schema 3 separates fixed placements from bounds and retry intervals.
+The reducer draws inclusive centimetre coordinates, tries terrain validation at
+most sixteen times, and draws an integer heading only after success. Successful
+rows persist by spawn ID; private retry rows postpone failed placement attempts
+by the source interval. Player reconnects do not modify these rows. Godot loads
+the same catalog, validates incoming actor IDs/bounds/headings and instantiates
+area actors only on loaded terrain chunks. Disconnect clears its replica cache.
+These stationary residents have no combat/death or client reroll interface.
+
 Choosing an NPC sends the existing clear-combat-target intent before approach.
 When accepting a new NPC conversation, the server also clears the controller's
 target and its private target view in the same transaction as the interaction.

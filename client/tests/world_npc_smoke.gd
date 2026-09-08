@@ -190,7 +190,74 @@ func _run() -> void:
 	)
 	_check_catalog_failures()
 	await _check_static_landmarks(main, catalog, definition, layer, stream)
+	await _check_area_spawns(main, catalog, definition, layer, stream)
 	_finish(main)
+
+
+func _check_area_spawns(
+	main: Node3D, catalog: NpcCatalog, definition: Dictionary, layer: WorldNpcs, stream: WorldStream
+) -> void:
+	if not FileAccess.file_exists("res://tests/npc-spawn-rows.json"):
+		return
+	var rows: Array = JSON.parse_string(
+		FileAccess.get_file_as_string("res://tests/npc-spawn-rows.json")
+	)
+	_check(rows.size() == definition.get("areas", []).size(), "snapshot covers every NPC area")
+	for row: Dictionary in rows:
+		# JSON numbers are floats; the real typed SDK delivers these columns as integers.
+		for field: String in ["x_cm", "z_cm", "heading_degrees"]:
+			_check(float(row[field]) == int(row[field]), "snapshot integer column is exact")
+			row[field] = int(row[field])
+		var point := Vector3(float(row.x_cm) / 100, row.height_m, float(row.z_cm) / 100)
+		var chunk := "%03d%03d" % [int(point.x / 256), int(point.z / 256)]
+		_check(await stream.call("_load_chunk", chunk), "area NPC terrain loads")
+	main.connection.npc_spawns_changed.emit(rows)
+	for row: Dictionary in rows:
+		_check(layer.actors.has(row.spawn_id), "area NPC appears from replicated-row signal")
+		if not layer.actors.has(row.spawn_id):
+			continue
+		var actor: NpcActor = layer.actors[row.spawn_id]
+		var data: Dictionary = catalog.actors[row.actor_id]
+		_check(
+			actor.position.is_equal_approx(
+				Vector3(float(row.x_cm) / 100, row.height_m, float(row.z_cm) / 100)
+			),
+			"area NPC uses captured server position and terrain height"
+		)
+		_check(absf(actor.rotation.y - float(row.yaw)) < 0.00001, "area NPC uses server heading")
+		_check(actor.get_node("NameLabel").text == data.name, "area NPC has original name")
+		var animation: AnimationPlayer = actor.get("_animation")
+		_check(animation != null and animation.is_playing(), "area NPC plays original idle")
+		_check(
+			actor.find_children("*", "CollisionObject3D", true, false).all(_is_picking_only),
+			"area NPC introduces no invisible movement obstacle"
+		)
+		var camera: Camera3D = main.camera_rig.camera
+		var center := actor.global_position + Vector3.UP * float(data.label_height) * 0.5
+		camera.global_position = center + Vector3(0.3, 0.45, -1).normalized() * 8.0
+		camera.look_at(center)
+		await create_timer(0.3).timeout
+		if DisplayServer.get_name() != "headless":
+			await RenderingServer.frame_post_draw
+			_check(
+				(
+					root.get_texture().get_image().save_png(
+						"user://world-npc-area-%s.png" % str(int(data.vnum))
+					)
+					== OK
+				),
+				"area NPC screenshot saved"
+			)
+	main.connection.npc_spawns_changed.emit([])
+	_check(
+		rows.all(func(row: Dictionary): return not layer.actors.has(row.spawn_id)),
+		"removing subscribed rows removes area NPC actors"
+	)
+	main.connection.npc_spawns_changed.emit(rows)
+	_check(
+		rows.all(func(row: Dictionary): return layer.actors.has(row.spawn_id)),
+		"restored rows recreate area NPC actors"
+	)
 
 
 func _check_static_landmarks(

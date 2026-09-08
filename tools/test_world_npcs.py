@@ -20,6 +20,9 @@ def main() -> None:
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument("--native", action="store_true")
     parser.add_argument("--npc-package", type=Path, default=INSTALL_ROOT)
+    parser.add_argument(
+        "--spawn-rows", type=Path, help="Public NPC snapshot for offline rendered QA"
+    )
     args = parser.parse_args()
     package = args.npc_package.resolve()
     validate_package(package)
@@ -45,6 +48,12 @@ def main() -> None:
     shutil.rmtree(staged_npcs)
     shutil.copytree(package, staged_npcs)
     (stage / "tests").mkdir()
+    if args.spawn_rows:
+        rows = json.loads(args.spawn_rows.read_text())
+        if not isinstance(rows, list) or not rows:
+            raise ValueError("NPC snapshot must contain public spawn rows")
+        shutil.copy2(args.spawn_rows, stage / "tests/npc-spawn-rows.json")
+        sources[str(args.spawn_rows.resolve())] = sha256(args.spawn_rows)
     test = ROOT / "client/tests/world_npc_smoke.gd"
     shutil.copy2(test, stage / "tests" / test.name)
     sources[str(test)] = sha256(test)
@@ -91,6 +100,8 @@ def main() -> None:
         run_preview(command, env, output / "runtime.log", smoke=True)
     finally:
         for capture in (output / "data").rglob("world-npc-static-*.png"):
+            shutil.copy2(capture, output / capture.name)
+        for capture in (output / "data").rglob("world-npc-area-*.png"):
             shutil.copy2(capture, output / capture.name)
         for filename in ("world-npc.json", "world-npc.png"):
             found = list((output / "data").rglob(filename))

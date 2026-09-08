@@ -118,6 +118,7 @@ def main() -> None:
             "security",
             "population",
             "npcs",
+            "npc_spawns",
             "classes",
         ],
         default="melee",
@@ -187,7 +188,7 @@ def main() -> None:
                         ROOT / "client/assets/imported/content/p0-warrior-dog/manifest.v1.json"
                     ).read_bytes()
                 )
-            if options.scenario in ("population", "npcs"):
+            if options.scenario in ("population", "npcs", "npc_spawns"):
                 from world_content import inspector, validate
 
                 profile = json.loads(options.population_profile.read_text())
@@ -199,6 +200,11 @@ def main() -> None:
                 + "_smoke.gd"
             )
             scripts = [Path("tests/combo_smoke.gd"), selected_script]
+            if options.scenario == "npc_spawns":
+                scripts.append(Path("tests/physical_population_smoke.gd"))
+                (stage / "tests/npc-catalog.json").write_bytes(
+                    (ROOT / "client/assets/imported/npcs/catalog.v1.json").read_bytes()
+                )
             if options.scenario == "npcs":
                 scripts.append(Path("tests/physical_population_smoke.gd"))
                 (stage / "tests/npc-route.json").write_bytes(

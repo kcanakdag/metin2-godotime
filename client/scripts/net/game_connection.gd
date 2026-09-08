@@ -29,9 +29,10 @@ signal command_feedback_changed(rows: Array)
 signal skills_changed(rows: Array)
 signal combat_target_changed(info: Dictionary)
 signal npc_interaction_changed(info: Dictionary)
+signal npc_spawns_changed(rows: Array)
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
-const EXPECTED_PROTOCOL_VERSION := 17
+const EXPECTED_PROTOCOL_VERSION := 18
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
 const TABLES := [
@@ -52,6 +53,7 @@ const TABLES := [
 	"command_feedback",
 	"combat_target_view",
 	"npc_interaction",
+	"npc_spawn",
 ]
 const LOBBY_QUERIES := [
 	"SELECT * FROM account_character",
@@ -73,6 +75,7 @@ const QUERIES := [
 	"SELECT * FROM simulation_clock",
 	"SELECT * FROM combat_target_view",
 	"SELECT * FROM npc_interaction",
+	"SELECT * FROM npc_spawn",
 ]
 
 var local_identity := ""
@@ -106,6 +109,7 @@ var skills: Array = []
 var command_feedback: Array = []
 var combat_target: Dictionary = {}
 var npc_interaction: Dictionary = {}
+var npc_spawns: Array = []
 
 var _client: SpacetimeDBClient
 var _session := 0
@@ -646,6 +650,9 @@ func _flush_snapshots() -> void:
 				rows.sort_custom(func(a: Dictionary, b: Dictionary): return int(a.id) < int(b.id))
 				command_feedback = rows
 				command_feedback_changed.emit(command_feedback)
+			"npc_spawn":
+				npc_spawns = rows
+				npc_spawns_changed.emit(npc_spawns)
 			"npc_interaction":
 				npc_interaction = {}
 				for row: Dictionary in rows:
@@ -803,6 +810,8 @@ func _clear_world_snapshots() -> void:
 	combat_target = {}
 	npc_interaction = {}
 	npc_interaction_changed.emit(npc_interaction)
+	npc_spawns = []
+	npc_spawns_changed.emit(npc_spawns)
 	server_time_us = 0
 	inventory_changed.emit(inventory)
 	item_drops_changed.emit(item_drops)

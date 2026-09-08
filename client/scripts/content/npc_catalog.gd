@@ -25,7 +25,11 @@ func load_document(document: Dictionary) -> bool:
 	error_message = ""
 	if (
 		document.get("schema") != "mt2spacetime.static-npcs"
-		or (document.get("version") != 1 and document.get("version") != 2)
+		or (
+			document.get("version") != 1
+			and document.get("version") != 2
+			and document.get("version") != 3
+		)
 		or not document.get("actors") is Array
 		or not document.get("maps") is Array
 	):
@@ -36,7 +40,7 @@ func load_document(document: Dictionary) -> bool:
 		if not _index_actor(actor, int(document.version)):
 			return _fail("Invalid NPC actor definition.")
 	for world: Variant in document.maps:
-		if not _index_map(world):
+		if not _index_map(world, int(document.version)):
 			return _fail("Invalid NPC map layout.")
 	return true
 
@@ -60,7 +64,7 @@ func _index_actor(value: Variant, version: int) -> bool:
 	var id := str(value.get("id", ""))
 	var path := str(value.get("model", ""))
 	if (
-		value.has("presentation") != (version == 2)
+		value.has("presentation") != (version >= 2)
 		or id.is_empty()
 		or actors.has(id)
 		or not path.begins_with(PREFIX)
@@ -99,7 +103,7 @@ func _valid_idle(motions: Array) -> bool:
 	return total == 100
 
 
-func _index_map(value: Variant) -> bool:
+func _index_map(value: Variant, version: int) -> bool:
 	if not value is Dictionary:
 		return false
 	var id := str(value.get("id", ""))
@@ -112,12 +116,42 @@ func _index_map(value: Variant) -> bool:
 	):
 		return false
 	var ids: Dictionary = {}
+	var areas: Variant = value.get("areas", [])
+	if (
+		not areas is Array
+		or (version == 3) != value.has("areas")
+		or areas.size() + value.placements.size() > 4096
+		or areas.size() + value.placements.size() == 0
+	):
+		return false
+	for area: Variant in areas:
+		if not area is Dictionary or not _valid_area(area, ids):
+			return false
+		ids[area.id] = true
 	for spawn: Variant in value.placements:
 		if not spawn is Dictionary or not _valid_placement(spawn, ids):
 			return false
 		ids[spawn.id] = true
 	maps[id] = value.duplicate(true)
 	return true
+
+
+func _valid_area(area: Dictionary, ids: Dictionary) -> bool:
+	if (
+		str(area.get("id", "")).is_empty()
+		or ids.has(area.get("id"))
+		or not actors.has(area.get("actor_id"))
+		or not area.get("bounds_cm") is Array
+		or area.bounds_cm.size() != 4
+		or not _number(area.get("respawn_interval_us"), 1000000, 86400000000)
+		or float(area.respawn_interval_us) != int(area.respawn_interval_us)
+	):
+		return false
+	for v: Variant in area.bounds_cm:
+		if not _number(v, 0, 2147483647) or float(v) != int(v):
+			return false
+	var b: Array = area.bounds_cm
+	return b[0] <= b[2] and b[1] <= b[3] and (b[0] != b[2] or b[1] != b[3])
 
 
 func _valid_placement(spawn: Dictionary, ids: Dictionary) -> bool:
