@@ -24,7 +24,22 @@ func show_item(row: Dictionary) -> void:
 	var vnum := int(row.get("vnum", 0))
 	var lines: Array[String] = [Art.item_name(vnum), ""]
 	var definition := ItemCatalog.item(vnum)
-	if definition.get("kind") == "weapon":
+	if row.has("skill_vnum"):
+		var skills := SkillCatalog.new()
+		if skills.load_required():
+			var skill := skills.definition(int(row.skill_vnum))
+			if not skill.is_empty():
+				lines[0] = str(skill.name)
+				lines.append("Rank %d / %d" % [int(row.get("rank", 0)), skill.maximum_rank])
+				lines.append(
+					(
+						"SP cost %d"
+						% skills.cost(int(row.skill_vnum), maxi(1, int(row.get("rank", 0))))
+					)
+				)
+				lines.append("Cooldown %d sec" % (int(skill.cooldown_us) / 1000000))
+				lines.append("Requires level %d and an equipped sword" % skill.minimum_level)
+	elif definition.get("kind") == "weapon":
 		var physical: Dictionary = definition.get("weapon", {})
 		var minimum := int(physical.get("power_min", 0)) + int(physical.get("refine_attack", 0))
 		var maximum := int(physical.get("power_max", 0)) + int(physical.get("refine_attack", 0))

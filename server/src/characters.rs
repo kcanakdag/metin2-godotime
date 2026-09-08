@@ -71,6 +71,9 @@ pub fn attack(
 }
 
 pub fn requires_weapon(action_id: &str) -> bool {
+    if crate::skills::is_skill_action(action_id) {
+        return true;
+    }
     definitions::PLAYER_ONEHAND_COMBO
         .iter()
         .any(|action| action.id == action_id)
@@ -112,11 +115,18 @@ pub fn combo_step(
 }
 
 pub fn root_actions() -> impl Iterator<Item = &'static AttackDefinition> {
-    definitions::PLAYER_ONEHAND_COMBO.iter().chain(
-        definitions::CHARACTER_BASIC_ATTACKS
-            .iter()
-            .map(|(_, _, action)| action),
-    )
+    definitions::PLAYER_ONEHAND_COMBO
+        .iter()
+        .chain(
+            definitions::CHARACTER_BASIC_ATTACKS
+                .iter()
+                .map(|(_, _, action)| action),
+        )
+        .chain(
+            definitions::SKILL_ACTIONS
+                .iter()
+                .map(|(_, _, action)| action),
+        )
 }
 
 #[cfg(test)]

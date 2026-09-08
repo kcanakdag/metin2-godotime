@@ -245,3 +245,12 @@ organization, and tests can inform later work, but its TCP protocol, process
 lifecycle, and storage are not a drop-in SpacetimeDB module or Godot client.
 The current Rust gameplay implementation is project code. See
 [open-mt2.md](open-mt2.md) for the detailed assessment and licensing distinction.
+
+The Sword Spin fixture adds only the selected male/female `skill/palbang.msa`
+animations and their referenced GR2 clips, plus `skill/warrior/palbang_01.sub`.
+They use the same pinned original client and Blender conversion path as the
+existing character/UI fixtures. English skill rows and the international power
+array are read as data by `tools/build_skill_catalog.py`; the compiler records
+source revision and hashes. Locale differences, formula selection and unsupported
+skill particles are documented in [skills](skills.md). No legacy runtime or
+additional external project is bundled.

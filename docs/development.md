@@ -1474,3 +1474,9 @@ prerequisites, phase status, failure behavior and recorded evidence.
 
 Implementation guidance for agents lives in [AGENTS.md](../AGENTS.md). Update
 these notes when the tested workflow changes.
+
+## Skill definitions and progression
+
+Protocol 16 adds owner-private learned skills and a shared catalog hash. See
+[the skill contract and build/test workflow](skills.md) for level-5 learning,
+validated casting, developer commands, selected source policy and current limits.

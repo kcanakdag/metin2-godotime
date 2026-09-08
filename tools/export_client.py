@@ -712,6 +712,8 @@ def audit_pack(godot, pck, output, env, *, allow_test_probe=False, p1_requiremen
     npc_hash = digest(npc_path) if npc_path.is_file() else ""
     character_path = ROOT / "client/assets/imported/characters/catalog.v1.json"
     character_hash = digest(character_path) if character_path.is_file() else ""
+    skill_path = ROOT / "client/assets/imported/skills/catalog.v1.json"
+    skill_hash = digest(skill_path) if skill_path.is_file() else ""
     probe = output / "audit_pack.gd"
     probe.write_text("""extends SceneTree
 
@@ -793,6 +795,18 @@ func _initialize() -> void:
             quit(1)
             return
         p1_audit["characters"] = characters
+        var skill_path := "res://assets/imported/skills/catalog.v1.json"
+        var skill_hash := OS.get_cmdline_user_args()[6]
+        if skill_hash.is_empty() or FileAccess.get_sha256(skill_path) != skill_hash:
+            push_error("Packaged skill catalog differs from the installed catalog")
+            quit(1)
+            return
+        var skill_catalog = load("res://scripts/content/skill_catalog.gd").new()
+        if not skill_catalog.load_required():
+            push_error("Packaged skill catalog cannot load")
+            quit(1)
+            return
+        p1_audit["skill_catalog_sha256"] = skill_hash
         var license_file := FileAccess.open(OS.get_cmdline_user_args()[0], FileAccess.WRITE)
         if not license_file:
             push_error("Could not write engine notices")
@@ -1324,6 +1338,7 @@ func has_required_entities(manifest: Dictionary, artifacts: Dictionary) -> bool:
             "1" if p1_requirements else "0",
             npc_hash,
             character_hash,
+            skill_hash,
         ],
         output / "pack-audit.log",
         env,

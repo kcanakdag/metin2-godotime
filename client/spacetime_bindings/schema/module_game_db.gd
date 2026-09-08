@@ -2,18 +2,19 @@
 # FILE WILL NOT BE SAVED. MODIFY TABLES IN YOUR MODULE SOURCE CODE INSTEAD.
 class_name GameModuleDb extends RefCounted
 
-const table_names : Array[String] = ["loot", "item_drop", "simulation_clock", "chat_message", "npc_interaction", "obstacle", "inventory_item", "player_appearance", "account_character", "character_progression", "monster", "inventory_access", "world_info", "command_feedback", "player", "combat_target_view", "account_state"]
+const table_names : Array[String] = ["loot", "item_drop", "character_skill", "simulation_clock", "chat_message", "npc_interaction", "obstacle", "inventory_item", "account_character", "character_progression", "player_appearance", "monster", "inventory_access", "world_info", "command_feedback", "player", "combat_target_view", "account_state"]
 
 var loot: GameLootTable
 var item_drop: GameItemDropTable
+var character_skill: GameCharacterSkillTable
 var simulation_clock: GameSimulationClockTable
 var chat_message: GameChatMessageTable
 var npc_interaction: GameNpcInteractionTable
 var obstacle: GameObstacleTable
 var inventory_item: GameInventoryItemTable
-var player_appearance: GamePlayerAppearanceTable
 var account_character: GameAccountCharacterTable
 var character_progression: GameCharacterProgressionTable
+var player_appearance: GamePlayerAppearanceTable
 var monster: GameMonsterTable
 var inventory_access: GameInventoryAccessTable
 var world_info: GameWorldInfoTable
@@ -25,14 +26,15 @@ var account_state: GameAccountStateTable
 func _init(p_local_db: LocalDatabase) -> void:
 	loot = preload('res://spacetime_bindings/schema/tables/game_loot_table.gd').create(p_local_db)
 	item_drop = preload('res://spacetime_bindings/schema/tables/game_item_drop_table.gd').create(p_local_db)
+	character_skill = preload('res://spacetime_bindings/schema/tables/game_character_skill_table.gd').create(p_local_db)
 	simulation_clock = preload('res://spacetime_bindings/schema/tables/game_simulation_clock_table.gd').create(p_local_db)
 	chat_message = preload('res://spacetime_bindings/schema/tables/game_chat_message_table.gd').create(p_local_db)
 	npc_interaction = preload('res://spacetime_bindings/schema/tables/game_npc_interaction_table.gd').create(p_local_db)
 	obstacle = preload('res://spacetime_bindings/schema/tables/game_obstacle_table.gd').create(p_local_db)
 	inventory_item = preload('res://spacetime_bindings/schema/tables/game_inventory_item_table.gd').create(p_local_db)
-	player_appearance = preload('res://spacetime_bindings/schema/tables/game_player_appearance_table.gd').create(p_local_db)
 	account_character = preload('res://spacetime_bindings/schema/tables/game_account_character_table.gd').create(p_local_db)
 	character_progression = preload('res://spacetime_bindings/schema/tables/game_character_progression_table.gd').create(p_local_db)
+	player_appearance = preload('res://spacetime_bindings/schema/tables/game_player_appearance_table.gd').create(p_local_db)
 	monster = preload('res://spacetime_bindings/schema/tables/game_monster_table.gd').create(p_local_db)
 	inventory_access = preload('res://spacetime_bindings/schema/tables/game_inventory_access_table.gd').create(p_local_db)
 	world_info = preload('res://spacetime_bindings/schema/tables/game_world_info_table.gd').create(p_local_db)

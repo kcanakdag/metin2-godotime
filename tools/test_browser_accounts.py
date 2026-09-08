@@ -193,6 +193,11 @@ def main() -> None:
     parser.add_argument("--native", type=Path, default=ROOT / "dist/linux-test/MT2Spacetime.x86_64")
     parser.add_argument("--output", type=Path)
     parser.add_argument(
+        "--skills",
+        action="store_true",
+        help="Exercise K/Escape skill-panel input in exported clients",
+    )
+    parser.add_argument(
         "--warrior-effects",
         action="store_true",
         help="With --classes, exercise female Warrior finisher waves as the second character",
@@ -652,6 +657,18 @@ def main() -> None:
                         page, web, wait, web_id
                     )
             samples["initial_web"], samples["initial_native"] = web(), desktop()
+            if args.skills:
+                page.keyboard.press("k")
+                wait(
+                    "skills_key_opens_panel",
+                    lambda: web().get("ui", {}).get("skills", {}).get("visible") is True,
+                )
+                page.screenshot(path=str(output / "skills-first-character.png"))
+                page.keyboard.press("Escape")
+                wait(
+                    "escape_closes_skills",
+                    lambda: web().get("ui", {}).get("skills", {}).get("visible") is False,
+                )
             if args.classes:
                 samples["ninja"] = exercise_class_world(
                     page,

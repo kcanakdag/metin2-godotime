@@ -1,12 +1,12 @@
 {
   "sdk_commit": "f6c59d7068e5dacbde0559906746d0a6c5933ffb",
-  "schema_sha256": "e73a9e1cfca78edd0859e6fdedaa8ae0b77c2cee16747782f7ce5be8975c1c5e",
+  "schema_sha256": "5578b148ca43f81e686b7990f9270a70742c4a36db514980fad754dfc3d3abbf",
   "files": {
-    "module_game_client.gd": "dc939e82e50f6a7a0ced537c8d8204d58ce1fbcfc4ccc95dec90724f8e315521",
-    "module_game_db.gd": "bfe2dc308853b188b6a284763a98757945885a207b09c51d29be4331efaac7ac",
+    "module_game_client.gd": "c9d3757018e019696b9078291df089f22e51c59d7264a456d5dcce62e8304177",
+    "module_game_db.gd": "9eb075ed05d651aec7acef8aa450a58f84201f2913a959820bc034b62f392566",
     "module_game_procedures.gd": "2c2ac42c8f5d708902cc2112b5945c54fd54b4f2a37bf2f1a277c8a9fdbfcfea",
-    "module_game_reducers.gd": "23d752070d0d43acb579978ed159d33c4ba319c4e0460c10c58e2b73cb88f2f6",
-    "module_game_types.gd": "c5e3e607b523450a84a9204e20a07863ce54375066408a48206e44bd313d40be",
+    "module_game_reducers.gd": "d0f76a181de04027dfbed2840b53d275e1817fedf67aa756eb2cf174a1d74ce9",
+    "module_game_types.gd": "5f35bba663140a4ee36465949ca9fd9c0a19ac3cf58fea87eeafa248fc0cab15",
     "spacetime_autoload.gd": "3e5f5edc34f6dbc7ff44e3e6d4c296def7da5627e3db41e33a6f54d4ebb0edee",
     "tables/game_account_character_character_id_unique_index.gd": "2461b071a282081b049d783de71735e4d8815bb49c11b53d5a78930bccbac810",
     "tables/game_account_character_table.gd": "c26985f92ea6b317920b00e08c8a8e4280e47b6296ce89d7b46891272315278b",
@@ -14,6 +14,8 @@
     "tables/game_account_state_table.gd": "06d7ad630279885098601b652a29a53712c5719e01a8abcf827d6c8c7211fded",
     "tables/game_character_progression_character_id_unique_index.gd": "61988c38ecfc7c234d2092d31b7d08a4295bccd27a4e943acf0968dbc2cd00a0",
     "tables/game_character_progression_table.gd": "dc0f6382c42730832f31e5c8212405e8d3707436cb0bb4e998002a04c0c0a744",
+    "tables/game_character_skill_id_unique_index.gd": "9864e6bdbf291c324c473eb7e6458cc4ad721c53489c1a12400328fc4a70febc",
+    "tables/game_character_skill_table.gd": "11f9fb292b911a644b30896a279c3d30d76fca166437223db8f9f207dd94b4d7",
     "tables/game_chat_message_id_unique_index.gd": "cf5492d32929bca0f9db789a304cd3f6d48c5e3e2365b138261f8e373bf6fa95",
     "tables/game_chat_message_table.gd": "87fba38f4747be35084788a096907f69dc3547497e8eb8387e293e7d16238782",
     "tables/game_combat_target_view_character_id_unique_index.gd": "593e564e4d13e0cd6584b81912e18cb782e6c96dacfd98303704110cb624c7f4",
@@ -51,7 +53,9 @@
     "types/game_admin_rate.gd": "2da1ab4b2e8a267e381ccfff3d3f93c67d33d3345647fe95da522935fa0433c2",
     "types/game_admin_request_collision.gd": "673ac20a8ec9831796eec92032f9d865e8b5c0893d8d9f95764ff95ba07ddec3",
     "types/game_admin_request_receipt.gd": "cd6b1341bb08f5f4317b1daad28e36f30afd46ca7b8a41c05022ae096bb496f5",
+    "types/game_captured_player_attacker.gd": "9ffa1ed3988eb31fef1d4f6191b134b6d5b60be492f3533abee2e673d8375805",
     "types/game_character_progression.gd": "1f229d9b102b0936eb6c105eeca65da76c988b347306e3db57ea498289c37dc8",
+    "types/game_character_skill.gd": "5f7b7646ed5271df2b7ad5e4a13498e574a7a1ca067ca230cd2ac655fc91bbdb",
     "types/game_chat_message.gd": "b046eb843cf5f8a711634e264cd0026c7a0f78e68747476f125a445add1cb398",
     "types/game_combat_target_view.gd": "0e3cf72e91126946ca066cc9306abe148a9b2eee4ab3c756b969ac56dc07dcf3",
     "types/game_command_feedback.gd": "5bfb310d2ae8f63d79938755a702f98b00a00587fb748f91bd62c9b29d7425e3",
@@ -70,6 +74,7 @@
     "types/game_monster_reaction.gd": "ab12169c55e8f1c1172bd18ac25e9173b71383d5750550ed23b0af3d412df4b9",
     "types/game_npc_interaction.gd": "e5416f3e679f031436259c8315349831e3312b9846a387e8e94adfabe6dbf3e3",
     "types/game_obstacle.gd": "b8da9b9034aaae130806412bdc6bd2c62fcc0f9b6cbf563ffb7e1f792356f68e",
+    "types/game_pending_skill.gd": "06a3befecdf7b9cd428c8dff084ad7ac52d37ffd4ca379543682fbfd4ae0cee3",
     "types/game_player.gd": "f0714323a6c6bbdd6bbf8ddd02bcad7c672106aefbcf01f02d02db4162e29e4b",
     "types/game_player_appearance.gd": "8194fb2f50c8470fc58919bbb901de1762ca7987e406be7891f8f91f031f02c2",
     "types/game_progression_operator.gd": "e44c19f63480edd074f36687b195868f639dce0cd9769ed7290cb4e3ca7cb002",
@@ -78,6 +83,6 @@
     "types/game_special_area.gd": "ad95ba1dd53394f53e6c726572b0b8ac6596c605bcf5ab75093ca149fd09341f",
     "types/game_special_area_victim.gd": "e1667e62199551a3f3faa5235a9daf19832dbf4139e9280d038f5ef51e98a083",
     "types/game_tick_schedule.gd": "0d19e056e6ab8c8968b2cf45f1ca5114d41b6fbdf30a021ca13da6ce771a9716",
-    "types/game_world_info.gd": "55af9e4222228b643a68cc5ff846fa86e33ed8c0c03758912c78a1533e6c7fbc"
+    "types/game_world_info.gd": "9b43d38bb7f9038f1df9450ba6e62db0e50b8e473dbd0096b049d4b7b6c95687"
   }
 }

@@ -60,6 +60,10 @@ func _run() -> void:
 		return
 	if str(_config.mode) == "prepare":
 		await _prepare_default_deny(first, second)
+	elif str(_config.mode) == "skills":
+		await _verify_skills(first, second)
+	elif str(_config.mode) == "skill_combat":
+		await _verify_skill_combat(first, second)
 	else:
 		await _verify_bootstrap_and_provisioning(first, second)
 	_finish()
@@ -283,6 +287,238 @@ func _verify_bootstrap_and_provisioning(first: GameConnection, second: GameConne
 		"reconnect_replay_original_target_no_mutation",
 		first.selected_progression() == state_before_reconnect
 	)
+
+
+func _verify_skills(first: GameConnection, second: GameConnection) -> void:
+	var denied := _request_id()
+	second.admin_set_skill(denied, "2 20")
+	_check(
+		"skill_grant_requires_permission",
+		await _feedback_contains(second, denied, "operator permission")
+	)
+	_check(
+		"below_level_five_cannot_learn",
+		not await _raw_success(first, "learn_skill", [2, 0], [&"U16", &"U32"])
+	)
+	var level := _request_id()
+	first.admin_raise_progression_level(level, "5")
+	if not _check(
+		"level_five_unlock",
+		await _wait_until(func(): return int(first.selected_progression().get("level", 0)) == 5)
+	):
+		return
+	_check("learn_first_rank", await _raw_success(first, "learn_skill", [2, 0], [&"U16", &"U32"]))
+	if not _check(
+		"learned_rank_subscribed", await _wait_until(func(): return first.skill_revision(2) == 1)
+	):
+		return
+	_check("first_rank_spends_one_point", int(first.selected_skills()[0].points_spent) == 1)
+	_check(
+		"stale_learning_rejected",
+		not await _raw_success(first, "learn_skill", [2, 0], [&"U16", &"U32"])
+	)
+	_check(
+		"overspending_rejected",
+		not await _raw_success(first, "learn_skill", [2, 1], [&"U16", &"U32"])
+	)
+	_check(
+		"unknown_skill_rejected",
+		not await _raw_success(first, "learn_skill", [255, 0], [&"U16", &"U32"])
+	)
+	_check("observer_cannot_read_learned_skills", second.skills.is_empty())
+	var sword := 0
+	for item: Dictionary in first.inventory:
+		if int(item.vnum) == 10:
+			sword = int(item.id)
+	if not _check("starter_sword_available", sword != 0):
+		return
+	first.equip_item(sword)
+	if not _check(
+		"sword_equipped",
+		await _wait_until(
+			func():
+				return first.inventory.any(
+					func(item): return int(item.id) == sword and bool(item.equipped)
+				),
+			8.0
+		)
+	):
+		return
+	var before_sp := int(first.selected_progression().current_sp)
+	_check("skill_cast_accepted", await _raw_success(first, "cast_skill", [2, 1], [&"U16", &"U32"]))
+	if not _check(
+		"cast_revision_subscribed", await _wait_until(func(): return first.skill_revision(2) == 2)
+	):
+		return
+	var ready := int(first.selected_skills()[0].ready_at_us)
+	_check(
+		"original_rank_one_sp_cost", int(first.selected_progression().current_sp) == before_sp - 56
+	)
+	_check(
+		"observer_receives_skill_action",
+		await _wait_until(
+			func():
+				return _player_action(second, first.local_identity).ends_with(".general.skill_2"),
+			8.0
+		)
+	)
+	_check(
+		"cast_replay_rejected",
+		not await _raw_success(first, "cast_skill", [2, 1], [&"U16", &"U32"])
+	)
+	_check(
+		"cooldown_recast_rejected",
+		not await _raw_success(first, "cast_skill", [2, 2], [&"U16", &"U32"])
+	)
+	await create_timer(1.05).timeout
+	var grant := _request_id()
+	first.admin_set_skill(grant, "2 20")
+	_check("authorized_rank_update", await _wait_until(func(): return first.skill_revision(2) == 3))
+	_check("rank_twenty_subscribed", int(first.selected_skills()[0].rank) == 20)
+	_check("rank_update_preserves_cooldown", int(first.selected_skills()[0].ready_at_us) == ready)
+	_check("admin_refunds_invested_points", int(first.selected_skills()[0].points_spent) == 0)
+	first.admin_set_skill(grant, "2 20")
+	await create_timer(0.3).timeout
+	_check("admin_replay_does_not_mutate_rank", first.skill_revision(2) == 3)
+	var identity := first.local_identity
+	first.disconnect_game()
+	_check(
+		"observer_sees_disconnect",
+		await _wait_until(
+			func():
+				return not second.players.any(
+					func(row): return str(row.identity) == identity and bool(row.online)
+				),
+			8.0
+		)
+	)
+	first.connect_account(
+		str(_config.server), str(_config.database), str(_config.tokens[0]), "skill-reconnect"
+	)
+	if not _check(
+		"skill_account_reconnects", await _wait_until(func(): return first.state == "lobby", 20.0)
+	):
+		return
+	first.select_character(identity)
+	_check(
+		"learned_skill_survives_reconnect",
+		await _wait_until(func(): return first.skill_revision(2) == 3)
+	)
+	_check("reconnect_preserves_cooldown", int(first.selected_skills()[0].ready_at_us) == ready)
+	_check("reconnect_keeps_skills_private", second.skills.is_empty())
+
+
+func _verify_skill_combat(first: GameConnection, second: GameConnection) -> void:
+	var level := _request_id()
+	first.admin_raise_progression_level(level, "6")
+	if not _check(
+		"combat_fixture_level_six",
+		await _wait_until(func(): return int(first.selected_progression().get("level", 0)) == 6)
+	):
+		return
+	_check(
+		"mutual_presence",
+		(
+			not _player_row(first, second.local_identity).is_empty()
+			and not _player_row(second, first.local_identity).is_empty()
+		)
+	)
+	var observer_start := _xz(_player_row(first, second.local_identity))
+	second.move_to(observer_start.x + 1.0, observer_start.y)
+	_check(
+		"observer_movement_replicates",
+		await _wait_until(
+			func():
+				return (
+					_xz(_player_row(first, second.local_identity)).distance_to(observer_start) > 0.5
+				),
+			8.0
+		)
+	)
+	second.stop_moving()
+	if not _check(
+		"mobs_subscribed", await _wait_until(func(): return not second.monsters.is_empty())
+	):
+		return
+	var dog_id := int(second.monsters[0].id)
+	var start := _xz(_player_row(second, first.local_identity))
+	for _attempt in 120:
+		var dog := _dog(second, dog_id)
+		var owner := _xz(_player_row(second, first.local_identity))
+		if owner.distance_to(_xz(dog)) <= 1.5:
+			break
+		var destination := _xz(dog) + (owner - _xz(dog)).normalized()
+		first.move_to(destination.x, destination.y)
+		await create_timer(0.2).timeout
+	first.stop_moving()
+	_check(
+		"caster_movement_replicates",
+		_xz(_player_row(second, first.local_identity)).distance_to(start) > 1.0
+	)
+	if not _check(
+		"caster_reaches_dog",
+		_xz(_player_row(second, first.local_identity)).distance_to(_xz(_dog(second, dog_id))) <= 1.5
+	):
+		return
+	var before := _dog(second, dog_id).duplicate(true)
+	_check(
+		"damaging_cast_accepted",
+		await _raw_success(first, "cast_skill", [2, first.skill_revision(2)], [&"U16", &"U32"])
+	)
+	_check(
+		"skill_damage_replicates_to_both",
+		await _wait_until(
+			func():
+				return (
+					int(_dog(second, dog_id).health) < int(before.health)
+					and _dog(first, dog_id).health == _dog(second, dog_id).health
+				),
+			8.0
+		)
+	)
+	var after := _dog(second, dog_id).duplicate(true)
+	await create_timer(1.1).timeout
+	_check(
+		"one_hit_per_monster_life",
+		(
+			_dog(second, dog_id).health == after.health
+			and _dog(second, dog_id).life_sequence == after.life_sequence
+		)
+	)
+	first.move_to(start.x, start.y)
+	_check(
+		"caster_returns_after_skill",
+		await _wait_until(
+			func(): return _xz(_player_row(second, first.local_identity)).distance_to(start) < 0.25,
+			25.0
+		)
+	)
+	first.stop_moving()
+
+
+func _xz(row: Dictionary) -> Vector2:
+	return Vector2(float(row.get("x", 0)), float(row.get("z", 0)))
+
+
+func _dog(client: GameConnection, id: int) -> Dictionary:
+	for row: Dictionary in client.monsters:
+		if int(row.id) == id:
+			return row
+	return {}
+
+
+func _player_row(client: GameConnection, identity: String) -> Dictionary:
+	for row: Dictionary in client.players:
+		if str(row.identity) == identity:
+			return row
+	return {}
+
+
+func _player_action(client: GameConnection, identity: String) -> String:
+	for row: Dictionary in client.players:
+		if str(row.identity) == identity:
+			return str(row.attack_action_id)
+	return ""
 
 
 func _ensure_character(client: GameConnection, name: String) -> bool:

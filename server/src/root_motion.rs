@@ -7,9 +7,9 @@ use crate::{Controller, accounts, collision_bounds, content, controller, player}
 use spacetimedb::{Identity, ReducerContext, Table};
 
 const ROOT_SUBSTEP_US: i64 = 50_000;
-const MAX_ROOT_SUBSTEPS: usize = 32;
+const MAX_ROOT_SUBSTEPS: usize = 64;
 const MAX_ROOT_DURATION_US: i64 = ROOT_SUBSTEP_US * MAX_ROOT_SUBSTEPS as i64;
-const MAX_ROOT_ENDPOINT_M: f64 = 2.0;
+const MAX_ROOT_ENDPOINT_M: f64 = 4.0;
 
 fn valid_definition(root: RootMotionDefinition) -> bool {
     (1..=MAX_ROOT_DURATION_US).contains(&root.duration_us)

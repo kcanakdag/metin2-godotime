@@ -40,6 +40,7 @@ func _run() -> void:
 	_build_stage()
 	_test_catalog()
 	await _test_shared_catalog()
+	await _test_skill_appearances()
 	await _test_player()
 	await _test_monster()
 	_test_malformed()
@@ -90,6 +91,7 @@ func _test_catalog() -> void:
 					"definition_profile": ActorCatalog.PROFILE_ID,
 					"definition_hash": _catalog.gameplay_definition_hash(),
 					"character_catalog_hash": _catalog.characters.content_hash,
+					"skill_catalog_hash": _catalog.skills.content_hash,
 				}
 			)
 		),
@@ -353,6 +355,28 @@ func _test_player() -> void:
 	_check(
 		"wait" in str(player.presentation_snapshot().action_id), "life sequence resets death state"
 	)
+
+
+func _test_skill_appearances() -> void:
+	for actor_id: String in ["actor.player.warrior-male", "actor.player.warrior-female"]:
+		var actor := ActorPresentation.new()
+		_check(actor.configure(_catalog, actor_id), actor_id + " configures skill model")
+		_stage.add_child(actor)
+		_check(actor.set_weapon(10), actor_id + " attaches sword for skill")
+		var action_id := actor_id + ".general.skill_2"
+		for sample_us: int in [300000, 700000, 1100000, 1700000]:
+			_check(
+				actor.play_action(
+					"onehand", action_id, "", sample_us, 1000000, 1000000 + sample_us
+				),
+				actor_id + " resolves equipped skill across motion modes"
+			)
+			await process_frame
+			_check(_skeleton_pose_is_sane(actor), actor_id + " skill deformation stays bounded")
+			_check(actor.snapshot().action_id == action_id, actor_id + " uses original skill clip")
+			await _capture_named(actor_id.get_slice(".", 2) + "-skill-%d" % sample_us)
+		actor.queue_free()
+		await process_frame
 
 
 func _test_shared_catalog() -> void:

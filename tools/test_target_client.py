@@ -25,6 +25,7 @@ window/size/viewport_height=800
 renderer/rendering_method="gl_compatibility"
 """
 SMOKES = {
+    "skills_ui": ("skills_ui_smoke.gd", "SKILLS_UI_SMOKE"),
     "content_gate": ("main_content_gate_smoke.gd", "MAIN_CONTENT_GATE_SMOKE"),
     "options": ("classic_system_options_smoke.gd", "CLASSIC_SYSTEM_OPTIONS_SMOKE"),
     "panel": ("classic_target_smoke.gd", "CLASSIC_TARGET_SMOKE"),
@@ -70,8 +71,10 @@ def main() -> None:
     )
     options = parser.parse_args()
     selected = options.suite or list(SMOKES)
-    if options.native and (selected != ["physical_ui"] or not shutil.which("xvfb-run")):
-        parser.error("--native requires --suite physical_ui and xvfb-run")
+    if options.native and (
+        selected not in (["physical_ui"], ["skills_ui"]) or not shutil.which("xvfb-run")
+    ):
+        parser.error("--native requires --suite physical_ui or skills_ui and xvfb-run")
     options.output = options.output.resolve()
     options.output.mkdir(parents=True, exist_ok=True)
     report_path = options.output / "report.json"
@@ -87,6 +90,7 @@ def main() -> None:
         raise SystemExit("Missing character catalog; run make characters-build first.")
     with tempfile.TemporaryDirectory(prefix="project-", dir=options.output) as scratch:
         stage = Path(scratch)
+        shutil.copytree(CLIENT / "assets/imported/skills", stage / "assets/imported/skills")
         shutil.copytree(CLIENT / "scripts", stage / "scripts")
         shutil.copytree(CLIENT / "addons/SpacetimeDB", stage / "addons/SpacetimeDB")
         shutil.copytree(CLIENT / "spacetime_bindings", stage / "spacetime_bindings")
@@ -156,9 +160,8 @@ def main() -> None:
                 raise SystemExit(f"Godot {name} smoke did not report completion.")
             checks[name] = int(match.group(1))
         if options.native:
-            shutil.copy2(
-                stage / "physical-ui-component.png", options.output / "physical-ui-component.png"
-            )
+            screenshot = selected[0].replace("_", "-") + "-component.png"
+            shutil.copy2(stage / screenshot, options.output / screenshot)
         report_path.write_text(
             json.dumps(
                 {

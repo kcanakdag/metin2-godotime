@@ -157,7 +157,7 @@ def write_private_text(path: Path, value: str) -> None:
 
 def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("phase", choices=("prepare", "verify"))
+    parser.add_argument("phase", choices=("prepare", "verify", "skills", "skill_combat"))
     parser.add_argument("--server", default="http://127.0.0.1:8186")
     parser.add_argument("--game-server", default="http://127.0.0.1:13223")
     parser.add_argument("--database", required=True)
@@ -202,7 +202,7 @@ def main() -> None:
             first_auth, first_token = sign_in(origin, accounts[0])
             second_auth, second_token = sign_in(origin, accounts[1])
             auths = [first_auth, second_auth]
-            mode = "verify"
+            mode = options.phase
 
         (ROOT / ".local").mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="progression-admin-", dir=ROOT / ".local") as raw:

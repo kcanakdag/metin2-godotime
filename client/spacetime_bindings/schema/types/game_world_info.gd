@@ -10,6 +10,7 @@ const table_names: Array[String] = ['world_info']
 @export var protocol_version: int
 @export var npc_catalog_hash: String
 @export var character_catalog_hash: String
+@export var skill_catalog_hash: String
 @export var map_name: String
 @export var map_id: String
 @export var content_hash: String
@@ -25,6 +26,7 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"protocol_version": "U32",
 	"npc_catalog_hash": "String",
 	"character_catalog_hash": "String",
+	"skill_catalog_hash": "String",
 	"map_name": "String",
 	"map_id": "String",
 	"content_hash": "String",
@@ -38,19 +40,21 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 ## 2. protocol_version: int[br]
 ## 3. npc_catalog_hash: String[br]
 ## 4. character_catalog_hash: String[br]
-## 5. map_name: String[br]
-## 6. map_id: String[br]
-## 7. content_hash: String[br]
-## 8. definition_profile: String[br]
-## 9. definition_hash: String[br]
-## 10. tick_ms: int[br]
-## 11. half_size: float[br]
-static func create(p_id: int, p_protocol_version: int, p_npc_catalog_hash: String, p_character_catalog_hash: String, p_map_name: String, p_map_id: String, p_content_hash: String, p_definition_profile: String, p_definition_hash: String, p_tick_ms: int, p_half_size: float) -> GameWorldInfo:
+## 5. skill_catalog_hash: String[br]
+## 6. map_name: String[br]
+## 7. map_id: String[br]
+## 8. content_hash: String[br]
+## 9. definition_profile: String[br]
+## 10. definition_hash: String[br]
+## 11. tick_ms: int[br]
+## 12. half_size: float[br]
+static func create(p_id: int, p_protocol_version: int, p_npc_catalog_hash: String, p_character_catalog_hash: String, p_skill_catalog_hash: String, p_map_name: String, p_map_id: String, p_content_hash: String, p_definition_profile: String, p_definition_hash: String, p_tick_ms: int, p_half_size: float) -> GameWorldInfo:
 	var result: GameWorldInfo = GameWorldInfo.new()
 	result.id = p_id
 	result.protocol_version = p_protocol_version
 	result.npc_catalog_hash = p_npc_catalog_hash
 	result.character_catalog_hash = p_character_catalog_hash
+	result.skill_catalog_hash = p_skill_catalog_hash
 	result.map_name = p_map_name
 	result.map_id = p_map_id
 	result.content_hash = p_content_hash

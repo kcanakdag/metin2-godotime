@@ -651,7 +651,7 @@ fn class_display_values(
     })
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, spacetimedb::SpacetimeType)]
 pub struct CapturedPlayerAttacker {
     pub level: u8,
     pub strength: u8,
@@ -957,6 +957,31 @@ pub fn roll_player_hit(
     monster: &Monster,
 ) -> Result<u16, String> {
     roll_damage(ctx, player_attacker(captured)?, dog_victim(monster)?)
+}
+
+pub fn roll_skill_hit(
+    ctx: &ReducerContext,
+    definition: &definitions::SkillDefinition,
+    rank: u8,
+    captured: CapturedPlayerAttacker,
+    vitality: u8,
+    monster: &Monster,
+) -> Result<u16, String> {
+    let attacker = player_attacker(captured)?;
+    let victim = dog_victim(monster)?;
+    let power = ctx
+        .rng()
+        .gen_range(attacker.power.power_min..=attacker.power.power_max);
+    let calculation = calculate_pre_floor(attacker, victim, power)
+        .map_err(|error| format!("Invalid skill physical snapshot: {error:?}"))?;
+    crate::skills::damage(
+        definition,
+        rank,
+        calculation.diagnostics.attack_after_npc_multiplier,
+        [captured.strength, captured.dexterity, vitality],
+        calculation.diagnostics.applied_defense,
+        victim.sword_resistance_percent,
+    )
 }
 
 pub fn roll_monster_hit(

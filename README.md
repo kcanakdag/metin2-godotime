@@ -26,7 +26,7 @@ fixture is simulated. A separate **103-check authenticated Web/Linux run**
 qualifies approach, dialogue, Close/Escape, WASD and account lifecycle. Another
 59 live checks cover private sessions, rejection, expiry and reconnect.
 The updated development build is served at **http://127.0.0.1:8186** against
-`mt2-p2-attack-speed-r1-20260908`. Click the City Guard to approach and talk;
+`mt2-p2-skills-dev-r1-20260908`. Click the City Guard to approach and talk;
 Close or Escape dismisses the dialogue, and movement resumes normally.
 Character creation shows Warrior, Ninja, Sura and Shaman together, with the
 selected class in front, original intro idle animations, hair, titles and
@@ -49,11 +49,15 @@ Sword+0 and Fan+0 now apply their original +22/+26 attack-speed bonuses to
 server combat timing and client playback. Status and item tooltips expose those
 values; equipment changes cannot retime an accepted attack. This slice passes
 144 live two-client checks, 87 rendered actor checks and 106 Chrome/Linux checks.
-Trees, new mob types, additional weapon modes and abilities remain pending. The local build uses a fresh
+The first Warrior ability, [Sword Spin](docs/skills.md), is available locally with
+level-5 learning, point-based upgrades, original motions/icons and authorized
+`/skill` rank commands. It passes 50 live skill/combat checks, 13 rendered UI
+checks, 116 actor checks and 108 exported Chrome/Linux checks.
+Trees, new mob types, additional weapon modes and further abilities remain pending. The local build uses a fresh
 character database; previous databases and auth accounts are preserved. The public
 endpoint remains unchanged.
 
-The current worktree is protocol 15 / trusted content schema 8 (item registry schema 2). Item actions
+The current worktree is protocol 16 / trusted content schema 8 (item registry schema 2). Item actions
 carry the server item's revision, rejecting stale/replayed mutations. Quantity
 changes have a private transactional audit history and an offline reconciliation
 tool. See the [item security contract](docs/architecture.md#item-integrity-and-replay-protection).
@@ -217,15 +221,16 @@ Its Web/Linux exports also passed mouse/keyboard inventory, browser refresh
 and potion-pickup checks against the public server.
 
 Original UI fidelity is the target, not completed parity with the original game.
-Entry enables one real server/channel, Shinsoo/Yongan and a male warrior;
-other empires/classes, skills and social systems remain inactive. Matching
+Entry enables one real server/channel, Shinsoo/Yongan and all four classes in
+both appearances. Sword Spin is the first supported Warrior skill; other
+abilities, empires and social systems remain pending. Matching
 original fonts, intro animations and complete behavior has not been established
 against a running original client. The equipped sword is projected through a
 small public presence row so peers can attach it without reading another
 account's inventory. The bounded P2 slice adds source-backed level 1 male
 Warrior stats, experience through the level-99 cap, quarter-step stat points
-and automatic potion grants. Other classes, skills, quests, death penalties,
-party experience and full Metin2 combat/stat balance remain unimplemented.
+and automatic potion grants. Quests, death penalties, party experience and full Metin2 combat/stat balance
+remain unimplemented.
 Yongan has all
 20 terrain sections and 601 building/prop placements; **368 trees and 6 effects
 remain unsupported**. See [the rebuild roadmap](docs/full-rebuild-plan.md).
@@ -278,6 +283,8 @@ make import-ui
 
 # Build the first generated actor fixture: Warrior, Sword+0 vnum 10 and Wild Dog 101.
 make content-build BLENDER=/path/to/blender
+make characters-build BLENDER=/path/to/blender
+make skills-build
 make content-validate
 make content-probe
 
@@ -380,6 +387,7 @@ compiled with `MT2_ALLOW_GUESTS=1`; never enable that option in a public build.
 | 1–4 / F1–F4 | Activate one of the eight visible quickslots |
 | Shift+1–4 / quickslot arrows | Select a quickslot page |
 | M / minimap atlas button | Open/close the draggable original Yongan area map |
+| K / Skills tab | Open skill learning/upgrades; drag learned skills to quickslots |
 | C / character button | Open/close the character status window and allocate earned stat points |
 | Minimap close/reopen and +/− buttons | Hide/show the minimap or change zoom |
 | L / chat-history button | Open the draggable, resizable chat log |

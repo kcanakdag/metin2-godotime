@@ -26,11 +26,12 @@ signal appearances_changed(rows: Array)
 signal server_clock_changed(server_time_us: int)
 signal progression_changed(rows: Array)
 signal command_feedback_changed(rows: Array)
+signal skills_changed(rows: Array)
 signal combat_target_changed(info: Dictionary)
 signal npc_interaction_changed(info: Dictionary)
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
-const EXPECTED_PROTOCOL_VERSION := 15
+const EXPECTED_PROTOCOL_VERSION := 16
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
 const TABLES := [
@@ -47,6 +48,7 @@ const TABLES := [
 	"player_appearance",
 	"simulation_clock",
 	"character_progression",
+	"character_skill",
 	"command_feedback",
 	"combat_target_view",
 	"npc_interaction",
@@ -55,6 +57,7 @@ const LOBBY_QUERIES := [
 	"SELECT * FROM account_character",
 	"SELECT * FROM account_state",
 	"SELECT * FROM character_progression",
+	"SELECT * FROM character_skill",
 	"SELECT * FROM command_feedback",
 ]
 const QUERIES := [
@@ -99,6 +102,7 @@ var require_content := false
 var appearances: Array = []
 var server_time_us := 0
 var progression: Array = []
+var skills: Array = []
 var command_feedback: Array = []
 var combat_target: Dictionary = {}
 var npc_interaction: Dictionary = {}
@@ -454,6 +458,7 @@ func _on_lobby_applied(session: int) -> void:
 	_dirty_tables["account_character"] = true
 	_dirty_tables["account_state"] = true
 	_dirty_tables["character_progression"] = true
+	_dirty_tables["character_skill"] = true
 	_dirty_tables["command_feedback"] = true
 	_flush_snapshots()
 	_set_state("opening", "Opening your account…")
@@ -630,6 +635,9 @@ func _flush_snapshots() -> void:
 				)
 				progression = rows
 				progression_changed.emit(progression)
+			"character_skill":
+				skills = rows
+				skills_changed.emit(skills)
 			"command_feedback":
 				rows.sort_custom(func(a: Dictionary, b: Dictionary): return int(a.id) < int(b.id))
 				command_feedback = rows
@@ -761,6 +769,8 @@ func _clear_snapshots() -> void:
 	characters = []
 	account_state = {}
 	progression = []
+	skills = []
+	skills_changed.emit(skills)
 	command_feedback = []
 	roster_changed.emit(characters)
 	account_changed.emit(account_state)
@@ -840,3 +850,30 @@ func _safe_profile(profile: String) -> String:
 
 func _exit_tree() -> void:
 	_retire_client()
+
+
+func selected_skills() -> Array:
+	return skills.filter(func(row): return str(row.get("character_id", "")) == local_identity)
+
+
+func skill_revision(vnum: int) -> int:
+	for row: Dictionary in selected_skills():
+		if int(row.skill_vnum) == vnum:
+			return int(row.revision)
+	return 0
+
+
+func learn_skill(vnum: int) -> void:
+	if vnum < 1 or vnum > 255:
+		return
+	_call_reducer("learn_skill", [vnum, skill_revision(vnum)], [&"U16", &"U32"])
+
+
+func cast_skill(vnum: int) -> void:
+	if vnum < 1 or vnum > 255:
+		return
+	_call_reducer("cast_skill", [vnum, skill_revision(vnum)], [&"U16", &"U32"])
+
+
+func admin_set_skill(request_id: String, argument: String) -> void:
+	_call_command("admin_set_skill", request_id, argument)

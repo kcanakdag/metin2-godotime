@@ -3,6 +3,7 @@ extends Control
 
 signal allocation_requested(character_id: String, stat_code: String)
 signal settings_changed
+signal skills_requested
 
 const Art = preload("res://scripts/ui/classic_art.gd")
 const DIMENSIONS := Vector2(253, 361)
@@ -111,7 +112,7 @@ func _build_tabs() -> void:
 	Art.image(self, "locale/en/ui/windows/tab_1", Vector2(0, 328))
 	for entry in [
 		[Vector2(6, 333), Vector2(53, 27), "Status"],
-		[Vector2(61, 333), Vector2(67, 27), "Skills are not available yet"],
+		[Vector2(61, 333), Vector2(67, 27), "Skills (K)"],
 		[Vector2(130, 333), Vector2(61, 27), "Actions are not available yet"],
 		[Vector2(192, 333), Vector2(55, 27), "Quests are not available yet"],
 	]:
@@ -120,6 +121,17 @@ func _build_tabs() -> void:
 		tab.size = entry[1]
 		tab.mouse_filter = Control.MOUSE_FILTER_STOP
 		tab.tooltip_text = entry[2]
+		if entry[2] == "Skills (K)":
+			tab.gui_input.connect(
+				func(event):
+					if (
+						event is InputEventMouseButton
+						and event.button_index == MOUSE_BUTTON_LEFT
+						and event.pressed
+					):
+						hide()
+						skills_requested.emit()
+			)
 		add_child(tab)
 		_tab_rects.append(tab)
 

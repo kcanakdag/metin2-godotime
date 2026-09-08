@@ -42,7 +42,16 @@ func set_item(value: Dictionary) -> void:
 	row = value
 	if not is_node_ready():
 		return
-	_icon.texture = Art.item_icon(int(row.get("vnum", 0))) if not row.is_empty() else null
+	_icon.texture = (
+		Art.texture(str(row.get("icon", "")))
+		if row.has("skill_vnum")
+		else (Art.item_icon(int(row.get("vnum", 0))) if not row.is_empty() else null)
+	)
+	_icon.modulate = (
+		Color.WHITE
+		if not row.has("skill_vnum") or int(row.get("rank", 0)) > 0
+		else Color(0.4, 0.4, 0.4)
+	)
 	_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_icon.size = (
@@ -51,7 +60,11 @@ func set_item(value: Dictionary) -> void:
 		else (_icon.texture.get_size() if _icon.texture else Vector2.ZERO)
 	)
 	var amount := int(row.get("count", 0))
-	_count.text = str(amount) if amount > 1 else ""
+	_count.text = (
+		str(int(row.get("cooldown_seconds", 0)))
+		if int(row.get("cooldown_seconds", 0)) > 0
+		else (str(amount) if amount > 1 else "")
+	)
 	_count.position = Vector2(size.x - _count.get_minimum_size().x - 2, size.y - 15)
 
 
@@ -74,21 +87,35 @@ func _get_drag_data(_at: Vector2) -> Variant:
 	_click_pending = false
 	if row.is_empty():
 		return null
+	if row.has("skill_vnum") and int(row.get("rank", 0)) == 0:
+		return null
 	drag_started.emit()
 	var preview := TextureRect.new()
-	preview.texture = Art.item_icon(int(row["vnum"]))
+	preview.texture = (
+		Art.texture(str(row.get("icon", "")))
+		if row.has("skill_vnum")
+		else Art.item_icon(int(row["vnum"]))
+	)
 	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	set_drag_preview(preview)
+	if row.has("skill_vnum"):
+		return {"mt2_skill": row.duplicate()}
 	return {"mt2_item": row.duplicate(), "source_kind": kind, "source_cell": cell}
 
 
 func _can_drop_data(_at: Vector2, data: Variant) -> bool:
-	return data is Dictionary and data.get("mt2_item") is Dictionary
+	return (
+		data is Dictionary
+		and (
+			data.get("mt2_item") is Dictionary
+			or (kind == "quickslot" and data.get("mt2_skill") is Dictionary)
+		)
+	)
 
 
 func _drop_data(_at: Vector2, data: Variant) -> void:
-	dropped.emit(self, data["mt2_item"])
+	dropped.emit(self, data.get("mt2_skill", data.get("mt2_item", {})))
 
 
 func _on_enter() -> void:

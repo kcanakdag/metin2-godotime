@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "skills": [
+    {
+      "id": "skill.warrior.sword-spin",
+      "vnum": 2,
+      "class_id": 0,
+      "minimum_level": 5,
+      "maximum_rank": 20,
+      "handler": "physical_splash_v1",
+      "motion": "skill_2",
+      "weapon_class": "sword"
+    }
+  ]
+}

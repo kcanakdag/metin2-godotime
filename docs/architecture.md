@@ -1092,3 +1092,9 @@ return to selection have been observed. Public account release
 `20260906T173802450337Z` passes deployment and HTTPS checks. Local and public
 Chrome/Linux runs each pass 103 checks, including real four-minute token
 renewal with unchanged identities/positions and no browser engine errors.
+
+## Skill definitions and progression
+
+Protocol 16 adds owner-private learned skills and a shared catalog hash. See
+[the skill contract and build/test workflow](skills.md) for level-5 learning,
+validated casting, developer commands, selected source policy and current limits.

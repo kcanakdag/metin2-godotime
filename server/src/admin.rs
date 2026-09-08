@@ -10,7 +10,7 @@ use crate::progression::{
 };
 use spacetimedb::{ConnectionId, Filter, Identity, ReducerContext, Table, Timestamp};
 
-const PROTOCOL_VERSION: u32 = 6;
+use crate::PROTOCOL_VERSION;
 const RATE_INTERVAL_US: i64 = 1_000_000;
 const FEEDBACK_LIMIT: usize = 32;
 const REQUEST_ID_LEN: usize = 32;
@@ -143,6 +143,7 @@ enum Action {
     Help,
     XpGrant,
     LevelRaise,
+    SkillSet,
     OperatorGrant,
     OperatorRevoke,
 }
@@ -153,6 +154,7 @@ impl Action {
             Self::Help => "help",
             Self::XpGrant => "xp_grant",
             Self::LevelRaise => "level_raise",
+            Self::SkillSet => "skill_set",
             Self::OperatorGrant => "operator_grant",
             Self::OperatorRevoke => "operator_revoke",
         }
@@ -235,7 +237,7 @@ pub fn request_command_help(ctx: &ReducerContext, request_id: String) -> Result<
         );
     }
     let message = if has_progression_capability(ctx, account.account) {
-        "Commands: /help, /xp <1..4294967295>, /level <2..99>."
+        "Commands: /help, /xp <1..4294967295>, /level <2..99>, /skill <id> <0..20>."
     } else {
         "Commands: /help. Type a normal message without a leading slash to chat."
     };
@@ -258,6 +260,91 @@ pub fn request_command_help(ctx: &ReducerContext, request_id: String) -> Result<
         },
     );
     Ok(())
+}
+
+#[spacetimedb::reducer]
+pub fn admin_set_skill(
+    ctx: &ReducerContext,
+    request_id: String,
+    argument: String,
+) -> Result<(), String> {
+    let (account, connection_id) = accounts::authenticated_controlled_account(ctx)?;
+    let canonical = if argument.len() <= 64 {
+        argument.split_whitespace().collect::<Vec<_>>().join(" ")
+    } else {
+        "invalid-length".into()
+    };
+    let request_id = match admit_request(
+        ctx,
+        &account,
+        connection_id,
+        Action::SkillSet,
+        &request_id,
+        &canonical,
+    )? {
+        Admission::Replay | Admission::RateLimited => return Ok(()),
+        Admission::New(value) => value,
+    };
+    let result = if request_id.is_empty() {
+        Err("Use a valid command request identifier.".to_owned())
+    } else if !has_progression_capability(ctx, account.account) {
+        Err("This account does not have progression operator permission.".to_owned())
+    } else {
+        let fields: Vec<_> = canonical.split(' ').collect();
+        match fields.as_slice() {
+            [id, rank]
+                if id.bytes().all(|b| b.is_ascii_digit())
+                    && rank.bytes().all(|b| b.is_ascii_digit()) =>
+            {
+                match (id.parse::<u16>(), rank.parse::<u8>()) {
+                    (Ok(id), Ok(rank)) => crate::skills::set_rank(ctx, id, rank),
+                    _ => Err("Usage: /skill <id> <0..20>.".into()),
+                }
+            }
+            _ => Err("Usage: /skill <id> <0..20>.".into()),
+        }
+    };
+    match result {
+        Ok(message) => {
+            finish_attempt(
+                ctx,
+                account.account,
+                connection_id,
+                Attempt {
+                    request_id: &request_id,
+                    action: Action::SkillSet,
+                    canonical_argument: &canonical,
+                    target_account: account.account,
+                    target_character: account.selected_character,
+                    outcome: "applied",
+                    reason_code: "skill_set",
+                    severity: "info",
+                    message: &message,
+                    reason: &message,
+                    progression: None,
+                },
+            );
+            Ok(())
+        }
+        Err(message) => finish_denial(
+            ctx,
+            &account,
+            connection_id,
+            Denial {
+                request_id: &request_id,
+                action: Action::SkillSet,
+                canonical_argument: &canonical,
+                reason_code: if has_progression_capability(ctx, account.account) {
+                    "invalid_skill"
+                } else {
+                    "permission"
+                },
+                message: &message,
+                target_character: account.selected_character,
+                reason: "",
+            },
+        ),
+    }
 }
 
 #[spacetimedb::reducer]

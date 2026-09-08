@@ -30,6 +30,55 @@ feature records across 41 systems are a scope inventory with different sizes,
 dependencies and acceptance criteria, so their record counts do not support a
 meaningful percentage-complete claim.
 
+## First Warrior skill — protocol 16
+
+The local endpoint **http://127.0.0.1:8186** serves
+`mt2-p2-skills-dev-r1-20260908` with matched audited Web/Linux test exports.
+Previous databases and auth accounts are preserved. The public endpoint is unchanged.
+[Sword Spin](../skills.md) adds level-5 learning, point spending, rank upgrades,
+server-owned SP/cooldown/damage, original male/female animations and icon, K/Skills
+UI, persistent quickslot bindings and authorized `/skill <id> <0..20>` commands.
+Administration remains default-deny in the development database; the separate QA
+module bootstraps only its disposable test operator. No user account has been
+newly provisioned for the developer commands.
+
+Evidence under `.local/p5-skills/`:
+
+- `admin-prepare-r1.json`: 15 two-account checks establish default-deny commands.
+- `skills-live-r4.json`: 35 checks on `mt2-p2-skills-qa-r2-20260908` cover learning,
+  points, revision/replay rejection, rank-one 56-SP cost, remote action delivery,
+  rank changes, private state, cooldown preservation and reconnect.
+- `skill-combat-r2.json`: 15 additional checks with those identities cover actual
+  Yongan mob damage, bidirectional movement, one hit per life and post-cast return.
+- `actors-r1/report.json`: 116 rendered actor checks, including both original
+  Warrior skill motions at four animation times; inspected the 700 ms captures.
+- `skills-ui-r2/report.json`: 13 rendered component checks; inspected the original
+  icon, rank, point button and cooldown display in `skills-ui-component.png`.
+- `browser-r1/report.json`: 108 actual Chrome/Linux checks, including K/Escape,
+  class/held-attack regression and account lifecycle; no browser engine errors.
+- `server-r5.log`: 138 Rust tests. `lint-r5.log`: all lint groups pass.
+  Focused Python: 41 export tests, 8 character tests and 3 restricted-formula tests.
+- `exports/web-r1` and `exports/linux-r1`: actual exports, 1,015/1,818 packaged
+  paths and 239 exact UI images audited. Both contain skill catalog SHA-256
+  `85a5eb2b7b28b2e4ac17c517d389d297a4ab21cd94cc8ea67d2e237069af353e`.
+  Web PCK: `09c2950463ad9f4939e11ef0352773d99db06005224bdbc41d7a677833a6a1bc`.
+  Linux PCK: `4a117674e9d9136c30f67eee0a6a077a240c795d56195b82989bfde49a6d5277`.
+
+Earlier skill live runs failed test-script parsing, an incorrect expected denial
+message and a test that violated the existing command rate limit. Those failures
+are retained; r4 is the clean progression run on a new database. The first UI
+attempt had a test identifier shadowing Godot's native Panel class; r2 passes.
+
+This is one selected skill and interim original-art panel. Original skill particles,
+external-force reaction, specialization choice, Master books/higher ranks and
+other skills remain pending. The compiled English gameplay formula intentionally
+uses the pinned international power table; locale differences and linear MSA-root
+approximation are documented in the skill contract. Exported K/Escape and native
+UI intent checks do not establish an exported mouse-driven level-5 learn/drag/cast
+flow; authoritative learning/casting is covered by the separate live SDK clients.
+No connected-editor MCP, Windows execution or new public gameplay qualification
+was available in this session.
+
 ## Captured item attack speed — protocol 15
 
 The local endpoint **http://127.0.0.1:8186** now serves

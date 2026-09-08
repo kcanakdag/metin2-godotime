@@ -57,6 +57,25 @@ def compile_profile(path: Path, *, offline: bool) -> dict:
             raise ValueError("Invalid or duplicate class ID")
         ids.add(class_id)
         modes, attachments = registered_motions(settings, selected["source_class"])
+        for skill in profile.get("skill_motions", []):
+            if set(skill) != {"class_id", "action", "file"} or not re.fullmatch(
+                r"skill_[1-9][0-9]*", skill["action"]
+            ):
+                raise ValueError("Invalid selected skill motion")
+            safe_path(skill["file"])
+            if skill["class_id"] == class_id:
+                general = next(mode for mode in modes if mode["id"] == "general")
+                if any(motion["action"] == skill["action"] for motion in general["motions"]):
+                    raise ValueError("Duplicate selected skill motion")
+                general["motions"].append(
+                    {
+                        "action": skill["action"],
+                        "files": [skill["file"]],
+                        "weights": [100],
+                        "loop": False,
+                    }
+                )
+
         variants = []
         for variant in selected["variants"]:
             sex, key = variant["sex"], variant["model_key"]

@@ -96,6 +96,9 @@ def main() -> None:
         raise SystemExit("Actor texture editor import verification requires xvfb-run.")
     with tempfile.TemporaryDirectory(prefix="project-", dir=options.output) as scratch:
         stage = Path(scratch)
+        shutil.copytree(
+            ROOT / "client" / "assets/imported/skills", stage / "assets/imported/skills"
+        )
         shutil.copytree(ROOT / "client/scripts/actors", stage / "scripts/actors")
         shutil.copytree(ROOT / "client/scripts/content", stage / "scripts/content")
         (stage / "scripts/world").mkdir()

@@ -84,6 +84,7 @@ func _test_failure(message: String, label: String) -> void:
 				"map_id": "training",
 				"definition_profile": ActorCatalog.PROFILE_ID,
 				"definition_hash": actor_catalog.gameplay_definition_hash(),
+				"skill_catalog_hash": actor_catalog.skills.content_hash,
 			}
 		)
 	)

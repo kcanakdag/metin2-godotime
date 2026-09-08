@@ -252,6 +252,16 @@
                 "general/dead.msa"
               ],
               "loop": false
+            },
+            {
+              "action": "skill_2",
+              "files": [
+                "bin/pack/PC/ymir work/pc/warrior/skill/palbang.msa"
+              ],
+              "weights": [
+                100
+              ],
+              "loop": false
             }
           ]
         },

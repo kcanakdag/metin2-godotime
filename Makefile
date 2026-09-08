@@ -38,7 +38,10 @@ GAME_SERVER_URL ?= $(SERVER_URL)
 .PHONY: auth-setup auth-start test-auth test-accounts test-physical
 .PHONY: check-plan
 .PHONY: world-validate world-preview npc-install test-npcs
-.PHONY: characters-build test-classes
+.PHONY: characters-build test-classes skills-build
+
+skills-build:
+	python3 tools/build_skill_catalog.py --offline
 
 characters-build:
 	python3 tools/import_character_content.py --blender "$(BLENDER)" --output "$(CHARACTER_OUTPUT)" --install $(CHARACTER_FLAGS)

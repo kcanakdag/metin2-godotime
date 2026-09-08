@@ -16,10 +16,20 @@ func admin_grant_progression_xp(request_id: String, amount_text: String) -> Spac
 func admin_raise_progression_level(request_id: String, target_text: String) -> SpacetimeDBReducerCall:
 	return _client.call_reducer('admin_raise_progression_level', [request_id, target_text], [&'String', &'String'])
 
+## 0. request_id: String [br]
+## 1. argument: String [br]
+func admin_set_skill(request_id: String, argument: String) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('admin_set_skill', [request_id, argument], [&'String', &'String'])
+
 ## 0. character_id: PackedByteArray [br]
 ## 1. stat_code: String [br]
 func allocate_stat(character_id: PackedByteArray, stat_code: String) -> SpacetimeDBReducerCall:
 	return _client.call_reducer('allocate_stat', [character_id, stat_code], [&'__identity__', &'String'])
+
+## 0. skill_vnum: int [br]
+## 1. expected_revision: int [br]
+func cast_skill(skill_vnum: int, expected_revision: int) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('cast_skill', [skill_vnum, expected_revision], [&'U16', &'U32'])
 
 
 func clear_combat_target() -> SpacetimeDBReducerCall:
@@ -53,6 +63,11 @@ func equip_item(id: int, expected_revision: int) -> SpacetimeDBReducerCall:
 ## 1. catalog_hash: String [br]
 func interact_npc(spawn_id: String, catalog_hash: String) -> SpacetimeDBReducerCall:
 	return _client.call_reducer('interact_npc', [spawn_id, catalog_hash], [&'String', &'String'])
+
+## 0. skill_vnum: int [br]
+## 1. expected_revision: int [br]
+func learn_skill(skill_vnum: int, expected_revision: int) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('learn_skill', [skill_vnum, expected_revision], [&'U16', &'U32'])
 
 
 func leave_world() -> SpacetimeDBReducerCall:

@@ -77,6 +77,7 @@ func _ready() -> void:
 	connection.appearances_changed.connect(_on_appearances)
 	connection.server_clock_changed.connect(_on_server_clock)
 	connection.progression_changed.connect(_on_progression)
+	connection.skills_changed.connect(_on_skills)
 	connection.combat_target_changed.connect(_on_combat_target)
 	connection.command_feedback_changed.connect(hud.set_command_feedback)
 	connection.obstacles_changed.connect(world.set_obstacles)
@@ -96,6 +97,8 @@ func _ready() -> void:
 	hud.use_item_requested.connect(connection.use_item)
 	hud.chat_submitted.connect(connection.send_chat)
 	hud.command_requested.connect(_on_command_requested)
+	hud.learn_skill_requested.connect(connection.learn_skill)
+	hud.cast_skill_requested.connect(connection.cast_skill)
 	hud.stat_allocation_requested.connect(connection.allocate_stat)
 	hud.combat_target_clear_requested.connect(connection.clear_combat_target)
 	hud.debug_option_changed.connect(_on_debug_option)
@@ -409,7 +412,9 @@ func _on_appearances(rows: Array) -> void:
 
 
 func _on_progression(_rows: Array) -> void:
-	hud.set_progression(connection.selected_progression())
+	hud.set_progression(
+		connection.selected_progression(), connection.selected_skills(), connection.server_time_us
+	)
 
 
 func _on_combat_target(_target: Dictionary) -> void:
@@ -426,6 +431,7 @@ func _on_server_clock(server_time_us: int) -> void:
 			if not actor.loot_mode and not actor.row.is_empty():
 				actor.apply_state(actor.row, server_time_us)
 	_last_server_time_us = server_time_us
+	hud.skill_clock_us = server_time_us
 	_observe_screen_waves(server_time_us)
 
 
@@ -462,7 +468,11 @@ func _reconcile_players() -> void:
 			_local_actor = player
 			camera_rig.target = player
 			hud.set_player_info(row, appearances_by_id.get(identity, {}))
-			hud.set_progression(connection.selected_progression())
+			hud.set_progression(
+				connection.selected_progression(),
+				connection.selected_skills(),
+				connection.server_time_us
+			)
 	for identity: String in _actors.keys():
 		if not present.has(identity):
 			_actors[identity].queue_free()
@@ -599,6 +609,8 @@ func _on_command_requested(command: String, request_id: String, argument: String
 			connection.admin_grant_progression_xp(request_id, argument)
 		"level":
 			connection.admin_raise_progression_level(request_id, argument)
+		"skill":
+			connection.admin_set_skill(request_id, argument)
 
 
 func _sync_pve(rows: Array, loot_mode: bool, item_mode: bool = false) -> void:
@@ -928,3 +940,9 @@ func _merge_config(path: String) -> void:
 		and not str(parsed.default_player_name).is_empty()
 	):
 		_settings.player_name = parsed.default_player_name
+
+
+func _on_skills(_rows: Array) -> void:
+	hud.set_progression(
+		connection.selected_progression(), connection.selected_skills(), connection.server_time_us
+	)

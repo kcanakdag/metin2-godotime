@@ -147,6 +147,7 @@ def selected_assets():
         names.update(
             f"pattern/{board}_line_{side}.tga" for side in ("left", "right", "top", "bottom")
         )
+    names.add("skill/warrior/palbang_01.sub")
     names.add("pattern/board_base.tga")
     for part in ("left", "center", "right"):
         names.add(f"pattern/titlebar_{part}.tga")

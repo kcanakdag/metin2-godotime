@@ -17,6 +17,7 @@ var manifest: Dictionary = {}
 var error_message := ""
 var report_errors := true
 var characters := CharacterCatalogScript.new()
+var skills := SkillCatalog.new()
 var _actors: Dictionary = {}
 var _items: Dictionary = {}
 var _items_by_vnum: Dictionary = {}
@@ -32,6 +33,8 @@ func load_required(path := MANIFEST_PATH, intro_models := false) -> bool:
 	var document: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if not document is Dictionary:
 		return _fail("Required actor profile is not valid JSON: " + path)
+	if not skills.load_required():
+		return _fail(skills.error_message)
 	if not characters.load_required():
 		return _fail(characters.error_message)
 	return load_document(document, characters.document, intro_models)
@@ -140,6 +143,11 @@ func _validate_required_slice() -> bool:
 func validate_world(info: Dictionary) -> bool:
 	if manifest.is_empty():
 		return _fail("The required actor profile has not loaded.")
+	if (
+		not skills.content_hash.is_empty()
+		and str(info.get("skill_catalog_hash", "")) != skills.content_hash
+	):
+		return _fail("Server and client skill catalogs differ. Rebuild and republish together.")
 	if str(info.get("definition_profile", "")) != PROFILE_ID:
 		return _fail("Server and client actor profiles differ. Rebuild the client content.")
 	if str(info.get("definition_hash", "")) != gameplay_definition_hash():

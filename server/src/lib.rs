@@ -17,6 +17,9 @@ mod npcs;
 mod physical_damage;
 mod progression;
 mod root_motion;
+mod skills;
+
+const PROTOCOL_VERSION: u32 = 16;
 mod special_area;
 mod targeting;
 
@@ -74,6 +77,7 @@ pub struct WorldInfo {
     pub protocol_version: u32,
     pub npc_catalog_hash: String,
     pub character_catalog_hash: String,
+    pub skill_catalog_hash: String,
     pub map_name: String,
     pub map_id: String,
     pub content_hash: String,
@@ -172,9 +176,10 @@ pub struct TickSchedule {
 fn compiled_world_info() -> WorldInfo {
     WorldInfo {
         id: 1,
-        protocol_version: 15,
+        protocol_version: PROTOCOL_VERSION,
         npc_catalog_hash: definitions::NPC_CATALOG_HASH.into(),
         character_catalog_hash: definitions::CHARACTER_CATALOG_HASH.into(),
+        skill_catalog_hash: definitions::SKILL_CATALOG_HASH.into(),
         map_name: if content::YONGAN {
             "Yongan"
         } else {
@@ -554,6 +559,7 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
     combat::resolve_due_hits(ctx, now);
     knockback::advance_all(ctx, now)?;
     special_area::scan(ctx, now)?;
+    skills::simulate(ctx, now)?;
     combo::resolve_due_transitions(ctx, now);
     let bounds = collision_bounds(ctx);
     for mut controller in ctx.db.controller().iter() {

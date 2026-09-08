@@ -10,6 +10,8 @@ signal reset_identity_requested
 signal attack_requested
 signal pickup_requested
 signal chat_submitted(message: String)
+signal learn_skill_requested(vnum: int)
+signal cast_skill_requested(vnum: int)
 signal command_requested(command: String, request_id: String, argument: String)
 signal debug_option_changed(option: String, value: Variant)
 signal screenshot_requested
@@ -58,6 +60,12 @@ const DIAGNOSTIC_FIELDS := {
 var npc_panel: Control
 var target_panel: Control
 
+var skill_clock_us: int = 0:
+	set(value):
+		skill_clock_us = value
+		if is_instance_valid(_hotbar):
+			_hotbar.update_skill_clock(value)
+
 var _root: Control
 var _connection: PanelContainer
 var _server: LineEdit
@@ -91,6 +99,9 @@ var _system: Control
 var _system_options: Control
 var _system_buttons: Dictionary = {}
 var _status: Control
+var _skills_panel: Control
+var _skill_rows: Array = []
+var _skill_progression: Dictionary = {}
 var _connected := false
 var _state := "disconnected"
 var _account_entry := false
@@ -112,6 +123,11 @@ func _ready() -> void:
 	_root.add_child(npc_panel)
 	npc_panel.close_requested.connect(func(id: int): npc_close_requested.emit(id))
 	_build_status()
+	_skills_panel = preload("res://scripts/ui/classic_skills.gd").new()
+	_root.add_child(_skills_panel)
+	_skills_panel.learn_requested.connect(func(vnum): learn_skill_requested.emit(vnum))
+	_skills_panel.cast_requested.connect(func(vnum): cast_skill_requested.emit(vnum))
+	_status.skills_requested.connect(_skills_panel.toggle)
 	_build_inventory()
 	_build_minimap()
 	_build_system()
@@ -149,6 +165,7 @@ func set_connection_state(state: String, message: String) -> void:
 		target_panel.clear_view()
 		npc_panel.set_interaction({})
 		_status.set_connected(false)
+		_skills_panel.hide()
 		_minimap.close_top()
 		_system.hide()
 		_system_options.hide()
@@ -187,7 +204,11 @@ func set_player_info(row: Dictionary, appearance: Dictionary = {}) -> void:
 	_minimap.set_player_info(row)
 
 
-func set_progression(row: Dictionary) -> void:
+func set_progression(row: Dictionary, skills: Array = [], clock_us: int = 0) -> void:
+	_skill_rows = skills.duplicate(true)
+	_hotbar.set_skills(skills, clock_us)
+	_skill_progression = row.duplicate(true)
+	_skills_panel.set_state(_skill_progression, _skill_rows)
 	_hotbar.set_progression(row)
 	_status.set_progression(row)
 
@@ -400,7 +421,7 @@ func _on_chat_input(message: String) -> void:
 	if command == "/help" and not argument.is_empty():
 		_show_info("Usage: /help")
 		return
-	if command not in ["/help", "/xp", "/level"]:
+	if command not in ["/help", "/xp", "/level", "/skill"]:
 		_show_info("Unknown command. Use /help.")
 		return
 	var request_id := Crypto.new().generate_random_bytes(16).hex_encode()
@@ -640,6 +661,8 @@ func handle_key(event: InputEventKey) -> bool:
 			pass
 		elif _chat_panel.close_top():
 			pass
+		elif _skills_panel.visible:
+			_skills_panel.hide()
 		elif _status.close_top():
 			pass
 		elif _connected:
@@ -652,6 +675,7 @@ func handle_key(event: InputEventKey) -> bool:
 		KEY_L: _chat_panel.toggle_history,
 		KEY_I: _inventory.toggle,
 		KEY_C: _status_toggle,
+		KEY_K: _skills_panel.toggle,
 	}
 	if toggles.has(event.keycode):
 		toggles[event.keycode].call()
@@ -683,6 +707,8 @@ func inventory_snapshot() -> Dictionary:
 	result["map"] = _minimap.snapshot()
 	result["chat"] = _chat_panel.snapshot()
 	result["status"] = _status.snapshot()
+	result["skills"] = _skills_panel.snapshot()
+	result["quickslot_skill_bindings"] = _hotbar.skill_bindings.duplicate()
 	result["target"] = target_panel.snapshot()
 	result["taskbar"] = quick
 	var system := {"visible": _system.is_visible_in_tree()}
@@ -716,6 +742,11 @@ func _on_slot_secondary(slot: Control) -> void:
 
 
 func _on_slot_dropped(slot: Control, row: Dictionary) -> void:
+	if row.has("skill_vnum"):
+		if slot.kind == "quickslot":
+			_hotbar.bind_skill(slot.cell, int(row.skill_vnum))
+			_save_profile()
+		return
 	var current := _find_item(int(row.get("id", 0)))
 	_cancel_carry()
 	if current.is_empty():
@@ -733,6 +764,9 @@ func _on_slot_dropped(slot: Control, row: Dictionary) -> void:
 
 
 func _activate_item(row: Dictionary) -> void:
+	if row.has("skill_vnum"):
+		cast_skill_requested.emit(int(row.skill_vnum))
+		return
 	if row.is_empty():
 		return
 	var current := _find_item(int(row.get("id", 0)))
@@ -830,6 +864,7 @@ func set_profile(key: String) -> void:
 	_save_profile()
 	_profile_key = ""
 	_hotbar.bindings.fill(0)
+	_hotbar.skill_bindings.fill(0)
 	_hotbar.set_page(0)
 	_inventory.restore_settings({})
 	_status.restore_settings({})
@@ -843,6 +878,10 @@ func set_profile(key: String) -> void:
 			if bindings is Array and bindings.size() == 32:
 				for index in 32:
 					_hotbar.bindings[index] = maxi(0, int(bindings[index]))
+			var skill_bindings: Variant = data.get("skill_bindings", [])
+			if skill_bindings is Array and skill_bindings.size() == 32:
+				for index in 32:
+					_hotbar.skill_bindings[index] = clampi(int(skill_bindings[index]), 0, 255)
 			_hotbar.set_page(int(data.get("quickslot_page", 0)))
 			_inventory.restore_settings(data)
 			_status.restore_settings(data)
@@ -857,6 +896,7 @@ func _save_profile() -> void:
 	if file:
 		var data := {
 			"bindings": _hotbar.bindings,
+			"skill_bindings": _hotbar.skill_bindings,
 			"quickslot_page": _hotbar.page,
 			"inventory_page": _inventory.page,
 			"inventory_position": [_inventory.position.x, _inventory.position.y],

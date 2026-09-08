@@ -299,7 +299,11 @@ pub fn start_player_action(
     now: i64,
 ) -> Result<(), String> {
     validate_player_action_start(ctx, controller, plan.definition, plan.target_id != 0, now)?;
-    let speed = crate::attack_timing::equipped_speed(ctx, controller.identity)?;
+    let speed = if crate::skills::is_skill_action(plan.definition.id) {
+        100
+    } else {
+        crate::attack_timing::equipped_speed(ctx, controller.identity)?
+    };
     let attack_until_us = now
         .checked_add(crate::attack_timing::scaled_us(
             plan.definition.duration_us,

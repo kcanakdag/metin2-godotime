@@ -99,5 +99,12 @@
     "basis": "development-only-original-fixture",
     "evidence": "docs/third-party.md#warrior-fixture-and-conversion",
     "release_status": "excluded-unless-rights-are-established"
-  }
+  },
+  "skill_motions": [
+    {
+      "class_id": 0,
+      "action": "skill_2",
+      "file": "skill/palbang.msa"
+    }
+  ]
 }

@@ -17,6 +17,11 @@ const Slot = preload("res://scripts/ui/classic_slot.gd")
 
 var page := 0
 var bindings: Array[int] = []
+var skill_bindings: Array[int] = []
+var _skill_rows: Dictionary = {}
+var _skill_catalog := SkillCatalog.new()
+var _skill_clock_us := 0
+var _last_skill_second := -1
 var _rows: Dictionary = {}
 var _slots: Array[Control] = []
 var _middle: Control
@@ -37,6 +42,9 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	bindings.resize(32)
 	bindings.fill(0)
+	skill_bindings.resize(32)
+	skill_bindings.fill(0)
+	_skill_catalog.load_required()
 	set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	offset_top = -37
 	_base = Art.tile(self, "pattern/taskbar_base", Rect2(263, 0, 256, 37))
@@ -197,11 +205,26 @@ func set_rows(rows: Array) -> void:
 
 
 func bind_item(index: int, row: Dictionary) -> void:
+	skill_bindings[page * 8 + index] = 0
 	bindings[page * 8 + index] = int(row.get("id", 0))
 	_refresh()
 
 
 func item_at(index: int) -> Dictionary:
+	var vnum := skill_bindings[page * 8 + index]
+	if vnum > 0:
+		var state: Dictionary = _skill_rows.get(vnum, {})
+		var definition := _skill_catalog.definition(vnum)
+		if not definition.is_empty():
+			return {
+				"skill_vnum": vnum,
+				"icon": definition.icon,
+				"rank": int(state.get("rank", 0)),
+				"cooldown_seconds":
+				maxi(
+					0, ceili(float(int(state.get("ready_at_us", 0)) - _skill_clock_us) / 1000000.0)
+				)
+			}
 	return _rows.get(bindings[page * 8 + index], {})
 
 
@@ -231,6 +254,7 @@ func snapshot() -> Dictionary:
 	return {
 		"page": page,
 		"bindings": bindings,
+		"skill_bindings": skill_bindings,
 		"slot_centers": centers,
 		"hp_width": _hp_clip.size.x,
 		"sp_width": _sp_clip.size.x,
@@ -253,3 +277,30 @@ func _layout() -> void:
 	_base.size.x = maxf(0, size.x - 263)
 	_middle.position = Vector2(floorf(size.x / 2) - 86, 0)
 	_right.position = Vector2(size.x - 144, 3)
+
+
+func set_skills(rows: Array, clock_us: int) -> void:
+	_skill_rows.clear()
+	for row: Dictionary in rows:
+		_skill_rows[int(row.skill_vnum)] = row
+	_skill_clock_us = clock_us
+	_refresh()
+
+
+func update_skill_clock(clock_us: int) -> void:
+	_skill_clock_us = clock_us
+	var second := int(clock_us / 1000000.0)
+	if second != _last_skill_second:
+		_last_skill_second = second
+		_refresh()
+
+
+func bind_skill(index: int, vnum: int) -> void:
+	if (
+		_skill_catalog.definition(vnum).is_empty()
+		or int(_skill_rows.get(vnum, {}).get("rank", 0)) <= 0
+	):
+		return
+	bindings[page * 8 + index] = 0
+	skill_bindings[page * 8 + index] = vnum
+	_refresh()
