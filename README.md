@@ -46,7 +46,9 @@ The companion `population_placement` developer command checks original group
 placement against the real server map; seed 42 places 2,853 members across all
 945 groups, covering all 44 definitions. This is an offline placement report.
 The full candidate gameplay catalog now links 78 attacks: 52 melee variants and
-26 original projectile launches. Projectile presentation and magic damage still
+26 original projectile launches. The compiler also emits typed Rust combat tables
+for the server; they are not installed as a live population yet. Projectile
+presentation and magic damage still
 need runtime integration; no additional enemy is live yet.
 The [flight-definition importer](docs/mobs.md#flight-definition-discovery) now
 resolves their four shared flight scripts and eight effect dependencies, preserving

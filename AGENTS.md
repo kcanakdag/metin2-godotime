@@ -523,3 +523,23 @@ bonuses remain outside the installed zero-bonus policy. Full population registry
 installation and live ranged/magic multiplayer QA are still pending. No server,
 client export or public deployment changed. The earlier note that penetration is
 not consumed is superseded by this checkpoint.
+
+`build_mob_catalog.py` now emits `combat-registry.rs` alongside its existing
+JSON artifacts, with a hash in the receipt. The generated tables use the actual
+server MobPhysicalDefinition, WeightedMobAttack and AttackDefinition types.
+They preserve all 44 physical definitions, damage-kind dispatch, multiplier/
+critical/penetration values and 78 source-timed weighted attacks. Projectile
+rows have immediate zero hit offsets; melee rows preserve the single converted
+window. Unsupported layouts and invalid numeric/identity/weight data reject.
+The emitter deliberately does not invent spawn, AI, regeneration or reward policy.
+
+Evidence: `.local/mobs/server-registry-r1/r2` have byte-identical registry output
+(SHA-256 `7135d451f51e45ded3df85416fc6cdf3fd71b99cd7ae7da57646b6b7ea7d234c`).
+The r1 Rust harness includes the actual generated server types and action validator:
+11 tests pass, including all 4,400 weighted selections and exact action lookups.
+Its type inputs are hashed in `type-inputs.json`. Fourteen Python compiler tests
+and scoped Ruff pass. This validates candidate combat tables, not installed
+population or live multiplayer behavior. No database or deployment changed.
+Next integrate these tables with the full runtime mob registry and the matching
+client content hash/installation path; retain original AI/regeneration/reward
+metadata and explicitly handle unsupported mechanics rather than dropping them.

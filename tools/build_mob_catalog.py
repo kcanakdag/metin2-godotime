@@ -9,6 +9,7 @@ from pathlib import Path
 from content_compile import ROOT
 from mob_gameplay import compile_catalog, validate_actor_reports
 from mob_presentation import compile_presentation
+from mob_server_registry import compile_registry
 
 
 def main():
@@ -28,6 +29,7 @@ def main():
             "mob_gameplay.py",
             "mob_projectiles.py",
             "mob_presentation.py",
+            "mob_server_registry.py",
             "build_mob_catalog.py",
             "content_compile.py",
             "content_formats.py",
@@ -67,6 +69,7 @@ def main():
         frozen[str(path)] = digest
     if any(hashlib.sha256(Path(p).read_bytes()).hexdigest() != h for p, h in frozen.items()):
         raise ValueError("Mob catalog inputs changed during compilation")
+    registry_source = compile_registry(catalog)
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     target = output / "gameplay.v1.json"
@@ -76,7 +79,10 @@ def main():
         json.dumps(compile_presentation(normalized, report, catalog["content_hash"]), indent=2)
         + "\n"
     )
+    registry = output / "combat-registry.rs"
+    registry.write_text(registry_source)
     receipt = {
+        "combat_registry_sha256": hashlib.sha256(registry.read_bytes()).hexdigest(),
         "status": "candidate-not-installed",
         "inputs": frozen,
         "presentation_sha256": hashlib.sha256(presentation.read_bytes()).hexdigest(),

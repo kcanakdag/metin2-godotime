@@ -16,6 +16,9 @@ After wildlife conversion, `tools/build_mob_catalog.py --content CONVERTED_DIR
 --output NEW_DIR` compiles the candidate motion/gameplay catalog and checks it
 against the conversion receipt and exact Blender animation report. See
 [mob tooling](mobs.md) for its source timing policies and remaining runtime work.
+The command also emits `combat-registry.rs`: candidate Rust combat tables using
+the server’s existing definition types, with its hash recorded in the receipt.
+This is not a complete AI/spawn/reward registry or an installation command.
 The command is offline and does not install content or restart services.
 The full selection now compiles projectile launch declarations separately from
 melee windows. Catalogs and receipts expose `unimplemented_runtime_requirements`;
