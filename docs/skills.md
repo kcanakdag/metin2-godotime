@@ -148,3 +148,19 @@ and records the selected tuning in the catalog hash. Names/descriptions, damage,
 cost/duration/cooldown/upkeep formulas, ranges and target limits are bounded;
 mechanic/identity changes are rejected and need a shared handler. This tuning is
 for the candidate full-class schema and does not silently alter live Sword Spin.
+
+### Multi-hit timing integration
+
+The candidate Rust compiler now preserves `hit_windows_us` on each generated
+`ClassSkillMotion`, in source event order. Each interval must start at a registered
+activation, finish no earlier than it starts, and stay within the existing bound
+of ten seconds beyond the animation. Unknown event kinds and missing hit lists
+reject; non-attack motions retain empty lists. Three-Way Cut's three independent
+windows therefore survive compilation instead of becoming activation-only data.
+
+The qualification harness executes 88 interval comparisons against the input
+catalog alongside 21,120 formula and 221 mechanic metadata checks. Four compiler
+unit tests pass, including malformed intervals. Evidence is in
+`.local/p6-skill-windows-r1/qualification-r2/`. This is candidate compiler work:
+the live cast resolver still uses the single Sword Spin envelope and must be
+extended to consume these intervals, collision shapes and original hit limits.

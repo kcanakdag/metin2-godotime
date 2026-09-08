@@ -45,8 +45,19 @@ def main():
     hashes = {name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in inputs.items()}
     initial = hashes["catalog"]
     source = json.loads(catalog.read_bytes())
+    window_checks = []
     metadata_checks = []
     for skill in source["skills"]:
+        for variant in skill["variants"]:
+            windows = [[hit["start_us"], hit["end_us"]] for hit in variant["hits"]]
+            window_checks.append(
+                "{ let motion = definitions::CLASS_SKILL_MOTIONS.iter().find(|m|"
+                + f"m.skill_vnum == {skill['vnum']} && m.actor_id == "
+                + json.dumps(variant["actor_id"])
+                + " ).unwrap(); let expected: &[[i64; 2]] = &"
+                + json.dumps(windows)
+                + "; assert_eq!(motion.hit_windows_us, expected); }\n"
+            )
         attribute = {"NORMAL": "Normal", "MELEE": "Melee", "RANGE": "Range", "MAGIC": "Magic"}[
             skill["attribute"]
         ]
@@ -90,6 +101,7 @@ def main():
         "pub mod definitions { include!(" + json.dumps(str(generated)) + "); }\n"
         "fn main() {\n"
         + "".join(metadata_checks)
+        + "".join(window_checks)
         + f"assert_eq!(definitions::CLASS_SKILL_RANK_POWERS, {source['rank_power_percent']});\n"
         + """
     assert_eq!(definitions::CLASS_SKILLS.len(),44);
@@ -128,6 +140,7 @@ def main():
         "appearances": 88,
         "formula_checks": checks,
         "metadata_checks": len(metadata_checks) * 5 + 1,
+        "motion_window_checks": len(window_checks),
         "catalog_sha256": initial,
         "runtime_sha256": hashes["runtime"],
         "compiler_sha256": hashes["compiler"],

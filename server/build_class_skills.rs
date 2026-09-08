@@ -10,6 +10,29 @@ fn integer(value: &Value, low: u64, high: u64) -> Result<u64, String> {
         .ok_or("Invalid class skill integer".into())
 }
 
+fn hit_windows(variant: &Value, duration: u64) -> Result<Vec<[u64; 2]>, String> {
+    let hits = variant["hits"]
+        .as_array()
+        .filter(|hits| hits.len() <= 32)
+        .ok_or("Invalid skill hit windows")?;
+    let mut result = Vec::new();
+    for hit in hits {
+        if !matches!(hit["kind"].as_str(), Some("attack_area" | "attack_window")) {
+            return Err("Unknown skill hit window kind".into());
+        }
+        let start = integer(&hit["start_us"], 0, duration)?;
+        let end = integer(&hit["end_us"], start, duration + 10_000_000)?;
+        if !variant["activation_us"]
+            .as_array()
+            .is_some_and(|times| times.iter().any(|time| time.as_u64() == Some(start)))
+        {
+            return Err("Skill hit window has no matching activation".into());
+        }
+        result.push([start, end]);
+    }
+    Ok(result)
+}
+
 fn affect(value: &Value) -> Result<Option<u16>, String> {
     let text = value.as_str().ok_or("Invalid skill affect identifier")?;
     if text.is_empty() {
@@ -180,6 +203,7 @@ pub fn validate(root: &Value) -> Result<(), String> {
                 return Err("Skill motion/appearance does not belong to its class".into());
             }
             let duration = integer(&variant["duration_us"], 1, 3_200_000)?;
+            hit_windows(variant, duration)?;
             let root = variant["root_m"]
                 .as_array()
                 .filter(|a| a.len() == 3)
@@ -231,7 +255,7 @@ pub fn generate(root: &Value) -> Result<String, String> {
     .unwrap();
     out.push_str("#[derive(Clone,Copy,Debug)] pub struct SkillPrograms { pub amount:&'static [Op],pub secondary:&'static [Op],pub duration:&'static [Op],pub secondary_duration:&'static [Op],pub upkeep:&'static [Op],pub splash_scale:&'static [Op] }\n");
     out.push_str("#[derive(Clone,Copy,Debug)] pub struct ClassSkillDefinition { pub vnum:u16,pub class_id:u8,pub group:u8,pub minimum_level:u8,pub maximum_rank:u8,pub handler:SkillHandler,pub target:SkillTarget,pub attribute:SkillAttribute,pub affect:Option<u16>,pub secondary_affect:Option<u16>,pub point:&'static str,pub secondary_point:&'static str,pub flags:&'static [&'static str],pub weapon_limits:&'static [&'static str],pub rank_costs:[u32;21],pub rank_cooldowns_us:[i64;21],pub programs:SkillPrograms,pub radius_m:f32,pub range_m:f32,pub max_targets:u8 }\n");
-    out.push_str("#[derive(Clone,Copy,Debug)] pub struct ClassSkillMotion {pub skill_vnum:u16,pub actor_id:&'static str,pub action_id:&'static str,pub duration_us:i64,pub root_m:[f32;3],pub activation_us:&'static [i64]}\n");
+    out.push_str("#[derive(Clone,Copy,Debug)] pub struct ClassSkillMotion {pub skill_vnum:u16,pub actor_id:&'static str,pub action_id:&'static str,pub duration_us:i64,pub root_m:[f32;3],pub activation_us:&'static [i64],pub hit_windows_us:&'static [[i64;2]]}\n");
     let mut definitions = Vec::new();
     let mut motions = Vec::new();
     for skill in root["skills"].as_array().unwrap() {
@@ -322,7 +346,8 @@ pub fn generate(root: &Value) -> Result<String, String> {
                 .iter()
                 .map(|v| v.as_u64().unwrap())
                 .collect::<Vec<_>>();
-            motions.push(format!("ClassSkillMotion{{skill_vnum:{id},actor_id:{actor:?},action_id:{action:?},duration_us:{duration},root_m:{root:?},activation_us:&{activations:?}}}"));
+            let windows = hit_windows(variant, duration)?;
+            motions.push(format!("ClassSkillMotion{{skill_vnum:{id},actor_id:{actor:?},action_id:{action:?},duration_us:{duration},root_m:{root:?},activation_us:&{activations:?},hit_windows_us:&{windows:?}}}"));
         }
     }
     writeln!(
@@ -354,7 +379,8 @@ mod tests {
                     let variants = ["male", "female"].map(|sex| {
                         let actor = format!("actor.player.{name}-{sex}");
                         json!({"actor_id":actor,"action_id":format!("{actor}.general.skill_{id}"),
-                            "duration_us":1_000_000,"root_m":[0,0,0],"activation_us":[0]})
+                            "duration_us":1_000_000,"root_m":[0,0,0],"activation_us":[0],
+                            "hits":[{"kind":"attack_area","start_us":0,"end_us":200_000}]})
                     });
                     let programs = [
                         "formula",
@@ -382,6 +408,27 @@ mod tests {
         }
         json!({"schema":"mt2spacetime.skills","version":2,
             "rank_power_percent":(0..=20).collect::<Vec<_>>(),"skills":skills})
+    }
+
+    #[test]
+    fn hit_windows_preserve_separate_intervals_and_reject_invalid_timing() {
+        let mut v = json!({"activation_us":[10,40],"hits":[
+            {"kind":"attack_area","start_us":10,"end_us":30},
+            {"kind":"attack_window","start_us":40,"end_us":150}
+        ]});
+        assert_eq!(hit_windows(&v, 100).unwrap(), vec![[10, 30], [40, 150]]);
+        for value in [json!(9), json!(10_000_101), json!(-1), json!(true)] {
+            v["hits"][0]["end_us"] = value;
+            assert!(hit_windows(&v, 100).is_err());
+        }
+        v["hits"][0]["end_us"] = json!(30);
+        v["hits"][0]["start_us"] = json!(11);
+        assert!(hit_windows(&v, 100).is_err());
+        v["hits"][0]["start_us"] = json!(10);
+        v["hits"][0]["kind"] = json!("custom");
+        assert!(hit_windows(&v, 100).is_err());
+        v["hits"] = Value::Null;
+        assert!(hit_windows(&v, 100).is_err());
     }
 
     #[test]

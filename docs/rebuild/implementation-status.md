@@ -5,6 +5,19 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Candidate multi-hit skill timing — 2026-09-08
+
+The full-class compiler previously discarded hit-window end times. It now emits
+separate validated intervals on `ClassSkillMotion`, preserving source order and
+post-animation attack-area lifetime bounds. Missing intervals, unknown kinds,
+reversed/out-of-bounds times and starts without activations reject. All 88 emitted
+appearance records match the input catalog in generated Rust; four compiler tests,
+21,120 formula evaluations and 221 metadata checks pass. Evidence:
+`.local/p6-skill-windows-r1/qualification-r2/`. The first harness run exposed an
+incorrect Rust integer cast in the new assertions; the corrected typed binding
+passes. No live skill or protocol change is included. Next is consuming the
+separate intervals and original collision/hit-limit semantics in cast resolution.
+
 ## Streamed-map UID restoration — 2026-09-08
 
 The local streaming loader now registers dependency UIDs from hash-verified mounted
