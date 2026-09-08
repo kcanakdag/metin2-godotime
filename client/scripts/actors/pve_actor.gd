@@ -8,6 +8,7 @@ const ActorCatalogScript := preload("res://scripts/content/actor_catalog.gd")
 const ActorPresentationScript := preload("res://scripts/actors/actor_presentation.gd")
 const TargetEffectScript := preload("res://scripts/actors/target_effect.gd")
 const TargetEffectCatalogScript := preload("res://scripts/content/target_effect_catalog.gd")
+const ItemCatalogScript := preload("res://scripts/content/item_catalog.gd")
 const TARGET_PICK_LAYER := 2
 
 var row: Dictionary = {}
@@ -20,6 +21,9 @@ var _target := Vector3.ZERO
 var _visual: Node3D
 var _label: Label3D
 var _time := 0.0
+var _loot_icon: Sprite3D
+var _loot_vnum := -1
+var _loot_icon_path := ""
 var _last_health := -1
 var _damage_sequence := 0
 var _damage_until_ticks_us := 0
@@ -76,7 +80,10 @@ func apply_state(value: Dictionary, server_time_us := 0) -> void:
 	if first or position.distance_to(_target) > 8.0:
 		position = _target
 	if loot_mode:
-		_label.text = "Red Potion (S)" if item_mode else "%d Yang" % int(row.get("gold", 0))
+		if item_mode:
+			_update_item_drop()
+		else:
+			_label.text = "%d Yang" % int(row.get("gold", 0))
 		_label.modulate = Color("ffd26e")
 		return
 	if not _ensure_presentation():
@@ -228,7 +235,13 @@ func pick_projection(camera: Camera3D, viewport_rect: Rect2) -> Dictionary:
 
 func presentation_snapshot() -> Dictionary:
 	if loot_mode:
-		return {"loot": true, "item": item_mode}
+		return {
+			"loot": true,
+			"item": item_mode,
+			"vnum": int(row.get("vnum", 0)),
+			"label": _label.text,
+			"icon_path": _loot_icon_path,
+		}
 	var result: Dictionary = _presentation.snapshot() if is_instance_valid(_presentation) else {}
 	result["row_id"] = int(row.get("id", 0))
 	result["definition_vnum"] = int(row.get("definition_vnum", 0))
@@ -382,16 +395,30 @@ func _effect_snapshot(effect: Node3D) -> Dictionary:
 
 func _build_loot() -> void:
 	if item_mode:
-		var icon := Sprite3D.new()
-		var icon_path := "res://assets/imported/ui/icon/item/27001.png"
-		if ResourceLoader.exists(icon_path):
-			icon.texture = load(icon_path)
-		icon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		icon.pixel_size = 0.018
-		icon.position.y = 0.35
-		_visual.add_child(icon)
+		_loot_icon = Sprite3D.new()
+		_loot_icon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_loot_icon.pixel_size = 0.018
+		_loot_icon.position.y = 0.35
+		_visual.add_child(_loot_icon)
 	else:
 		_part(Vector3(0, 0.35, 0), Vector3(0.35, 0.35, 0.35), Color("ffd26e"))
+
+
+func _update_item_drop() -> void:
+	var vnum := int(row.get("vnum", 0))
+	if vnum == _loot_vnum:
+		return
+	_loot_vnum = vnum
+	var definition: Dictionary = ItemCatalogScript.item(vnum)
+	_label.text = str(definition.get("name", "Unknown item (%d)" % vnum))
+	_loot_icon_path = ""
+	_loot_icon.texture = null
+	if not definition.is_empty():
+		var path := "res://assets/imported/ui/%s.png" % str(definition.icon)
+		if ResourceLoader.exists(path):
+			_loot_icon.texture = load(path)
+			_loot_icon_path = path
+	_loot_icon.visible = _loot_icon.texture != null
 
 
 func _part(point: Vector3, size: Vector3, color: Color) -> void:

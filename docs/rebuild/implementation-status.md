@@ -5,6 +5,23 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Item-drop names and icons use the shared catalog — 2026-09-08
+
+`PveActor` no longer presents every item drop as a Small Red Potion. The subscribed
+vnum resolves the installed item catalog name and original icon. Repeated state
+updates reuse the visual; a changed vnum updates both fields, and an unknown ID
+clears the old texture and displays an explicit unknown-item label. The diagnostic
+snapshot exposes vnum, label and loaded icon path for reusable tooling.
+
+The native controlled scene passes 15 checks for Small/Medium Red Potions, Sword+0,
+changed definitions, unknown-ID clearing and authoritative Yang label amounts.
+Reviewed capture: `.local/items/drop-catalog-r1/data/godot/app_userdata/MT2 Actor Test/item-drops.png`.
+Evidence/hashes: `.local/items/drop-catalog-r1/acceptance.json`. Original installed
+icons were reused; no new source assets or external code were copied.
+This corrects item identity, not classic ground rendering: icons still use the
+existing billboard presentation, the Yang block remains, and label overlap is
+unresolved. No new export, public update or connected editor inspection occurred.
+
 ## Held attack acknowledgement gate — 2026-09-08
 
 Main now allows one outstanding attack request and suppresses repeated held input

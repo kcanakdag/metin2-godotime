@@ -1875,3 +1875,11 @@ with `godot --headless --path <project> --script res://tests/held_attack_smoke.g
 and isolated XDG data/config directories. It exercises pending acknowledgements,
 stale idle observations, release/rejection and reset; it does not replace actual
 exported held-Space/combo and reconnect checks.
+
+`client/tests/item_drop_smoke.gd` is a focused rendered scenario for catalog-driven
+drop labels/icons. Copy it and the current owned actor/content scripts into an
+isolated imported client project, then run
+`xvfb-run -a godot --path <project> --script res://tests/item_drop_smoke.gd` with
+isolated XDG data/config directories. It writes `user://item-drops.json` and a
+capture. The scenario covers multiple definitions, changed/unknown vnums and Yang
+labels; it does not establish classic 3D ground-model or multiplayer fidelity.
