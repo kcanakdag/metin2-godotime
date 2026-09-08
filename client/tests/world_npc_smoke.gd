@@ -24,6 +24,18 @@ class ConnectionSpy:
 		connection_state_changed.emit(state, "Offline NPC component QA")
 
 
+class Viewer:
+	extends PlayerActor
+
+	func _ready() -> void:
+		pass
+
+	func _process(_delta: float) -> void:
+		pass
+
+
+var _viewer := Viewer.new()
+
 var _checks := 0
 var _failures: Array[String] = []
 
@@ -37,6 +49,10 @@ func _run() -> void:
 	var main := MainScene.instantiate()
 	main.get_node("GameConnection").set_script(ConnectionSpy)
 	root.add_child(main)
+	main.set_process(false)
+	main.add_child(_viewer)
+	_viewer.server_position = Vector3(605, 198.515, 663)
+	main.set("_local_actor", _viewer)
 	main.get("_account_flow").use_legacy_entry()
 	var connection: ConnectionSpy = main.connection
 	var layer: WorldNpcs = main.get("_npcs")
@@ -55,6 +71,7 @@ func _run() -> void:
 		"content_hash": definition.content_hash,
 		"definition_profile": ActorCatalog.PROFILE_ID,
 		"definition_hash": actor_catalog.gameplay_definition_hash(),
+		"mob_catalog_hash": actor_catalog.mob_gameplay_hash,
 		"character_catalog_hash": actor_catalog.characters.content_hash,
 		"skill_catalog_hash": actor_catalog.skills.content_hash,
 		"training_target_hash": actor_catalog.training_target_hash,
@@ -66,7 +83,7 @@ func _run() -> void:
 	_check(connection.entries == 1 and connection.disconnects == 0, "Main content gate enters")
 	_check(
 		layer.actors.size() == _expected_count(definition, stream),
-		"Main connection activates all NPCs on loaded chunks"
+		"Main activates nearby NPCs on loaded chunks"
 	)
 	if layer.actors.is_empty():
 		_finish(main)
@@ -117,6 +134,21 @@ func _run() -> void:
 		),
 		"refresh preserves stable instance"
 	)
+	var near_count := layer.actors.size()
+	_viewer.server_position = Vector3(10, 0, 10)
+	layer.refresh()
+	_check(layer.actors.is_empty(), "distant viewer releases NPC actors over loaded terrain")
+	_viewer.server_position = Vector3(605, 198.515, 663)
+	layer.refresh()
+	_check(
+		layer.actors.size() == near_count and layer.actors.has(spawn.id),
+		"viewer return restores nearby guard without subscription changes"
+	)
+	main.set("_local_actor", null)
+	layer.refresh()
+	_check(layer.actors.is_empty(), "missing local viewer does not instantiate NPCs")
+	main.set("_local_actor", _viewer)
+	layer.refresh()
 	var chunk: Node = stream.loaded["002002"]
 	stream.loaded.erase("002002")
 	stream.remove_child(chunk)
@@ -189,6 +221,7 @@ func _run() -> void:
 		"final Main scene holds the loaded population after transitions"
 	)
 	_check_catalog_failures()
+	layer.set("_viewer", Callable())
 	await _check_static_landmarks(main, catalog, definition, layer, stream)
 	await _check_area_spawns(main, catalog, definition, layer, stream)
 	_finish(main)
@@ -311,7 +344,14 @@ func _expected_count(definition: Dictionary, stream: WorldStream) -> int:
 	var result := 0
 	for spawn: Dictionary in definition.placements:
 		var chunk := "%03d%03d" % [int(spawn.position[0] / 256), int(spawn.position[2] / 256)]
-		if stream.loaded.has(chunk):
+		if (
+			stream.loaded.has(chunk)
+			and preload("res://scripts/world/pve_visibility.gd").includes(
+				{"x": spawn.position[0], "y": spawn.position[1], "z": spawn.position[2]},
+				_viewer.server_position,
+				stream.ready_at
+			)
+		):
 			result += 1
 	return result
 

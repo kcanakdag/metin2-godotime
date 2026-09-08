@@ -5,6 +5,30 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Nearby NPCs and measured debug overhead — 2026-09-08
+
+Main now supplies the local player position to the NPC layer, applying the same
+original distance policy as mob presentation. Native NPC coverage passes 56 checks,
+including range exit/re-entry, missing viewer and the guard. Resources still load
+eagerly; only instance/animation work is reduced. Hidden debug HUDs no longer build
+full developer snapshots four times per second.
+
+Actual browser/Linux exports passed packaged mob audits and the 42-check focused
+field replay in `.local/mobs/debug-cost-field-r1/report.json`. Both clients received
+the same 2,835 mobs/44 species and rendered original field mobs; reviewed captures
+show terrain/materials and the original dog models. No browser/native engine errors
+were reported. This scoped run omits unrelated account lifecycle tests.
+
+The new `--field-only --profile-probe` workflow measures a five-second interval
+without periodic full probe snapshots, then resumes them. Chrome measured 18 FPS
+with snapshots and 34.1 mean FPS during the pause; Xvfb native measured 7 and 10.3.
+These are short sequential samples with the original reference client still
+running, not a controlled release benchmark. Event-history callbacks remain active.
+Snapshot instrumentation materially affects the observed results; further release
+profiling and scene/network work remain. No public deployment or connected editor
+inspection occurred. Acceptance and source/artifact hashes:
+`.local/mobs/debug-cost-export-r1/acceptance.json`.
+
 ## Changed mob writes and complete exported field/lifecycle replay — 2026-09-08
 
 Simulation now compares the complete before/after `Monster` and `MonsterClock`

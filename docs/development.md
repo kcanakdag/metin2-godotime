@@ -1812,3 +1812,37 @@ captures each exported render and records instrumented FPS samples. Combine with
 `--mob-catalog <compiled>/gameplay.v1.json` for full subscription checks. These field
 checks replace the old assumption that an authored dog can be rendered from town;
 the existing `--actors` fixture still targets its old nearby dog/model package.
+
+
+For focused rendering/performance iteration, add `--field-only` with `--mob-route`.
+The harness registers two clients, enters the world, checks the selected population,
+walks to the field, captures and samples it, then stops. It omits the return trip
+and unrelated character-switch/login lifecycle checks. Reports explicitly record
+`scope: field-only`; native/browser engine failures still fail the run during
+cleanup. Field samples include instantiated NPC counts as well as mob counts.
+Use the full account scenario at lifecycle changes or broader milestone acceptance.
+
+Add `--profile-probe` to measure a five-second interval at the field destination
+without the export probe's periodic full-scene snapshots. The fixed probe action
+`profile_performance` pauses snapshot publication, counts process frames using
+monotonic microseconds, then resumes publication with `performance_profile`.
+Reports preserve both the normal instrumented samples and the snapshot-free
+interval. Network subscriptions and gameplay continue; event-history callbacks
+remain active, so this is not a completely uninstrumented release benchmark.
+Compare results on the same hardware/render backend and record competing load.
+The ordinary hidden developer panel no longer constructs full snapshots every
+quarter second; opening it restores live diagnostics.
+
+Map NPC presentation uses the same original view-distance policy as mobs when
+Main supplies its local player position. Loaded terrain is still required, and
+losing the local player removes NPC instances. Catalog previews may omit a viewer
+to inspect all loaded placements. Models are still loaded during preparation;
+this change reduces scene/animation work, not asset download or initial loading.
+Focused native evidence: `.local/npcs/nearby-runtime-r2/report.json` (56 checks),
+including leaving/returning, missing local player and guard interaction. The
+exported comparison `.local/mobs/debug-cost-field-r1/report.json` passed 42 focused
+checks. Field samples were Chrome 18 FPS / Xvfb native 7 FPS with snapshots, then
+34.1 / 10.3 mean FPS during the five-second snapshot pause. The reference Metin2
+client remained running. These short sequential samples establish probe overhead,
+not a controlled release benchmark. Both packaged mob audits passed; reviewed
+browser/native captures show textured terrain and original field mobs.

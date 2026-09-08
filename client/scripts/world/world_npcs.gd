@@ -5,6 +5,7 @@ extends Node3D
 signal failed(message: String)
 
 const Catalog := preload("res://scripts/content/npc_catalog.gd")
+const Visibility := preload("res://scripts/world/pve_visibility.gd")
 const Actor := preload("res://scripts/actors/npc_actor.gd")
 
 var error_message := ""
@@ -13,12 +14,13 @@ var _catalog := Catalog.new()
 var _layout: Dictionary = {}
 var _models: Dictionary = {}
 var _ready_at: Callable
+var _viewer: Callable
 var _active := false
 var _elapsed := 0.0
 var _spawn_rows: Array = []
 
 
-func prepare(info: Dictionary, ready_at: Callable) -> bool:
+func prepare(info: Dictionary, ready_at: Callable, viewer: Callable = Callable()) -> bool:
 	clear()
 	error_message = ""
 	if str(info.get("map_id", "")) == "training":
@@ -45,6 +47,7 @@ func prepare(info: Dictionary, ready_at: Callable) -> bool:
 			return false
 		_models[spawn.actor_id] = packed
 	_ready_at = ready_at
+	_viewer = viewer
 	return true
 
 
@@ -62,6 +65,7 @@ func clear() -> void:
 	_layout.clear()
 	_models.clear()
 	_ready_at = Callable()
+	_viewer = Callable()
 	_spawn_rows.clear()
 
 
@@ -131,7 +135,12 @@ func refresh() -> void:
 	for spawn: Dictionary in placements:
 		wanted[spawn.id] = true
 		var point := Vector3(spawn.position[0], spawn.position[1], spawn.position[2])
-		if not _ready_at.call(point):
+		var in_view: bool = _ready_at.call(point)
+		if _viewer.is_valid():
+			in_view = Visibility.includes(
+				{"x": point.x, "y": point.y, "z": point.z}, _viewer.call(), _ready_at
+			)
+		if not in_view:
 			if actors.has(spawn.id):
 				_dispose(actors[spawn.id])
 				actors.erase(spawn.id)

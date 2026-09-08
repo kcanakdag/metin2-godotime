@@ -3,6 +3,9 @@ extends Node
 ## Exposes snapshots and a fixed list of ordinary validated client actions, never eval/tokens.
 
 var _elapsed := 0.0
+var _profile_started_us := 0
+var _profile_frames := 0
+var _performance_profile: Dictionary = {}
 var _callback: JavaScriptObject
 var _report := ""
 var _commands := ""
@@ -47,6 +50,18 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_poll_native_command()
+	if _profile_started_us > 0:
+		_profile_frames += 1
+		var duration := Time.get_ticks_usec() - _profile_started_us
+		if duration < 5_000_000:
+			return
+		_performance_profile = {
+			"duration_us": duration,
+			"frames": _profile_frames,
+			"mean_fps": float(_profile_frames) * 1_000_000.0 / float(duration),
+			"snapshot_sampling": false,
+		}
+		_profile_started_us = 0
 	_capture_screen_wave()
 	_elapsed += delta
 	if _elapsed < 0.2:
@@ -77,6 +92,7 @@ func _process(delta: float) -> void:
 		snapshot.get("command_feedback", []),
 		["id", "request_id", "severity", "message", "created_at"]
 	)
+	snapshot["performance_profile"] = _performance_profile
 	snapshot["errors"] = _errors
 	snapshot["perform_attack_acks"] = _perform_attack_acks.duplicate(true)
 	snapshot["select_combat_target_acks"] = _select_combat_target_acks.duplicate(true)
@@ -269,6 +285,10 @@ func _dispatch(command: Dictionary) -> void:
 	var world := get_parent()
 	var connection: GameConnection = world.connection
 	match str(command.get("action", "")):
+		"profile_performance":
+			_profile_frames = 0
+			_performance_profile = {}
+			_profile_started_us = Time.get_ticks_usec()
 		"login":
 			world._account_flow._login(
 				str(command.get("username", "")), str(command.get("password", ""))

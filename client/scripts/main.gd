@@ -197,7 +197,7 @@ func _process(delta: float) -> void:
 			_hover_elapsed = 0.0
 			_update_hover(get_viewport().get_mouse_position())
 	_diagnostic_elapsed += delta
-	if _diagnostic_elapsed >= 0.25:
+	if _diagnostic_elapsed >= 0.25 and hud.is_debug_visible():
 		_diagnostic_elapsed = 0.0
 		hud.set_diagnostics(dev_snapshot())
 	_marker_time = maxf(0.0, _marker_time - delta)
@@ -517,7 +517,7 @@ func _observe_screen_waves(server_time_us: int) -> void:
 			bool(row.get("online", false))
 			and str(row.get("identity", "")) == connection.local_identity
 		):
-			viewer_position = _subscribed_position(row)
+			viewer_position = PveVisibility.position_for(row)
 			break
 	if not viewer_position is Vector3:
 		camera_rig.reset_screen_waves()
@@ -533,7 +533,7 @@ func _observe_screen_waves(server_time_us: int) -> void:
 		)
 		var motion := _actor_catalog.motion(actor_id, "", action_id)
 		var event: Variant = motion.get("screen_wave", {})
-		var actor_position: Variant = _subscribed_position(row)
+		var actor_position: Variant = PveVisibility.position_for(row)
 		if not event is Dictionary or event.is_empty() or not actor_position is Vector3:
 			continue
 		event = event.duplicate()
@@ -548,10 +548,6 @@ func _observe_screen_waves(server_time_us: int) -> void:
 			viewer_position,
 			server_time_us
 		)
-
-
-func _subscribed_position(row: Dictionary) -> Variant:
-	return PveVisibility.position_for(row)
 
 
 func _on_world_info(info: Dictionary) -> void:
@@ -595,7 +591,11 @@ func _prepare_world(info: Dictionary) -> void:
 			hud.show_notice(_stream.failure_message)
 			return
 		_stream.set_active(true)
-	if not _npcs.prepare(info, _stream.ready_at):
+	if not _npcs.prepare(
+		info,
+		_stream.ready_at,
+		func(): return _local_actor.server_position if is_instance_valid(_local_actor) else null
+	):
 		_on_npc_failure(_npcs.error_message)
 		return
 	_npcs.set_spawn_rows(connection.npc_spawns)

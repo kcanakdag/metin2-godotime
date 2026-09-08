@@ -153,6 +153,14 @@ def main() -> None:
     parser.add_argument("--inventory", action="store_true")
     parser.add_argument("--actors", action="store_true")
     parser.add_argument(
+        "--profile-probe",
+        action="store_true",
+        help="Measure field FPS with probe snapshots suspended",
+    )
+    parser.add_argument(
+        "--field-only", action="store_true", help="Stop after field rendering/performance checks"
+    )
+    parser.add_argument(
         "--mob-route", type=Path, help="Walk both exports to original field mobs and back"
     )
     parser.add_argument(
@@ -216,6 +224,10 @@ def main() -> None:
         help="Exercise the authored dummy with real browser pointer and Space input",
     )
     args = parser.parse_args()
+    if args.profile_probe and not args.mob_route:
+        parser.error("--profile-probe requires --mob-route")
+    if args.field_only and not args.mob_route:
+        parser.error("--field-only requires --mob-route")
     if args.warrior_effects and not args.classes:
         parser.error("--warrior-effects requires --classes")
     if args.classes and any(
@@ -684,7 +696,18 @@ def main() -> None:
                     wait,
                     json.loads(args.mob_route.read_text()),
                     output,
+                    return_to_town=not args.field_only,
+                    profile_probe=args.profile_probe,
                 )
+                if args.field_only:
+                    assert not browser_errors, "Browser engine errors: " + "; ".join(
+                        browser_errors[:3]
+                    )
+                    checks.append("browser_has_no_engine_errors")
+                    passed = True
+                    context.close()
+                    browser.close()
+                    return
             if args.training_dummy:
                 samples["training_dummy"] = exercise_training_dummy(
                     page, web, desktop, web_command, wait, web_id, output
@@ -1301,6 +1324,7 @@ def main() -> None:
             desktop_final = {"snapshot_unavailable": str(error)}
         result = {
             "passed": passed,
+            "scope": "field-only" if args.field_only else "accounts",
             "failure": failure,
             "url": args.url,
             "database": args.database,
@@ -1316,8 +1340,8 @@ def main() -> None:
         for directory in [output / "data", output / "config"]:
             shutil.rmtree(directory, ignore_errors=True)
         print("Evidence: " + str(output), flush=True)
-    if not passed:
-        raise SystemExit(failure or "Exported account checks did not complete")
+        if not passed:
+            raise SystemExit(failure or "Exported account checks did not complete")
 
 
 if __name__ == "__main__":
