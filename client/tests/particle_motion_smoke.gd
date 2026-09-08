@@ -101,6 +101,24 @@ func _run() -> void:
 		"inward source speed",
 		first.velocity.is_equal_approx(-(first.position - first.center).normalized())
 	)
+	recipe.particle.BillboardType = 3
+	recipe.particle.RotationRandomStartingBegin = 0
+	recipe.particle.RotationRandomStartingEnd = 0
+	recipe.particle.RotationType = 0
+	for attached: int in [0, 1]:
+		recipe.particle.AttachEnable = attached
+		_check("ground rotation configuration", system.configure(recipe, 42))
+		var rotated := Transform3D(Basis(Vector3.UP, PI / 2), Vector3.ZERO)
+		system.advance(0.25, rotated)
+		_check(
+			"ground heading captured at birth", is_equal_approx(system.particles[1].rotation, -90.0)
+		)
+		system.advance(0.25, Transform3D.IDENTITY)
+		_check(
+			"old particle preserves birth heading",
+			is_equal_approx(system.particles[1].rotation, -90.0)
+		)
+		_check("new particle uses new heading", is_zero_approx(system.particles[2].rotation))
 	_exercise_catalog(catalog)
 	print(JSON.stringify({"checks": _checks, "failures": _failures}))
 	quit(0 if _failures.is_empty() else 1)

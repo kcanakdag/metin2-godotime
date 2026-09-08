@@ -48,6 +48,11 @@ func advance(delta: float, transform: Transform3D, emitting: bool = true) -> Dic
 	for birth: Dictionary in result.births:
 		var particle := Motion.spawn(_recipe, birth, transform, _rng, delta)
 		Style.initialize(particle, _recipe, _rng)
+		if int(_recipe.particle.BillboardType) == 3:
+			# Original ground-plane rotation is captured at birth, including attached particles.
+			var cosine := sqrt(maxf(0.0, 1.0 - transform.basis.y.z * transform.basis.y.z))
+			if cosine >= 0.00001:
+				particle.rotation += rad_to_deg(atan2(transform.basis.x.z, transform.basis.z.z))
 		if first:
 			rotation_speed = Style.batch_rotation(_recipe.particle, _rng)
 			first = false

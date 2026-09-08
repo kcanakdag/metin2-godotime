@@ -661,7 +661,9 @@ Random spin direction is selected once per emission batch, matching the source
 decorator cloning rule. `particle_effect.gd` batches world-space triangles by
 system/texture frame and renders the selected camera-facing or stretched quads.
 It supports the selected 5/2 additive and 5/6 alpha blend pairs with color operation
-4 and billboard types 0/1. Other render modes reject configuration rather than
+4/5 (normal/doubled RGB modulation) and billboard types 0/1/3. Type 3 lies
+in the ground plane and retains the emitter heading captured at birth; stretch
+takes precedence when enabled. Other render modes reject configuration rather than
 silently receiving a default. Recipes and texture resources are trusted imported
 content; a configured effect needs to be in a scene with an active camera.
 

@@ -5,10 +5,11 @@ const Simulation = preload("res://scripts/actors/particle_simulation.gd")
 const Motion = preload("res://scripts/actors/particle_motion.gd")
 const SHADER := """shader_type spatial;
 render_mode %s, unshaded, cull_disabled, depth_draw_never;
+uniform float color_multiplier = 1.0;
 uniform sampler2D source_texture : source_color, repeat_enable, filter_linear;
 void fragment() {
     vec4 sampled = texture(source_texture, UV);
-    ALBEDO = sampled.rgb * COLOR.rgb;
+    ALBEDO = clamp(sampled.rgb * COLOR.rgb * color_multiplier, vec3(0.0), vec3(1.0));
     ALPHA = sampled.a * COLOR.a;
 }
 """
@@ -25,8 +26,8 @@ func configure(effect: Dictionary, textures: Dictionary, random_seed: int) -> bo
 		if (
 			int(style.SrcBlendType) != 5
 			or int(style.DestBlendType) not in [2, 6]
-			or int(style.ColorOperationType) != 4
-			or int(style.BillboardType) not in [0, 1]
+			or int(style.ColorOperationType) not in [4, 5]
+			or int(style.BillboardType) not in [0, 1, 3]
 			or style.curves.ScaleX.is_empty()
 			or style.curves.ScaleY.is_empty()
 			or style.packed_color_keys.is_empty()
@@ -44,6 +45,9 @@ func configure(effect: Dictionary, textures: Dictionary, random_seed: int) -> bo
 			var material := ShaderMaterial.new()
 			material.shader = shader
 			material.set_shader_parameter("source_texture", textures[path])
+			material.set_shader_parameter(
+				"color_multiplier", 2.0 if int(style.ColorOperationType) == 5 else 1.0
+			)
 			materials.append(material)
 		candidates.append(
 			{"recipe": recipe.duplicate(true), "simulation": simulation, "materials": materials}
@@ -111,8 +115,12 @@ func _corners(particle: Dictionary, recipe: Dictionary, camera: Camera3D) -> Arr
 		cross_axis = up.cross(view).normalized()
 	else:
 		var angle := deg_to_rad(float(particle.rotation))
-		up = up.rotated(view, -angle)
-		cross_axis = cross_axis.rotated(view, -angle)
+		if int(recipe.particle.BillboardType) == 3:
+			up = Vector3(cos(angle), 0, sin(angle))
+			cross_axis = Vector3(sin(angle), 0, -cos(angle))
+		else:
+			up = up.rotated(view, -angle)
+			cross_axis = cross_axis.rotated(view, -angle)
 	cross_axis *= -float(particle.half_size.x) * float(particle.scale.x)
 	up *= float(particle.half_size.y) * float(particle.scale.y)
 	var center := Motion.world_position(particle, global_transform)

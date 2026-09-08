@@ -5,6 +5,29 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Warrior ground-plane particle rendering — 2026-09-09
+
+The shared renderer now handles original billboard type 3 (ground-plane quads)
+and color operation 5 (clamped doubled RGB modulation; alpha unchanged). Ground
+rotation captures the emitter heading at birth for attached and detached particles;
+subsequent emitter rotation does not rewrite existing particle headings. Stretch
+continues to take precedence over billboard orientation, as in the pinned client.
+Unsupported other render modes still reject configuration.
+
+All five particle-only Warrior candidates now pass the isolated native gallery:
+51 checks in `.local/p6-skill-effects-r3/render-final/report.json`. Geometry checks
+cover source-axis corners, camera independence, quarter turns and attached centers.
+97 motion checks cover birth heading, retained heading and later births; the existing
+projectile gallery passes 67 checks. Reports/captures are under the same evidence
+root. Sword Spin's ground swirl was visually reviewed. Touched GDScript lint and
+format checks pass; Godot 4.7.2 parsed and ran the components. Rendering used Linux
+Xvfb/llvmpipe, not Chrome or the connected editor. No pixel comparison with an
+original-client capture was performed.
+
+These remain isolated effects, not installed skill presentation. Motion-event
+attachment dispatch, Bash's mixed mesh/particle effect and live/browser qualification
+remain next. No server, database or public build changed.
+
 ## Warrior particle candidates and duplicate scalar keys — 2026-09-09
 
 The scalar MSE importer and Godot emitter now accept nondecreasing timestamps,

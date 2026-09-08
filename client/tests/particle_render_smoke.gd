@@ -47,6 +47,7 @@ func _run() -> void:
 	await RenderingServer.frame_post_draw
 	var baseline := root.get_texture().get_image()
 	_style_checks(catalog.effects[0].systems[0])
+	_geometry_checks(world, camera, catalog.effects[0].systems[0])
 	for i: int in range(catalog.effects.size()):
 		var effect := Effect.new()
 		world.add_child(effect)
@@ -115,3 +116,36 @@ func _style_checks(source: Dictionary) -> void:
 	_check("texture advances past deadline", particle.frame == 1)
 	Style.advance(particle, recipe, 0.5, rng)
 	_check("texture wraps multiple steps", particle.frame == 2)
+
+
+func _geometry_checks(world: Node3D, camera: Camera3D, source: Dictionary) -> void:
+	var effect := Effect.new()
+	world.add_child(effect)
+	var recipe := source.duplicate(true)
+	recipe.particle.BillboardType = 3
+	recipe.particle.StretchEnable = 0
+	var particle := {
+		"position": Vector3(2, 3, 4),
+		"previous_position": Vector3(2, 3, 4),
+		"attached": false,
+		"rotation": 0.0,
+		"half_size": Vector2(1, 2),
+		"scale": Vector2.ONE
+	}
+	var corners: Array[Vector3] = effect._corners(particle, recipe, camera)
+	_check("ground quad source corner", corners[0].is_equal_approx(Vector3(0, 3, 5)))
+	_check("ground quad opposite corner", corners[3].is_equal_approx(Vector3(4, 3, 3)))
+	var old_basis := camera.basis
+	camera.rotate_y(0.7)
+	_check(
+		"ground quad ignores camera heading", effect._corners(particle, recipe, camera) == corners
+	)
+	camera.basis = old_basis
+	particle.rotation = 90.0
+	corners = effect._corners(particle, recipe, camera)
+	_check("ground quarter turn", corners[0].is_equal_approx(Vector3(1, 3, 2)))
+	effect.position = Vector3(10, 0, 0)
+	particle.attached = true
+	corners = effect._corners(particle, recipe, camera)
+	_check("attached ground center follows emitter", corners[0].is_equal_approx(Vector3(11, 3, 2)))
+	effect.queue_free()

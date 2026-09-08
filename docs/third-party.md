@@ -413,3 +413,11 @@ models (`money.gr2`, `medicine_R.GR2`) and their diffuse textures (`money.dds`,
 Original inputs and converted derivatives stay ignored; no original implementation
 was copied. Conversion reuses the pinned Carbon reader and existing Blender tool.
 Original asset rights remain distinct from tooling licenses. See [ground items](ground-items.md).
+
+The Warrior ground-plane renderer and birth-heading adapter independently follow
+`EffectLib/ParticleInstance.cpp:Transform` and
+`ParticleSystemInstance.cpp` at the pinned client revision above. Color operation 5
+uses doubled RGB modulation per Microsoft's
+[D3DTEXTUREOP reference](https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dtextureop).
+The adapter preserves the original separate alpha modulation; these references do
+not establish pixel parity across the original Direct3D and Godot renderers.
