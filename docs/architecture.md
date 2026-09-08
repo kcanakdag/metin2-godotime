@@ -1621,3 +1621,23 @@ integrity test rejects changed catalog/presentation/registry bytes and mismatche
 identities; three Python registry checks and selected-package strict library
 Clippy pass. The normal rendered client’s matching-package qualification is next;
 this run exercises the gameplay connection fixture, not exported Main rendering.
+
+
+## Original Yongan population build selection — 2026-09-08
+
+`MT2_ORIGINAL_POPULATION` selects the verified original inventory, compiled by
+`build_original_population.rs` into the normal `REGENERATION_DEFINITIONS` registry.
+The offline inspection example shares this compiler. Build-time validation checks
+all group members against `MT2_MOB_CONTENT`; missing species fail before publication.
+This mode requires Yongan and excludes authored population overrides/combat fixtures.
+Ordinary authored placements become empty, so original allocated groups are the
+sole ordinary mob population. The separately authored dummy remains unchanged.
+Server RNG, terrain-valid group sampling, persisted regeneration deadlines and
+monotonic group/member allocation run through the existing authoritative adapter.
+No new client-controlled spawn action or protocol/table schema is introduced.
+
+The selected 945-entry inventory initialized 2,835 members covering 44 species in
+`mt2-p2-original-linked-r1-20260908`. Two real clients passed 22 focused checks.
+This establishes population subscriptions and connection lifecycle, not full-map
+rendering performance, long-running stability, every species' combat, or server
+restart persistence. Public protocol 19 is still the earlier build.

@@ -119,6 +119,7 @@ def main() -> None:
             "recovery",
             "security",
             "population",
+            "original_population",
             "npcs",
             "npc_spawns",
             "classes",
@@ -131,6 +132,7 @@ def main() -> None:
         choices=range(4),
         help="Focus the classes scenario on one class while validating the full private rosters",
     )
+    parser.add_argument("--mob-catalog", type=Path)
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument(
         "--population-profile", type=Path, default=ROOT / "content/worlds/yongan.population.json"
@@ -139,6 +141,8 @@ def main() -> None:
         "--report", type=Path, default=ROOT / ".local/p2-physical/combat-report.json"
     )
     options = parser.parse_args()
+    if options.scenario == "original_population" and options.mob_catalog is None:
+        parser.error("--scenario original_population requires --mob-catalog")
     if options.class_id is not None and options.scenario != "classes":
         parser.error("--class-id requires --scenario classes")
     if not options.database.startswith("mt2-p2-"):
@@ -202,6 +206,9 @@ def main() -> None:
                 + "_smoke.gd"
             )
             scripts = [Path("tests/combo_smoke.gd"), selected_script]
+            if options.scenario == "original_population":
+                scripts.append(Path("tests/physical_population_smoke.gd"))
+                (stage / "tests/mob-catalog.json").write_bytes(options.mob_catalog.read_bytes())
             if options.scenario == "npc_spawns":
                 scripts.append(Path("tests/physical_population_smoke.gd"))
                 (stage / "tests/npc-catalog.json").write_bytes(

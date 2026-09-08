@@ -9,6 +9,7 @@ mod build_combo;
 mod build_items;
 mod build_mobs;
 mod build_npcs;
+mod build_original_population;
 mod build_population;
 mod build_regeneration;
 mod build_skills;
@@ -499,6 +500,21 @@ fn main() {
     println!("cargo:rerun-if-changed=build_mobs.rs");
     let selected_mobs = std::env::var_os("MT2_MOB_CONTENT")
         .map(|path| build_mobs::load(Path::new(&path)).unwrap_or_else(|error| fail(error)));
+    println!("cargo:rerun-if-env-changed=MT2_ORIGINAL_POPULATION");
+    println!("cargo:rerun-if-changed=build_original_population.rs");
+    println!("cargo:rerun-if-changed=src/population_catalog.rs");
+    let original_population = std::env::var_os("MT2_ORIGINAL_POPULATION").map(|path| {
+        if std::env::var_os("CARGO_FEATURE_YONGAN").is_none()
+            || !std::env::var(TARGET_FIXTURE_ENV).unwrap_or_default().is_empty()
+            || std::env::var_os("MT2_POPULATION_PROFILE").is_some() {
+            fail("Original population requires Yongan without combat fixtures or authored population overrides");
+        }
+        let mobs = selected_mobs.as_ref().unwrap_or_else(|| fail("Original population requires MT2_MOB_CONTENT"));
+        let path = Path::new(&path);
+        println!("cargo:rerun-if-changed={}", path.display());
+        let bytes = fs::read(path).unwrap_or_else(|e| fail(format!("Cannot read original population: {e}")));
+        build_original_population::compile(&bytes, Some(&mobs.vnums)).unwrap_or_else(|e| fail(e))
+    });
     println!("cargo:rerun-if-changed={DEFINITIONS}");
     println!("cargo:rerun-if-changed={COMBO_VALIDATOR}");
     println!("cargo:rerun-if-changed=build_items.rs");
@@ -1070,7 +1086,11 @@ fn main() {
     if reward_gold_min > reward_gold_max {
         fail("mob reward_gold_min exceeds reward_gold_max");
     }
-    let (monster_spawns, combat_fixture_content_hash) = selected_monster_spawns(mob_vnum);
+    let (monster_spawns, combat_fixture_content_hash) = if original_population.is_some() {
+        (Vec::new(), "")
+    } else {
+        selected_monster_spawns(mob_vnum)
+    };
 
     let item = items
         .iter()
@@ -1517,7 +1537,10 @@ pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
     writeln!(output, "];").unwrap();
 
     output.push_str("#[derive(Clone, Copy, Debug)]\npub struct RegenerationGroupArea { pub bounds_cm: [i32; 4], pub groups: &'static [&'static [u32]] }\n#[derive(Clone, Copy, Debug)]\npub struct RegenerationDefinition { pub force_aggressive: bool, pub area: Option<RegenerationGroupArea>, pub id: u32, pub interval_us: i64, pub capacity: usize, pub startup_jitter_max_seconds: u8, pub templates: &'static [MonsterSpawnDefinition] }\n");
-    if std::env::var(TARGET_FIXTURE_ENV).unwrap_or_default() == "regenerating-wild-dog-v1" {
+    if let Some(registry) = original_population {
+        output.push_str(&registry);
+        output.push_str("pub const REGENERATION_DEFINITIONS: &[RegenerationDefinition] = ORIGINAL_REGENERATION_DEFINITIONS;\n");
+    } else if std::env::var(TARGET_FIXTURE_ENV).unwrap_or_default() == "regenerating-wild-dog-v1" {
         let payload: Value = serde_json::from_slice(
             &fs::read(REGENERATING_TARGET_FIXTURE).expect("regeneration fixture must exist"),
         )

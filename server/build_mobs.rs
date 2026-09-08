@@ -6,6 +6,7 @@ use std::path::Path;
 pub struct Package {
     pub gameplay_hash: String,
     pub registry: String,
+    pub vnums: std::collections::BTreeSet<u32>,
 }
 
 fn read(root: &Path, name: &str) -> Result<Vec<u8>, String> {
@@ -51,7 +52,25 @@ pub fn load(root: &Path) -> Result<Package, String> {
     if !registry.contains("pub const MOBS: &[MobDefinition]") {
         return Err("Mob package lacks assembled definitions; rebuild it".into());
     }
+    let mut vnums = std::collections::BTreeSet::new();
+    for mob in gameplay["mobs"]
+        .as_array()
+        .ok_or("Missing mob definitions")?
+    {
+        let vnum = mob["vnum"]
+            .as_u64()
+            .and_then(|v| u32::try_from(v).ok())
+            .filter(|v| *v > 0)
+            .ok_or("Invalid mob vnum")?;
+        if !vnums.insert(vnum) {
+            return Err("Duplicate mob vnum".into());
+        }
+    }
+    if vnums.is_empty() {
+        return Err("Empty mob registry".into());
+    }
     Ok(Package {
+        vnums,
         gameplay_hash: hash.into(),
         registry,
     })

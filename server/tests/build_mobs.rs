@@ -8,7 +8,7 @@ fn package_requires_matching_bytes_and_gameplay_identities() {
     let dir = std::env::temp_dir().join(format!("mt2-mob-package-{}", std::process::id()));
     std::fs::create_dir(&dir).unwrap();
     let hash = "a".repeat(64);
-    let gameplay = json!({"content_hash":hash}).to_string();
+    let gameplay = json!({"content_hash":hash,"mobs":[{"vnum":101}]}).to_string();
     let presentation = json!({"gameplay_hash":hash}).to_string();
     let registry = "pub const MOBS: &[MobDefinition] = &[];";
     let digest = |text: &str| format!("{:x}", Sha256::digest(text.as_bytes()));
@@ -25,6 +25,7 @@ fn package_requires_matching_bytes_and_gameplay_identities() {
     let package = build_mobs::load(&dir).unwrap();
     assert_eq!(package.gameplay_hash, hash);
     assert_eq!(package.registry, registry);
+    assert_eq!(package.vnums, [101].into());
     for (name, original) in [
         ("gameplay.v1.json", gameplay.as_str()),
         ("presentation.v1.json", presentation.as_str()),

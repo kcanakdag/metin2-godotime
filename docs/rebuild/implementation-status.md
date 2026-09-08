@@ -5,6 +5,28 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Original Yongan population linked and subscribed — 2026-09-08
+
+`MT2_ORIGINAL_POPULATION` now links the 945 original regeneration entries into a
+normal Yongan module using the selected 44-species mob package. The shared offline/
+build compiler verifies inventory hash and lifecycle policy, and rejects species
+missing from the compiled mob package. Authored ordinary spawns are replaced; the
+practice dummy remains independent. Existing allocation and regeneration reducers
+own all spawned state. This remains application protocol 24 with unchanged bindings.
+
+Frozen module and evidence: `.local/mobs/original-linked-r1/acceptance.json`.
+New database `mt2-p2-original-linked-r1-20260908` initialized 2,835 ordinary mobs
+across all 44 species. Both authenticated clients received that population, moved
+with remote updates, rejected an unknown target and verified disconnect/reconnect;
+22 checks passed. Two focused build-package tests and strict selected Yongan library
+Clippy passed. An initial anonymous SQL count was denied by the normal auth boundary;
+evidence comes from authenticated client subscriptions, without weakening auth.
+
+No public deployment changed. Full-population rendered Main/browser performance,
+long-running population behavior, database restart and all-species combat still
+need qualification. The next implementation step is rendered full-world integration
+and export, followed by the public update once the integrated slice is qualified.
+
 ## Client mob/projectile package installer — 2026-09-08
 
 `tools/install_mob_content.py` now installs hash-verified, allowlisted converted

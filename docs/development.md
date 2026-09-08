@@ -1753,3 +1753,25 @@ Focused presentation QA uses `tools/test_world_projectiles.py --godot <godot>
 --output <fresh-directory>`. It installs the package into an isolated Main scene,
 imports through Godot and exercises four projectile definitions with controlled
 rows. This does not establish live networking, browser export or editor behavior.
+
+
+## Build the original Yongan mob population
+
+Build with `--features yongan`, `MT2_MOB_CONTENT=<absolute-compiled-mob-package>`
+and `MT2_ORIGINAL_POPULATION=<absolute-population.v1.json>`. The last input is the
+hash-verified original regeneration inventory from the mob population pipeline.
+The shared compiler validates its map, lifecycle policy, group references and
+species against the selected mob package. Combat fixtures and
+`MT2_POPULATION_PROFILE` cannot be combined with this mode. Original regeneration
+entries replace authored ordinary mob placements; the practice dummy remains.
+The existing terrain and NPC packages must also be present for a Yongan build.
+
+Freeze the module, publish to a fresh `mt2-p2-` database and run
+`tools/test_physical_combat.py --scenario original_population --mob-catalog
+<compiled-package>/gameplay.v1.json` with the explicit auth/game endpoints,
+database, Godot executable and report path. This focused scenario targets the
+selected full Yongan inventory (over 2,000 initial mobs); it checks two authenticated
+subscriptions, registered unique mob IDs, movement, invalid-target rejection and
+reconnect. It does not render actors or exercise combat against every species.
+`server/examples/regeneration_compile.rs` uses the same compiler for offline
+inspection without installing the emitted registry.
