@@ -79,6 +79,33 @@ pass in `.local/mobs/regeneration-restore-acceptance-r1.json`. This does not pro
 a SpacetimeDB restart: persisted tables and transactional live integration are
 still pending.
 
+The shared `npc_placement::sample_group` planner now implements the original
+leader-first chain using the existing sixteen-attempt range sampler. It aborts
+after a failed leader, skips failed followers, and derives each next rectangle
+from the most recent successful member. Derived rectangles may cross map edges;
+individual samples still require terrain acceptance. Four independent 300–500 cm
+offset draws follow each success. The module is a public pure Rust API, not a new
+SpacetimeDB reducer; existing NPC behavior remains unchanged.
+
+Inspect the complete group selection against the server's baked Yongan map:
+
+```sh
+cargo run --manifest-path server/Cargo.toml --offline --features yongan \
+  --example population_placement -- /path/to/population.v1.json 42 \
+  > /path/to/placements.json
+```
+
+The tool verifies the inventory hash, samples original selectors uniformly and
+records source entry/unit/member identity, coordinates, height and heading. It
+currently supports group families (`g`, `ga`, `r`) on Yongan. Positions use the
+server's current movement footprint; species-specific footprints remain future
+work. Seed 42 places 2,853 members across all 945 units and all 44 definitions;
+seed 43 places 2,843, with no failed leaders or followers in either run. Repeating
+seed 42 produces identical output. Evidence is in
+`.local/mobs/population-placement-acceptance-r1.json`. These are real-map offline
+placement checks, not live actor spawning, rendered map inspection or multiplayer
+evidence.
+
 `content/profiles/yongan-wildlife.json` explicitly selects Wild Dog 101, Wolf 102,
 Wild Boar 108, Bear 110 and Tiger 114. This is a candidate source inventory, not
 an installed runtime registry or a new spawn layout.

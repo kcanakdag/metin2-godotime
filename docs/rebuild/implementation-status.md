@@ -22,6 +22,22 @@ evidence. No server or public deployment changed in this recheck.
 
 ### Original wildlife definitions in progress
 
+Group placement checkpoint: the shared server range sampler now supports original
+leader-first group chains, independent offsets, failed-leader abort and skipped
+followers. Derived rectangles may cross map edges while individual positions still
+require terrain validation. Existing NPC placement is unchanged; the pure Rust
+module is exposed for reuse without introducing a client-callable action.
+
+The `population_placement` developer command samples all original Yongan group
+selectors against baked server collision. Seed 42 places 2,853 members, seed 43
+places 2,843; both place all 945 units with no failed followers and seed 42 covers
+all 44 definitions. Repeated seed 42 output is identical. Seven focused sampler
+tests and scoped strict Clippy pass. Evidence:
+`.local/mobs/population-placement-acceptance-r1.json`. This uses the current shared
+movement footprint, not per-species collision radii. No live spawning, rendered
+world inspection, deployment or multiplayer qualification is claimed; transactional
+database integration of placement and regeneration remains unfinished.
+
 Regeneration restoration checkpoint: the scheduler now validates and restores
 storage-neutral snapshots without resetting deadlines or retired owner counters.
 The offline tool adds new-file checkpoint creation and a separate-process resume

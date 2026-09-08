@@ -14,6 +14,72 @@ pub struct Placement {
     pub heading_degrees: u16,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct GroupPlacement {
+    pub slot: usize,
+    pub vnum: u32,
+    pub placement: Placement,
+}
+
+/// Plan original overworld group positions. Callers validate terrain per species
+/// and transact the resulting entities with the regeneration owner allocation.
+pub fn sample_group(
+    members: &[u32],
+    bounds_cm: [i32; 4],
+    mut random: impl FnMut(i32, i32) -> i32,
+    mut height: impl FnMut(u32, f32, f32) -> Option<f32>,
+) -> Result<Vec<GroupPlacement>, String> {
+    if members.is_empty() || members.len() > 256 || members.contains(&0) {
+        return Err("Group requires 1..=256 valid member definitions".into());
+    }
+    let mut area = Area::new(bounds_cm)?;
+    let mut result = Vec::new();
+    for (slot, &vnum) in members.iter().enumerate() {
+        let Some(placement) = area.sample(&mut random, |x, z| height(vnum, x, z))? else {
+            if slot == 0 {
+                break; // Original leader placement failure aborts the whole group.
+            }
+            continue;
+        };
+        result.push(GroupPlacement {
+            slot,
+            vnum,
+            placement,
+        });
+        let mut offsets = [0; 4];
+        for offset in &mut offsets {
+            *offset = random(300, 500);
+            if !(300..=500).contains(offset) {
+                return Err("Group placement RNG returned an invalid offset".into());
+            }
+        }
+        // Unlike the initial source rectangle, these derived rectangles can
+        // cross a map edge. Keep them intact; terrain rejects individual samples.
+        let [left, top, right, bottom] = offsets;
+        area = Area {
+            bounds_cm: [
+                placement
+                    .x_cm
+                    .checked_sub(left)
+                    .ok_or("Group rectangle overflow")?,
+                placement
+                    .z_cm
+                    .checked_sub(top)
+                    .ok_or("Group rectangle overflow")?,
+                placement
+                    .x_cm
+                    .checked_add(right)
+                    .ok_or("Group rectangle overflow")?,
+                placement
+                    .z_cm
+                    .checked_add(bottom)
+                    .ok_or("Group rectangle overflow")?,
+            ],
+        };
+    }
+    Ok(result)
+}
+
 impl Placement {
     pub fn yaw(self) -> f32 {
         // Original forward is (+sin, +cos); Godot actor forward is -Z.
@@ -74,6 +140,74 @@ impl Area {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn groups_chain_from_successes_and_keep_last_bounds_after_follower_failure() {
+        let mut rejected = 0;
+        let rows = sample_group(
+            &[101, 102, 103, 104],
+            [1000, 1000, 1100, 1100],
+            |lo, _| lo,
+            |vnum, _, _| {
+                if vnum == 102 {
+                    rejected += 1;
+                    None
+                } else {
+                    Some(0.0)
+                }
+            },
+        )
+        .unwrap();
+        assert_eq!(rejected, 16);
+        assert_eq!(
+            rows.iter()
+                .map(|r| (r.slot, r.vnum, r.placement.x_cm, r.placement.z_cm))
+                .collect::<Vec<_>>(),
+            vec![(0, 101, 1000, 1000), (2, 103, 700, 700), (3, 104, 400, 400)]
+        );
+    }
+
+    #[test]
+    fn failed_leader_aborts_and_invalid_offset_rejects_the_plan() {
+        let mut attempts = 0;
+        assert!(
+            sample_group(
+                &[101, 102],
+                [1000, 1000, 1100, 1100],
+                |lo, _| lo,
+                |vnum, _, _| {
+                    assert_eq!(vnum, 101);
+                    attempts += 1;
+                    None
+                }
+            )
+            .unwrap()
+            .is_empty()
+        );
+        assert_eq!(attempts, 16);
+        assert!(
+            sample_group(
+                &[101],
+                [1000, 1000, 1100, 1100],
+                |lo, _| if lo == 300 { 299 } else { lo },
+                |_, _, _| Some(0.0)
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn derived_group_rectangle_can_cross_map_edge_without_rejecting_valid_samples() {
+        let rows = sample_group(
+            &[101, 102],
+            [100, 100, 200, 200],
+            |lo, hi| if lo < 0 { hi } else { lo },
+            |_, x, z| (x >= 0.0 && z >= 0.0).then_some(0.0),
+        )
+        .unwrap();
+        assert_eq!(rows.len(), 2);
+        assert_eq!((rows[1].placement.x_cm, rows[1].placement.z_cm), (400, 400));
+    }
 
     #[test]
     fn inclusive_edges_preserve_centimetres_and_heading_equivalence() {

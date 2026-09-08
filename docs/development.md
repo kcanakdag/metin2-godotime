@@ -56,6 +56,12 @@ the command in a separate process with `--resume FILE` to exercise restoration.
 The tool refuses to overwrite an existing checkpoint. These are offline developer
 files; they do not restore a live database.
 
+`cargo run --manifest-path server/Cargo.toml --offline --features yongan --example
+population_placement -- /path/to/population.v1.json 42` emits seeded group positions
+using the shared sampler and real server collision data. Redirect stdout to an
+ignored JSON report. Change the seed to inspect another placement; no server or
+editor is modified.
+
 ## Classic character builds
 
 Use `make characters-build` for the selected four-class/eight-appearance pipeline,
