@@ -1,6 +1,6 @@
 //! Original ordinary-NPC damage dispatch after CalcMeleeDamage.
 //! No player bow/skill formula: callers supply trusted NPC damage and defenses.
-//! Party, magic-attack, affect, penetration and hit/skill bonus stages remain zero
+//! Party, magic-attack, affect, penetration resistance and hit/skill bonus stages remain zero
 //! in the installed policy. Extend that policy before enabling those modifiers.
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -18,9 +18,39 @@ pub fn finish(
     melee_damage: u16,
     resistance: u8,
     critical_percent: u8,
+    draw: impl FnMut(u8, u8) -> u8,
+) -> Result<u16, String> {
+    finish_with_penetration(
+        kind,
+        melee_damage,
+        resistance,
+        critical_percent,
+        Penetration::default(),
+        draw,
+    )
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Penetration {
+    pub percent: u8,
+    // Authoritative defense grade after defense-percent adjustment, excluding
+    // NPC-attacker marriage defense. Added after critical, never doubled by it.
+    pub defense: u16,
+}
+
+pub fn finish_with_penetration(
+    kind: Kind,
+    melee_damage: u16,
+    resistance: u8,
+    critical_percent: u8,
+    penetration: Penetration,
     mut draw: impl FnMut(u8, u8) -> u8,
 ) -> Result<u16, String> {
-    if resistance > 100 || critical_percent > 100 || (kind == Kind::Normal && resistance != 0) {
+    if resistance > 100
+        || critical_percent > 100
+        || penetration.percent > 100
+        || (kind == Kind::Normal && resistance != 0)
+    {
         return Err("Invalid ordinary mob damage modifiers.".into());
     }
     let mut damage = u32::from(melee_damage);
@@ -29,17 +59,26 @@ pub fn finish(
     }
     damage = damage * u32::from(100 - resistance) / 100;
     if critical_percent != 0 {
-        let chance = match kind {
-            Kind::Magic if critical_percent >= 10 => 5 + (critical_percent - 10) / 4,
-            Kind::Magic => critical_percent / 2,
-            _ => critical_percent,
-        };
+        let chance = proc_chance(kind, critical_percent);
         // A nonzero source percentage still draws when its reduced chance is 0.
         if checked_draw(&mut draw, 1, 100)? <= chance {
             damage *= 2;
         }
     }
+    if penetration.percent != 0
+        && checked_draw(&mut draw, 1, 100)? <= proc_chance(kind, penetration.percent)
+    {
+        damage += u32::from(penetration.defense);
+    }
     u16::try_from(damage).map_err(|_| "Ordinary mob damage exceeds the supported range.".into())
+}
+
+fn proc_chance(kind: Kind, percent: u8) -> u8 {
+    match kind {
+        Kind::Magic if percent >= 10 => 5 + (percent - 10) / 4,
+        Kind::Magic => percent / 2,
+        _ => percent,
+    }
 }
 
 fn checked_draw(draw: &mut impl FnMut(u8, u8) -> u8, low: u8, high: u8) -> Result<u8, String> {
@@ -53,6 +92,105 @@ fn checked_draw(draw: &mut impl FnMut(u8, u8) -> u8, low: u8, high: u8) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn penetration_adds_defense_after_resistance_and_critical() {
+        for kind in [Kind::NormalRange, Kind::Magic] {
+            let mut draws = 0;
+            let result = finish_with_penetration(
+                kind,
+                37,
+                50,
+                100,
+                Penetration {
+                    percent: 100,
+                    defense: 11,
+                },
+                |lo, hi| {
+                    assert_eq!((lo, hi), (1, 100));
+                    draws += 1;
+                    1
+                },
+            )
+            .unwrap();
+            assert_eq!(result, 47); // 37 -> 18 -> 36 -> 47; defense is not doubled.
+            assert_eq!(draws, 2);
+        }
+    }
+
+    #[test]
+    fn original_one_percent_magic_penetration_draws_but_cannot_proc() {
+        for kind in [Kind::Normal, Kind::NormalRange, Kind::Magic] {
+            let mut hits = 0;
+            let mut draws = 0;
+            for roll in 1..=100 {
+                let result = finish_with_penetration(
+                    kind,
+                    30,
+                    0,
+                    0,
+                    Penetration {
+                        percent: 1,
+                        defense: 10,
+                    },
+                    |_, _| {
+                        draws += 1;
+                        roll
+                    },
+                )
+                .unwrap();
+                hits += usize::from(result == 40);
+            }
+            assert_eq!(draws, 100);
+            assert_eq!(hits, if kind == Kind::Magic { 0 } else { 1 });
+        }
+    }
+
+    #[test]
+    fn penetration_rejects_invalid_inputs_and_overflow() {
+        assert!(
+            finish_with_penetration(
+                Kind::Normal,
+                30,
+                0,
+                0,
+                Penetration {
+                    percent: 101,
+                    defense: 10
+                },
+                |_, _| panic!("invalid input drew RNG")
+            )
+            .is_err()
+        );
+        assert!(
+            finish_with_penetration(
+                Kind::Normal,
+                u16::MAX,
+                0,
+                0,
+                Penetration {
+                    percent: 100,
+                    defense: 1
+                },
+                |_, _| 1
+            )
+            .is_err()
+        );
+        assert!(
+            finish_with_penetration(
+                Kind::Magic,
+                30,
+                0,
+                0,
+                Penetration {
+                    percent: 1,
+                    defense: 10
+                },
+                |_, _| 0
+            )
+            .is_err()
+        );
+    }
 
     #[test]
     fn magic_critical_uses_reduced_probability_but_range_uses_full_probability() {

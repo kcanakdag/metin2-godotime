@@ -1007,12 +1007,21 @@ pub fn roll_monster_hit(
     target: Identity,
 ) -> Result<u16, String> {
     let definition = mob_physical(monster)?;
-    let damage = roll_damage(ctx, mob_attacker(definition)?, player_victim(ctx, target)?)?;
-    crate::mob_damage::finish(
+    let victim = player_victim(ctx, target)?;
+    let defense = server_defense_grade(victim)
+        .map_err(|error| format!("Invalid penetration defense: {error:?}"))?;
+    let defense =
+        u16::try_from(defense).map_err(|_| "Penetration defense exceeds supported range")?;
+    let damage = roll_damage(ctx, mob_attacker(definition)?, victim)?;
+    crate::mob_damage::finish_with_penetration(
         crate::combat::ordinary_definition(monster)?.damage_kind,
         damage,
         0,
         definition.critical_percent,
+        crate::mob_damage::Penetration {
+            percent: definition.penetrate_percent,
+            defense,
+        },
         |low, high| ctx.rng().gen_range(low..=high),
     )
 }
@@ -1080,6 +1089,7 @@ mod tests {
             sword_resistance_percent: 0,
             fan_resistance_percent: 0,
             critical_percent: 0,
+            penetrate_percent: 0,
         };
         let dog = &definitions::MOB_PHYSICAL_DEFINITIONS[0];
         let target = warrior_victim(1, 4, 3);

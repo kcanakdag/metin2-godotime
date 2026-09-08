@@ -1256,3 +1256,18 @@ Seven MAGIC variants (391,392,393,395,396,397,398) also have source penetration 
 the finalizer does not yet consume it. Do not silently discard it during registry
 installation. Original MAGIC penetration reduces the chance but still consumes
 a random draw for a nonzero source value, even when the resulting chance is zero.
+
+Ordinary NPC penetration is now a trusted physical-definition field and flows
+through the runtime damage finalizer. It adds the canonical victim defense after
+resistance and critical doubling; critical does not double that add-back.
+Normal/normal-range use the full chance; magic uses the source skill reduction.
+A nonzero 1% MAGIC value consumes a draw but cannot proc after reduction, matching
+the seven selected White Oath variants. Invalid chance/roll and u16 result overflow
+reject. The installed dog remains at zero penetration with unchanged random draws.
+All-target Rust tests and strict all-feature Clippy pass (148 library tests plus
+other suites); evidence: `.local/mobs/penetration-runtime-r1`.
+Penetration resistance, its passive skill modifier and nonzero defense-percent
+bonuses remain outside the installed zero-bonus policy. Full population registry
+installation and live ranged/magic multiplayer QA are still pending. No server,
+client export or public deployment changed. The earlier note that penetration is
+not consumed is superseded by this checkpoint.
