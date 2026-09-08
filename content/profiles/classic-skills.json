@@ -21,6 +21,28 @@
       "handler": "physical_splash_v1",
       "motion": "skill_2",
       "weapon_class": "sword"
+    },
+    {
+      "id": "skill.warrior.spirit-strike",
+      "vnum": 16,
+      "class_id": 0,
+      "minimum_level": 5,
+      "maximum_rank": 20,
+      "handler": "physical_area_v1",
+      "motion": "skill_16",
+      "weapon_class": "sword",
+      "hits_per_life": 1
+    },
+    {
+      "id": "skill.warrior.bash",
+      "vnum": 17,
+      "class_id": 0,
+      "minimum_level": 5,
+      "maximum_rank": 20,
+      "handler": "physical_area_v1",
+      "motion": "skill_17",
+      "weapon_class": "sword",
+      "hits_per_life": 1
     }
   ]
 }

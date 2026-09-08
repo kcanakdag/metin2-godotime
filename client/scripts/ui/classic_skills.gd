@@ -23,9 +23,14 @@ func _ready() -> void:
 	var title := Art.title(self, "Skills", 253, hide)
 	title.gui_input.connect(_title_input)
 	_points = Art.label(self, "", Vector2(16, 38), Art.TITLE)
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(16, 67)
+	scroll.size = Vector2(225, 188)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
 	_list = Control.new()
-	_list.position = Vector2(16, 67)
-	add_child(_list)
+	_list.custom_minimum_size = Vector2(212, 188)
+	scroll.add_child(_list)
 	var hint := Art.label(
 		self,
 		"Drag a learned skill to a quickslot.\nRight-click a skill to use it.",
@@ -66,6 +71,7 @@ func set_state(progression: Dictionary, rows: Array) -> void:
 	var points := maxi(0, int(progression.get("level", 0)) - 4 - spent)
 	_points.text = "Skill points: %d" % points
 	var definitions := catalog.available(int(progression.get("character_class", -1)))
+	_list.custom_minimum_size.y = maxf(188.0, definitions.size() * 60.0)
 	if definitions.is_empty():
 		Art.label(_list, "No skills available for this class yet.", Vector2.ZERO, Art.TEXT)
 	for index in definitions.size():
@@ -74,7 +80,7 @@ func set_state(progression: Dictionary, rows: Array) -> void:
 		for row: Dictionary in rows:
 			if int(row.skill_vnum) == int(definition.vnum):
 				rank = int(row.rank)
-		var y := float(index * 70)
+		var y := float(index * 60)
 		Art.image(_list, "public/slot_base", Vector2(0, y))
 		var slot := Slot.new()
 		slot.position = Vector2(0, y)
@@ -99,7 +105,7 @@ func set_state(progression: Dictionary, rows: Array) -> void:
 			_list, "Rank %d / %d" % [rank, definition.maximum_rank], Vector2(42, y + 18), Art.TEXT
 		)
 		var plus := TextureButton.new()
-		plus.position = Vector2(200, y + 9)
+		plus.position = Vector2(195, y + 9)
 		plus.texture_normal = Art.texture("game/windows/btn_plus_up")
 		plus.texture_hover = Art.texture("game/windows/btn_plus_over")
 		plus.texture_pressed = Art.texture("game/windows/btn_plus_down")

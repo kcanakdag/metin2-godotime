@@ -17,7 +17,9 @@ The local worktree now expects protocol 26 for persisted skill-event placements.
 The public endpoint remains protocol 24. Use matching regenerated bindings and a
 fresh test database for this local change; do not overwrite the public world.
 The protocol-26 state passes 35 authenticated Sword Spin checks and 15 real combat checks.
-Three-Way Cut is now enabled locally alongside Sword Spin. Its two-client dummy
+Four Warrior skills are enabled locally: Three-Way Cut, Sword Spin, Spirit Strike
+and Bash. The four-skill replay passes 52 two-client checks; equipped animation QA
+passes 132 checks and the scrollable skill panel passes 18 native checks. Its two-client dummy
 replay passes 25 checks, including three replicated hits, target validation and
 cooldown rejection. Original icons pass native UI QA. Another 28 two-client checks verify original
 Grey Wolf flinch, knockdown, 0.392 m push and recovery. Equipped animation samples

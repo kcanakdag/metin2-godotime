@@ -60,6 +60,7 @@ def stage_project(stage: Path) -> None:
         (ROOT / "client/scripts/net/game_connection.gd", stage / "scripts/net/game_connection.gd"),
         (ROOT / "tools/progression_admin_smoke.gd", stage / "tests/progression_admin_smoke.gd"),
         (ROOT / "tools/skill_reaction_smoke.gd", stage / "tests/skill_reaction_smoke.gd"),
+        (ROOT / "tools/skill_batch_smoke.gd", stage / "tests/skill_batch_smoke.gd"),
     ):
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
@@ -95,15 +96,17 @@ def run_godot(
     if import_process.returncode:
         log_path.write_text(import_process.stdout)
         raise OperatorError(f"Admin smoke project import failed; log: {log_path}")
+    script = {
+        "skill_reactions": "skill_reaction_smoke.gd",
+        "skill_batch": "skill_batch_smoke.gd",
+    }.get(str(config["mode"]), "progression_admin_smoke.gd")
     command = [
         godot,
         "--headless",
         "--path",
         str(stage),
         "--script",
-        "res://tests/skill_reaction_smoke.gd"
-        if config["mode"] == "skill_reactions"
-        else "res://tests/progression_admin_smoke.gd",
+        "res://tests/" + script,
         "--",
         "--admin-smoke-config",
         str(config_path),
@@ -175,6 +178,7 @@ def arguments() -> argparse.Namespace:
             "training_dummy",
             "three_way_cut",
             "skill_reactions",
+            "skill_batch",
         ),
     )
     parser.add_argument("--server", default="http://127.0.0.1:8186")

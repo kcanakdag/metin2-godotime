@@ -55,6 +55,24 @@ func _run() -> void:
 	panel.set_state({"character_class": 0, "level": 5}, learned)
 	bar.set_skills(learned, 1000000)
 	await process_frame
+	for index in [2, 3]:
+		var added_slot: Control = panel._list.get_child(index * 5 + 1)
+		_check(added_slot._icon.texture != null, "batch skill original icon loads")
+	var scroll: ScrollContainer = panel._list.get_parent()
+	for _step in 3:
+		var wheel := InputEventMouseButton.new()
+		wheel.position = scroll.get_global_rect().get_center()
+		wheel.global_position = wheel.position
+		wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+		wheel.pressed = true
+		root.push_input(wheel)
+		await process_frame
+	_check(scroll.scroll_vertical > 0, "wheel input scrolls expanded skill list")
+	var final_slot: Control = panel._list.get_child(16)
+	_check(
+		scroll.get_global_rect().encloses(final_slot.get_global_rect()),
+		"last skill is accessible inside viewport"
+	)
 	if DisplayServer.get_name() != "headless":
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("res://skills-ui-component.png")

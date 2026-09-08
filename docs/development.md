@@ -2019,3 +2019,20 @@ walks to the mob, and records independent damage/reaction/force/recovery observa
 from both clients. The original clips can outlast the skill action: the fixture
 waits for actual recovery within eight seconds instead of imposing a shorter clip.
 No server inspection reducer or mutable creature-stat override is added.
+
+## Compatible skill batch replay
+
+Use `tools/test_progression_admin.py skill_batch` with the existing server,
+database, Godot, private-fixture and report arguments against a fresh disposable
+`mt2-p2-*` database built with the matching installed skill catalog. Reuse authorized
+test accounts; preserve existing databases. The phase learns Warrior skills
+1/2/16/17, raises the character to level 8 with server-authorized controls, then
+checks both clients observe the expected 3/1/1/1 dummy hits and cooldown rejection.
+It respects the one-second operator mutation limit. This phase currently qualifies
+these four selected skills; extend its expectations when changing the batch.
+
+`tools/test_actors.py --scenario equipped_skills --native` automatically samples
+all selected Warrior skills on both appearances. Run
+`tools/test_target_client.py --suite skills_ui --native` for icon, quickslot and
+scroll-panel input coverage. The current UI fixture expects the four-skill profile.
+Browser and ordinary-mob reaction acceptance remain separate checks.

@@ -5,6 +5,37 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Four-skill compatible batch — 2026-09-08
+
+Enabled Spirit Strike (16) and Bash (17) through the existing selected-content
+profile and physical-area handler, alongside Three-Way Cut (1) and Sword Spin (2).
+Original formulas, icons, motions and event geometry compile through the existing
+pipeline. Installed catalog SHA-256:
+`ccd812f0c4199d90eafac822f07482edb53f21169168385b15b3ba279abca02c`.
+No new combat handler or protocol schema was required. Skills needing charge,
+status effects, magic or projectiles remain disabled until their mechanics exist.
+Specialization selection is still pending; this development profile exposes both
+Warrior trees and does not establish original skill-tree/UI parity.
+
+Fresh local database `mt2-p2-skill-batch-v26-r2-20260908` passes 52 checks with two
+independent authenticated Godot clients: learn all four, matching per-hit dummy
+health histories (3/1/1/1), exact-life preservation and cooldown rejection. The
+first attempt hit the operator's one-second mutation limit; test setup now waits
+1.1 seconds between level commands, preserving the server limit and both databases.
+Native equipped-animation QA passes 132 checks across both Warrior appearances.
+Reviewed male Spirit Strike and female Bash samples retain hair, model and sword
+attachments. Native UI QA passes 18 checks, including original icons and actual
+mouse-wheel input reaching the last skill; the rendered scrolled panel was reviewed.
+Nine live compiler checks, strict library Clippy and targeted Python/GDScript lint
+pass. Evidence: `.local/p6-skill-batch-r1/acceptance.json`.
+
+The panel now scrolls its content rather than overflowing as skills are added.
+This is local native/headless-network evidence: no connected-editor MCP inspection,
+new-skill ordinary-mob force replay, exported browser qualification or public update.
+The existing Three-Way Cut Grey Wolf replay is separate evidence. Local frozen WASM
+contains QA authorization and must not be deployed publicly. Next: matching full-world
+browser export and endpoint qualification before the public development rollout.
+
 ## Original mob skill reactions and reusable authored layouts — 2026-09-08
 
 Authored population overrides now validate against all vnums in the selected

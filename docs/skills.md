@@ -405,3 +405,17 @@ minimum-damage hits, normal flinch, GREAT front knockdown/standup, 0.392 m force
 recovery on a surviving exact life. The original 1.2 s knockdown plus 2 s standup
 are retained. This complements the dummy and equipped-native checks; exported
 browser/full-world behavior and exact original physics parity remain unproven.
+
+### Compatible four-skill batch
+
+The current profile enables Warrior vnums 1, 2, 16 (Spirit Strike) and 17 (Bash).
+The latter two use the existing physical-area handler, original compiled formulas,
+icons and motions, with one hit per victim life per cast. Adding them required
+profile entries and rebuilding catalogs, not separate combat implementations.
+The scrollable panel accommodates the expanded catalog. Specialization selection
+is pending; exposing both Warrior trees is development behavior.
+
+The batch passes 52 authenticated two-client dummy checks, 132 native equipped
+animation checks, 18 native UI checks (including wheel input) and nine compiler
+checks. New-skill ordinary-mob reactions and exported browser QA remain pending.
+See the implementation ledger for evidence paths and the exact installed hash.
