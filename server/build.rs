@@ -1458,6 +1458,7 @@ pub struct MobDefinition {
     pub attacks: &'static [WeightedMobAttack],
     pub acquisition_range_m: f32,
     pub chase_home_range_m: f32,
+    pub target_chase_limit_cm: Option<i64>,
     pub respawn_us: i64,
 }
 impl std::ops::Deref for MobDefinition {
@@ -1479,6 +1480,7 @@ pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
     damage_kind: crate::mob_damage::Kind::Normal,
     attacks: &[WeightedMobAttack { attack: MOB_ATTACK, weight: 100 }],
     acquisition_range_m: MOB_ACQUISITION_RANGE_M,
+    target_chase_limit_cm: None,
     chase_home_range_m: MOB_CHASE_HOME_RANGE_M, respawn_us: MOB_RESPAWN_US,
 }];
 "#,

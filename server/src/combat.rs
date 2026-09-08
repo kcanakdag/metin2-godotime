@@ -1311,6 +1311,29 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
     Ok(())
 }
 
+fn mob_distance_m(a: (f32, f32), b: (f32, f32), original: bool) -> f64 {
+    if original {
+        source_distance_between_meters(a, b).map_or(f64::INFINITY, |cm| cm as f64 / 100.0)
+    } else {
+        f64::from((a.0 - b.0).hypot(a.1 - b.1))
+    }
+}
+
+fn within_chase_policy(
+    d: &definitions::MobDefinition,
+    monster: (f32, f32),
+    home: (f32, f32),
+    player: (f32, f32),
+) -> bool {
+    if let Some(limit) = d.target_chase_limit_cm {
+        limit > 0
+            && source_distance_between_meters(monster, player)
+                .is_some_and(|distance| distance < limit)
+    } else {
+        (player.0 - home.0).hypot(player.1 - home.1) < d.chase_home_range_m
+    }
+}
+
 fn select_monster_victim(
     ctx: &ReducerContext,
     monster: &Monster,
@@ -1319,8 +1342,12 @@ fn select_monster_victim(
 ) -> Option<crate::Player> {
     let definition = ordinary_definition(ctx, monster).ok()?;
     if let Some(player) = crate::mob_aggro::victim(ctx, monster).filter(|p| {
-        (p.x - clock.home_x).hypot(p.z - clock.home_z) < definition.chase_home_range_m
-            && content::clear_path(monster.x, monster.z, p.x, p.z, bounds)
+        within_chase_policy(
+            definition,
+            (monster.x, monster.z),
+            (clock.home_x, clock.home_z),
+            (p.x, p.z),
+        ) && content::clear_path(monster.x, monster.z, p.x, p.z, bounds)
     }) {
         return Some(player);
     }
@@ -1330,23 +1357,33 @@ fn select_monster_victim(
     {
         return None;
     }
-    let selected = ctx
-        .db
-        .player()
-        .iter()
-        .filter(|player| player.online && player.health > 0)
-        .filter(|player| {
-            (player.x - clock.home_x).hypot(player.z - clock.home_z) < definition.chase_home_range_m
-        })
-        .filter(|player| {
-            (player.x - monster.x).hypot(player.z - monster.z) < definition.acquisition_range_m
-        })
-        .filter(|player| content::clear_path(monster.x, monster.z, player.x, player.z, bounds))
-        .min_by(|a, b| {
-            (a.x - monster.x)
-                .hypot(a.z - monster.z)
-                .total_cmp(&(b.x - monster.x).hypot(b.z - monster.z))
-        });
+    let selected =
+        ctx.db
+            .player()
+            .iter()
+            .filter(|player| player.online && player.health > 0)
+            .filter(|player| {
+                within_chase_policy(
+                    definition,
+                    (monster.x, monster.z),
+                    (clock.home_x, clock.home_z),
+                    (player.x, player.z),
+                )
+            })
+            .filter(|player| {
+                mob_distance_m(
+                    (monster.x, monster.z),
+                    (player.x, player.z),
+                    definition.target_chase_limit_cm.is_some(),
+                ) < f64::from(definition.acquisition_range_m)
+            })
+            .filter(|player| content::clear_path(monster.x, monster.z, player.x, player.z, bounds))
+            .min_by(|a, b| {
+                let original = definition.target_chase_limit_cm.is_some();
+                mob_distance_m((monster.x, monster.z), (a.x, a.z), original).total_cmp(
+                    &mob_distance_m((monster.x, monster.z), (b.x, b.z), original),
+                )
+            });
     if let Some(player) = &selected {
         crate::mob_aggro::acquire(ctx, monster, player);
     }
@@ -1480,6 +1517,46 @@ pub(crate) fn cancel_monster_hit(clock: &mut MonsterClock) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn original_chase_uses_current_target_distance_instead_of_authored_home() {
+        let authored = super::definitions::MOB_DEFINITIONS[0];
+        let original = super::definitions::MobDefinition {
+            target_chase_limit_cm: Some(4000),
+            ..authored
+        };
+        assert!(!super::within_chase_policy(
+            &authored,
+            (100.0, 0.0),
+            (0.0, 0.0),
+            (110.0, 0.0)
+        ));
+        assert!(super::within_chase_policy(
+            &original,
+            (100.0, 0.0),
+            (0.0, 0.0),
+            (110.0, 0.0)
+        ));
+        // The source approximation differs from Euclidean meters along one axis.
+        assert!(super::within_chase_policy(
+            &original,
+            (0.0, 0.0),
+            (0.0, 0.0),
+            (41.0, 0.0)
+        ));
+        assert!(!super::within_chase_policy(
+            &original,
+            (0.0, 0.0),
+            (0.0, 0.0),
+            (42.0, 0.0)
+        ));
+        assert!(!super::within_chase_policy(
+            &original,
+            (0.0, 0.0),
+            (0.0, 0.0),
+            (f32::NAN, 0.0)
+        ));
+    }
+
     fn validate_fixture(monster: &super::Monster) -> Result<(), String> {
         let spawn = super::definitions::MONSTER_SPAWNS
             .iter()

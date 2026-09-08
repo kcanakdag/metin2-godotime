@@ -869,3 +869,28 @@ Clippy pass. The fresh training database `mt2-p2-regeneration-policy-r1-20260908
 passes all 67 real two-account regeneration checks, including replacement and
 reconnect, with its existing zero-jitter/passive policy. Public protocol 19 remains
 unchanged; candidate installation and nonzero entry-policy live tests are pending.
+
+## Assembled mob registry — 2026-09-08
+
+The mob compiler now emits `MOBS`, assembling species, physical-table identity,
+damage kinds and weighted actions into the actual `MobDefinition` shape. Original
+`aggressive_sight` supplies acquisition distance. Candidate definitions select a
+4,000-cm target-relative pursuit limit and normal ten-second NPC corpse lifetime,
+based on the pinned source `char_state.cpp` combat-distance check and
+`char_battle.cpp` dead-event scheduling. Revival-party/immediate-death exceptions
+remain unsupported; this is the ordinary selected-population policy.
+
+`target_chase_limit_cm: Some(...)` uses the original integer approximate distance
+for pursuit, acquisition and nearest-victim ordering. Existing authored definitions
+use `None` and retain their home-relative development limit. Original protection/
+party following, idle wandering and health regeneration remain pending; these
+policies alone do not establish full original AI. The full registry is still a
+candidate, not installed with the original population or client content.
+
+Evidence: `.local/mobs/complete-registry-r1/acceptance.json`. All 44 definitions
+compile against current generated server types; the typed harness passes 11
+checks, including all 4,400 weighted rolls across 78 actions and physical-table
+linkage. Three focused Python tests, a pursuit-policy Rust test and strict library
+Clippy pass. No new live replay was run: existing live content still selects the
+authored policy, while the new candidate policy has only unit/type evidence.
+No protocol, database or public deployment changed.

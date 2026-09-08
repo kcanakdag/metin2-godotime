@@ -17,7 +17,7 @@ def rust_text(value):
 
 
 def compile_registry(catalog):
-    physical, actions, kinds, species = [], [], [], []
+    physical, actions, kinds, species, mobs = [], [], [], [], []
     seen = set()
     for mob in catalog["mobs"]:
         vnum = integer(mob["vnum"], 1, 2**32 - 1, "vnum")
@@ -113,15 +113,23 @@ def compile_registry(catalog):
         if total != 100:
             raise ValueError("Mob action weights must total 100")
         actions.append(f"({vnum}, &[" + ",\n".join(rows) + "])")
+        sight = integer(stats["aggressive_sight"], 1, 100000, "aggressive sight") / 100.0
+        index = len(mobs)
+        mobs.append(
+            f"MobDefinition {{ species: SPECIES[{index}], damage_kind: KINDS[{index}].1, "
+            f"attacks: ATTACKS[{index}].1, acquisition_range_m: {sight!r}, "
+            "chase_home_range_m: 0.0, target_chase_limit_cm: Some(4000), respawn_us: 10000000 }"
+        )
     if not 1 <= len(seen) <= 128:
         raise ValueError("Expected 1..128 combat registry definitions")
     return (
-        "// Generated candidate combat tables; not a complete spawn/AI/reward registry.\n"
-        "use crate::definitions::{MobPhysicalDefinition, WeightedMobAttack, AttackDefinition, MobSpeciesDefinition, DefendingSphereDefinition, MonsterReactionDefinition};\n"
+        "// Generated candidate mob definitions; full world/party AI installation is separate.\n"
+        "use crate::definitions::{MobPhysicalDefinition, WeightedMobAttack, AttackDefinition, MobSpeciesDefinition, DefendingSphereDefinition, MonsterReactionDefinition, MobDefinition};\n"
         "pub const SPECIES: &[MobSpeciesDefinition] = &[\n" + ",\n".join(species) + "];\n"
         "pub const PHYSICAL: &[MobPhysicalDefinition] = &[\n" + ",\n".join(physical) + "];\n"
         "pub const KINDS: &[(u32, crate::mob_damage::Kind)] = &[\n" + ",\n".join(kinds) + "];\n"
         "pub const ATTACKS: &[(u32, &[WeightedMobAttack])] = &[\n" + ",\n".join(actions) + "];\n"
+        "pub const MOBS: &[MobDefinition] = &[\n" + ",\n".join(mobs) + "];\n"
     )
 
 

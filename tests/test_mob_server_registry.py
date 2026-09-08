@@ -13,7 +13,7 @@ def catalog():
     source["flags"] = {"ai_flag": []}
     source["rewards"].update(exp=15, gold_min=18, gold_max=27)
     source["stats"].update(
-        st=3, ht=5, dx=6, damage_min=20, damage_max=24, **{"def": 4, "damage_multiplier": 1.4}
+        st=3, ht=5, dx=6, aggressive_sight=2000, damage_min=20, damage_max=24, **{"def": 4, "damage_multiplier": 1.4}
     )
     source["combat_modifiers"] = dict(
         resist_sword=0, resist_fan=0, enchant_critical=1, enchant_penetrate=1
@@ -32,6 +32,8 @@ class MobServerRegistryTests(unittest.TestCase):
         self.assertIn("penetrate_percent: 1", generated)
         self.assertIn("experience: 15, gold_min: 18, gold_max: 27", generated)
         self.assertIn("MobSpeciesDefinition", generated)
+        self.assertIn("target_chase_limit_cm: Some(4000), respawn_us: 10000000", generated)
+        self.assertIn("acquisition_range_m: 20.0", generated)
         self.assertIn("hit_start_us: 250000", generated)
 
     def test_invalid_values_and_inconsistent_dispatch_reject(self):
