@@ -32,7 +32,7 @@ signal npc_interaction_changed(info: Dictionary)
 signal npc_spawns_changed(rows: Array)
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
-const EXPECTED_PROTOCOL_VERSION := 18
+const EXPECTED_PROTOCOL_VERSION := 19
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
 const TABLES := [

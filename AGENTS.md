@@ -352,11 +352,23 @@ original model-space offset semantics and long-frame completion coverage.
 Archer/Jin-Hee idle gallery captures were reviewed; not launch-render evidence.
 Eleven Python tests and scoped lint pass. This fixture uses controlled rows.
 
-Next connect those signals to flight creation and authoritative magic/projectile
-combat so the prepared mobs
-can become playable. `MonsterClock.pending_target` is private and the current
-public Monster row has no target; introduce synchronized authoritative target
-state with protocol/two-client QA rather than client-side nearest-player guesses.
+The worktree now uses protocol 19: public Monster rows capture `attack_target`
+and `attack_target_life_sequence` at action acceptance. Private hit consumption
+preserves the presentation snapshot; action completion, death/respawn and recovery
+clear it. Both subscriptions see the correct snapshot in the 104-check live
+training scenario, `.local/mobs/attack-target-training-r1/multiplayer.json`.
+Server tests pass 138 and strict library Clippy passes. Bindings are generated
+from the actual database; schema hash is
+`0e20635c4f614a884e4d08c2eba09d2f19c6e027d5eb5a96fe5567c1c480234a`.
+The separate frozen Yongan module is `.local/mobs/attack-target-r1/module.wasm`;
+the training module/database uses `attack-target-training-r1` and
+`mt2-p2-attack-target-training-r1-20260908`. The melee harness requires a training
+build without the yongan feature; earlier formatting/wrong-map attempts failed.
+The served local/public artifacts below remain unchanged. Never infer their
+protocol from the newer worktree.
+
+Next connect the actor signals and exact public target life to flight creation,
+then original magic/projectile damage and live population integration.
 Do not keep substituting inventory reports for integration.
 The interrupted investigation inspected pinned primary files under
 `.cache/full-game-research/client/source/src/EffectLib/`:

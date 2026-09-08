@@ -137,7 +137,7 @@ scene passes 122 native checks with captured rows. Matching Web/Linux exports
 now serve 38 NPC definitions at 47 placements on the local development endpoint;
 browser qualification is recorded in the status ledger.
 
-The current worktree is protocol 18 / trusted content schema 8 (item registry schema 2). Item actions
+The current worktree is protocol 19 / trusted content schema 8 (item registry schema 2). Item actions
 carry the server item's revision, rejecting stale/replayed mutations. Quantity
 changes have a private transactional audit history and an offline reconciliation
 tool. See the [item security contract](docs/architecture.md#item-integrity-and-replay-protection).

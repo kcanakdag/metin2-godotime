@@ -14,6 +14,8 @@ const table_names: Array[String] = ['monster']
 @export var model_key: String
 @export var motion_set: String
 @export var attack_action_id: String
+@export var attack_target: PackedByteArray
+@export var attack_target_life_sequence: int
 @export var x: float
 @export var y: float
 @export var z: float
@@ -38,6 +40,8 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"model_key": "String",
 	"motion_set": "String",
 	"attack_action_id": "String",
+	"attack_target": "__identity__",
+	"attack_target_life_sequence": "U32",
 	"x": "F32",
 	"y": "F32",
 	"z": "F32",
@@ -60,19 +64,21 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 ## 6. model_key: String[br]
 ## 7. motion_set: String[br]
 ## 8. attack_action_id: String[br]
-## 9. x: float[br]
-## 10. y: float[br]
-## 11. z: float[br]
-## 12. heading: float[br]
-## 13. health: int[br]
-## 14. max_health: int[br]
-## 15. activity: int[br]
-## 16. attack_sequence: int[br]
-## 17. life_sequence: int[br]
-## 18. respawn_at_us: int[br]
-## 19. action_started_at_us: int[br]
-## 20. action_ends_at_us: int[br]
-static func create(p_id: int, p_definition_vnum: int, p_actor_id: String, p_name: String, p_level: int, p_model_key: String, p_motion_set: String, p_attack_action_id: String, p_x: float, p_y: float, p_z: float, p_heading: float, p_health: int, p_max_health: int, p_activity: int, p_attack_sequence: int, p_life_sequence: int, p_respawn_at_us: int, p_action_started_at_us: int, p_action_ends_at_us: int) -> GameMonster:
+## 9. attack_target: PackedByteArray[br]
+## 10. attack_target_life_sequence: int[br]
+## 11. x: float[br]
+## 12. y: float[br]
+## 13. z: float[br]
+## 14. heading: float[br]
+## 15. health: int[br]
+## 16. max_health: int[br]
+## 17. activity: int[br]
+## 18. attack_sequence: int[br]
+## 19. life_sequence: int[br]
+## 20. respawn_at_us: int[br]
+## 21. action_started_at_us: int[br]
+## 22. action_ends_at_us: int[br]
+static func create(p_id: int, p_definition_vnum: int, p_actor_id: String, p_name: String, p_level: int, p_model_key: String, p_motion_set: String, p_attack_action_id: String, p_attack_target: PackedByteArray, p_attack_target_life_sequence: int, p_x: float, p_y: float, p_z: float, p_heading: float, p_health: int, p_max_health: int, p_activity: int, p_attack_sequence: int, p_life_sequence: int, p_respawn_at_us: int, p_action_started_at_us: int, p_action_ends_at_us: int) -> GameMonster:
 	var result: GameMonster = GameMonster.new()
 	result.id = p_id
 	result.definition_vnum = p_definition_vnum
@@ -82,6 +88,8 @@ static func create(p_id: int, p_definition_vnum: int, p_actor_id: String, p_name
 	result.model_key = p_model_key
 	result.motion_set = p_motion_set
 	result.attack_action_id = p_attack_action_id
+	result.attack_target = p_attack_target
+	result.attack_target_life_sequence = p_attack_target_life_sequence
 	result.x = p_x
 	result.y = p_y
 	result.z = p_z

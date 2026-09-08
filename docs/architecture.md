@@ -115,6 +115,18 @@ walkable. The shared `valid_npc_position` function is used at server initializat
 and by the offline catalog inspector. Mob spawning and player movement retain
 their collision checks. This does not add a client placement reducer.
 
+Protocol 19 adds `Monster.attack_target` and `attack_target_life_sequence`.
+The server captures the character identity and life when accepting an ordinary
+attack, alongside its action ID/sequence and interval. This public presentation
+snapshot survives private hit consumption; nearest-target scans cannot rewrite
+it during the action. Idle/movement, death, respawn and knockback recovery clear
+it. Zero identity means no target; life sequence zero is valid for a fresh player.
+The private hit state and exact life checks remain the authority for damage.
+A visual consumer must resolve the exact target life and presence rather than
+retargeting another player. A retained snapshot is not permission to deal damage.
+The client requires protocol 19 and matching regenerated bindings; existing
+protocol-18 exports and databases remain separate until a coordinated deployment.
+
 Protocol 18 adds public `npc_spawn` rows for original rectangular NPC areas.
 Catalog schema 3 separates fixed placements from bounds and retry intervals.
 The reducer draws inclusive centimetre coordinates, tries terrain validation at

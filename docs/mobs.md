@@ -826,8 +826,8 @@ model captures, not images proving launched projectiles. Eleven focused Python
 tests and scoped Python/GDScript lint pass. No engine errors were observed.
 
 The world still needs to connect these signals to the projectile resource
-factory. The current public monster row does not expose its target; that target
-is private in `MonsterClock`. Add an authoritative public attack-target contract
-with synchronized client/protocol and two-client tests rather than guessing the
-nearest player. Magic/ranged damage, live population installation, browser and
+factory. Protocol 19 now publishes the accepted target identity and life on the monster
+row. The 104-check two-client training test verifies both replicas and death
+clearing; private hit state still owns damage. Connect that exact target life
+rather than guessing the nearest player. Magic/ranged damage, live population installation, browser and
 exported client qualification remain unfinished.

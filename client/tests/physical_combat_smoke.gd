@@ -7,6 +7,7 @@ const DOG_DAMAGE := [29, 30, 32, 33, 35]
 var _expected_sword_domain: Array = SWORD_DAMAGE
 var _incoming: Array = []
 var _previous_health: Dictionary = {}
+var _public_targets: Array[Dictionary] = []
 
 
 func _run() -> void:
@@ -29,6 +30,12 @@ func _run() -> void:
 		ready = await _prove_targetless_physical(actor, observer, actor_id)
 	if ready:
 		observer.players_changed.connect(func(_rows: Array): _record_incoming(observer, actor_id))
+		for pair: Array in [[actor, "actor"], [observer, "observer"]]:
+			var client: GameConnection = pair[0]
+			var role: String = pair[1]
+			client.monsters_changed.connect(
+				func(_rows: Array): _record_attack_target(client, role, actor_id)
+			)
 		ready = await _approach_dog(actor, observer, actor_id)
 	if ready:
 		ready = await _physical_hit(actor, observer, actor_id, true, "captured_sword")
@@ -298,6 +305,23 @@ func _observe_physical_hit(
 	)
 
 
+func _record_attack_target(client: GameConnection, role: String, actor_id: String) -> void:
+	var monster := _monster(client)
+	var target := _player(client, actor_id)
+	if monster.is_empty() or target.is_empty() or int(monster.activity) != 2:
+		return
+	_public_targets.append(
+		{
+			"role": role,
+			"target": str(monster.attack_target),
+			"target_life": int(monster.attack_target_life_sequence),
+			"expected_target": actor_id,
+			"expected_life": int(target.life_sequence),
+			"sequence": int(monster.attack_sequence)
+		}
+	)
+
+
 func _record_incoming(observer: GameConnection, actor_id: String) -> void:
 	var row := _player(observer, actor_id)
 	if row.is_empty():
@@ -344,6 +368,28 @@ func _kill_with_physical_hits(
 		)
 	):
 		return false
+	var target_roles := {}
+	var targets_match := not _public_targets.is_empty()
+	for value: Dictionary in _public_targets:
+		target_roles[value.role] = true
+		targets_match = (
+			targets_match
+			and value.target == value.expected_target
+			and value.target_life == value.expected_life
+		)
+	_check(
+		"physical_public_attack_target_matches_both_subscriptions",
+		targets_match and target_roles.size() == 2
+	)
+
+	_check(
+		"physical_dead_mob_clears_attack_target",
+		(
+			str(_monster(observer).attack_target) == "0".repeat(64)
+			and int(_monster(observer).attack_target_life_sequence) == 0
+		)
+	)
+	_timing_evidence.append({"public_attack_targets": _public_targets.duplicate(true)})
 	var life := int(_monster(observer).life_sequence)
 	actor.move_to(TRAINING_ACTOR_SAFE.x, TRAINING_ACTOR_SAFE.y)
 	if not _check(

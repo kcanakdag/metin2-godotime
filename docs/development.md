@@ -50,6 +50,16 @@ both the unique Blender report and its expanded per-definition report. The exist
 gallery checks every alias against the actual shared GLB clips. See
 [mob conversion](mobs.md#convert-and-inspect-selected-wildlife) for report semantics.
 
+## Attack target protocol fixture
+
+The worktree requires protocol 19. To run `test_physical_combat.py --scenario melee`,
+publish a fresh **training** module (build without `--features yongan`) to a new
+`mt2-p2-...` database. The scenario intentionally expects one dog on the training
+map; a Yongan module is not interchangeable. Use `--server` for the authentication
+origin and `--game-server` for the direct local SpacetimeDB endpoint when the
+development proxy only allows its currently served database. Generate bindings
+from the new module before running the test. Preserve existing databases.
+
 ## Original population diagnostics
 
 `tools/test_particle_emission.py --godot GODOT --catalog PARTICLE_CATALOG

@@ -28,6 +28,8 @@ pub struct Monster {
     pub model_key: String,
     pub motion_set: String,
     pub attack_action_id: String,
+    pub attack_target: Identity,
+    pub attack_target_life_sequence: u32,
     pub x: f32,
     pub y: f32,
     pub z: f32,
@@ -274,6 +276,8 @@ fn fresh_monster(
         model_key: model_key.into(),
         motion_set: motion_set.into(),
         attack_action_id: attack_action_id.into(),
+        attack_target: Identity::ZERO,
+        attack_target_life_sequence: 0,
         x,
         y: content::height(x, z),
         z,
@@ -815,6 +819,7 @@ pub(crate) fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, characte
     let now = now_us(ctx);
     crate::combo::clear_chains_targeting(ctx, monster.id, monster.life_sequence);
     monster.activity = 3;
+    clear_monster_attack_target(monster);
     monster.action_started_at_us = now;
     monster.respawn_at_us =
         now.saturating_add(crate::training_targets::definition(monster.id).map_or_else(
@@ -1250,6 +1255,9 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
             monster.action_started_at_us = 0;
             monster.action_ends_at_us = 0;
         }
+        if monster.activity != 2 {
+            clear_monster_attack_target(&mut monster);
+        }
         ctx.db.monster().id().update(monster);
         ctx.db.monster_clock().id().update(clock);
     }
@@ -1306,6 +1314,8 @@ fn schedule_monster_hit(
     clock.pending_hit_until_us = now.saturating_add(attack.hit_end_us);
     clock.pending_damage = damage;
     monster.attack_action_id = attack.id.into();
+    monster.attack_target = target;
+    monster.attack_target_life_sequence = target_generation;
     monster.attack_sequence = monster.attack_sequence.wrapping_add(1);
     monster.activity = 2;
     monster.action_started_at_us = now;
@@ -1386,6 +1396,12 @@ fn take_due_monster_hit(clock: &mut MonsterClock, now: i64) -> Option<PendingMon
     });
     cancel_monster_hit(clock);
     hit
+}
+
+/// Presentation target survives hit consumption, but not the owning action/life.
+pub(crate) fn clear_monster_attack_target(monster: &mut Monster) {
+    monster.attack_target = Identity::ZERO;
+    monster.attack_target_life_sequence = 0;
 }
 
 pub(crate) fn cancel_monster_hit(clock: &mut MonsterClock) {

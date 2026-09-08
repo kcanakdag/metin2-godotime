@@ -173,6 +173,7 @@ fn publish_reaction(
         .ok_or("Monster reaction timestamp is outside the supported range.")?;
     monster.attack_sequence = monster.attack_sequence.wrapping_add(1);
     monster.activity = 2;
+    crate::combat::clear_monster_attack_target(monster);
     monster.attack_action_id = definition.id.into();
     monster.action_started_at_us = started_at_us;
     monster.action_ends_at_us = ends_at_us;

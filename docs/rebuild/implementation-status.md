@@ -22,6 +22,27 @@ evidence. No server or public deployment changed in this recheck.
 
 ### Original wildlife definitions in progress
 
+Protocol 19 attack-target checkpoint: public Monster rows now capture the accepted
+character identity and life sequence. That snapshot survives private hit
+consumption and clears with idle/movement, death/new life and recovery. Bindings
+were generated from the actual new database (schema SHA-256
+`0e20635c4f614a884e4d08c2eba09d2f19c6e027d5eb5a96fe5567c1c480234a`).
+The server passes 138 Rust tests and strict library Clippy. The isolated
+`attack-target-protocol-r1` gate passes six actual Godot checks, including
+rejection of protocol 18 and acceptance of 19.
+
+`.local/mobs/attack-target-training-r1/multiplayer.json` passes 104 checks with
+two authenticated clients, including target/life values in both subscriptions,
+death clearing, movement, damage, stale-target rejection, disconnect and reentry.
+The first attempt stopped on test formatting; the next incorrectly used a Yongan
+module for the single-dog training scenario. Neither failure is treated as a
+gameplay pass. The final run used fresh database
+`mt2-p2-attack-target-training-r1-20260908` and frozen training `module.wasm`.
+A separate Yongan module remains in `.local/mobs/attack-target-r1/module.wasm`.
+These are disposable test deployments; the served local protocol-18 builds and
+public endpoint were not replaced. Projectile creation/damage and population
+installation remain unfinished.
+
 Current presentation checkpoint (supersedes the pending-rendering statements in
 the historical checkpoints below): commit `fcfea47` added the opaque-target arrow
 material and connected all four selected flights to particle/mesh attachments,

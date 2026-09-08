@@ -23,7 +23,7 @@ mod root_motion;
 mod skills;
 mod training_targets;
 
-const PROTOCOL_VERSION: u32 = 18;
+const PROTOCOL_VERSION: u32 = 19;
 mod special_area;
 mod targeting;
 

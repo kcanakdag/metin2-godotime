@@ -2312,6 +2312,33 @@
                 },
                 {
                   "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U256": []
+                          },
+                          "name": {
+                            "some": "__identity__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "attack_target"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "attack_target_life_sequence"
+                  }
+                },
+                {
+                  "algebraic_type": {
                     "F32": []
                   },
                   "name": {

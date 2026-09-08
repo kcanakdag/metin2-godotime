@@ -1,6 +1,6 @@
 {
   "sdk_commit": "f6c59d7068e5dacbde0559906746d0a6c5933ffb",
-  "schema_sha256": "51f4b80211588e8349c354323cc2420b48f6c0cfba7e157b1f92cfceb1931e39",
+  "schema_sha256": "0e20635c4f614a884e4d08c2eba09d2f19c6e027d5eb5a96fe5567c1c480234a",
   "files": {
     "module_game_client.gd": "e64bb7da0c620c01ade312369b99dbc57ed865b42d45352e3d19f64dada70f7d",
     "module_game_db.gd": "badcad53db048be1ec8cca0b10f51e4bbbce52e304c2ddab52f819bb855c1c96",
@@ -69,7 +69,7 @@
     "types/game_item_drop.gd": "13265b898a0d89b19e6d860592de060d1e4aab5a7867703a42a111d8f4e31f80",
     "types/game_item_recovery.gd": "aeee928307da9a5bef1e51a08c5265c31a6e2e1c50ca1873990d1027ab98b5b6",
     "types/game_loot.gd": "3956f344fb5259b45c7550b8c8efe66b4de8640ccc3fccb49d0e35e99bf34c6e",
-    "types/game_monster.gd": "78d7ae066e3cb199bc805ed88edde50a9db5a2b52b3499963410e3afc6a8e3d8",
+    "types/game_monster.gd": "a23a3b8c0d52b555793ca3243de7ddf1797f27ef8aa0d7865846298b9dd4cc3d",
     "types/game_monster_clock.gd": "5486ba3c33099b32c12737a508e245a521fadf30ce2a4b291ddd7a49a7664f81",
     "types/game_monster_damage.gd": "999f55409c3ce3ebce9d65690c264f4402c73a7eb0732ea12a1cc621370828e7",
     "types/game_monster_force.gd": "b41fca0c0b1cff8fb3f3d6a4f39d0363c8a34b1717e3a0435df94377ccd558da",
