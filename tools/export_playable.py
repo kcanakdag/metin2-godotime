@@ -159,6 +159,26 @@ def main():
             env,
             staged_target_effects,
         )
+        mob_manifest = stage / "assets/imported/mobs/presentation.v1.json"
+        if mob_manifest.is_file():
+            mob_hash = json.loads(mob_manifest.read_text())["gameplay_hash"]
+            mob_report = local / "mob-pack-audit.json"
+            run(
+                [
+                    args.godot,
+                    "--headless",
+                    "--main-pack",
+                    executable.with_suffix(".pck"),
+                    "--script",
+                    ROOT / "tools/audit_mob_pack.gd",
+                    "--",
+                    mob_hash,
+                    mob_report,
+                ],
+                local / "mob-pack-audit.log",
+                env,
+            )
+            audit["mobs"] = json.loads(mob_report.read_text())
         package_notices(stage, build, local)
         if args.target == "linux":
             executable.chmod(0o755)

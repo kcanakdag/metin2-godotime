@@ -5,6 +5,40 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Full-population browser/Linux exports and partial qualification — 2026-09-08
+
+Actual test exports from client source `fd25ed5` are frozen in
+`.local/mobs/full-world-export-r1/{web,linux}`. Their normal export audits passed;
+additional actual-pack audits loaded all 44 definitions, 19 models with skeletons,
+meshes/nonempty animation libraries, and referenced projectile resources on both
+targets. `tools/audit_mob_pack.gd` now performs this audit, and future playable exports
+include it in their build manifest when mobs are installed. The existing exports
+were audited separately; their original manifests were not rewritten.
+
+The local proxy at `http://127.0.0.1:8186` now serves that browser build against
+`mt2-p2-original-linked-r1-20260908`; existing auth/game services and prior databases
+remain intact. `.local/mobs/full-world-browser-r2/report.json` recorded 50 successful
+checks and no browser engine errors, but the overall scenario did not pass. Both
+actual exports received identical 2,835 ordinary mob IDs across all 44 species,
+rendered each other, walked the guard route, and exercised private dialogue, close,
+reopen and WASD cleanup. Reviewed browser town and guard captures. The new optional
+`--mob-catalog` assertion rejects duplicate IDs, unknown species and incomplete
+population (also replayed against retained exported snapshots).
+
+Preserved failures: r1 stopped on the NPC helper's unrelated six-dog assumption,
+now removed. r2 subsequently stopped at the legacy `--actors` test, which expects
+a rendered fixture dog from town and its old asset path. Original mobs are outside
+town view range; this needs a dedicated field route, not an altered spawn. r3 tried
+the account/lifecycle scenario without those fixture flags but registration hit
+the normal signup rate limit; no auth limits were changed or bypassed.
+
+One initial instrumented browser snapshot reported 16 FPS. This is not a sustained
+performance measurement and the large debug snapshot may contribute; performance
+is not qualified. Next: field rendering/combat and performance investigation, then
+remaining exported lifecycle checks after cooldown and public deployment. No public
+endpoint change. Acceptance scope/artifact hashes:
+`.local/mobs/full-world-export-r1/acceptance.json`.
+
 ## Nearby PVE presentation for the full population — 2026-09-08
 
 The previous client instantiated every subscribed mob before hiding actors outside

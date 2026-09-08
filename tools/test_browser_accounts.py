@@ -38,6 +38,7 @@ from test_browser_finisher import (
     park_finisher_clients,
 )
 from test_browser_inventory import exercise_inventory
+from test_browser_mobs import population_summary
 from test_browser_npcs import exercise_npcs, npc
 from test_browser_panels import exercise_panels
 from test_browser_physical import exercise_physical
@@ -151,6 +152,9 @@ def main() -> None:
     )
     parser.add_argument("--inventory", action="store_true")
     parser.add_argument("--actors", action="store_true")
+    parser.add_argument(
+        "--mob-catalog", type=Path, help="Validate the full original mob population"
+    )
     parser.add_argument("--panels", action="store_true")
     parser.add_argument(
         "--classes",
@@ -663,6 +667,10 @@ def main() -> None:
                         page, web, wait, web_id
                     )
             samples["initial_web"], samples["initial_native"] = web(), desktop()
+            if args.mob_catalog:
+                catalog = json.loads(args.mob_catalog.read_text())
+                samples["original_population"] = population_summary(web(), desktop(), catalog)
+                wait("both_exports_receive_full_original_population", lambda: True)
             if args.training_dummy:
                 samples["training_dummy"] = exercise_training_dummy(
                     page, web, desktop, web_command, wait, web_id, output

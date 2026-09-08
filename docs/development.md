@@ -1775,3 +1775,20 @@ subscriptions, registered unique mob IDs, movement, invalid-target rejection and
 reconnect. It does not render actors or exercise combat against every species.
 `server/examples/regeneration_compile.rs` uses the same compiler for offline
 inspection without installing the emitted registry.
+
+
+## Exported original-population checks
+
+`tools/export_playable.py` now runs `tools/audit_mob_pack.gd` whenever the staged
+client contains a mob manifest. It loads the actual exported mob scenes, skeletons,
+meshes and animations, checks the expected gameplay identity, and resolves all
+referenced projectile resources through the normal loader. Results are included
+under `pack_audit.mobs`. This resource audit does not replace rendered field QA.
+
+Use `tools/test_browser_accounts.py --mob-catalog <compiled>/gameplay.v1.json`
+with matching browser/Linux test exports and explicit URL/database/output. This
+option targets the full original Yongan fixture: both subscribed populations must
+contain over 2,000 unique ordinary mob IDs, every selected species, finite positions,
+and the same ID-to-species mapping. The NPC walking route checks its own map, NPC
+positions, movement and dialogue; it no longer assumes an unrelated six-dog fixture.
+Do not use that population assertion for a deliberately smaller custom map.
