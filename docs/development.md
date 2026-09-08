@@ -1725,3 +1725,31 @@ world metadata and initial mobs. This is still a training fixture, not a public
 map deployment. The normal rendered client additionally requires the matching
 `assets/imported/mobs/presentation.v1.json` and converted assets; without them its
 content-hash gate intentionally rejects the selected server. Protocol 24 is required.
+
+
+## Install converted mobs in the client
+
+After compiling the mob catalog and building the selected projectile package:
+
+```sh
+python3 tools/install_mob_content.py --content <converted-mob-directory> \
+  --catalog <compiled-mob-catalog-directory> --projectiles <projectile-package-directory> \
+  --client client
+```
+
+The installer verifies package hashes, shared gameplay identity, referenced flights
+and allowlisted converted resources before staging the two destination directories.
+Only presentation files are installed under `assets/imported/mobs` and
+`assets/imported/projectiles`; no original archives or server registries are copied.
+Matching installs can be repeated, including after Godot expands texture import
+metadata. Required import settings must still match; changed model/image bytes,
+unowned directories and different packages are rejected without overwriting them.
+To stage a different package, use a fresh isolated client directory. In-place
+package upgrades are not yet supported. A normal client with an installed package
+requires a server advertising the same `mob_catalog_hash` (protocol 24).
+
+Focused presentation QA uses `tools/test_world_projectiles.py --godot <godot>
+--mobs <converted-mob-directory> --projectiles <projectile-package-directory>
+--output <fresh-directory>`. It installs the package into an isolated Main scene,
+imports through Godot and exercises four projectile definitions with controlled
+rows. This does not establish live networking, browser export or editor behavior.

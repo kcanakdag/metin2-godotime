@@ -8,6 +8,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from install_mob_content import collect, install
 from test_actors import PROJECT, ROOT, run, sha256
 
 
@@ -21,7 +22,10 @@ def main():
     output = args.output.resolve()
     stage = output / "project"
     stage.mkdir(parents=True, exist_ok=False)
-    frozen = {str(Path(__file__).resolve()): sha256(Path(__file__))}
+    frozen = {
+        str(path.resolve()): sha256(path)
+        for path in (Path(__file__), ROOT / "tools/install_mob_content.py")
+    }
     for relative in (
         "scripts",
         "scenes",
@@ -51,16 +55,8 @@ def main():
         ],
         check=True,
     )
-    public = json.loads((stage / "candidate/presentation.v1.json").read_text())
-    manifest_path = stage / "assets/imported/content/p0-warrior-dog/manifest.v1.json"
-    manifest = json.loads(manifest_path.read_text())
-    ids = {a["id"] for a in public["actors"]}
-    for key in ("actors", "artifacts"):
-        manifest[key] = [a for a in manifest[key] if a["id"] not in ids] + public[key]
-    manifest_path.write_text(json.dumps(manifest) + "\n")
-    # This merge is isolated QA only, not an installed content/hash gate bypass.
-    shutil.copytree(args.mobs / "generated", stage / "assets/imported/mobs")
-    shutil.copytree(args.projectiles, stage / "assets/imported/projectiles")
+    packages, gameplay_hash = collect(args.mobs, stage / "candidate", args.projectiles)
+    install(stage, packages, gameplay_hash)
     for package in (args.mobs.resolve(), args.projectiles.resolve()):
         for path in package.rglob("*"):
             if path.is_file():
@@ -92,6 +88,7 @@ def main():
         env,
         output / "import.log",
     )
+    install(stage, packages, gameplay_hash)  # Godot may expand import metadata.
     run(
         [
             "xvfb-run",

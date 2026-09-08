@@ -50,6 +50,7 @@ func _run() -> void:
 		"map_id": "training",
 		"definition_profile": ActorCatalog.PROFILE_ID,
 		"definition_hash": catalog.gameplay_definition_hash(),
+		"mob_catalog_hash": catalog.mob_gameplay_hash,
 		"character_catalog_hash": catalog.characters.content_hash,
 		"skill_catalog_hash": catalog.skills.content_hash,
 		"training_target_hash": catalog.training_target_hash,

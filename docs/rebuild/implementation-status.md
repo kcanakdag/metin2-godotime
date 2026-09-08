@@ -5,6 +5,30 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Client mob/projectile package installer — 2026-09-08
+
+`tools/install_mob_content.py` now installs hash-verified, allowlisted converted
+presentation resources with receipts and preserves existing different/unowned
+content. Matching repeated installs validate image/model bytes and required import
+settings while tolerating Godot-generated texture metadata. New installations stage
+both directories before renaming; an ordinary rename failure rolls back completed
+renames. Different-package upgrades still require isolated client staging.
+
+The working client now contains 44 mob definitions sharing 19 GLBs (20 mob files
+including the manifest), plus 28 projectile package files. The installed gameplay
+hash is `4edc30856279fa12c9d1b723e8557e6140d37600e9a3f2adba9ebbca2d18a78a`.
+It requires a matching protocol-24 server. No public deployment changed.
+
+Evidence: `.local/mobs/installed-main-r1/report.json`: 31 controlled Main-scene
+checks passed through the actual installer and normal loader. The reviewed archer
+capture shows the textured mob, target and in-flight arrow. A post-import repeat
+initially rejected Godot-generated sidecar metadata; the installer was corrected,
+and repeat installation against that same imported project now passes. Four focused
+Python tests and scoped lint pass, including rejection of changed import policy.
+This is native controlled-row rendering, not live Main multiplayer, browser export,
+connected-editor inspection or full original population acceptance. Next: link the
+original Yongan regeneration inventory and qualify the resulting populated world.
+
 ## Selected server mob package and public hash — 2026-09-08
 
 `MT2_MOB_CONTENT=/absolute/catalog-directory` selects a locally compiled package
