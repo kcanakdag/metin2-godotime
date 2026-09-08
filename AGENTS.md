@@ -479,3 +479,16 @@ live enemies. Their action scheduling, canonical resistance adapters, population
 registry installation and live two-client qualification still remain unfinished.
 Party/affect/penetration and hit/skill bonus stages are not implemented by this
 finalizer; the installed policy keeps them at zero. No server was republished.
+
+NPC ranged/magic scheduling now follows the original synchronous `Attack` ->
+`Shoot` call. Trusted ranged/magic actions require zero melee hit-window offsets;
+normal melee actions retain their existing bounded window. Simulation publishes
+the accepted action and immediately consumes/resolves its captured hit in the
+same transaction. Existing target identity/life, health, range and collision
+validation still applies. Client projectile events never authorize damage and
+flight travel time does not delay this original NPC damage path.
+Tests cover both ranged/magic registry dispatch, malformed melee-window rejection
+and single consumption at acceptance with no later tick replay. No ranged/magic
+mob is installed yet, so live multiplayer acceptance for this branch is pending.
+Original population registry generation, canonical resistance adapters and original
+AI/distance policies still need integration before release qualification.

@@ -25,9 +25,7 @@ fn validate(definition: &MobDefinition) -> Result<(), String> {
             || a.duration_us > 60_000_000
             || a.cooldown_us <= 0
             || a.cooldown_us > 60_000_000
-            || a.hit_start_us < 0
-            || a.hit_end_us <= a.hit_start_us
-            || a.hit_end_us > a.duration_us
+            || !valid_hit_timing(definition.damage_kind, a)
             || a.range_m != definition.attack_range_m
             || a.combo_input.is_some()
             || a.root_motion.is_some()
@@ -43,6 +41,19 @@ fn validate(definition: &MobDefinition) -> Result<(), String> {
         return Err("Mob attack weights must total 100".into());
     }
     Ok(())
+}
+
+// NPC Shoot resolves during Attack acceptance. Fly events are presentation,
+// not deferred damage windows; reject fabricated melee windows for those kinds.
+fn valid_hit_timing(kind: crate::mob_damage::Kind, attack: AttackDefinition) -> bool {
+    match kind {
+        crate::mob_damage::Kind::Normal => {
+            attack.hit_start_us >= 0
+                && attack.hit_end_us > attack.hit_start_us
+                && attack.hit_end_us <= attack.duration_us
+        }
+        _ => attack.hit_start_us == 0 && attack.hit_end_us == 0,
+    }
 }
 
 pub fn select(definition: &MobDefinition, roll: u8) -> Result<AttackDefinition, String> {
@@ -93,6 +104,33 @@ mod tests {
             weight: 50,
         },
     ];
+
+    #[test]
+    fn projectile_dispatch_requires_immediate_damage_without_melee_windows() {
+        for kind in [
+            crate::mob_damage::Kind::NormalRange,
+            crate::mob_damage::Kind::Magic,
+        ] {
+            let mut mob = definitions::MOB_DEFINITIONS[0];
+            mob.damage_kind = kind;
+            assert!(select(&mob, 1).is_err());
+            const ATTACK: AttackDefinition = AttackDefinition {
+                hit_start_us: 0,
+                hit_end_us: 0,
+                ..definitions::MOB_ATTACK
+            };
+            const ROWS: &[WeightedMobAttack] = &[WeightedMobAttack {
+                attack: ATTACK,
+                weight: 100,
+            }];
+            mob.attacks = ROWS;
+            assert_eq!(select(&mob, 1).unwrap().id, ATTACK.id);
+            assert_eq!(by_id(&mob, ATTACK.id).unwrap().hit_end_us, 0);
+            let attack = ATTACK;
+            assert!(valid_hit_timing(kind, attack));
+            assert!(!valid_hit_timing(crate::mob_damage::Kind::Normal, attack));
+        }
+    }
 
     #[test]
     fn every_weighted_roll_keeps_its_own_identity_and_hit_window() {

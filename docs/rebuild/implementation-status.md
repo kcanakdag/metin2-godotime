@@ -22,6 +22,21 @@ evidence. No server or public deployment changed in this recheck.
 
 ### Original wildlife definitions in progress
 
+NPC ranged/magic scheduling now follows the original synchronous `Attack` ->
+`Shoot` call. Trusted ranged/magic actions require zero melee hit-window offsets;
+normal melee actions retain their existing bounded window. Simulation publishes
+the accepted action and immediately consumes/resolves its captured hit in the
+same transaction. Existing target identity/life, health, range and collision
+validation still applies. Client projectile events never authorize damage and
+flight travel time does not delay this original NPC damage path.
+Tests cover both ranged/magic registry dispatch, malformed melee-window rejection
+and single consumption at acceptance with no later tick replay. All-target tests
+pass (143 library tests plus other suites), as does strict all-feature Clippy;
+evidence: `.local/mobs/immediate-dispatch-r1`. No ranged/magic
+mob is installed yet, so live multiplayer acceptance for this branch is pending.
+Original population registry generation, canonical resistance adapters and original
+AI/distance policies still need integration before release qualification.
+
 Ordinary mob damage dispatch now uses a typed field on the trusted mob definition.
 The installed dog selects Normal; the shared `mob_damage` finalizer also implements
 NormalRange and Magic under the current zero-bonus policy. NPC magic repeats the

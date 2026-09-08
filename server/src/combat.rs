@@ -1211,6 +1211,7 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
             .unwrap_or((clock.home_x, clock.home_z));
         let distance = (tx - monster.x).hypot(tz - monster.z);
         monster.activity = 0;
+        let mut immediate_hit = false;
         if now < clock.attack_until_us {
             monster.activity = 2;
         } else if let Some(player) = target.filter(|player| {
@@ -1224,7 +1225,7 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
             monster.action_started_at_us = 0;
             monster.action_ends_at_us = 0;
             if now >= clock.next_attack_us {
-                schedule_monster_hit(
+                immediate_hit = schedule_monster_hit(
                     ctx,
                     &mut monster,
                     &mut clock,
@@ -1258,8 +1259,14 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
         if monster.activity != 2 {
             clear_monster_attack_target(&mut monster);
         }
+        let monster_id = monster.id;
         ctx.db.monster().id().update(monster);
         ctx.db.monster_clock().id().update(clock);
+        if immediate_hit {
+            // Publish the accepted source action before resolving its exact target.
+            // Consume the pending record in this transaction, never on a client fly event.
+            resolve_due_monster_event(ctx, monster_id, now, now);
+        }
     }
     Ok(())
 }
@@ -1296,7 +1303,7 @@ fn schedule_monster_hit(
     target: Identity,
     target_generation: u32,
     now: i64,
-) -> Result<(), String> {
+) -> Result<bool, String> {
     let definition = ordinary_definition(monster)?;
     let roll = if definition.attacks.len() == 1 {
         1
@@ -1310,6 +1317,7 @@ fn schedule_monster_hit(
     clock.pending_target = target;
     clock.pending_target_generation = target_generation;
     clock.pending_source_generation = monster.life_sequence;
+    let immediate = definition.damage_kind != crate::mob_damage::Kind::Normal;
     clock.pending_hit_at_us = now.saturating_add(attack.hit_start_us);
     clock.pending_hit_until_us = now.saturating_add(attack.hit_end_us);
     clock.pending_damage = damage;
@@ -1320,7 +1328,7 @@ fn schedule_monster_hit(
     monster.activity = 2;
     monster.action_started_at_us = now;
     monster.action_ends_at_us = clock.attack_until_us;
-    Ok(())
+    Ok(immediate)
 }
 
 fn resolve_monster_hit(ctx: &ReducerContext, monster_id: u32, hit: PendingMonsterHit, now: i64) {
@@ -1680,6 +1688,21 @@ mod tests {
         assert!(exact_hit_generations_match(3, 3, 7, 7));
         assert!(!exact_hit_generations_match(3, 4, 7, 7));
         assert!(!exact_hit_generations_match(3, 3, 7, 8));
+    }
+
+    #[test]
+    fn immediate_monster_hit_is_consumed_on_acceptance_and_not_replayed() {
+        let now = 1_000_000;
+        let mut clock = monster_clock_with_hit(now, now);
+        assert!(take_due_monster_hit(&mut clock, now - 1).is_none());
+        let hit = take_due_monster_hit(&mut clock, now).unwrap();
+        assert_eq!(
+            (hit.source_generation, hit.target_generation, hit.damage),
+            (3, 4, 20)
+        );
+        assert!(take_due_monster_hit(&mut clock, now).is_none());
+        assert!(take_due_monster_hit(&mut clock, now + 50_000).is_none());
+        assert_eq!(clock.pending_target, Identity::ZERO);
     }
 
     #[test]
