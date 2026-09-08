@@ -50,6 +50,12 @@ gallery checks every alias against the actual shared GLB clips. See
 
 ## Original population diagnostics
 
+`python3 tools/import_particle_effects.py --effect VIRTUAL_MSE --output NEW_DIR`
+converts explicitly selected particle recipes and their referenced textures.
+Repeat `--effect` for a bounded selection; use `--offline` after caching the
+selected sources. The tool verifies decoded texture pixels and records source/tool
+hashes, without installing content. See [particle conversion](mobs.md#particle-effect-conversion).
+
 `tools/import_projectile_mesh.py --effect VIRTUAL_MSE --blender BLENDER --output NEW_DIR`
 converts selected mesh-only projectile geometry through the shared Blender path.
 Use `--offline` once its MSE/MDE/texture sources are cached. The output retains

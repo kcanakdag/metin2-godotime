@@ -54,6 +54,10 @@ original parameters and explicitly recording malformed source trails.
 The original arrow mesh now converts through the shared Blender pipeline and passes
 native Godot frame/geometry checks. Original blending and particle effects remain
 pending; the projectile is not yet live.
+The seven particle effects now have converted recipes and 12 pixel-verified
+textures covering 22 systems. The reusable importer preserves curves, attachment,
+texture-frame order and original render settings; simulation and Godot rendering
+remain pending. See [particle conversion](docs/mobs.md#particle-effect-conversion).
 Yongan's six authored Wild Dog homes pass **107 two-client checks** on a fresh
 local database. The original City Guard is installed in the playable map layer,
 with original placement, weighted idle animations and its attached weapon.

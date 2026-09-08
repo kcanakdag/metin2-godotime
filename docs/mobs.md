@@ -537,3 +537,42 @@ model reuse is implemented, or that the original population is playable. Group
 spawning/AI, complete combat handlers, shared model packaging, matching live
 catalog gates and exported multiplayer QA remain pending. Served builds are
 unchanged.
+## Particle effect conversion
+
+The selected particle-only MSE subset has a reusable offline converter:
+
+```sh
+python3 tools/import_particle_effects.py --offline \
+  --effect 'ymir work/effect/monster/chaos_ghost_20_1_throw.mse' \
+  --output .local/mobs/particle-example
+```
+
+Repeat `--effect` for up to 32 distinct recipes. Omit `--offline` when the
+explicitly selected source scripts or textures need fetching. Output must be a
+new directory; a failed run leaves its partial output for inspection, without a
+success receipt. Successful output contains `effects.v1.json`, PNG textures and
+`receipt.json`. This tool does not install effects, alter a database or export a
+client.
+
+The strict parser retains original emission shapes, timing/loop counts, position
+keys, scalar curves, blend/billboard settings, attachment/stretch flags, rotation
+and ordered texture frames. Duplicate frames remain intentional animation frames.
+Curves retain original units; emitter-time curves are not arbitrarily clamped to
+normalized particle age. Color keys include the original union of RGBA event times
+with interpolated channels packed to bytes. Unsupported groups/interpolation,
+unknown fields, malformed curves, nonfinite numbers and unsafe texture paths
+fail conversion. This bounded subset requires explicit source fields and does
+not implement every legacy loader fallback or mixed mesh/particle effect.
+
+The seven selected projectile effects pass conversion in
+`.local/mobs/particle-effects-r2` and an identical offline repeat in `-r3`:
+22 systems and 12 distinct texture paths. Each PNG reproduces the source image's
+decoded RGBA pixels. `particle-acceptance-r1.json` records the catalog/receipt
+hashes, repeat comparison and 20 focused parser/mesh regression tests; owned
+Python lint passes. The first offline attempt lacked the selected texture cache.
+
+These are converted recipes, not rendered or multiplayer-qualified effects.
+Particle simulation, original blend/billboard rendering and flight attachment
+remain explicit runtime requirements. No new mob or class skill is playable from
+this conversion alone. The shared format is intended for both projectile and
+ability presentation, with server-owned damage remaining separate.

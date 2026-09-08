@@ -7,7 +7,16 @@ The projectile effect follow-up fetches the eight previously resolved MSE script
 and the arrow's referenced `arrow_01.mde`/TGA at the existing client pin. The arrow
 geometry is converted offline with our shared Blender tool; original blend metadata
 is retained without claiming renderer parity. Seven MSE files contain particle
-systems and remain unconverted. Source files and converted models remain ignored.
+systems; their recipes and textures are now converted separately, with runtime
+simulation/rendering still pending. Source files and converted models remain ignored.
+
+The particle adapter reads the seven selected MSE scripts and fetches only their
+12 referenced texture paths at the same client pin. `metin_particles.py` is an
+independently authored adapter informed by `EffectLib/ParticleSystemData.cpp`,
+`Type.h`, `EmitterProperty.h` and `ParticleProperty.h`; it copies no original
+implementation. Original centimetre/second values and render enums are preserved.
+The conversion uses Pillow for decoded RGBA-to-PNG output and verifies exact
+decoded pixels. Original scripts/textures and converted outputs remain ignored.
 
 The flight-discovery extension fetches only the four MSF definitions selected by
 the 26 White Oath launch declarations, at the existing client pin. It resolves
