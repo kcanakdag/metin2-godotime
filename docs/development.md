@@ -54,6 +54,8 @@ gallery checks every alias against the actual shared GLB clips. See
 --output NEW_DIR` runs the actual GDScript emitter lifecycle in an isolated Godot
 project. Its source-bound report distinguishes emission checks from rendering
 and server integration, which are not exercised. See [emission lifecycle](mobs.md#godot-emission-lifecycle).
+Add `--scenario motion` to exercise the connected particle kinematics, moving
+emitters and deterministic replay; this is still non-rendering QA.
 
 `python3 tools/import_particle_effects.py --effect VIRTUAL_MSE --output NEW_DIR`
 converts explicitly selected particle recipes and their referenced textures.

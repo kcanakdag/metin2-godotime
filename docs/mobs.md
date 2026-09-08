@@ -603,6 +603,37 @@ uses a private project/user-data directory; it does not touch the open editor.
 An earlier manual run passed the assertions but could not write Godot's default
 user-data directory; its log is retained under `particle-emission-r1`.
 
-This component currently tracks emission/lifetimes only. Particle positions,
-forces, geometry, materials, texture animation and flight attachment remain to be
-implemented and visually qualified. It is not connected to the served game.
+This component tracks emission/lifetimes. The companion kinematic simulation is
+described below; geometry, materials and texture animation still need rendering
+and visual qualification. Neither component is connected to the served game.
+
+### Particle motion and moving emitters
+
+`particle_motion.gd` supplies original shape sampling, source centimetre/axis
+conversion, inward/outward emission, velocity dispersion, gravity and drag.
+`particle_simulation.gd` connects it to the emission lifecycle, removes expired
+particles and exposes presentation states by stable per-instance ID. Attached
+particles retain local coordinates; world particles capture the emitter transform
+at birth and remain behind as it moves. Randomness uses an explicit seed for
+repeatable diagnostics; it does not reproduce the original RNG stream.
+
+The implementation samples the original normalized cube/rectangle directions,
+not an invented uniform sphere distribution. Gravity runs before per-update air
+resistance, followed by position integration. The original particle dimensions
+are half extents, and previous position is initialized from birth velocity for
+future stretched-quad rendering. Source recipes must pass the offline importer;
+this is not an API for untrusted client data. Non-rigid/nonfinite transforms and
+invalid timesteps reject before state advances. Nonzero emitter angular orbit is
+explicitly unsupported and rejected; every currently selected system uses zero.
+
+Use the same runner with `--scenario motion`. The accepted
+`.local/mobs/particle-motion-r1/report.json` records 89 actual-engine checks:
+exact trajectories, force order, emitter attachment, ellipse/sphere edge emission,
+inward/outward speed, rejection, and two identical seeded runs across all 22
+systems for 600 moving/rotating-emitter updates each. Godot reports no errors.
+The shared runner's emission regression also passes 90 checks in
+`particle-emission-r3`. Owned Python and GDScript lint pass.
+
+Rendering remains next: color/scale/rotation, texture-frame progression, billboards,
+stretched quads and original blend modes. These simulation checks establish neither
+visual fidelity nor projectile flight, combat, multiplayer or deployment acceptance.

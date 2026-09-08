@@ -243,8 +243,9 @@ Revalidate processes/endpoints before restarting or deploying. The latest code
 checkpoint is `3b27f19` (particle recipes/textures), preceded by `1bf21ea` (arrow
 mesh conversion) and `558dee3` (flight-definition discovery). The interrupted
 follow-up initially researched particle runtime behavior. After the handoff request,
-work resumed: `client/scripts/actors/particle_emission.gd` now implements emission
-and lifetime tracking. It is not yet a kinematic simulation or renderer.
+work resumed: `client/scripts/actors/particle_emission.gd` implements emission
+and lifetime tracking, with `particle_motion.gd` and `particle_simulation.gd`
+adding kinematics. The renderer is not implemented yet.
 
 ### Playable state versus prepared content
 
@@ -293,7 +294,14 @@ The emission/lifetime component now passes 90 actual Godot checks, including all
 NEW_DIR`. The test isolates user data and binds source hashes; it performs no
 rendering or server integration. See `docs/mobs.md#godot-emission-lifecycle`.
 
-Next implement particle motion/forces and rendering around this lifecycle, then
+Particle motion now passes 89 actual-engine checks in
+`.local/mobs/particle-motion-r1/report.json`; the runner's `--scenario motion`
+exercises original trajectories/forces, attached/world coordinates, shapes and
+seeded replay across all 22 systems. The emission regression passes 90 checks in
+`particle-emission-r3`. There is still no rendered or live-game qualification.
+Nonzero emitter angular orbit rejects explicitly; the selected systems use zero.
+
+Next implement color/scale/rotation, texture animation and rendering, then
 flight attachment and authoritative magic/projectile combat so the prepared mobs
 can become playable. Do not keep substituting inventory reports for integration.
 The interrupted investigation inspected pinned primary files under

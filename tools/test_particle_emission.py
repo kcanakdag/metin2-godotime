@@ -21,9 +21,13 @@ def main():
     parser.add_argument("--catalog", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--godot", required=True)
+    parser.add_argument("--scenario", choices=("emission", "motion"), default="emission")
     args = parser.parse_args()
     output = args.output.resolve()
-    files = ["scripts/actors/particle_emission.gd", "tests/particle_emission_smoke.gd"]
+    scene = f"tests/particle_{args.scenario}_smoke.gd"
+    files = ["scripts/actors/particle_emission.gd", scene]
+    if args.scenario == "motion":
+        files += ["scripts/actors/particle_motion.gd", "scripts/actors/particle_simulation.gd"]
     inputs = [ROOT / "client" / f for f in files] + [args.catalog.resolve(), Path(__file__)]
     frozen = {str(p.resolve()): digest(p) for p in inputs}
     output.mkdir(parents=True, exist_ok=False)
@@ -44,7 +48,7 @@ def main():
                 "--path",
                 str(output),
                 "--script",
-                "res://tests/particle_emission_smoke.gd",
+                "res://" + scene,
                 "--",
                 str(output / "effects.v1.json"),
             ],
@@ -62,6 +66,7 @@ def main():
         raise RuntimeError("Particle emission QA inputs changed during the run")
     report = {
         **rows[0],
+        "scenario": args.scenario,
         "inputs": frozen,
         "engine_log_sha256": digest(output / "run.log"),
         "rendering_verified": False,

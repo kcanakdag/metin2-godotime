@@ -20,6 +20,10 @@ decoded pixels. Original scripts/textures and converted outputs remain ignored.
 The Godot emission component is independently authored from the lifecycle contract
 in `EffectElementBaseInstance.cpp`, `ParticleSystemInstance.cpp` and
 `ParticleInstance.cpp` at the same pin. No original implementation is copied.
+The companion independently authored motion adapter also follows force order in
+`EffectUpdateDecorator.cpp`/`.h`, original shape/velocity sampling and attached
+versus world-space coordinates. Godot's seeded RNG supports repeatable QA, not
+original random-stream parity. No additional source assets were fetched for it.
 
 The flight-discovery extension fetches only the four MSF definitions selected by
 the 26 White Oath launch declarations, at the existing client pin. It resolves
