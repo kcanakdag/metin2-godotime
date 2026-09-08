@@ -2147,3 +2147,9 @@ Add `--scenario mesh_clock` to `tools/test_motion_effect_playback.py` for isolat
 original mesh timing checks (delay, finite/infinite loops, exact deadlines and
 bounded catch-up). The default actor scenario remains unchanged. The native
 `test_particle_emission.py --scenario mesh` checks the arrow renderer using this clock.
+
+Use `test_particle_emission.py --scenario skill_mesh --catalog MIXED_MESH_CATALOG
+--godot GODOT --output NEW_DIR` for Bash's selected native mesh material/animation
+checks. It checks additive color ramps against measured framebuffer backgrounds,
+all original frames, staggered starts and finite completion, with saved captures.
+This scenario checks mesh layers individually, not the complete mixed effect.

@@ -5,6 +5,29 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Bash finite mesh rendering and additive material — 2026-09-09
+
+The shared mesh renderer now accepts the selected source-color/additive (3/2)
+recipe alongside opaque arrow (3/8), using the shared imported frame interval,
+start delay and finite/infinite loop clock. Completed effects hide. The selected
+materials remain white-modulated, single-texture and opaque-destination only;
+unsupported color/texture animation modes still reject. Source visibility/alpha
+does not multiply RGB for these source-color blend factors.
+
+Native Bash mesh QA passes 545 checks: a 256-byte RGB ramp on two measured
+backgrounds agrees with the independent clamped `source² + destination` reference
+(maximum error 1.118 byte values), all 31 original frames appear on each of three
+layers, and finite completion hides each mesh. Captured frame 10 of the first mesh
+was visually reviewed. Evidence: `.local/p6-skill-effects-r13/bash-render-r2/report.json`
+and captures. The initial run failed a Godot external constant lookup; the final
+shader variant uses a static method. Arrow native regression passes 527 checks at
+`r13/arrow-regression/report.json`. Touched lint/format checks pass.
+
+This qualifies individual mesh layers in Linux Compatibility/llvmpipe, not the
+complete mixed Bash effect or original-client/browser pixel parity. Combining all
+particle/mesh layers, equipped Bash playback, world packaging and two-client
+exported verification remain next. No deployment or installed content changed.
+
 ## Shared original mesh frame clock — 2026-09-09
 
 `mesh_frame_clock.gd` implements the original effect-frame deadlines, finite/infinite

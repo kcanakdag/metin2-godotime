@@ -1,5 +1,5 @@
 extends Node3D
-## Selected opaque arrow material: source-color / inverse-destination-alpha.
+## Selected original source-color mesh materials: opaque arrow or additive skill.
 ## The adaptation requires destination alpha 1; transparent viewports reject.
 
 const FrameClock = preload("res://scripts/actors/mesh_frame_clock.gd")
@@ -63,7 +63,11 @@ func configure(definition: Dictionary, scene: PackedScene, texture: Texture2D) -
 	for player: AnimationPlayer in model.find_children("*", "AnimationPlayer", true, false):
 		player.stop()
 	var shader := Shader.new()
-	shader.code = SHADER
+	shader.code = (
+		additive_shader()
+		if int(definition.recipe.elements[0].blending_destination) == 2
+		else SHADER
+	)
 	var material := ShaderMaterial.new()
 	material.shader = shader
 	material.set_shader_parameter("source_texture", texture)
@@ -72,7 +76,15 @@ func configure(definition: Dictionary, scene: PackedScene, texture: Texture2D) -
 	add_child(model)
 	_mesh = mesh
 	_count = int(definition.frame_count)
-	_clock.configure(_count, 0.02, true, 0)
+	var recipe: Dictionary = definition.recipe
+	_clock.configure(
+		_count,
+		float(recipe.frame_delay),
+		bool(recipe.animation_loop),
+		int(recipe.animation_loop_count),
+		float(recipe.start_time)
+	)
+	visible = _clock.snapshot().visible
 	_frame = 0
 	_apply_frame()
 	return true
@@ -83,8 +95,9 @@ func advance(delta: float, _camera: Camera3D = null) -> Dictionary:
 		return {"error": "Invalid mesh effect step"}
 	var state: Dictionary = _clock.advance(delta)
 	_frame = int(state.frame)
+	visible = bool(state.visible)
 	_apply_frame()
-	return {"frame": _frame, "finished": false}
+	return state
 
 
 func _apply_frame() -> void:
@@ -102,17 +115,21 @@ static func _supported(definition: Dictionary) -> bool:
 	if definition.geometries[0].visibility.size() != int(definition.frame_count):
 		return false
 	for value: Variant in definition.geometries[0].visibility:
-		if float(value) != 1.0:
+		if not is_finite(float(value)):
 			return false
+	if not FrameClock.new().configure(
+		int(definition.frame_count),
+		float(recipe.frame_delay),
+		bool(recipe.animation_loop),
+		int(recipe.animation_loop_count),
+		float(recipe.start_time)
+	):
+		return false
 	return (
-		float(recipe.start_time) == 0
-		and recipe.animation_loop
-		and int(recipe.animation_loop_count) == 0
-		and float(recipe.frame_delay) == 0.02
-		and int(element.billboard_type) == 0
+		int(element.billboard_type) == 0
 		and element.blending_enabled
 		and int(element.blending_source) == 3
-		and int(element.blending_destination) == 8
+		and int(element.blending_destination) in [2, 8]
 		and int(element.color_operation) == 4
 		and element.color_factor == [1.0, 1.0, 1.0, 1.0]
 		and element.alpha_events.is_empty()
@@ -120,3 +137,7 @@ static func _supported(definition: Dictionary) -> bool:
 		and element.texture_animation_loop
 		and float(element.texture_frame_delay) == 0.02
 	)
+
+
+static func additive_shader() -> String:
+	return SHADER.replace("blend_mix", "blend_add")
