@@ -1991,3 +1991,13 @@ The UI importer includes the installed catalog's original icons automatically.
 `--skill-inventory` additionally includes an explicitly discovered pinned inventory.
 The skill hash changes when the selected profile changes, so use a matching module
 and export; an old server is expected to fail the client content gate.
+
+## Equipped skill animation fixture
+
+`tools/test_actors.py --scenario equipped_skills --native` renders every enabled
+Warrior skill on both appearances with the original equipped sword. It resolves
+skills across the onehand/general motion modes, finishes transition blending,
+seeks and freezes four source-time poses per clip, checks skeleton/equipment bounds,
+and captures each pose with a camera centered on the deformed skeleton. It reuses the shared actor fixture’s scene, camera and validation helpers. It covers selected live skills without rerunning
+the entire 88-motion candidate suite. It does not qualify browser rendering or
+server hit reactions.

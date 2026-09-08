@@ -5,6 +5,29 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Equipped skill animation review — 2026-09-08
+
+Added the focused `equipped_skills` native fixture, selecting Warrior skills
+from the live catalog. Both appearances attach Sword+0, resolve
+general skills while equipped in onehand mode, settle blending, and freeze four
+sampled poses per enabled skill. Skeleton and equipment bounds plus exact action
+IDs pass 68 checks. Evidence: `.local/p6-equipped-skills-r1/native-r3/` (reviewed captures in `native-r2`).
+The fixture was moved out of the shared test to retain its existing file-size lint
+limit; the final dedicated fixture also passes all 68 checks. The first
+attempt exposed missing staging of the new fixture; staging now always copies the
+selected script. Four Three-Way Cut captures (both appearances at 466666 and 799999
+us) were reviewed: attached swords, intact character/hair/textures and bounded poses.
+This is sampled native evidence, not complete animation or exported-browser parity.
+
+No live runtime or public deployment changed. The remaining reaction replay needs
+an ordinary mob that survives all three hits; original Wild Dog has 126 HP, while
+other imported species have higher original health. Inspection found authored
+population overrides still restrict the registry to the default mob vnum even
+when a selected mob package is supplied (`selected_monster_spawns` in build.rs).
+Next: allow authored developer layouts to use their selected validated registry,
+then run a surviving ordinary-mob Three-Way Cut reaction/force replay without
+changing original creature stats or weakening damage rules.
+
 ## Three-Way Cut installed and two-client damage accepted — 2026-09-08
 
 The selected profile now enables original Three-Way Cut alongside Sword Spin.

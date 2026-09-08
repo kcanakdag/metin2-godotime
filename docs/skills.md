@@ -392,3 +392,9 @@ three matching dummy health transitions and rejected missing/stale targets and
 replayed/cooling casts. Native panel QA passes 14 checks and its capture was reviewed.
 This does not qualify ordinary mob flinches/knockback, equipped animation fidelity,
 or an exported browser build. The public world remains on its existing release.
+
+Equipped native animation QA now passes 68 checks for both enabled skills and both
+Warrior appearances. Four Three-Way Cut poses were reviewed with attached original
+swords and intact hair/textures. Use the focused `equipped_skills` actor scenario
+for selected-skill animation/attachment work. Browser and live mob reaction evidence
+remain separate requirements.

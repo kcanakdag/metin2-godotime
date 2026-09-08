@@ -74,7 +74,7 @@ def main() -> None:
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument(
         "--scenario",
-        choices=["actors", "fan", "class_skills", "training_dummy", "mobs"],
+        choices=["actors", "fan", "class_skills", "equipped_skills", "training_dummy", "mobs"],
         default="actors",
     )
     parser.add_argument(
@@ -152,9 +152,11 @@ def main() -> None:
             "actors": "actor_smoke.gd",
             "fan": "fan_actor_smoke.gd",
             "class_skills": "class_skill_actor_smoke.gd",
+            "equipped_skills": "equipped_skill_actor_smoke.gd",
             "training_dummy": "training_dummy_smoke.gd",
             "mobs": "mob_actor_smoke.gd",
         }[options.scenario]
+        shutil.copy2(ROOT / "client/tests" / selected_smoke, stage / "tests" / selected_smoke)
         shutil.copy2(
             ROOT / "client/tests/training_dummy_smoke.gd", stage / "tests/training_dummy_smoke.gd"
         )
