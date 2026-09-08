@@ -2055,3 +2055,21 @@ from the running server. Spirit Strike and Bash each passed 30 two-client checks
 against original Grey Wolf health, knockdown/standup and recovery. No rendering is
 performed by this headless network replay; equipped native and browser QA remain
 separate scopes.
+
+## Skill-panel input inspection
+
+The existing UI snapshot now reports skill controls by vnum, with viewport-space
+slot and learn-button centers, full-slot visibility, learning availability and the
+scroll center/offset. Browser automation should scroll until the desired control
+is fully visible, then use ordinary mouse input. These are read-only observations;
+learning and casting remain normal validated intents. Normal exports still exclude
+the browser probe, and these observations do not add privileged commands.
+
+The native `skills_ui` fixture passes 24 checks, including actual learn-button
+press/release, scrolled Bash right-click, and drag/drop into a quickslot. The
+fixture supplies projected learned state; it does not prove server learning or
+browser casting. Synthetic wheel input must include release events: omitting them
+interfered with the following right-click even though hover reached the correct
+slot. Use viewport-local motion/button coordinates, matching the other UI fixtures.
+Evidence: `.local/p6-skill-controls-r7/`; the rendered panel/quickslot capture was
+reviewed. Exported browser learning/casting integration remains the next step.

@@ -11,6 +11,7 @@ var _list: Control
 var _points: Label
 var _moving := false
 var _drag_offset := Vector2.ZERO
+var _skill_controls: Dictionary = {}
 
 
 func _ready() -> void:
@@ -62,6 +63,7 @@ func set_state(progression: Dictionary, rows: Array) -> void:
 		return
 	_progression = progression.duplicate(true)
 	_rows = rows.duplicate(true)
+	_skill_controls.clear()
 	for child in _list.get_children():
 		_list.remove_child(child)
 		child.queue_free()
@@ -119,6 +121,7 @@ func set_state(progression: Dictionary, rows: Array) -> void:
 			or int(progression.get("level", 0)) < int(definition.minimum_level)
 		)
 		plus.tooltip_text = "Learn / upgrade: 1 skill point"
+		_skill_controls[int(definition.vnum)] = {"slot": slot, "learn": plus}
 
 
 func toggle() -> void:
@@ -126,4 +129,34 @@ func toggle() -> void:
 
 
 func snapshot() -> Dictionary:
-	return {"visible": visible, "points": _points.text, "rows": _rows.duplicate(true)}
+	var scroll: ScrollContainer = _list.get_parent()
+	var viewport := scroll.get_global_rect()
+	var controls: Array = []
+	for vnum: int in _skill_controls:
+		var entry: Dictionary = _skill_controls[vnum]
+		var slot: Control = entry.slot
+		var learn: TextureButton = entry.learn
+		var center := slot.get_global_rect().get_center()
+		var learn_center := learn.get_global_rect().get_center()
+		(
+			controls
+			. append(
+				{
+					"vnum": vnum,
+					"slot_center": [center.x, center.y],
+					"learn_center": [learn_center.x, learn_center.y],
+					"fully_visible":
+					is_visible_in_tree() and viewport.encloses(slot.get_global_rect()),
+					"learn_enabled": not learn.disabled,
+				}
+			)
+		)
+	var scroll_center := viewport.get_center()
+	return {
+		"visible": visible,
+		"points": _points.text,
+		"rows": _rows.duplicate(true),
+		"controls": controls,
+		"scroll_center": [scroll_center.x, scroll_center.y],
+		"scroll_vertical": scroll.scroll_vertical,
+	}

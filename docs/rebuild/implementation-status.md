@@ -5,6 +5,28 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Scroll-aware skill control inspection and real mouse QA — 2026-09-08
+
+Added read-only per-vnum slot/learn-button centers and visibility to the existing
+skill-panel snapshot, plus scroll position/center. Browser automation can discover
+controls without hardcoding row positions; no privileged action or gameplay rule
+changed. Native UI acceptance now passes 24 checks: original icons, projected ranks
+and cooldowns, actual learn-button input, complete wheel events, scrolled Bash
+right-click intent and actual drag/drop into the second quickslot. The resulting
+rendered panel and Bash quickslot capture were reviewed.
+
+The first runs failed on the right-click after scrolling. Hover inspection reached
+the correct skill slot; the fixture had sent wheel presses without releases.
+Completing wheel press/release pairs fixed event delivery. No production input
+workaround was introduced. Final evidence: `.local/p6-skill-controls-r7/`; earlier
+failed runs remain in r1–r5. r6 passed 22 checks before adding learn/drag coverage.
+Targeted GDScript lint and actual native Godot execution pass.
+
+This fixture supplies learned rows and wires the component drop signal; it does
+not establish server-side learning, the complete HUD quickslot path or browser
+casting. No new public export/deployment or connected-editor MCP inspection.
+Next: use these coordinates in a focused exported skill-learning/casting replay.
+
 ## Spirit Strike and Bash ordinary-mob reactions — 2026-09-08
 
 The shared `skill_reactions` replay now accepts `--reaction-skill 1|16|17`, with
