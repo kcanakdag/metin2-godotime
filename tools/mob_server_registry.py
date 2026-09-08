@@ -17,13 +17,14 @@ def rust_text(value):
 
 
 def compile_registry(catalog):
-    physical, actions, kinds = [], [], []
+    physical, actions, kinds, species = [], [], [], []
     seen = set()
     for mob in catalog["mobs"]:
         vnum = integer(mob["vnum"], 1, 2**32 - 1, "vnum")
         if vnum in seen:
             raise ValueError("Duplicate registry vnum")
         seen.add(vnum)
+        species.append(species_record(mob))
         source = mob["source_definition"]
         stats, modifiers = source["stats"], source["combat_modifiers"]
         kind = {
@@ -116,8 +117,52 @@ def compile_registry(catalog):
         raise ValueError("Expected 1..128 combat registry definitions")
     return (
         "// Generated candidate combat tables; not a complete spawn/AI/reward registry.\n"
-        "use crate::definitions::{MobPhysicalDefinition, WeightedMobAttack, AttackDefinition};\n"
+        "use crate::definitions::{MobPhysicalDefinition, WeightedMobAttack, AttackDefinition, MobSpeciesDefinition, DefendingSphereDefinition, MonsterReactionDefinition};\n"
+        "pub const SPECIES: &[MobSpeciesDefinition] = &[\n" + ",\n".join(species) + "];\n"
         "pub const PHYSICAL: &[MobPhysicalDefinition] = &[\n" + ",\n".join(physical) + "];\n"
         "pub const KINDS: &[(u32, crate::mob_damage::Kind)] = &[\n" + ",\n".join(kinds) + "];\n"
         "pub const ATTACKS: &[(u32, &[WeightedMobAttack])] = &[\n" + ",\n".join(actions) + "];\n"
     )
+
+
+def species_record(mob):
+    """Species facts only; acquisition/leash/respawn belong to world policy."""
+    source = mob["source_definition"]
+    rewards = source["rewards"]
+    fields = {
+        "vnum": str(integer(mob["vnum"], 1, 2**32 - 1, "species vnum")),
+        "actor_id": rust_text(mob["id"]),
+        "name": rust_text(mob["name"]),
+        "model_key": rust_text(mob["model_key"]),
+        "motion_set": rust_text(mob["id"] + ".general"),
+        "level": str(integer(mob["level"], 1, 99, "species level")),
+        "health": str(integer(mob["health"], 1, 65535, "species health")),
+        "attack_range_m": repr(float(number(mob["attack_range_m"], 0.01, 100, "range"))),
+        "move_speed_mps": repr(
+            float(number(mob["movement"]["server_speed_mps"], 0.001, 100, "move speed"))
+        ),
+    }
+    if mob["health"] != source["stats"]["max_hp"] or mob["level"] != source["stats"]["level"]:
+        raise ValueError("Species stats differ from source")
+    for target, key in (("experience", "exp"), ("gold_min", "gold_min"), ("gold_max", "gold_max")):
+        fields[target] = str(integer(rewards[key], 0, 2**32 - 1, key))
+    if rewards["gold_min"] > rewards["gold_max"]:
+        raise ValueError("Reversed species gold range")
+    sphere = mob["defending_sphere"]
+    if len(sphere["position_m"]) != 3:
+        raise ValueError("Defending sphere needs three coordinates")
+    coordinates = [repr(float(number(v, -10, 10, "sphere center"))) for v in sphere["position_m"]]
+    radius = repr(float(number(sphere["radius_m"], 0.01, 10, "sphere radius")))
+    fields["defending_sphere"] = (
+        f"DefendingSphereDefinition {{ local_center_x_m: {coordinates[0]}, "
+        f"local_center_y_m: {coordinates[1]}, local_center_z_m: {coordinates[2]}, radius_m: {radius} }}"
+    )
+    for action in ("front_knockdown", "front_standup", "back_knockdown"):
+        reaction = mob["reactions"][action]
+        if not reaction["id"].startswith(mob["id"] + ".general." + action):
+            raise ValueError("Reaction belongs to another species or action")
+        duration = integer(reaction["duration_us"], 1, 60_000_000, "reaction duration")
+        fields[action] = (
+            f"MonsterReactionDefinition {{ id: {rust_text(reaction['id'])}, duration_us: {duration} }}"
+        )
+    return "MobSpeciesDefinition { " + ", ".join(f"{k}: {v}" for k, v in fields.items()) + " }"

@@ -1376,8 +1376,7 @@ fn main() {
 #[derive(Clone, Copy, Debug)]
 pub struct WeightedMobAttack { pub attack: AttackDefinition, pub weight: u8 }
 #[derive(Clone, Copy, Debug)]
-pub struct MobDefinition {
-    pub damage_kind: crate::mob_damage::Kind,
+pub struct MobSpeciesDefinition {
     pub vnum: u32,
     pub actor_id: &'static str,
     pub name: &'static str,
@@ -1385,12 +1384,8 @@ pub struct MobDefinition {
     pub motion_set: &'static str,
     pub level: u8,
     pub health: u16,
-    pub attacks: &'static [WeightedMobAttack],
     pub attack_range_m: f32,
     pub move_speed_mps: f32,
-    pub acquisition_range_m: f32,
-    pub chase_home_range_m: f32,
-    pub respawn_us: i64,
     pub experience: u32,
     pub gold_min: u32,
     pub gold_max: u32,
@@ -1399,19 +1394,34 @@ pub struct MobDefinition {
     pub front_standup: MonsterReactionDefinition,
     pub back_knockdown: MonsterReactionDefinition,
 }
+#[derive(Clone, Copy, Debug)]
+pub struct MobDefinition {
+    pub species: MobSpeciesDefinition,
+    pub damage_kind: crate::mob_damage::Kind,
+    pub attacks: &'static [WeightedMobAttack],
+    pub acquisition_range_m: f32,
+    pub chase_home_range_m: f32,
+    pub respawn_us: i64,
+}
+impl std::ops::Deref for MobDefinition {
+    type Target = MobSpeciesDefinition;
+    fn deref(&self) -> &Self::Target { &self.species }
+}
 pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
+    species: MobSpeciesDefinition {
+        vnum: MOB_VNUM, actor_id: MOB_ACTOR_ID, name: MOB_NAME,
+        model_key: MOB_MODEL_KEY, motion_set: MOB_MOTION_SET,
+        level: MOB_LEVEL, health: MOB_MAX_HEALTH,
+        attack_range_m: MOB_ATTACK.range_m, move_speed_mps: MOB_MOVE_SPEED_MPS,
+        experience: MOB_EXPERIENCE, gold_min: MOB_REWARD_GOLD_MIN, gold_max: MOB_REWARD_GOLD_MAX,
+        defending_sphere: MOB_STATIC_DEFENDING_SPHERE,
+        front_knockdown: MOB_GREAT_FRONT_KNOCKDOWN, front_standup: MOB_GREAT_FRONT_STANDUP,
+        back_knockdown: MOB_GREAT_BACK_KNOCKDOWN,
+    },
     damage_kind: crate::mob_damage::Kind::Normal,
-    vnum: MOB_VNUM, actor_id: MOB_ACTOR_ID, name: MOB_NAME,
-    model_key: MOB_MODEL_KEY, motion_set: MOB_MOTION_SET,
-    level: MOB_LEVEL, health: MOB_MAX_HEALTH,
     attacks: &[WeightedMobAttack { attack: MOB_ATTACK, weight: 100 }],
-    attack_range_m: MOB_ATTACK.range_m,
-    move_speed_mps: MOB_MOVE_SPEED_MPS, acquisition_range_m: MOB_ACQUISITION_RANGE_M,
+    acquisition_range_m: MOB_ACQUISITION_RANGE_M,
     chase_home_range_m: MOB_CHASE_HOME_RANGE_M, respawn_us: MOB_RESPAWN_US,
-    experience: MOB_EXPERIENCE, gold_min: MOB_REWARD_GOLD_MIN, gold_max: MOB_REWARD_GOLD_MAX,
-    defending_sphere: MOB_STATIC_DEFENDING_SPHERE,
-    front_knockdown: MOB_GREAT_FRONT_KNOCKDOWN, front_standup: MOB_GREAT_FRONT_STANDUP,
-    back_knockdown: MOB_GREAT_BACK_KNOCKDOWN,
 }];
 "#,
     );

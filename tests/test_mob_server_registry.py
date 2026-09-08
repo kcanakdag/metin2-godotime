@@ -10,6 +10,7 @@ def catalog():
     result = compile_catalog(fixture())
     source = result["mobs"][0]["source_definition"]
     source["battle_type"] = "MELEE"
+    source["rewards"].update(exp=15, gold_min=18, gold_max=27)
     source["stats"].update(
         st=3, ht=5, dx=6, damage_min=20, damage_max=24, **{"def": 4, "damage_multiplier": 1.4}
     )
@@ -28,10 +29,15 @@ class MobServerRegistryTests(unittest.TestCase):
         self.assertEqual(data, before)
         self.assertIn("damage_multiplier: 1.4", generated)
         self.assertIn("penetrate_percent: 1", generated)
+        self.assertIn("experience: 15, gold_min: 18, gold_max: 27", generated)
+        self.assertIn("MobSpeciesDefinition", generated)
         self.assertIn("hit_start_us: 250000", generated)
 
     def test_invalid_values_and_inconsistent_dispatch_reject(self):
         for mutate in (
+            lambda d: d["mobs"][0].update(health=999),
+            lambda d: d["mobs"][0]["source_definition"]["rewards"].update(gold_min=28),
+            lambda d: d["mobs"][0]["movement"].update(server_speed_mps=float("nan")),
             lambda d: d["mobs"].append(copy.deepcopy(d["mobs"][0])),
             lambda d: d["mobs"][0]["attacks"][0].update(weight=99),
             lambda d: d["mobs"][0]["attacks"][0].update(damage_kind="magic"),

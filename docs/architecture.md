@@ -1271,3 +1271,16 @@ bonuses remain outside the installed zero-bonus policy. Full population registry
 installation and live ranged/magic multiplayer QA are still pending. No server,
 client export or public deployment changed. The earlier note that penetration is
 not consumed is superseded by this checkpoint.
+
+Species data is now separated from world lifecycle policy in the actual server
+MobDefinition. The installed dog uses the same values through MobSpeciesDefinition;
+acquisition/leash and respawn remain explicit world policy. The generated candidate
+adds 44 species records for health, model/motion IDs, movement, defending spheres,
+reactions and XP/gold ranges, alongside its existing physical/action tables.
+Evidence: `.local/mobs/species-registry-r1` compiles against actual server types
+and passes 11 Rust fixture tests (including all weighted selections). Fourteen
+Python compiler tests, all-target Rust tests (148 library tests) and strict Clippy
+pass. Source mismatch, invalid movement and reversed reward ranges reject.
+The full population remains uninstalled; original AI/regen/drop integration is
+still required. Public deployment was requested after this slice and is in progress
+under `.local/public-progress-r1`; do not report it deployed until verified.

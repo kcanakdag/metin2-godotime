@@ -18,7 +18,9 @@ against the conversion receipt and exact Blender animation report. See
 [mob tooling](mobs.md) for its source timing policies and remaining runtime work.
 The command also emits `combat-registry.rs`: candidate Rust combat tables using
 the server’s existing definition types, with its hash recorded in the receipt.
-This is not a complete AI/spawn/reward registry or an installation command.
+The tables include species health, movement, collision, reaction and XP/gold
+values. AI, spawn/regeneration policy and item drops are not installed by this
+command.
 The command is offline and does not install content or restart services.
 The full selection now compiles projectile launch declarations separately from
 melee windows. Catalogs and receipts expose `unimplemented_runtime_requirements`;
