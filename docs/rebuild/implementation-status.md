@@ -7,6 +7,35 @@ or reclassify that scope.
 
 ## P6: all-class abilities requested; training target delivered locally
 
+
+### Area NPC exports accepted locally
+
+The protocol-18 build now serves at `http://127.0.0.1:8186`, using the preserved
+isolated `mt2-p2-npc-areas-qa-r1-20260908` database. The old town database and
+exports remain available on disk. The public endpoint is unchanged.
+
+Actual exports `.local/npcs/exports/area-web-r1` and `area-linux-r1` pass package
+audits: 1,208 Web / 2,011 Linux paths, 38 NPC models and 239 exact UI images each.
+The server module remains `.local/npcs/area-module-r2.wasm`. The local proxy
+was switched only after both exports passed their audits.
+
+`.local/npcs/area-browser-r2/report.json` passes **115 actual Chrome/Linux checks**
+with no browser engine errors. The new `yongan-areas-route.json` retains source
+rectangles rather than sampled coordinates: both exports must show all six area
+NPCs inside their bounds with identical positions/headings, original names and
+playing idle animations. The 23 fixed entry NPCs, guard approach/private dialogue,
+Close/Escape/WASD, dummy held-Space combat, Skills input, character switching,
+disconnect/reconnect/reload and logout/login also pass. The browser dialogue
+capture was visually inspected. This does not visit every remote NPC with both
+cameras; the separate native map fixture inspected all six area residents.
+
+Two focused browser-verifier tests pass and Python lint passes. The first launch
+used system Python without Playwright and stopped before creating clients;
+`area-browser-r1.log` is retained. Running with `.local/venv-dev/bin/python`
+resolved that environment error. No game code or auth limits were changed.
+The accepted hashes and limitations are recorded in `area-deployment-r1.json`.
+No server-process restart, Windows execution or public deployment is claimed.
+
 ### Training dummy customization validation
 
 The authored dummy is already present in the accepted local town build. A fresh
@@ -24,8 +53,8 @@ The requested 44 playable abilities remain incomplete; existing conversion and
 formula evidence must not be described as runtime skill integration.
 
 The separate protocol-18 area-NPC changes now have generated bindings, live
-subscription QA and native map evidence as recorded below. Matching exports
-remain pending. The served build remains protocol 17.
+subscription QA and native map evidence as recorded below. The matching exports
+are now accepted locally as recorded above.
 
 ### Original area-spawn townspeople: conversion and source contract
 
@@ -62,15 +91,15 @@ names, position/heading, idle playback and picking-only collision are covered.
 Python NPC tests pass 16 cases; Rust NPC compiler tests pass three cases;
 `make server-test` passes. Lint passes after a Python formatting correction.
 The formatter-only tool change followed the rendered run; gameplay inputs did
-not change. Matching exports, browser QA and deployment remain next. The local
-served build and public endpoint have not changed.
+not change. Matching exports and local browser QA subsequently passed as recorded
+above; the public endpoint remains unchanged.
 
 `content/profiles/yongan-area-npcs.json` selects six `NOMOVE` NPCs: Aranyo, Ah-Yu,
 Yonah, Mirine, Uriel and Baek-Go. Their original regeneration rectangles are
 preserved as inclusive centimetre bounds with 16 attempts and independent random
 integer headings (0..360), following pinned `regen.cpp` / `char_manager.cpp`.
-The explicit area policy omits fixed X/Z coordinates; the fixed-point catalog
-builder rejects it until authoritative runtime placement is implemented.
+The explicit area policy omits fixed X/Z coordinates. The initial point-only
+builder rejected it; schema 3 now preserves these areas for runtime placement.
 The non-stationary Shabby Pedestrian remains outside this profile.
 
 `.local/npcs/yongan-area-r3` converts all six models and 26 original motions;
@@ -84,8 +113,8 @@ only with topology proof; used textureless materials remain rejected. The next
 attempt exposed Mirine's embedded run translation without MSA accumulation.
 Stationary NPC conversion now preserves and flags that unused source clip while
 retaining the playable-character and double-travel checks. Failed logs remain.
-No new NPCs are installed or deployed by this slice; server-owned sampled positions,
-subscriptions and real two-client placement/reconnect QA remain required.
+That initial conversion slice did not deploy NPCs. Its runtime integration and
+local deployment are now qualified above.
 
 ### Remaining original point NPCs: candidate package
 

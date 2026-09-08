@@ -26,7 +26,7 @@ fixture is simulated. A separate **103-check authenticated Web/Linux run**
 qualifies approach, dialogue, Close/Escape, WASD and account lifecycle. Another
 59 live checks cover private sessions, rejection, expiry and reconnect.
 The updated development build is served at **http://127.0.0.1:8186** against
-`mt2-p2-town-dev-r1-20260908`. Click the City Guard to approach and talk;
+`mt2-p2-npc-areas-qa-r1-20260908`. Click the City Guard to approach and talk;
 Close or Escape dismisses the dialogue, and movement resumes normally.
 Character creation shows Warrior, Ninja, Sura and Shaman together, with the
 selected class in front, original intro idle animations, hair, titles and
@@ -83,8 +83,9 @@ Six further original townspeople are converted and pass 144 native gallery check
 Their [random-area spawn definitions](docs/world-content.md#original-area-spawn-npcs)
 now use persistent server-owned positions and Godot subscriptions in a separate
 protocol-18 QA database. Two-client replication passes 51 checks; the real map
-scene passes 122 native checks with captured rows. Matching exports and deployment
-remain pending; the served build still contains the preceding 32 definitions.
+scene passes 122 native checks with captured rows. Matching Web/Linux exports
+now serve 38 NPC definitions at 47 placements on the local development endpoint;
+browser qualification is recorded in the status ledger.
 
 The current worktree is protocol 18 / trusted content schema 8 (item registry schema 2). Item actions
 carry the server item's revision, rejecting stale/replayed mutations. Quantity

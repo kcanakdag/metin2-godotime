@@ -43,7 +43,7 @@ Republishing an existing database is not a supported population deployment
 workflow. Do not reuse IDs for unrelated spawns, remove persisted IDs or reset a
 database to make tests pass. Migration/reconciliation is an upcoming operator
 feature. The population layout itself adds no protocol fields. Current NPC interactions
-use application protocol 17.
+use application protocol 18, including persistent NPC area rows.
 
 ## Convert original stationary NPCs
 
@@ -339,7 +339,7 @@ use it before the converter preserves it as an empty slot. Used materials still
 require supported textures. Mirine has a travelling run clip without MSA travel:
 for stationary NPCs only, the converter preserves and flags this unused embedded
 motion. It does not enable NPC locomotion or relax playable-character root checks.
-The served population remains 32 definitions at 41 placements.
+The preceding point-only build contained 32 definitions at 41 placements.
 
 The shared Rust sampler is `server/src/npc_placement.rs`. It takes a server RNG
 callback and a terrain-height validator, samples inclusive centimetre coordinates,
@@ -373,8 +373,9 @@ rejections, presence removal, repeated reconnects and an empty-world reconnect.
 The public rows captured by that scenario drive `.local/npcs/area-world-r1`, which
 passes 122 native Main/map checks. All six screenshots were inspected. This scene
 uses an offline connection spy; the separate live scenario proves subscriptions.
-Server-process restart persistence and exported browser presentation remain untested.
-The served endpoint and its existing database are unchanged.
+Server-process restart persistence remains untested. The matching exported build
+now serves locally using the separate area database; the preceding database is
+preserved. Exported browser qualification is recorded in the status ledger.
 
 ```sh
 python3 tools/test_physical_combat.py --scenario npc_spawns \
@@ -389,3 +390,12 @@ python3 tools/test_world_npcs.py --native --godot /path/to/godot \
 save that JSON array for `--spawn-rows`. The rendered fixture validates integer
 columns and records the snapshot hash. It checks row removal/restoration, original
 names, positions, headings, idle playback and picking-only collision proxies.
+
+
+The accepted local area build is `.local/npcs/exports/area-web-r1` plus
+`area-linux-r1`, on `mt2-p2-npc-areas-qa-r1-20260908`. Use
+`tests/fixtures/yongan-areas-route.json` with the browser runner to verify all six
+area presentations against original bounds and one another. The route also checks
+23 fixed entry NPCs and the guard interaction. `area-browser-r2` passes 115 checks,
+including dummy and account lifecycle; the actual exports audit all 38 NPC models.
+Run the browser tool with `.local/venv-dev/bin/python`, which includes Playwright.

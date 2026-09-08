@@ -28,10 +28,41 @@ def population_matches(snapshot, expected):
     return True
 
 
+def area_population_matches(first, second, areas):
+    for area in areas:
+        a, b = (npc(snapshot, area["spawn_id"]) for snapshot in (first, second))
+        bounds = area["bounds_cm"]
+        for row in (a, b):
+            position = row.get("position", [])
+            if (
+                not row.get("playing")
+                or not row.get("idle")
+                or row.get("name") != area["name"]
+                or len(position) != 3
+                or not all(math.isfinite(v) for v in position)
+                or not bounds[0] - 0.01 <= position[0] * 100 <= bounds[2] + 0.01
+                or not bounds[1] - 0.01 <= position[2] * 100 <= bounds[3] + 0.01
+                or not math.isfinite(row.get("yaw", math.nan))
+            ):
+                return False
+        if math.dist(a["position"], b["position"]) > 0.001:
+            return False
+        angle = a["yaw"] - b["yaw"]
+        if abs(math.atan2(math.sin(angle), math.cos(angle))) > 0.0001:
+            return False
+    return True
+
+
 def exercise_npcs(page, web, desktop, web_command, native_command, wait, route, output):
     spawn_id = route["spawn_id"]
     expected = route["npc_position"]
     population = route.get("entry_population", [])
+    areas = route.get("entry_areas", [])
+    if areas:
+        wait(
+            f"both_exports_render_{len(areas)}_area_npcs_at_matching_server_positions",
+            lambda: area_population_matches(web(), desktop(), areas),
+        )
     if population:
         wait(
             f"both_exports_render_{len(population)}_original_entry_npcs",
