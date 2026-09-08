@@ -163,6 +163,7 @@ fn visit_due_hits(events: &mut [DueHitEvent], mut visit: impl FnMut(DueHitEvent)
 }
 
 pub fn initialize(ctx: &ReducerContext) {
+    crate::monster_spawns::initialize(ctx);
     let bounds = collision_bounds(ctx);
     for spawn in definitions::MONSTER_SPAWNS
         .iter()
@@ -1181,12 +1182,11 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
     }
     for mut monster in ctx.db.monster().iter() {
         validate_monster(&monster)?;
+        let spawn = crate::monster_spawns::resolve(ctx, monster.id)?;
         if monster.health == 0 {
             if now >= monster.respawn_at_us {
                 let life_sequence = monster.life_sequence.wrapping_add(1);
                 clear_monster_damage(ctx, monster.id, monster.life_sequence);
-                let spawn = trusted_spawn(monster.id)
-                    .expect("a persisted monster must have a trusted spawn definition");
                 ctx.db.monster().id().update(fresh_monster(
                     spawn,
                     life_sequence,
@@ -1206,8 +1206,6 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
         if crate::knockback::locks_ai(ctx, monster.id, monster.life_sequence) {
             continue;
         }
-        let spawn = trusted_spawn(monster.id)
-            .expect("a persisted monster must have a trusted spawn definition");
         let mut clock = ctx
             .db
             .monster_clock()

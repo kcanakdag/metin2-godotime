@@ -5,6 +5,31 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Persisted spawn origins — 2026-09-08
+
+Protocol 21 adds the private `monster_origin` table, initialized from the installed
+spawn registry. Mutable monster positions and AI clocks no longer provide the
+origin used by simulation/respawn: every actor (including dead mobs and the dummy)
+must resolve its private origin before simulation. Missing origins, mismatched
+IDs/definitions, changed homes and nonfinite coordinates reject. Current origins
+remain bound to the authored registry; dynamic allocation and regeneration owner
+records are not implemented by this change. No client reducer can create origins.
+Existing databases require a deliberate migration before this module can be used;
+QA uses a new database and preserves all existing worlds.
+
+Bindings were regenerated from `mt2-p2-spawn-origin-r1-20260908`: 89 files,
+schema SHA-256 `bb9896b98ac5b4a075065f770446093e7d2c7c740a67ef001b655492f3dd11d4`.
+The public endpoint remains protocol 19. Do not aim the worktree client at it.
+
+
+Qualification: `.local/mobs/spawn-origin-r1/acceptance.json` records 108 passed
+real two-account combat checks (including death/respawn and disconnect/reconnect),
+six protocol-gate checks rejecting 20/accepting 21, the focused origin validation
+test and strict library Clippy. GDScript format/lint and generated-binding Godot
+parsing pass. The schema explicitly marks the origin table Private. The first
+protocol import hit a sandbox local-listener failure; its isolated rerun with
+socket access passed. Server-process restart is not yet qualified.
+
 ## Regeneration catalog integration — 2026-09-08
 
 The regeneration stress command now consumes the same typed population catalog as
