@@ -5,6 +5,18 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Shared fixed-area activation lifecycle — 2026-09-08
+
+Extracted the existing combo fixed-area activation phase rules and introduced
+validated placement capture. The combo resolver now uses both shared helpers;
+ordinary finite placement remains unchanged. Candidate Three-Way Cut area replays
+capture placement on activation, skip that tick, and scan through the same shared
+lifecycle before geometry/admission checks. Four candidate replays and ten focused
+Rust area checks pass; strict Clippy passes. Evidence:
+`.local/p6-area-lifecycle-r1/`. Skill pending state does not yet persist these
+placements, so live fixed-area skill dispatch remains pending. No protocol or
+public deployment changed in this step.
+
 ## Catalog-driven skill repeat limits — 2026-09-08
 
 The live profile/linker/compiler now accept an optional bounded `hits_per_life`,

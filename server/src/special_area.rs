@@ -1,5 +1,6 @@
 //! Trusted combo4 fixed-area damage and activation lifecycle.
 
+use crate::area_lifecycle::{AreaPhase, Placement, area_phase};
 use crate::combat::{monster, monster_clock};
 #[cfg(test)]
 use crate::combat_geometry::squared_distance_to_segment;
@@ -10,15 +11,6 @@ use crate::{Controller, accounts, controller, player};
 use spacetimedb::{Identity, ReducerContext, Table};
 
 const AREA_HIT_TYPE_GREAT: u8 = 1;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum AreaPhase {
-    Waiting,
-    Activate,
-    ActivatedThisTick,
-    Scan,
-    Expired,
-}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum VictimScanDecision {
@@ -54,27 +46,6 @@ fn apply_scan_decision(
         apply()
     } else {
         Ok(false)
-    }
-}
-
-fn area_phase(
-    now: i64,
-    activation_at_us: i64,
-    expires_at_us: i64,
-    activated_at_tick_us: i64,
-) -> AreaPhase {
-    if now >= expires_at_us {
-        AreaPhase::Expired
-    } else if activated_at_tick_us == 0 {
-        if now < activation_at_us {
-            AreaPhase::Waiting
-        } else {
-            AreaPhase::Activate
-        }
-    } else if now <= activated_at_tick_us {
-        AreaPhase::ActivatedThisTick
-    } else {
-        AreaPhase::Scan
     }
 }
 
@@ -364,10 +335,20 @@ pub fn activate_due(ctx: &ReducerContext, now: i64) -> Result<(), String> {
             area.heading,
         )
         .ok_or("Special-area placement is invalid.")?;
-        area.center_x = owner.x + offset.0;
-        area.center_y = owner.y;
-        area.center_z = owner.z + offset.1;
-        area.activated_at_tick_us = now;
+        let placement = Placement::capture(
+            [
+                f64::from(owner.x + offset.0),
+                f64::from(owner.y),
+                f64::from(owner.z + offset.1),
+            ],
+            area.heading,
+            now,
+        )?;
+        area.center_x = placement.origin[0] as f32;
+        area.center_y = placement.origin[1] as f32;
+        area.center_z = placement.origin[2] as f32;
+        area.heading = placement.heading;
+        area.activated_at_tick_us = placement.activated_at_us;
         seed_victims(ctx, &area);
         ctx.db.special_area().character_id().update(area);
     }

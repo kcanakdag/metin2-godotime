@@ -266,3 +266,12 @@ not rewrite a saved cast's repeat limit. Event deduplication and the total hit
 budget still apply independently. The installed Sword Spin catalog remains
 byte-identical with a limit of one. Four live compiler and eight runtime tests pass;
 this local change has not enabled Three-Way Cut or been published.
+
+Fixed-area activation now shares `area_lifecycle` with the existing combo finisher:
+placement captures the activation position/heading, scanning starts after the
+activation tick, and the area expires at its deadline. Compiled Three-Way Cut
+replays use that same lifecycle with saved placements, then apply the shared
+geometry and receipt checks. Four area replays and ten focused Rust area checks
+pass; strict Clippy passes. Evidence: `.local/p6-area-lifecycle-r1/`. The live skill
+pending state still needs these per-event placements before fixed-area dispatch
+can be enabled; the existing combo uses the shared lifecycle now.

@@ -2,6 +2,7 @@
 mod accounts;
 mod admin;
 mod appearance;
+mod area_lifecycle;
 mod attack_timing;
 mod characters;
 mod combat;

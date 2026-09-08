@@ -43,6 +43,7 @@ def main():
         "geometry_compiler": ROOT / "server/build_skill_geometry.rs",
         "hit_runtime": ROOT / "server/src/skill_hits.rs",
         "combat_geometry": ROOT / "server/src/combat_geometry.rs",
+        "area_lifecycle": ROOT / "server/src/area_lifecycle.rs",
         "harness": Path(__file__).resolve(),
     }
     hashes = {name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in inputs.items()}
@@ -140,6 +141,9 @@ def main():
         + "#[path="
         + json.dumps(str(ROOT / "server/src/combat_geometry.rs"))
         + "] pub mod combat_geometry;\n"
+        + "#[path="
+        + json.dumps(str(ROOT / "server/src/area_lifecycle.rs"))
+        + "] pub mod area_lifecycle;\n"
         + "pub mod definitions { include!("
         + json.dumps(str(generated))
         + "); }\n"
@@ -171,13 +175,19 @@ def main():
             let high = [front[0], 5.0, front[2]];
             let mut receipts = Vec::new();
             let captured = skill_hits::capture_events(motion.hit_windows_us, 1_000_000).unwrap();
+            let mut placements = vec![None; motion.hit_geometry.len()];
             for now in [162206,200000,434712,500000,849959,900000] {
                 let active = skill_hits::active_events(&captured, now+1_000_000).unwrap();
                 for (event,shape) in motion.hit_geometry.iter().enumerate() {
                     if active & (1 << event) == 0 { continue; }
-                    assert!(!shape.intersects_fixed_area([10.0,0.0,20.0],heading,back,back,0.4).unwrap());
-                    assert!(!shape.intersects_fixed_area([10.0,0.0,20.0],heading,high,high,0.4).unwrap());
-                    assert!(shape.intersects_fixed_area([10.0,0.0,20.0],heading,front,front,0.4).unwrap());
+                    let Some(placement) = placements[event] else {
+                        placements[event] = Some(area_lifecycle::Placement::capture([10.0,0.0,20.0],heading,now+1_000_000).unwrap());
+                        continue;
+                    };
+                    assert_eq!(area_lifecycle::area_phase(now+1_000_000,captured[event][0],captured[event][1],placement.activated_at_us),area_lifecycle::AreaPhase::Scan);
+                    assert!(!shape.intersects_fixed_area(placement.origin,placement.heading,back,back,0.4).unwrap());
+                    assert!(!shape.intersects_fixed_area(placement.origin,placement.heading,high,high,0.4).unwrap());
+                    assert!(shape.intersects_fixed_area(placement.origin,placement.heading,front,front,0.4).unwrap());
                     assert!(shape.intersects_fixed_area([10.0,0.0,20.0],f32::NAN,front,front,0.4).is_err());
                     if skill_hits::admits(&receipts,10,1,event as u8,3,5).unwrap() {
                         receipts.push(skill_hits::receipt(10,1,event as u8));
@@ -233,6 +243,7 @@ def main():
         "geometry_compiler_sha256": hashes["geometry_compiler"],
         "hit_runtime_sha256": hashes["hit_runtime"],
         "combat_geometry_sha256": hashes["combat_geometry"],
+        "area_lifecycle_sha256": hashes["area_lifecycle"],
         "harness_sha256": hashes["harness"],
     }
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
