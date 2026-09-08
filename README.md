@@ -58,6 +58,8 @@ The seven particle effects now have converted recipes and 12 pixel-verified
 textures covering 22 systems. The reusable importer preserves curves, attachment,
 texture-frame order and original render settings; simulation and Godot rendering
 remain pending. See [particle conversion](docs/mobs.md#particle-effect-conversion).
+The shared Godot emission/lifetime component passes 90 actual-engine checks across
+all 22 systems; particle motion and rendering are still pending.
 Yongan's six authored Wild Dog homes pass **107 two-client checks** on a fresh
 local database. The original City Guard is installed in the playable map layer,
 with original placement, weighted idle animations and its attached weapon.

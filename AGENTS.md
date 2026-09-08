@@ -37,10 +37,13 @@ missing reports or assets on a fresh checkout are not proof that checks passed.
 
 ## Current implementation priorities
 
-Quests are deferred at the user's request. The latest requested milestone is
-classic character creation, the other classes and reusable asset import scripts.
-Continue playable mobs/combat, map NPCs, missing scenery, abilities and additional
-maps alongside those priorities as directed by the user.
+The full objective includes all milestones and eventually quests, with world
+population first. Earlier requests to defer quests describe sequencing, not their
+permanent exclusion. Complete playable mobs/combat, map NPCs, missing scenery,
+all four classes/all 44 classic abilities, additional maps and developer tools.
+The desired final experience is indistinguishable from classic Metin2, while
+content remains data-driven, extensible and customizable. Converted assets alone
+do not meet gameplay acceptance. Preserve the full scope across handoffs.
 Extend reusable definitions and importers alongside each gameplay slice. Use
 the offline [world-content tools](docs/world-content.md) for population drafts
 and visual inspection; live admin actions still require server authorization.
@@ -80,7 +83,9 @@ and visual inspection; live admin actions still require server authorization.
 6. Update documentation and record a reviewable checkpoint with actual results,
    remaining limitations and the next implementation step.
 
-Working alone is valid. If the harness supports subagents, use them for independent
+The user's current preference is solo implementation: do not spawn subagents
+unless the user changes that preference. The following coordination guidance
+applies only when delegation is authorized. Use agents for independent
 work such as asset conversion alongside server implementation. Give each file or
 subsystem one owner and each feature a clear integration owner. Share the contract
 once, coordinate changes directly, and review at meaningful checkpoints. Avoid
@@ -230,3 +235,123 @@ and the next action. Exclude credentials. Distinguish implemented, tested,
 accepted and deployed; never claim full-game or original-client parity from one
 bounded fixture. Continue authorized work without repeatedly asking permission
 for routine implementation choices.
+
+## Handoff snapshot — 2026-09-08
+
+This section records observed state at handoff, not immutable configuration.
+Revalidate processes/endpoints before restarting or deploying. The latest code
+checkpoint is `3b27f19` (particle recipes/textures), preceded by `1bf21ea` (arrow
+mesh conversion) and `558dee3` (flight-definition discovery). The interrupted
+follow-up initially researched particle runtime behavior. After the handoff request,
+work resumed: `client/scripts/actors/particle_emission.gd` now implements emission
+and lifetime tracking. It is not yet a kinematic simulation or renderer.
+
+### Playable state versus prepared content
+
+- Local accepted gameplay has four classes/both appearances, basic combat,
+  Sword Spin, the Blender-authored training dummy, six authored Wild Dog homes,
+  and town NPCs. Only Sword Spin is a live ability; the other 43 remain unfinished.
+- The dummy is already installed. Its profile is
+  `content/profiles/training-dummy.json`: 30,000 HP, two-second respawn, Yongan
+  placement `(662, 580)`, plus a Training Grounds placement. It grants no rewards.
+  `tools/build_training_dummy.py` regenerates configurable appearance and clips.
+  See `docs/training-dummy.md`; do not create a second dummy to repeat this work.
+- All 44 candidate class skills have data/formulas and imported motions, not
+  complete gameplay. Shared handlers, specialization selection, weapon modes,
+  buffs/status effects, healing/friendly targeting, UI and two-client casting
+  remain required. See `docs/skills.md` for tuning and qualification workflows.
+- Full Yongan mob preparation covers 44 definitions sharing 19 GLBs/271 unique
+  clips. `.local/mobs/population-conversion-acceptance-r1.json` binds the conversion;
+  `.local/mobs/population-actors-r1/report.json` records 2,818 native asset checks.
+  These additional mobs are **not installed in the live population**.
+- `.local/mobs/population-gameplay-r2/gameplay.v1.json` links 78 attacks: 52 melee
+  and 26 projectile variants. White Oath definitions use original MAGIC damage,
+  including visually sword/bow-equipped actors. Do not substitute physical damage.
+- Group placement and regeneration have reusable offline Rust cores/diagnostics.
+  Their live database integration remains unfinished. Original capacity is owned
+  by group leaders and released on destruction; surviving followers can remain.
+  See `docs/mobs.md` before replacing the authored-home runtime. Current combat
+  validation still relies on `trusted_spawn` and generated static definitions.
+
+### Immediate continuation: projectile presentation and world integration
+
+`tools/metin_particles.py` and `tools/import_particle_effects.py` convert seven
+selected MSE effects, 22 particle systems and 12 referenced textures. They retain
+original units, scalar curves, packed color keys, ordered texture frames, blend,
+billboard, attachment and rotation settings. They do not simulate/render effects.
+The arrow mesh is also converted, but original blend parity is unfinished.
+
+Evidence: `.local/mobs/particle-effects-r2` and `particle-effects-r3` are identical
+online/offline builds. `.local/mobs/particle-acceptance-r1.json` records 20 focused
+tests, owned Python lint, catalog/receipt hashes and `runtime_qualified: false`.
+Source texture decoded pixels match converted PNGs. These checks do not establish
+Godot rendering, exported gameplay or additional playable abilities.
+
+The emission/lifetime component now passes 90 actual Godot checks, including all
+22 systems, in `.local/mobs/particle-emission-r2/report.json`. Reproduce with
+`tools/test_particle_emission.py --godot GODOT --catalog PARTICLE_CATALOG --output
+NEW_DIR`. The test isolates user data and binds source hashes; it performs no
+rendering or server integration. See `docs/mobs.md#godot-emission-lifecycle`.
+
+Next implement particle motion/forces and rendering around this lifecycle, then
+flight attachment and authoritative magic/projectile combat so the prepared mobs
+can become playable. Do not keep substituting inventory reports for integration.
+The interrupted investigation inspected pinned primary files under
+`.cache/full-game-research/client/source/src/EffectLib/`:
+
+- `EffectElementBaseInstance.cpp`: local time advances before particle update;
+  a delayed start activates on one update and begins simulation on the next.
+- `ParticleSystemInstance.cpp`: fractional emission residue is preserved;
+  capacity-clipped integer emission is discarded. Loop count zero repeats
+  continuously; nonzero counts stop emission while live particles can remain.
+  Only one cycle length is subtracted per update, not an arbitrary catch-up loop.
+- `ParticleInstance.cpp`: remaining life is reduced first and expires when
+  strictly negative. Decorators run before velocity-based position integration.
+- `EffectUpdateDecorator.cpp`: air resistance scales velocity per update;
+  gravity changes original Z velocity using elapsed time. Do not assume generic
+  engine particles automatically reproduce these rules. Rendering/attachment and
+  coordinate conversion still need source investigation and actual visual QA.
+
+### Last accepted service artifacts (liveness not rechecked at handoff)
+
+- Local URL: `http://127.0.0.1:8186`, application protocol 18, database
+  `mt2-p2-npc-areas-qa-r1-20260908`.
+- Frozen module: `.local/npcs/area-module-r2.wasm`; web export:
+  `.local/npcs/exports/area-web-r1`; Linux export:
+  `.local/npcs/exports/area-linux-r1/MT2Spacetime.x86_64`.
+- Spacetime endpoint `127.0.0.1:13223`, data `.local/p1/server`; auth endpoint
+  `127.0.0.1:13224`, data `.local/p1/auth`; exact local issuer
+  `http://127.0.0.1:8186/auth`, guest access disabled. Inspect existing routing.
+- `.local/npcs/area-browser-r2/report.json` records 115 Chrome/Linux checks.
+  Public `https://kcanakdag.com:8443` was still the older protocol-4 deployment.
+  Recent imports/cleanup did not deploy or qualify the public endpoint.
+- Godot MCP was unavailable and Blender MCP previously unreachable in this
+  harness. Use existing isolated CLI tooling when needed; recheck availability
+  rather than asserting that a connected editor was inspected.
+
+### Disk cleanup and worktree preservation
+
+The user explicitly authorized removing unused files. Cleanup removed 44 historical
+Cargo build directories identified by `.rustc_info.json` and `.fingerprint`
+under `.local/`, after confirming no host `cargo`/`rustc` process was active.
+Measured recovery was **17,050,132,480 bytes (15.88 GiB)**. An earlier pass removed
+approximately 289 MiB of inactive `server/target/debug/incremental` cache.
+The detailed deletion inventory is
+`.local/cleanup/compiler-caches-20260908-114842.json`.
+
+Databases/auth state, original and imported assets, test reports, frozen modules,
+game exports and the main `server/target` build tree were preserved. Historical
+test compilation caches must be rebuilt if those scenarios are run again;
+missing cached executables now are expected, not evidence that source was lost.
+Free disk space was 49 GiB at the documentation check; other activity changed
+space concurrently, so do not attribute that entire amount to this cleanup.
+Check `df` before large exports. Never delete `.local` wholesale: it contains
+databases, secrets and irreplaceable evidence alongside rebuildable caches.
+
+Five pre-existing untracked Godot UID files were deliberately left untouched:
+`client/scripts/actors/attack_input.gd.uid`, `attack_timing.gd.uid` in that same
+directory, `client/scripts/content/character_catalog.gd.uid`, and
+`client/tests/fan_actor_smoke.gd.uid`, `physical_classes_smoke.gd.uid` in that
+test directory. Review their ownership before staging or deleting them.
+Check git status for the emission implementation/checkpoint. Keep credentials out of handoff text,
+tool output and commits; inspect only sanitized fields from local QA state.

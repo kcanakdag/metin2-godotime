@@ -17,6 +17,9 @@ independently authored adapter informed by `EffectLib/ParticleSystemData.cpp`,
 implementation. Original centimetre/second values and render enums are preserved.
 The conversion uses Pillow for decoded RGBA-to-PNG output and verifies exact
 decoded pixels. Original scripts/textures and converted outputs remain ignored.
+The Godot emission component is independently authored from the lifecycle contract
+in `EffectElementBaseInstance.cpp`, `ParticleSystemInstance.cpp` and
+`ParticleInstance.cpp` at the same pin. No original implementation is copied.
 
 The flight-discovery extension fetches only the four MSF definitions selected by
 the 26 White Oath launch declarations, at the existing client pin. It resolves

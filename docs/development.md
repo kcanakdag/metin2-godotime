@@ -50,6 +50,11 @@ gallery checks every alias against the actual shared GLB clips. See
 
 ## Original population diagnostics
 
+`tools/test_particle_emission.py --godot GODOT --catalog PARTICLE_CATALOG
+--output NEW_DIR` runs the actual GDScript emitter lifecycle in an isolated Godot
+project. Its source-bound report distinguishes emission checks from rendering
+and server integration, which are not exercised. See [emission lifecycle](mobs.md#godot-emission-lifecycle).
+
 `python3 tools/import_particle_effects.py --effect VIRTUAL_MSE --output NEW_DIR`
 converts explicitly selected particle recipes and their referenced textures.
 Repeat `--effect` for a bounded selection; use `--offline` after caching the

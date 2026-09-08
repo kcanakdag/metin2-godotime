@@ -576,3 +576,33 @@ Particle simulation, original blend/billboard rendering and flight attachment
 remain explicit runtime requirements. No new mob or class skill is playable from
 this conversion alone. The shared format is intended for both projectile and
 ability presentation, with server-owned damage remaining separate.
+
+### Godot emission lifecycle
+
+`client/scripts/actors/particle_emission.gd` now implements the shared presentation
+emission lifecycle. It consumes imported emitter curves and returns particle births
+and deaths with per-instance monotonic IDs. It preserves delayed-start activation,
+fractional emission residue, discarded capacity overflow, finite/infinite loops,
+single-cycle advancement per update, inactive emission and strictly-negative
+lifetime expiry. Configuration is copied and bounded; rejected configuration or
+nonfinite/invalid timesteps do not mutate the running instance. The original uses
+single-precision floats; this Godot component is not a bit-identical replay claim.
+
+Run its isolated actual-engine checks with:
+
+```sh
+python3 tools/test_particle_emission.py --godot /path/to/godot \
+  --catalog .local/mobs/particle-effects-r3/effects.v1.json \
+  --output .local/mobs/particle-emission-new
+```
+
+The fixture exercises all 22 selected systems for 1,200 updates each, plus focused
+lifecycle/rejection cases. `.local/mobs/particle-emission-r2/report.json` records
+90 passing checks in Godot 4.7.2, with source hashes and no engine errors. The runner
+uses a private project/user-data directory; it does not touch the open editor.
+An earlier manual run passed the assertions but could not write Godot's default
+user-data directory; its log is retained under `particle-emission-r1`.
+
+This component currently tracks emission/lifetimes only. Particle positions,
+forces, geometry, materials, texture animation and flight attachment remain to be
+implemented and visually qualified. It is not connected to the served game.
