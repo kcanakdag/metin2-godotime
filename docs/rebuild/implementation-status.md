@@ -5,6 +5,24 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## All-class effect attachment resolution — 2026-09-09
+
+`resolve_skill_effects.py` joins the discovered events to pinned original GR2
+skeletons and installed hash-verified GLB skin joints. Decorative model node names
+cannot satisfy a bone reference. Missing converted bones reject rather than hiding
+conversion loss; source-missing bones retain the original follow/capture behavior.
+The output keeps source/model/catalog hashes and all other metadata for later work.
+
+The actual offline run resolved all 136 events across eight actors, with no lost
+referenced bones and no disabled events. Six original-missing `Bip01 Footsteps`
+references use root following: Warrior female skills 2/17/18, Ninja male 48, and
+Shaman male 96/109. Evidence: `.local/p6-all-skill-effects-r1/resolved.json`.
+Two focused tests cover GLB joint-only matching, invalid/duplicate joints,
+source fallback versus conversion loss, copy preservation and rejected-event
+refusal. Ruff passes. This verifies attachment names and fallback selection,
+not animated transform parity for every class or rendered effect resources.
+No installed content, server behavior or public build changed.
+
 ## All-class motion-effect discovery — 2026-09-09
 
 `tools/discover_skill_effects.py` now batches effect extraction across the pinned

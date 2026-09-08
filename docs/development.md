@@ -2232,3 +2232,18 @@ The report is an unresolved candidate: original/converted bone resolution, MSE
 conversion, runtime feature support and gameplay acceptance are still required.
 It does not install assets or enable a skill. Adding a skill to the selected
 inventory automatically includes both configured appearances in this scan.
+
+
+Resolve the batch inventory against installed character resources with:
+
+```sh
+python3 tools/resolve_skill_effects.py --offline --inventory NEW_JSON \
+  --characters client/assets/imported/characters/catalog.v1.json --client client \
+  --output NEW_RESOLVED_JSON
+```
+
+The resolver checks race/model hashes, reads original bones with the pinned Carbon
+reader and counts only GLB skin joints as converted bones. A bone lost in conversion
+rejects the batch; an originally absent bone follows the existing source-aware
+fallback rules. The output retains unresolved non-type-1 metadata and source
+provenance. It does not modify models, convert effects or enable gameplay.
