@@ -79,8 +79,8 @@ def compile_catalog(profile: dict, *, offline: bool) -> dict:
     characters = json.loads(
         (ROOT / "client/assets/imported/characters/catalog.v1.json").read_text()
     )
-    actors = {actor["id"]: actor for actor in characters["actors"]}
-    actors.update({actor["id"]: actor for actor in base["actors"]})
+    actors = {actor["id"]: actor for actor in base["actors"]}
+    actors.update({actor["id"]: actor for actor in characters["actors"]})
     skills, seen, names = [], set(), set()
     for selected in profile["skills"]:
         fields = {

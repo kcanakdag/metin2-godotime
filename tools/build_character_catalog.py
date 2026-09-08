@@ -260,13 +260,48 @@ def build(source: Path, output: Path) -> dict:
     return document
 
 
-def install(source: Path, *, replace: bool = False) -> Path | None:
+def verify_motion_extension(previous: dict, candidate: dict) -> int:
+    """Require all existing motion records and actor attachment contracts to survive."""
+    current = {actor["id"]: actor for actor in candidate["actors"]}
+    preserved = 0
+    for actor in previous["actors"]:
+        replacement = current.get(actor["id"])
+        if replacement is None:
+            raise ValueError("Motion extension removes an installed actor")
+        for field in ("attachment_bones", "forward", "skeleton_signature", "motion_vector_space"):
+            if actor.get(field) != replacement.get(field):
+                raise ValueError(f"Motion extension changes actor {field}")
+        modes = {mode["id"]: mode for mode in replacement["modes"]}
+        for mode in actor["modes"]:
+            new_mode = modes.get(mode["id"])
+            if new_mode is None or any(
+                mode.get(field) != new_mode.get(field)
+                for field in ("combo_chains", "required_item_vnums")
+            ):
+                raise ValueError("Motion extension changes an installed mode contract")
+            motions = {motion["action_id"]: motion for motion in new_mode["motions"]}
+            for motion in mode["motions"]:
+                if motions.get(motion["action_id"]) != motion:
+                    raise ValueError("Motion extension removes or changes an installed motion")
+                preserved += 1
+    return preserved
+
+
+def install(
+    source: Path, *, replace: bool = False, preserve_existing_motions: bool = False
+) -> Path | None:
     """Validate before swapping; keep any previous installation next to this build."""
     source = source.resolve()
     validate_package(source)
     backup = source.with_name(source.name + "-previous-install")
     if INSTALL_ROOT.exists() and (not replace or backup.exists()):
         raise ValueError("Use --replace with a new build output to preserve the installed catalog")
+    if preserve_existing_motions and INSTALL_ROOT.exists():
+        validate_package(INSTALL_ROOT)
+        verify_motion_extension(
+            json.loads((INSTALL_ROOT / "catalog.v1.json").read_text()),
+            json.loads((source / "catalog.v1.json").read_text()),
+        )
     INSTALL_ROOT.parent.mkdir(parents=True, exist_ok=True)
     previous = None
     with tempfile.TemporaryDirectory(
@@ -295,10 +330,21 @@ def main() -> None:
     parser.add_argument(
         "--replace", action="store_true", help="Preserve and replace an installed catalog"
     )
+    parser.add_argument(
+        "--preserve-existing-motions",
+        action="store_true",
+        help="Reject motion/attachment regressions before replacing the package",
+    )
     args = parser.parse_args()
+    if args.preserve_existing_motions and not (args.install and args.replace):
+        parser.error("--preserve-existing-motions requires --install --replace")
     catalog = build(args.source.resolve(), args.output.resolve())
     if args.install:
-        install(args.output, replace=args.replace)
+        install(
+            args.output,
+            replace=args.replace,
+            preserve_existing_motions=args.preserve_existing_motions,
+        )
     print(
         json.dumps(
             {

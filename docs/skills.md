@@ -238,3 +238,13 @@ observed by both clients and one hit per monster life. Evidence:
 `.local/p6-skill-cast-r1/acceptance.json`. These are headless Godot clients, not
 rendered browser exports; additional abilities remain disabled. The isolated QA
 module contains a local bootstrap identity and must not be used for public rollout.
+
+The all-class motion package is now installed locally using the preserved Blender
+conversion and current catalog generator. All 236 previous motion records survive
+exactly, and the package exposes 88 skill motions. The actual native class-skill
+scenario passes 625 checks; both Three-Way Cut appearance captures were reviewed.
+Those captures are pose-only and do not include equipped swords. The skill linker
+now prefers installed character definitions over the legacy base actor, matching
+the client; an offline rebuild proves Sword Spin's current skill catalog unchanged.
+Evidence: `.local/p6-skill-install-r1/acceptance.json`. The character catalog hash
+changed and needs a matching module/export rollout; this does not enable skills.

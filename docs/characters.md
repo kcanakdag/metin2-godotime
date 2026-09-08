@@ -192,3 +192,11 @@ peer. Its probe is confined to explicitly instrumented development exports.
 See the [status ledger](rebuild/implementation-status.md) for actual evidence,
 deployment differences and remaining work. Asset and tooling terms are recorded
 in [third-party.md](third-party.md).
+
+When extending an installed motion set, pass `--preserve-existing-motions` with
+`--install --replace` to `tools/build_character_catalog.py`. Before swapping files,
+it verifies the previous package and rejects removed/changed motion records,
+attachment/forward/skeleton contracts, combo chains and equipment requirements.
+New motions are permitted; intentional changes to old motions use the normal
+reviewed replacement workflow. The prior package is still retained beside the
+new build. This check does not prove mesh/animation deformation; run native actor QA.

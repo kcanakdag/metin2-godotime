@@ -5,6 +5,23 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Installed full skill motions — 2026-09-08
+
+Rebuilt the verified `.local/p6-class-skills/characters-r4` conversion with the
+current catalog generator and installed eight actors with 88 skill motions.
+The optional `--preserve-existing-motions` installer guard verifies all 236 prior
+motion records plus attachment/mode contracts before swapping, preserving the old
+package at `.local/p6-skill-install-r1/runtime-r2-previous-install`. Two targeted
+guard tests pass. Native Godot class-skill QA passes 625 checks; male/female
+Three-Way Cut captures were reviewed (pose-only, without equipped weapons).
+No connected Godot MCP tool was available; QA used isolated Godot/Xvfb.
+
+The live skill linker now prefers installed character definitions over the base
+Warrior fallback. An offline compile preserves Sword Spin's exact catalog bytes.
+Evidence: `.local/p6-skill-install-r1/acceptance.json`. The new character hash is
+not published to running servers; matching module/exports remain required. No
+additional live skill is enabled. Next: Three-Way Cut's live content/area dispatch.
+
 ## Protocol-25 live Sword Spin acceptance — 2026-09-08
 
 Fresh Yongan database `mt2-p2-skill-cast-v25-r1-20260908` passes 35 real
