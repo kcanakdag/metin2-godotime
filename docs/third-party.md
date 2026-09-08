@@ -385,3 +385,15 @@ The independently authored ordinary-mob damage finalizer uses the existing pinne
 server reference (`battle.cpp` and `char_battle.cpp`) to distinguish NPC normal,
 normal-range and magic damage, including floor, resistance and critical ordering.
 No original implementation is copied or new reference dependency downloaded.
+
+
+## Selected original ground items
+
+`tools/import_ground_items.py` independently interprets the pinned client
+`GameLib/ItemManager.cpp::LoadItemList` and `ItemData.cpp::SetDefaultItemData`.
+It fetched the English item-list metadata and only the selected Yang/red-potion
+models (`money.gr2`, `medicine_R.GR2`) and their diffuse textures (`money.dds`,
+`medicine.dds`) at client pin `bb19e9abda71c4545d35a3f9bf8cfedf3ce3c7b7`.
+Original inputs and converted derivatives stay ignored; no original implementation
+was copied. Conversion reuses the pinned Carbon reader and existing Blender tool.
+Original asset rights remain distinct from tooling licenses. See [ground items](ground-items.md).

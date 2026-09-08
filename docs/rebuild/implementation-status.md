@@ -5,6 +5,22 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Original ground-model conversion pipeline — 2026-09-08
+
+The new `tools/import_ground_items.py` resolves an explicit selected item-list set,
+deduplicates shared models, fetches their pinned texture dependencies and reuses
+our Blender item converter. `--godot` imports/renders an isolated Linux preview;
+`--offline` reuses verified cached sources. Defaults are Yang and the two existing
+red-potion sizes, resolving to two original models (92,728 bytes total).
+
+Two parser tests pass. Offline normalization exactly matches online normalization.
+The complete offline Blender/Godot command passed in `.local/items/ground-pipeline-r2`;
+all three preview instances have textured meshes and valid bounds. Reviewed native
+capture shows original coins and red bottles. Hash evidence: its `acceptance.json`.
+See [ground-item workflow](../ground-items.md). This is conversion/preview only:
+models are not yet installed in gameplay; ground placement, original drop animation,
+label overlap and exported runtime qualification remain pending. Public is unchanged.
+
 ## Item-drop names and icons use the shared catalog — 2026-09-08
 
 `PveActor` no longer presents every item drop as a Small Red Potion. The subscribed

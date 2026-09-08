@@ -1883,3 +1883,8 @@ isolated imported client project, then run
 isolated XDG data/config directories. It writes `user://item-drops.json` and a
 capture. The scenario covers multiple definitions, changed/unknown vnums and Yang
 labels; it does not establish classic 3D ground-model or multiplayer fidelity.
+
+The [ground-item pipeline](ground-items.md) resolves selected original drop models,
+deduplicates them and optionally runs Blender plus an isolated Godot preview.
+Its default is the existing Yang/two-potion fixture; it does not install gameplay
+assets automatically.
