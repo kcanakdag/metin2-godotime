@@ -2134,3 +2134,11 @@ original swords, captures three frames per appearance/skill and checks deformati
 and renderer errors. Candidate events are injected only into the isolated test;
 no installed catalog is rewritten. This scenario keeps texture import/3D checks,
 but the editor texture negative control is opt-in because asset importing is unchanged.
+
+`tools/import_projectile_mesh.py --mixed --effect ORIGINAL_MSE --blender BLENDER
+--output NEW_DIR` converts every particle and mesh layer of a selected mixed effect.
+The candidate mesh catalog includes `particle_effect`, decoded/hash-verified particle
+`textures`, and `layer_order`. The default remains strict mesh-only conversion.
+Neither mode installs runtime content. Mesh positions must currently be constant.
+Frame delays use a bounded rational Blender timeline with integer key spacing and
+`fps_base=1`; geometry, UVs, morph weights and animation boundaries are audited.

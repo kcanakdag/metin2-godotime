@@ -5,6 +5,28 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Complete Bash effect conversion candidate — 2026-09-09
+
+`import_projectile_mesh.py --mixed` now converts the full parsed effect: mesh GLBs,
+particle recipes/textures and original layer ordering. Bash's candidate contains
+three 31-frame meshes, 12 particle systems and four decoded PNGs (three particle
+textures and one mesh texture). All geometry, UV, morph-weight and boundary audits
+pass. All 96 exported frame timestamps were checked against the original 0.007 s
+spacing. Evidence: `.local/p6-skill-effects-r11/bash-r2/receipt.json`,
+`mesh-effects.v1.json`, and `timeline-check.json`.
+
+The first conversion failed its animation audit: the pinned glTF exporter
+multiplies `fps_base` when deriving timestamps. The converter now represents delays
+as bounded rational intervals, with integer key spacing and `fps_base=1`. Bash uses
+seven timeline steps at 1000 FPS and ends at 0.217 seconds; the existing arrow uses
+one step at 50 FPS. The offline arrow reconversion passes unchanged geometry/timing
+contracts in `r11/arrow-regression/receipt.json`. Touched Python lint/format pass.
+The failed candidate is retained separately; no imported source or vendor code changed.
+
+This is complete conversion, not complete rendering. Bash's source-color/additive
+mesh blend, finite 7 ms frame playback and mixed renderer integration are next.
+No installed gameplay content, server or public release changed.
+
 ## Complete Bash effect parsing and quadratic position curves — 2026-09-09
 
 `mixed_effects.parse_mixed_effect` validates both particle and mesh subtrees and

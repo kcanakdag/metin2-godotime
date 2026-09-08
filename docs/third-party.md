@@ -443,3 +443,9 @@ client pin (SHA-256 `0ddb1751f19613b49eaab3daee9b184547002ca5ef1c8777733d71d703f
 The independently authored quadratic particle position adapter follows
 `EffectLib/EffectElementBase.cpp:GetPosition`: the control point is relative to the
 segment start and a singleton remains constant. No source implementation is copied.
+
+The complete Bash candidate fetches only its three referenced particle textures and
+one JPEG mesh texture at the existing client pin. Decoded PNG pixels are verified
+against source images. The background Blender converter avoids the pinned glTF
+exporter's `fps * fps_base` timestamp calculation by using `fps_base=1` and rational
+integer key spacing; this is an owned converter adaptation, not a vendor patch.

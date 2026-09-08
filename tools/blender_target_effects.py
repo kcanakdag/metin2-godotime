@@ -2,8 +2,10 @@
 
 import argparse
 import json
+import math
 import os
 import sys
+from fractions import Fraction
 from pathlib import Path
 
 import bpy
@@ -113,11 +115,23 @@ def build_mesh(asset, output):
         for point_index, point in enumerate(frame_vertices[frame_index]):
             key.data[point_index].co = point
     keys = obj.data.shape_keys.key_blocks
+    frame_delay = asset.get("frame_delay", 0.02)
+    if (
+        not isinstance(frame_delay, (int, float))
+        or not math.isfinite(frame_delay)
+        or not 0.000001 <= frame_delay <= 60
+    ):
+        raise ValueError("Invalid mesh animation frame delay")
+    interval = Fraction(str(frame_delay)).limit_denominator(32767)
+    if abs(float(interval) - frame_delay) > 1e-9:
+        raise ValueError("Mesh frame delay cannot be represented by the bounded Blender timeline")
     for timeline_frame in range(frame_count + 1):
         active_frame = timeline_frame if timeline_frame < frame_count else 0
         for source_frame, key in enumerate(keys[1:], 1):
             key.value = 1.0 if source_frame == active_frame else 0.0
-            key.keyframe_insert(data_path="value", frame=timeline_frame, group="MeshFrames")
+            key.keyframe_insert(
+                data_path="value", frame=timeline_frame * interval.numerator, group="MeshFrames"
+            )
     action = obj.data.shape_keys.animation_data.action
     action.name = "loop-loop"
     for layer in action.layers:
@@ -128,8 +142,8 @@ def build_mesh(asset, output):
                         point.interpolation = "CONSTANT"
 
     bpy.context.scene.frame_start = 0
-    bpy.context.scene.frame_end = frame_count
-    bpy.context.scene.render.fps = 50
+    bpy.context.scene.frame_end = frame_count * interval.numerator
+    bpy.context.scene.render.fps = interval.denominator
     bpy.context.scene.render.fps_base = 1.0
     bpy.context.view_layer.objects.active = obj
     obj.select_set(True)

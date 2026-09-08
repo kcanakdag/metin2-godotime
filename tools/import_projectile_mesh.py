@@ -4,13 +4,14 @@
 import argparse
 import hashlib
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path, PurePosixPath
 
 from content_compile import ROOT, source_archive
-from content_formats import virtual_path
+from content_formats import parse_legacy_script, virtual_path
 from import_target_effects import audit_glb, convert_image, frame_payload, run_blender
-from metin_effect_mesh import parse_mde, parse_mse
+from metin_effect_mesh import parse_mde, parse_mesh_root, parse_mse
+from mixed_effects import parse_mixed_effect
 
 
 def main():
@@ -19,6 +20,9 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--blender", type=Path, required=True)
     parser.add_argument("--offline", action="store_true")
+    parser.add_argument(
+        "--mixed", action="store_true", help="Convert every layer of a mixed particle/mesh effect"
+    )
     args = parser.parse_args()
     effect = virtual_path(args.effect)
     if not effect.startswith("ymir work/") or not effect.endswith(".mse"):
@@ -31,6 +35,8 @@ def main():
             "import_projectile_mesh.py",
             "import_target_effects.py",
             "metin_effect_mesh.py",
+            "metin_particles.py",
+            "mixed_effects.py",
             "blender_target_effects.py",
             "content_formats.py",
             "content_compile.py",
@@ -45,13 +51,35 @@ def main():
         source_files[str(result)] = hashlib.sha256(result.read_bytes()).hexdigest()
         return result
 
-    mse = parse_mse(fetch(effect).read_text(), blend_pairs={(3, 8), (5, 2), (5, 6)})
+    script = fetch(effect).read_text()
+    mixed = parse_mixed_effect(script, effect) if args.mixed else None
+    if mixed:
+        root = parse_legacy_script(script)
+        mse = parse_mesh_root(
+            replace(root, groups=[g for g in root.groups if g.name == "Mesh"]),
+            blend_pairs={(3, 2), (3, 8), (5, 2), (5, 6)},
+        )
+    else:
+        mse = parse_mse(script, blend_pairs={(3, 8), (5, 2), (5, 6)})
+    particle_textures = {}
+    if mixed:
+        paths = {t for s in mixed["particles"]["systems"] for t in s["particle"]["textures"]}
+        if len(paths) > 256:
+            raise ValueError("Mixed particle textures exceed budget")
+        for path in sorted(paths):
+            relative = f"textures/{hashlib.sha256(path.encode()).hexdigest()[:16]}.png"
+            receipt = convert_image(fetch(path), output / relative)
+            particle_textures[path] = {
+                "path": relative,
+                "sha256": receipt["png_sha256"],
+                "rgba_sha256": receipt["rgba_sha256"],
+                "width": receipt["width"],
+                "height": receipt["height"],
+            }
     assets, originals, recipes = [], [], []
     for index, mesh in enumerate(mse.meshes):
-        if len(mesh.position_events) != 1 or mesh.frame_delay != 0.02:
-            raise ValueError(
-                "Mesh converter currently needs a fixed offset and 50 FPS source frames"
-            )
+        if len(mesh.position_events) != 1:
+            raise ValueError("Mesh converter currently needs a fixed offset")
         mde = parse_mde(fetch(str(PurePosixPath(effect).parent / mesh.mesh_file)).read_bytes())
         if len(mesh.elements) != len(mde.geometries):
             raise ValueError("Mesh effect element count differs from geometry")
@@ -71,6 +99,7 @@ def main():
         assets.append(
             {
                 "id": identity,
+                "frame_delay": mesh.frame_delay,
                 "position_cm": mesh.position_events[0].position,
                 "frames": list(range(mde.frame_count)),
                 "geometries": geometries,
@@ -117,6 +146,12 @@ def main():
             for i, original in enumerate(originals)
         ],
     }
+    if mixed:
+        catalog.update(
+            particle_effect=mixed["particles"],
+            textures=particle_textures,
+            layer_order=mixed["layer_order"],
+        )
     catalog_path = output / "mesh-effects.v1.json"
     catalog_path.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n")
     report = {
@@ -126,6 +161,8 @@ def main():
         "tools": frozen,
         "models": audits,
         "render_recipes": recipes,
+        "particle_systems": len(mixed["particles"]["systems"]) if mixed else 0,
+        "layer_order": mixed["layer_order"] if mixed else [],
         "mesh_catalog_sha256": hashlib.sha256(catalog_path.read_bytes()).hexdigest(),
         "runtime_requirements": ["original-blend-and-color-recipe", "flight-attachment-rendering"],
     }
