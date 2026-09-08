@@ -5,6 +5,19 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Accepted skill event clocks — 2026-09-08
+
+The accepted cast path now captures validated absolute event deadlines before
+mutating gameplay state. It rejects overflow, negative clocks and authored offsets
+beyond the supported motion lifetime without returning partial capture state.
+Seven skill tests pass; both candidate Three-Way Cut appearances pass replays on
+a nonzero captured clock. Evidence: `.local/p6-skill-capture-r1/`. The pending table
+still stores Sword Spin's original single interval, with no schema/protocol change.
+Multi-event persistence and activation placement are not yet integrated. Inspection
+also confirmed the installed character package lacks `skill_1`; the existing
+candidate package contains both appearances. Their installation and matching
+content-hash rollout remain prerequisites. Public deployment is unchanged.
+
 ## Shared skill event selection — 2026-09-08
 
 The live single-window resolver now calls the shared event selector in `skill_hits`.

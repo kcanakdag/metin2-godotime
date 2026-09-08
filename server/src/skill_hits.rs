@@ -1,6 +1,31 @@
 //! Exact-life hit admission shared by single- and multi-event skill casts.
 //! Event zero retains the existing persisted `monster:life` representation.
 
+/// Capture all authored offsets on the accepted cast's clock in one validated step.
+/// No caller can observe a partially captured list when a later event is invalid.
+pub fn capture_events(windows: &[[i64; 2]], started_at_us: i64) -> Result<Vec<[i64; 2]>, String> {
+    if started_at_us < 0 {
+        return Err("Invalid skill cast clock".into());
+    }
+    active_events(windows, -1)?;
+    windows
+        .iter()
+        .map(|&[start, end]| {
+            if start > 3_200_000 || end > 13_200_000 {
+                return Err("Skill event exceeds supported motion lifetime".into());
+            }
+            Ok([
+                started_at_us
+                    .checked_add(start)
+                    .ok_or("Skill event clock overflow")?,
+                started_at_us
+                    .checked_add(end)
+                    .ok_or("Skill event clock overflow")?,
+            ])
+        })
+        .collect()
+}
+
 /// Select active motion events without merging gaps or replaying expired windows.
 /// Times share one clock (absolute for saved casts, relative for authored motions).
 /// Inclusive endpoints preserve the current live skill-window contract.
@@ -80,6 +105,23 @@ pub fn admits(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn capture_preserves_offsets_and_rejects_partial_or_overflowed_casts() {
+        assert_eq!(
+            capture_events(&[[10, 20], [30, 50]], 1_000).unwrap(),
+            vec![[1_010, 1_020], [1_030, 1_050]]
+        );
+        assert!(capture_events(&[[0, 1]], -1).is_err());
+        assert!(capture_events(&[[0, 1], [10, 20]], i64::MAX - 10).is_err());
+        assert!(capture_events(&[[0, 1], [20, 10]], 0).is_err());
+        assert!(capture_events(&[[3_200_001, 3_200_002]], 0).is_err());
+        assert!(capture_events(&[[3_200_000, 13_200_001]], 0).is_err());
+        assert_eq!(
+            capture_events(&[[3_200_000, 13_200_000]], 0).unwrap(),
+            vec![[3_200_000, 13_200_000]]
+        );
+    }
 
     #[test]
     fn separate_windows_preserve_gaps_overlap_and_expiration() {

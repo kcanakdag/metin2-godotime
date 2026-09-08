@@ -236,6 +236,8 @@ pub fn cast_skill(
         .find(|(id, actor, _)| *id == skill_vnum && *actor == appearance.actor_id)
         .ok_or("Skill animation is unavailable.")?
         .2;
+    let events =
+        crate::skill_hits::capture_events(&[[action.hit_start_us, action.hit_end_us]], now)?;
     let cost = sp_cost(d, state.rank)?;
     if p.current_sp < cost {
         return Err("Not enough SP.".into());
@@ -274,12 +276,8 @@ pub fn cast_skill(
         rank: state.rank,
         action_revision: control.action_revision,
         source_life: player.life_sequence,
-        hit_at_us: now
-            .checked_add(action.hit_start_us)
-            .ok_or("Skill hit clock overflow.")?,
-        hit_until_us: now
-            .checked_add(action.hit_end_us)
-            .ok_or("Skill hit clock overflow.")?,
+        hit_at_us: events[0][0],
+        hit_until_us: events[0][1],
         attacker,
         vitality: p.vitality,
         hit_lives: Vec::new(),

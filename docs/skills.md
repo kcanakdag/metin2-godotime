@@ -201,3 +201,14 @@ this same selector and hit ledger: repeated ticks within each interval yield exa
 three distinct receipts. This replay assumes a hit-eligible target; it does not
 prove collision, damage, network casting or animation fidelity. Pending cast state
 still contains the original single interval until multi-event capture is integrated.
+
+Accepted casts now convert authored event offsets to absolute deadlines through
+`skill_hits::capture_events` before gameplay mutations. The shared capture rejects
+negative clocks, overflow and out-of-motion offsets as a whole. The existing
+Sword Spin stores the same single captured interval; no pending-table schema has
+changed. Both compiled Three-Way Cut timing replays now use a nonzero captured
+clock rather than only relative offsets. Seven focused skill tests pass, including
+late invalid intervals and clock overflow. Full multi-event persistence, activation
+positions and collision dispatch remain pending. The installed actor package lacks
+`skill_1`; its two motions exist in the separate candidate character package and
+must be installed with matching client/server content hashes for the live rollout.
