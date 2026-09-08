@@ -3,6 +3,13 @@
 These are the source revisions used by the current project. Code licenses and
 original game asset rights remain separate.
 
+The flight-discovery extension fetches only the four MSF definitions selected by
+the 26 White Oath launch declarations, at the existing client pin. It resolves
+eight MSE dependency paths without fetching their contents. Loader/default and
+negative trail-lifetime behavior were checked against `GameLib/FlyingData.cpp`
+and `GameLib/FlyTrace.cpp`; the parser is independently authored. Original scripts
+and generated inventories remain in ignored source/evidence directories.
+
 The ordinary mob projectile linker preserves selected original MSA type-6 launch
 declarations and references their MSF paths without fetching additional effect
 assets. Damage-type interpretation was checked against the pinned server's

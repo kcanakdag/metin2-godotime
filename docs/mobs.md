@@ -1,5 +1,39 @@
 # Original mob pipeline
 
+## Flight-definition discovery
+
+```sh
+python3 tools/discover_projectiles.py --offline \
+  --catalog /path/to/gameplay.v1.json --output /path/to/new-projectile-inventory
+```
+
+Omit `--offline` only to fetch the flight scripts explicitly referenced by the
+candidate catalog. The command validates the catalog hash and records pinned MSF
+source hashes, source loader defaults, original flight parameters, attachments and
+resolved MSE dependency paths. It does not fetch or convert those MSE dependencies
+yet, and does not change the installed game. Original units remain centimetres,
+seconds and degrees for the future coordinate adapter.
+
+The 26 White Oath launches share four MSF definitions with five attachments and
+eight effect dependencies. These include homing, acceleration, angular velocity
+and two offset strands; they cannot all be replaced by a generic straight arrow.
+`CollisionSphereRadius` is recorded as ignored because its original loader read
+is commented out. Malformed/unknown fields and unsafe paths reject.
+
+`bou_20_1_throw.msf` contains negative trail dimensions. The importer preserves
+those numbers and flags them explicitly. `FlyTrace::UpdateNewPosition` immediately
+expires history for a negative trail lifetime, so the recorded policy is
+`expires-immediately`; no positive replacement dimensions are invented. Other
+invalid trail dimensions still need explicit handling before runtime use.
+
+`projectile-sources-r5/r6` are byte-identical offline inventories. An earlier repeatability check found
+unstable JSON key ordering; the writer now sorts keys and retains those earlier
+outputs for diagnosis. Three parser
+tests and Python lint pass; evidence is
+`.local/mobs/projectile-source-acceptance-r1.json`. MSE conversion, flight rendering,
+coordinate/attachment validation in Godot and authoritative attack integration
+remain unfinished.
+
 ## Full candidate attacks and projectile declarations
 
 `build_mob_catalog.py` now compiles all 44 converted definitions into 78 ordinary

@@ -22,6 +22,16 @@ evidence. No server or public deployment changed in this recheck.
 
 ### Original wildlife definitions in progress
 
+Flight metadata checkpoint: `discover_projectiles.py` resolves the exact four MSF
+definitions used by the 26 White Oath launches, with five attachments and eight
+MSE dependencies. Pinned source hashes and loader defaults are recorded; no MSE
+conversion or runtime rendering is claimed. The source's negative trail dimensions
+are retained as an issue, with its negative-lifetime immediate-expiry behavior
+recorded from `FlyTrace::UpdateNewPosition` rather than repaired with invented values.
+Three parser tests and Python lint pass; `projectile-sources-r5/r6` are identical
+offline inventories. Evidence: `.local/mobs/projectile-source-acceptance-r1.json`.
+Flight/effect rendering and authoritative projectile attacks remain pending.
+
 Full gameplay linker checkpoint: all 44 definitions now compile with 78 attacks
 (52 melee, 26 projectile). Type-6 source launch declarations retain identity,
 timing, source position, attachment and MSF effect reference separately from melee

@@ -50,6 +50,12 @@ gallery checks every alias against the actual shared GLB clips. See
 
 ## Original population diagnostics
 
+`python3 tools/discover_projectiles.py --catalog GAMEPLAY_JSON --offline --output NEW_DIR`
+discovers the exact MSF set selected by the candidate mob attacks. Omit `--offline`
+when those pinned text assets need fetching. The hash-bound inventory records flight
+parameters and resolves MSE dependency paths; it does not install effects or run
+original code. See [flight discovery](mobs.md#flight-definition-discovery).
+
 For offline original-population lifecycle diagnostics, use
 `cargo run --manifest-path server/Cargo.toml --offline --features yongan --example
 regeneration_stress -- /path/to/population.v1.json`. The command checks inventory
