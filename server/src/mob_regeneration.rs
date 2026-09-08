@@ -1,6 +1,7 @@
 //! Persisted regeneration state; selected training group exercises the live adapter.
 use crate::monster_spawns::{monster_origin, monster_spawn_group};
 use crate::regeneration::{EntrySnapshot, EntryState};
+use spacetimedb::rand::Rng;
 use spacetimedb::{ReducerContext, Table};
 
 #[spacetimedb::table(accessor = monster_regeneration)]
@@ -61,19 +62,48 @@ pub fn tick(ctx: &ReducerContext) -> Result<(), String> {
     for saved in ctx.db.monster_regeneration().iter() {
         let state = restore(&saved)?;
         let next = state.plan_tick(crate::now_us(ctx), || {
-            let members = crate::monster_spawns::allocate_group(
-                ctx,
-                definition(saved.id)?.templates,
-                saved.id,
-            )?;
+            let definition = definition(saved.id)?;
+            let (templates, headings) = if let Some(area) = definition.area {
+                let group = area.groups[ctx.rng().gen_range(0..area.groups.len())];
+                let placed = crate::npc_placement::sample_group(
+                    group,
+                    area.bounds_cm,
+                    |low, high| ctx.rng().gen_range(low..=high),
+                    |_, x, z| {
+                        crate::content::valid_spawn(x, z)
+                            .ok()
+                            .map(|()| crate::content::height(x, z))
+                    },
+                )?;
+                if placed.is_empty() {
+                    return Ok(None);
+                }
+                let templates = placed
+                    .iter()
+                    .map(|m| crate::definitions::MonsterSpawnDefinition {
+                        id: 0,
+                        definition_vnum: m.vnum,
+                        home_x: m.placement.x_cm as f32 / 100.0,
+                        home_z: m.placement.z_cm as f32 / 100.0,
+                    })
+                    .collect::<Vec<_>>();
+                let headings = placed.iter().map(|m| m.placement.yaw()).collect::<Vec<_>>();
+                (templates, headings)
+            } else {
+                (
+                    definition.templates.to_vec(),
+                    vec![0.0; definition.templates.len()],
+                )
+            };
+            let members = crate::monster_spawns::allocate_group(ctx, &templates, saved.id)?;
             let owner = u64::from(
                 members
                     .first()
                     .ok_or("Regeneration allocated an empty group")?
                     .id,
             );
-            for member in members {
-                crate::combat::insert_allocated_monster(ctx, member);
+            for (member, heading) in members.into_iter().zip(headings) {
+                crate::combat::insert_allocated_monster(ctx, member, heading);
             }
             Ok(Some(owner))
         })?;

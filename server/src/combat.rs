@@ -188,8 +188,14 @@ pub fn initialize(ctx: &ReducerContext) {
     crate::mob_regeneration::initialize(ctx).expect("regeneration initialization must succeed");
 }
 
-pub(crate) fn insert_allocated_monster(ctx: &ReducerContext, spawn: MonsterSpawnDefinition) {
-    ctx.db.monster().insert(fresh_monster(spawn, 0, 0));
+pub(crate) fn insert_allocated_monster(
+    ctx: &ReducerContext,
+    spawn: MonsterSpawnDefinition,
+    heading: f32,
+) {
+    let mut monster = fresh_monster(spawn, 0, 0);
+    monster.heading = heading;
+    ctx.db.monster().insert(monster);
     ctx.db.monster_clock().insert(fresh_monster_clock(spawn));
 }
 

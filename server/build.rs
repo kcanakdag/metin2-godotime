@@ -436,7 +436,7 @@ fn selected_monster_spawns(mob_vnum: u32) -> (Vec<MonsterSpawn>, &'static str) {
     } else if selector == "allocated-wild-dog-v1" {
         "training-v5-allocated-wild-dog-v1"
     } else if selector == "regenerating-wild-dog-v1" {
-        "training-v6-regenerating-wild-dog-v1"
+        "training-v7-regenerating-area-wild-dog-v1"
     } else {
         "training-v3-triple-wild-dog-finisher-v1"
     };
@@ -1419,7 +1419,12 @@ fn main() {
     writeln!(
         output,
         "pub const MOB_PROXIMITY_AGGRESSION: bool = {};",
-        std::env::var(TARGET_FIXTURE_ENV).unwrap_or_default() != "passive-wild-dog-v1"
+        !matches!(
+            std::env::var(TARGET_FIXTURE_ENV)
+                .unwrap_or_default()
+                .as_str(),
+            "passive-wild-dog-v1" | "regenerating-wild-dog-v1"
+        )
     )
     .unwrap();
     output.push_str(
@@ -1504,7 +1509,7 @@ pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
     }
     writeln!(output, "];").unwrap();
 
-    output.push_str("#[derive(Clone, Copy, Debug)]\npub struct RegenerationDefinition { pub id: u32, pub interval_us: i64, pub capacity: usize, pub startup_jitter_seconds: u8, pub templates: &'static [MonsterSpawnDefinition] }\n");
+    output.push_str("#[derive(Clone, Copy, Debug)]\npub struct RegenerationGroupArea { pub bounds_cm: [i32; 4], pub groups: &'static [&'static [u32]] }\n#[derive(Clone, Copy, Debug)]\npub struct RegenerationDefinition { pub area: Option<RegenerationGroupArea>, pub id: u32, pub interval_us: i64, pub capacity: usize, pub startup_jitter_seconds: u8, pub templates: &'static [MonsterSpawnDefinition] }\n");
     if std::env::var(TARGET_FIXTURE_ENV).unwrap_or_default() == "regenerating-wild-dog-v1" {
         let payload: Value = serde_json::from_slice(
             &fs::read(REGENERATING_TARGET_FIXTURE).expect("regeneration fixture must exist"),
@@ -1518,7 +1523,23 @@ pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
             settings.capacity,
             settings.startup_jitter_seconds,
         );
-        writeln!(output, "pub const REGENERATION_DEFINITIONS: &[RegenerationDefinition] = &[RegenerationDefinition {{ id: {id}, interval_us: {interval}, capacity: {capacity}, startup_jitter_seconds: {jitter}, templates: MONSTER_SPAWNS }}];").unwrap();
+        let area = if let Some(value) = payload.get("group_area") {
+            let area = build_regeneration::parse_area(value, &[mob_vnum])
+                .unwrap_or_else(|error| fail(error));
+            let groups = area
+                .groups
+                .iter()
+                .map(|g| format!("&{g:?}"))
+                .collect::<Vec<_>>()
+                .join(",");
+            format!(
+                "Some(RegenerationGroupArea {{ bounds_cm: {:?}, groups: &[{}] }})",
+                area.bounds_cm, groups
+            )
+        } else {
+            "None".into()
+        };
+        writeln!(output, "pub const REGENERATION_DEFINITIONS: &[RegenerationDefinition] = &[RegenerationDefinition {{ area: {area}, id: {id}, interval_us: {interval}, capacity: {capacity}, startup_jitter_seconds: {jitter}, templates: MONSTER_SPAWNS }}];").unwrap();
     } else {
         output.push_str("pub const REGENERATION_DEFINITIONS: &[RegenerationDefinition] = &[];\n");
     }

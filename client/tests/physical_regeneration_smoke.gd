@@ -13,7 +13,13 @@ func _run() -> void:
 	if ready:
 		ready = _check(
 			"regeneration_fixture_marker",
-			str(actor.world_info.content_hash) == "training-v6-regenerating-wild-dog-v1"
+			str(actor.world_info.content_hash) == "training-v7-regenerating-area-wild-dog-v1"
+		)
+	if ready:
+		var position := _position(_monster(observer))
+		ready = _check(
+			"leader_sampled_inside_authored_area",
+			position.x >= 7.5 and position.x <= 8.5 and position.y >= 7.5 and position.y <= 8.5
 		)
 	if ready:
 		ready = await _park_observer(observer, actor, observer_id)

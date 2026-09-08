@@ -46,3 +46,33 @@ fn malformed_numeric_values_and_unknown_or_missing_fields_reject() {
     input.as_object_mut().unwrap().remove("capacity");
     assert!(parse(&input).is_err());
 }
+
+#[test]
+fn group_areas_preserve_equal_weight_choices_and_reject_bad_geometry_or_species() {
+    let source = json!({"bounds_cm":[100,200,300,400],"groups":[[101,101],[171,101]]});
+    let area = build_regeneration::parse_area(&source, &[101, 171]).unwrap();
+    assert_eq!(area.groups, vec![vec![101, 101], vec![171, 101]]);
+    assert_eq!(area.bounds_cm, [100, 200, 300, 400]);
+    assert!(build_regeneration::parse_area(&source, &[101]).is_err());
+    for bounds in [
+        json!([300, 200, 100, 400]),
+        json!([-1, 0, 1, 1]),
+        json!([1, 1, 1, 1]),
+        json!([0, 0, 1]),
+    ] {
+        let mut invalid = source.clone();
+        invalid["bounds_cm"] = bounds;
+        assert!(build_regeneration::parse_area(&invalid, &[101, 171]).is_err());
+    }
+    for groups in [
+        json!([]),
+        json!([[]]),
+        json!([[0]]),
+        json!([[999]]),
+        json!([[101.5]]),
+    ] {
+        let mut invalid = source.clone();
+        invalid["groups"] = groups;
+        assert!(build_regeneration::parse_area(&invalid, &[101, 171]).is_err());
+    }
+}

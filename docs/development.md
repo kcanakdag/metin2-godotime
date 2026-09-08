@@ -1701,3 +1701,10 @@ The regeneration fixture’s JSON `regeneration` object now supplies `id`,
 the generated server definition owns those settings and its member-template slice.
 Do not edit generated Rust output. Existing replay expectations target the checked-in
 five-second, capacity-one configuration; altered content needs matching QA.
+
+The regeneration fixture now also provides optional `group_area` with integer
+`bounds_cm` and an array of equal-weight `groups` (each group lists member vnums,
+leader first). Only installed species are accepted. The selected fixture uses
+passive dogs and checks initial leader placement inside its area before testing
+replacement/reconnect. Template IDs are replaced by fresh allocated IDs. The
+current explicit fixture marker is `training-v7-regenerating-area-wild-dog-v1`.

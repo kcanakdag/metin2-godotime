@@ -5,6 +5,35 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Group-area regeneration placement — 2026-09-08
+
+Compiled regeneration definitions now optionally contain a rectangle in centimeters
+and equal-weight group choices. The build validates ordered bounds, nonempty
+bounded groups and installed species references. The server selects a group and
+calls the same `npc_placement::sample_group` used by the world placement tool,
+validating sampled positions against terrain/collision. It preserves sampled
+headings, allocates only successfully placed members and returns a failed attempt
+without consuming capacity when leader placement fails. Followers may partially
+fail placement according to the shared source-backed sampler.
+
+The selected training fixture now places its passive two-dog group in the
+[750,750,850,850] cm area, instead of using fixed member homes. Its explicit marker
+is `training-v7-regenerating-area-wild-dog-v1`. JSON `group_area` supplies
+`bounds_cm` and `groups`; omitting it retains authored templates. This uses one
+selected group choice; the compiler/runtime support for choices does not establish
+that the original 945 entries/54 groups/44 species are installed. Source catalog
+compilation, forced-aggression propagation, original party AI and startup random
+jitter remain pending. Protocol 23 and bindings are unchanged.
+
+
+Evidence: `.local/mobs/regeneration-area-r1/acceptance.json`, database
+`mt2-p2-regeneration-area-r1-20260908`. All 67 live two-account checks pass,
+including initial leader placement within the compiled rectangle, normal sword
+combat, corpse destruction/replacement, follower survival, stale-target rejection
+and reconnect. Three focused compiler tests cover settings, valid choices and
+malformed bounds/unknown species; strict targeted Clippy passes. This is training
+map runtime evidence, not a rendered original-world population qualification.
+
 ## Compiled regeneration settings — 2026-09-08
 
 The live adapter now resolves `REGENERATION_DEFINITIONS` by entry ID for restore,
