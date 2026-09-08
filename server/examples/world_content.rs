@@ -42,12 +42,12 @@ fn inspect() -> Result<Value, String> {
     }
     let vnum = u32::try_from(mobs[0]["vnum"].as_u64().ok_or("Missing mob vnum")?)
         .map_err(|_| "Invalid mob vnum")?;
-    let spawns = build_population::parse(&request["profile"], map_id, vnum)?;
+    let spawns = build_population::parse(&request["profile"], map_id, &[vnum])?;
     let rows: Vec<_> = spawns
         .iter()
         .map(|spawn| {
             let validation = content::valid_spawn(spawn.home_x, spawn.home_z);
-            json!({"id": spawn.id, "definition_vnum": vnum, "x": spawn.home_x,
+            json!({"id": spawn.id, "definition_vnum": spawn.definition_vnum, "x": spawn.home_x,
             "y": content::height(spawn.home_x, spawn.home_z), "z": spawn.home_z,
             "valid": validation.is_ok(), "error": validation.err()})
         })

@@ -5,6 +5,7 @@ use std::collections::BTreeSet;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MonsterSpawn {
     pub id: u32,
+    pub definition_vnum: u32,
     pub home_x: f32,
     pub home_z: f32,
 }
@@ -36,7 +37,15 @@ fn coordinate(value: &Value) -> Result<f32, String> {
     Ok(number as f32)
 }
 
-pub fn parse(value: &Value, map_id: &str, mob_vnum: u32) -> Result<Vec<MonsterSpawn>, String> {
+pub fn parse(
+    value: &Value,
+    map_id: &str,
+    available_vnums: &[u32],
+) -> Result<Vec<MonsterSpawn>, String> {
+    let registry: BTreeSet<_> = available_vnums.iter().copied().collect();
+    if registry.is_empty() || registry.contains(&0) || registry.len() != available_vnums.len() {
+        return Err("Monster registry must contain distinct positive definition IDs".into());
+    }
     let root = fields(
         value,
         &[
@@ -80,7 +89,8 @@ pub fn parse(value: &Value, map_id: &str, mob_vnum: u32) -> Result<Vec<MonsterSp
         if !ids.insert(id) {
             return Err(format!("Duplicate spawn ID {id}"));
         }
-        if positive_u32(&row["definition_vnum"])? != mob_vnum {
+        let definition_vnum = positive_u32(&row["definition_vnum"])?;
+        if !registry.contains(&definition_vnum) {
             return Err(format!(
                 "Spawn {id} refers to an unavailable monster definition"
             ));
@@ -93,7 +103,12 @@ pub fn parse(value: &Value, map_id: &str, mob_vnum: u32) -> Result<Vec<MonsterSp
         {
             return Err(format!("Spawn {id} overlaps another authored home"));
         }
-        spawns.push(MonsterSpawn { id, home_x, home_z });
+        spawns.push(MonsterSpawn {
+            id,
+            definition_vnum,
+            home_x,
+            home_z,
+        });
     }
     spawns.sort_by_key(|spawn| spawn.id);
     Ok(spawns)

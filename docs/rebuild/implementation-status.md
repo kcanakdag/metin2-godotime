@@ -9,6 +9,27 @@ or reclassify that scope.
 
 ### Original wildlife definitions in progress
 
+Spawn identity checkpoint: the shared population parser now takes an explicit
+registry and retains each placement's `definition_vnum`. Generated ordinary and
+training-target spawn records carry that ID through creation, and physical combat
+checks the persisted actor against its compiled spawn. The current build still
+registers only the existing ordinary dog and separate dummy; additional wildlife
+stats, attacks, AI and rewards remain unintegrated.
+
+`make server-test` passes 157 Rust tests, including mixed-definition parsing and
+spawn/actor mismatch rejection. Rust and GDScript lint pass. The isolated module
+`.local/mobs/spawn-definition-module-r1.wasm` passes **113 two-client checks** in
+`spawn-definition-live-r2.json`, on `mt2-p2-mob-registry-qa-r2-20260908`. Coverage
+includes exact authored homes, movement, target rejection, physical damage,
+kill/reward handling, respawn, reconnect and no reward replay. The actual published
+schema matches the committed protocol-18 bindings exactly.
+
+The first live run failed six obsolete unscaled-duration assertions; the shared
+combo fixture now checks ceiling-rounded duration using the subscribed action's
+captured speed. The corrected run used a fresh database with the unchanged server
+module. Both runs and their databases are preserved. No timing rule was weakened,
+no server speed changed, and no new mob or served build was deployed by this slice.
+
 Conversion follow-up: `tools/import_mob_content.py` reuses the pinned Blender
 actor converter for the five selected wildlife definitions. The candidate
 `.local/mobs/wildlife-converted-r1` contains five models, 68 reachable motions and

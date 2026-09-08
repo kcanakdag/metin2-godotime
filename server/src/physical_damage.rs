@@ -824,6 +824,7 @@ fn policy_victim(
 }
 
 fn dog_victim(monster: &Monster) -> Result<PhysicalVictimSnapshot, String> {
+    crate::combat::validate_monster(monster)?;
     validate_generated_policy()?;
     if let Some(d) = crate::training_targets::validate(monster)? {
         return Ok(policy_victim(
@@ -998,6 +999,7 @@ pub fn roll_monster_hit(
     monster: &Monster,
     target: Identity,
 ) -> Result<u16, String> {
+    crate::combat::validate_monster(monster)?;
     if monster.definition_vnum != definitions::WILD_DOG_101_PHYSICAL.vnum
         || monster.actor_id != definitions::WILD_DOG_101_PHYSICAL.actor_id
         || monster.max_health != definitions::MOB_MAX_HEALTH

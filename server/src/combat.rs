@@ -196,7 +196,8 @@ pub(crate) fn validate_monster(monster: &Monster) -> Result<(), String> {
             && monster.level == definitions::MOB_LEVEL
             && monster.max_health == definitions::MOB_MAX_HEALTH);
     if !supported
-        || trusted_spawn(monster.id).is_none()
+        || !trusted_spawn(monster.id)
+            .is_some_and(|spawn| spawn.definition_vnum == monster.definition_vnum)
         || monster.health > monster.max_health
         || !monster.x.is_finite()
         || !monster.y.is_finite()
@@ -231,7 +232,7 @@ fn fresh_monster(
     let training = crate::training_targets::definition(spawn.id);
     Monster {
         id: spawn.id,
-        definition_vnum: training.map_or(definitions::MOB_VNUM, |d| d.vnum),
+        definition_vnum: spawn.definition_vnum,
         actor_id: training
             .map_or(definitions::MOB_ACTOR_ID, |d| d.actor_id)
             .into(),
@@ -1365,6 +1366,25 @@ pub(crate) fn cancel_monster_hit(clock: &mut MonsterClock) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn persisted_mob_identity_must_match_its_compiled_spawn() {
+        let spawn = super::definitions::MONSTER_SPAWNS[0];
+        let mut monster = super::fresh_monster(spawn, 0, 0);
+        assert_eq!(monster.definition_vnum, spawn.definition_vnum);
+        assert!(super::validate_monster(&monster).is_ok());
+        monster.definition_vnum = spawn.definition_vnum + 1;
+        assert!(super::validate_monster(&monster).is_err());
+        monster = super::fresh_monster(spawn, 0, 0);
+        monster.id = u32::MAX;
+        assert!(super::validate_monster(&monster).is_err());
+        let training = super::definitions::TRAINING_TARGET_SPAWNS[0];
+        monster = super::fresh_monster(training, 0, 0);
+        assert_eq!(monster.definition_vnum, training.definition_vnum);
+        assert!(super::validate_monster(&monster).is_ok());
+        monster.id = spawn.id;
+        assert!(super::validate_monster(&monster).is_err());
+    }
+
     use super::*;
     use spacetimedb::ConnectionId;
 

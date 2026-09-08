@@ -344,7 +344,8 @@ fn selected_monster_spawns(mob_vnum: u32) -> (Vec<MonsterSpawn>, &'static str) {
         )
         .unwrap_or_else(|error| fail(format!("Invalid population JSON: {error}")));
         return (
-            build_population::parse(&value, map_id, mob_vnum).unwrap_or_else(|error| fail(error)),
+            build_population::parse(&value, map_id, &[mob_vnum])
+                .unwrap_or_else(|error| fail(error)),
             "",
         );
     }
@@ -403,7 +404,12 @@ fn selected_monster_spawns(mob_vnum: u32) -> (Vec<MonsterSpawn>, &'static str) {
                 "combat spawn fixture placement {index} does not match the reviewed dual Wild Dog fixture"
             ));
         }
-        result.push(MonsterSpawn { id, home_x, home_z });
+        result.push(MonsterSpawn {
+            id,
+            definition_vnum,
+            home_x,
+            home_z,
+        });
     }
     let content_hash = if selector == "dual-wild-dog-v1" {
         "training-v2-dual-wild-dog-v1"
@@ -1372,7 +1378,7 @@ fn main() {
     .unwrap();
     writeln!(
         output,
-        "#[derive(Clone, Copy, Debug)]\npub struct MonsterSpawnDefinition {{ pub id: u32, pub home_x: f32, pub home_z: f32 }}"
+        "#[derive(Clone, Copy, Debug)]\npub struct MonsterSpawnDefinition {{ pub id: u32, pub definition_vnum: u32, pub home_x: f32, pub home_z: f32 }}"
     )
     .unwrap();
     writeln!(
@@ -1383,8 +1389,8 @@ fn main() {
     for spawn in monster_spawns {
         writeln!(
             output,
-            "\tMonsterSpawnDefinition {{ id: {}, home_x: {:?}, home_z: {:?} }},",
-            spawn.id, spawn.home_x, spawn.home_z
+            "\tMonsterSpawnDefinition {{ id: {}, definition_vnum: {}, home_x: {:?}, home_z: {:?} }},",
+            spawn.id, spawn.definition_vnum, spawn.home_x, spawn.home_z
         )
         .unwrap();
     }

@@ -1,5 +1,11 @@
 # Development workflow
 
+The shared combo smoke helper validates attack duration against the public action's
+captured speed using ceiling-rounded source timing. Sword+0's +22 bonus must not
+be tested as a one-second unscaled animation. The population scenario uses this
+helper; use a new database after its kill/reward/respawn sequence when repeating
+the full initial-state fixture.
+
 Run commands from the repository root. The game uses standard Godot with
 GDScript and a Rust SpacetimeDB module. Python runs development and asset tools;
 Node runs the authentication service and local development proxy/MCP tools.

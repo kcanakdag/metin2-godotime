@@ -132,7 +132,7 @@ pub fn generate(root: &Value, map: &str) -> Result<String, String> {
         if world == map {
             writeln!(
                 spawns,
-                "MonsterSpawnDefinition {{ id: {id}, home_x: {x:?}, home_z: {z:?} }},"
+                "MonsterSpawnDefinition {{ id: {id}, definition_vnum: {vnum}, home_x: {x:?}, home_z: {z:?} }},"
             )
             .unwrap();
         }

@@ -16,10 +16,26 @@ fn same_handler_accepts_multiple_homes_and_stable_nonsequential_ids() {
         .as_array_mut()
         .unwrap()
         .push(json!({"id": 83, "definition_vnum":101, "home_x": -4.0, "home_z": 12.0}));
-    let parsed = build_population::parse(&data, "training", 101).unwrap();
+    let parsed = build_population::parse(&data, "training", &[101]).unwrap();
     assert_eq!(parsed.len(), 2);
     assert_eq!(parsed[1].id, 83);
     assert_eq!((parsed[1].home_x, parsed[1].home_z), (-4.0, 12.0));
+}
+
+#[test]
+fn retains_distinct_definition_ids_for_a_mixed_population() {
+    let mut data = profile();
+    data["placements"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id": 83, "definition_vnum":102, "home_x": -4.0, "home_z": 12.0}));
+    let rows = build_population::parse(&data, "training", &[101, 102]).unwrap();
+    assert_eq!(rows[0].definition_vnum, 101);
+    assert_eq!(rows[1].definition_vnum, 102);
+    assert!(build_population::parse(&data, "training", &[101]).is_err());
+    for registry in [&[][..], &[0][..], &[101, 101][..]] {
+        assert!(build_population::parse(&data, "training", registry).is_err());
+    }
 }
 
 #[test]
@@ -37,7 +53,7 @@ fn rejects_unknown_fields_definitions_ids_and_ambiguous_coordinates() {
         let mut data = profile();
         data["placements"][0][key] = bad;
         assert!(
-            build_population::parse(&data, "training", 101).is_err(),
+            build_population::parse(&data, "training", &[101]).is_err(),
             "{key}"
         );
     }
@@ -47,9 +63,9 @@ fn rejects_unknown_fields_definitions_ids_and_ambiguous_coordinates() {
         .as_array_mut()
         .unwrap()
         .push(duplicate.clone());
-    assert!(build_population::parse(&data, "training", 101).is_err());
+    assert!(build_population::parse(&data, "training", &[101]).is_err());
     duplicate["id"] = json!(2);
     data["placements"][1] = duplicate;
-    assert!(build_population::parse(&data, "training", 101).is_err());
-    assert!(build_population::parse(&profile(), "another-map", 101).is_err());
+    assert!(build_population::parse(&data, "training", &[101]).is_err());
+    assert!(build_population::parse(&profile(), "another-map", &[101]).is_err());
 }

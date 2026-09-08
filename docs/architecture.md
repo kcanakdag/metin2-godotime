@@ -1,5 +1,15 @@
 # Architecture
 
+Compiled monster placements retain their `definition_vnum` alongside instance ID
+and home coordinates. The population parser validates membership in an explicit
+registry of distinct positive vnums, preserving mixed definitions rather than
+collapsing every row to one species. The current build supplies only the existing
+ordinary mob vnum; the authored training target has its own typed placements.
+Monster creation uses the placement's definition ID, and combat validates that
+persisted identity against its compiled spawn. This internal build contract adds
+no database columns or reducers; protocol 18 remains unchanged. The converted
+wildlife registry still needs stats, action and reward integration.
+
 Classic class presentation and combat share the installed character catalog
 (see [characters](characters.md)). The common Sword+0 and Fan+0 chains resolve each step
 from the server-owned character appearance and captured weapon vnum. All eight

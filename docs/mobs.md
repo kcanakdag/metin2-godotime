@@ -28,7 +28,11 @@ The selected source HP values are 126, 162, 248, 381 and 585 respectively. The
 current development dog has 100 HP; adopting the original registry must explicitly
 update that fixture and its tests. Do not copy its values onto other mob types.
 The existing gameplay still embeds one ordinary mob definition, with a separate
-authored dummy. Placement rows also currently accept only that ordinary vnum.
+authored dummy. The shared population parser now accepts an explicit registry and
+retains every placement's definition vnum. The current build supplies only the
+implemented ordinary vnum; additional source definitions are not yet accepted as
+playable monsters. The authored dummy's compiled placements retain its own vnum.
+Combat verifies the persisted mob against its assigned spawn ID/type.
 
 `.local/mobs/yongan-wildlife-r3` resolves five model paths and 69 original motion
 registrations offline. Three parser regression tests and Python lint pass. The conversion follow-up below now covers the asset stage. Trusted registry

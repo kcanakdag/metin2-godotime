@@ -531,11 +531,15 @@ func _start_action(
 	if not observed:
 		return {}
 	var row := _player(observer, actor_id).duplicate(true)
+	var speed := int(row.get("attack_speed_percent", 0))
+	if not _check(label + "_captured_speed_valid", speed >= 100 and speed <= 170):
+		return {}
+	var source_duration := 1_000_000 if action_id == COMBO_ONE else 933_333
 	_check(
-		label + "_source_duration",
+		label + "_captured_speed_duration",
 		(
 			int(row.action_ends_at_us) - int(row.action_started_at_us)
-			== (1_000_000 if action_id == COMBO_ONE else 933_333)
+			== ceili(float(source_duration) * 100.0 / speed)
 		)
 	)
 	return row
