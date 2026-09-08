@@ -388,10 +388,20 @@ rejection and world flight lifecycles. Three Python tests and scoped lint pass.
 Reproduce via `test_particle_emission.py --scenario package --catalog PACKAGE/catalog.v1.json`.
 The package is not installed and has no main-scene/export/browser qualification.
 
-Next load this package and connect PveActor launch signals in Main,
-and resolve actual transformed target bounding-sphere centers (original
-`ActorInstanceFly.cpp`), then original magic/projectile damage and live population
-integration. Do not claim a controlled resolver proves live subscriptions.
+Main-scene projectile checkpoint: Main now loads the required package, connects
+real PveActor launch signals and resolves the rendered player's transformed body
+bounds center. `.local/mobs/projectile-main-r4/report.json` passes 31 native checks
+with four hashed captures, including equipped target idle, source removal,
+duplicate suppression, impact draining and disconnect while a shot is active.
+Reviewed the flame and arrow captures: both appear between the converted attacker
+and equipped warrior in the training scene. This fixture controls state and time;
+it does not establish live subscriptions, browser behavior or original-client
+visual parity. Earlier QA caught an empty-animation snapshot error and an invalid
+fixture sword ID; both are corrected. Godot MCP tools were unavailable; native
+isolated Godot/Xvfb was used without touching the open editor. No content package,
+server or public deployment changed. Next: authoritative original magic/ranged
+combat and live population integration, followed by exported multiplayer QA.
+
 Do not keep substituting inventory reports for integration.
 The interrupted investigation inspected pinned primary files under
 `.cache/full-game-research/client/source/src/EffectLib/`:

@@ -910,3 +910,14 @@ missing links, unsafe paths and revision mismatch; scoped lint passes.
 The package remains an ignored candidate. Main-scene loading and launch-signal
 connection, actual target bounding centers, installation/export audits, browser
 rendering and authoritative projectile damage are not established by this gallery.
+
+### Main-scene projectile integration
+
+The actual Main scene now consumes the portable package when required by its mob
+manifest, routes actor launch events to WorldProjectiles and resolves target body
+centers from rendered PlayerActors. Run `tools/test_world_projectiles.py` using
+the command documented in [development](development.md). The r4 native fixture
+passes 31 checks and records four captures; flame and arrow images were reviewed.
+The candidate merge is confined to the disposable fixture. Full mob installation,
+authoritative magic/ranged damage and exported multiplayer qualification remain
+pending. A controlled connection spy is not live subscription evidence.

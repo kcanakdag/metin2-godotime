@@ -9,6 +9,8 @@ const ActorCatalogScript := preload("res://scripts/content/actor_catalog.gd")
 const TargetEffectCatalogScript := preload("res://scripts/content/target_effect_catalog.gd")
 const WorldPickerScript := preload("res://scripts/world/world_picker.gd")
 const WorldNpcsScript := preload("res://scripts/world/world_npcs.gd")
+const WorldProjectilesScript := preload("res://scripts/world/world_projectiles.gd")
+const PROJECTILE_CATALOG_PATH := "res://assets/imported/projectiles/catalog.v1.json"
 const HOVER_REFRESH_SECONDS := 0.1
 const GROUND_PICK_RADIUS_M := 2.0
 
@@ -25,6 +27,7 @@ var _marker_time := 0.0
 var _stream: WorldStream
 var _npcs: WorldNpcs
 var _pve: Dictionary = {}
+var _projectiles: Node3D
 var _original_map := false
 var _content_generation := 0
 var _account_flow: AccountScreens
@@ -49,6 +52,9 @@ var _attack_input := preload("res://scripts/actors/attack_input.gd").new()
 
 
 func _ready() -> void:
+	_projectiles = WorldProjectilesScript.new()
+	_projectiles.name = "WorldProjectiles"
+	add_child(_projectiles)
 	_stream = WorldStream.new()
 	_stream.name = "WorldStream"
 	add_child(_stream)
@@ -153,6 +159,8 @@ func _update_held_attack() -> void:
 
 
 func _process(delta: float) -> void:
+	if connection.state == "connected" and is_instance_valid(_projectiles):
+		_projectiles.advance(delta, get_viewport().get_camera_3d())
 	_update_held_attack()
 	if is_instance_valid(_local_actor):
 		_stream.focus(_local_actor.server_position)
@@ -394,6 +402,8 @@ func _on_connection_state(state: String, message: String) -> void:
 		_content_generation += 1
 		_stream.set_active(false)
 		_npcs.clear()
+		if is_instance_valid(_projectiles):
+			_projectiles.clear()
 	if state == "connected":
 		_npcs.set_active(true)
 	if state != "connected":
@@ -557,9 +567,16 @@ func _prepare_world(info: Dictionary) -> void:
 		connection.disconnect_game()
 		hud.show_notice(_target_effect_catalog.error_message)
 		return
-	if not _actor_catalog.validate_world(info):
+	var valid_content := _actor_catalog.validate_world(info)
+	var content_error: String = _actor_catalog.error_message
+	if valid_content:
+		valid_content = _projectiles.prepare(
+			_actor_catalog.manifest, PROJECTILE_CATALOG_PATH, _resolve_projectile_target
+		)
+		content_error = _projectiles.error_message
+	if not valid_content:
 		connection.disconnect_game()
-		hud.show_notice(_actor_catalog.error_message)
+		hud.show_notice(content_error)
 		return
 	if str(info.get("map_id", "training")) == "metin2_map_a1":
 		var ready := await _stream.prepare(str(info.get("content_hash", "")))
@@ -575,6 +592,17 @@ func _prepare_world(info: Dictionary) -> void:
 		return
 	_npcs.set_spawn_rows(connection.npc_spawns)
 	connection.enter_loaded_world()
+
+
+func _resolve_projectile_target(identity: String) -> Dictionary:
+	var actor: PlayerActor = _actors.get(identity)
+	return actor.projectile_target() if is_instance_valid(actor) else {}
+
+
+func _on_actor_projectile(actor: Node3D, event: Dictionary, origin: Vector3) -> void:
+	if connection.state != "connected":
+		return
+	_projectiles.launch(actor.row, event, origin, get_process_delta_time())
 
 
 func _on_npc_failure(message: String) -> void:
@@ -627,6 +655,8 @@ func _sync_pve(rows: Array, loot_mode: bool, item_mode: bool = false) -> void:
 			actor.loot_mode = loot_mode
 			actor.item_mode = item_mode
 			actor.configure(_actor_catalog, _target_effect_catalog)
+			if not loot_mode:
+				actor.projectile_launched.connect(_on_actor_projectile)
 			add_child(actor)
 			_pve[id] = actor
 		var pve_actor: PveActor = _pve[id]
@@ -637,6 +667,8 @@ func _sync_pve(rows: Array, loot_mode: bool, item_mode: bool = false) -> void:
 			if _pve[id] == _hovered_actor:
 				_set_hovered_actor(null)
 			_pve[id].set_stream_visible(false)
+			if not loot_mode and is_instance_valid(_projectiles):
+				_projectiles.forget_actor(int(_pve[id].row.id))
 			_pve[id].queue_free()
 			_pve.erase(id)
 

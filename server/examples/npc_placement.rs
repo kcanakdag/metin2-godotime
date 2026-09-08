@@ -5,6 +5,9 @@ mod content;
 #[allow(dead_code)]
 #[path = "../src/movement.rs"]
 mod movement;
+// This stationary-NPC tool uses Area; group placement is exercised by
+// the separate population_placement example and shared module tests.
+#[allow(dead_code)]
 #[path = "../src/npc_placement.rs"]
 mod npc_placement;
 

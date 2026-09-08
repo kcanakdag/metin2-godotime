@@ -115,6 +115,25 @@ func apply_state(
 	_last_health = health
 
 
+func projectile_target() -> Dictionary:
+	if (
+		not bool(row.get("online", false))
+		or not is_instance_valid(_presentation)
+		or not _presentation.visible
+	):
+		return {}
+	var bounds: Dictionary = _catalog.actor_bounds(_presentation.actor_id)
+	if bounds.is_empty():
+		return {}
+	# Original target is the transformed model bounding-box center, not a foot
+	# position or a fixed height. Use the converted body bounds, excluding weapons.
+	var center: Vector3 = (bounds.minimum + bounds.maximum) * 0.5
+	var point: Vector3 = _presentation.global_transform * center
+	if not point.is_finite():
+		return {}
+	return {"identity": identity, "life_sequence": int(row.life_sequence), "position": point}
+
+
 func presentation_snapshot() -> Dictionary:
 	var result: Dictionary = _presentation.snapshot() if is_instance_valid(_presentation) else {}
 	var presentation_local: Vector3 = (

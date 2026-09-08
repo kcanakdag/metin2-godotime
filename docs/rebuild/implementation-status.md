@@ -22,6 +22,22 @@ evidence. No server or public deployment changed in this recheck.
 
 ### Original wildlife definitions in progress
 
+Main-scene projectile checkpoint: Main now loads the required package, connects
+real PveActor launch signals and resolves the rendered player's transformed body
+bounds center. `.local/mobs/projectile-main-r4/report.json` passes 31 native checks
+with four hashed captures, including equipped target idle, source removal,
+duplicate suppression, impact draining and disconnect while a shot is active.
+Reviewed the flame and arrow captures: both appear between the converted attacker
+and equipped warrior in the training scene. This fixture controls state and time;
+it does not establish live subscriptions, browser behavior or original-client
+visual parity. Earlier QA caught an empty-animation snapshot error and an invalid
+fixture sword ID; both are corrected. Godot MCP tools were unavailable; native
+isolated Godot/Xvfb was used without touching the open editor. No content package,
+server or public deployment changed. Full `tools/dev.py lint` passes after a
+scoped dead-code allowance on the NPC diagnostic’s shared placement module: this
+example uses Area only; the population example exercises the group API. Next: authoritative original magic/ranged
+combat and live population integration, followed by exported multiplayer QA.
+
 Portable projectile package checkpoint: `build_projectile_catalog.py` now
 assembles the converted dependencies and `projectile_catalog.gd` loads them through
 Godot ResourceLoader. `projectile-package-r2/r3` are byte-identical catalogs with
@@ -30,7 +46,8 @@ texture; generated import sidecars now preserve exact decoded pixels.
 `projectile-package-render-r3` passes 145 native checks, including 12 texture
 RGBA hashes, malformed-load rejection and the four flight lifecycles. Three
 Python packager tests and scoped lint pass. The package is not installed;
-main-scene hookup, exported/browser QA and live projectile damage remain pending.
+exported/browser QA and live projectile damage remain pending; Main hookup is
+covered by the newer checkpoint above.
 
 World projectile lifecycle checkpoint: `world_projectiles.gd` resolves the exact
 protocol-19 target identity/life, creates the shared particle/mesh flights and

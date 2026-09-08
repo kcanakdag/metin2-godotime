@@ -93,6 +93,14 @@ into a portable runtime package. Test it with `test_particle_emission.py
 Copy the generated texture import sidecars with its assets; default Godot import
 changed a source texture during QA. See [portable package](mobs.md#portable-projectile-package).
 
+`tools/test_world_projectiles.py --godot GODOT --mobs CONVERTED_MOBS
+--projectiles PROJECTILE_PACKAGE --output NEW_DIR` stages the candidate mob catalog
+and portable projectile package in an isolated copy of the actual Main scene.
+It uses controlled state rows and a connection spy, captures all four projectile
+types, and checks source removal, animation deduplication and active-shot disconnect.
+The fixture controls Main's simulation clock during rendering; it does not prove
+live subscriptions, server damage, browser behavior or installation readiness.
+
 `python3 tools/import_particle_effects.py --effect VIRTUAL_MSE --output NEW_DIR`
 converts explicitly selected particle recipes and their referenced textures.
 Repeat `--effect` for a bounded selection; use `--offline` after caching the

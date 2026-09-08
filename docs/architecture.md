@@ -1198,3 +1198,15 @@ profile supplies their identity, stats, collision sphere and map homes. Passive 
 and anchored reactions are shared target behavior; all kill reward/credit paths
 exclude practice targets. The public `training_target_hash` binds the client model
 profile to the server rules. See [the workflow](training-dummy.md).
+
+## Mob projectile presentation
+
+Main prepares `assets/imported/projectiles/catalog.v1.json` when the installed
+actor manifest declares projectile launches. Required flight/resource failures
+prevent world entry through the existing content-error path. Melee-only content
+needs no projectile package. PveActor signals create presentation-only flights;
+Main advances them while connected and clears them on world departure.
+The target resolver uses the exact subscribed player identity/life and transformed
+converted body bounds center, excluding equipment. Source removal forgets launch
+deduplication without destroying an existing flight. These visual callbacks never
+apply damage; authoritative ranged/magic damage remains separate unfinished work.

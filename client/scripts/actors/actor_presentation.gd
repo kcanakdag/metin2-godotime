@@ -259,7 +259,11 @@ func snapshot() -> Dictionary:
 		"clip": str(current_motion.get("godot_name", "")),
 		"animation": str(animation_player.current_animation) if animation_player else "",
 		"animation_position":
-		animation_player.current_animation_position if animation_player else 0.0,
+		(
+			animation_player.current_animation_position
+			if animation_player and not animation_player.current_animation.is_empty()
+			else 0.0
+		),
 		"animation_speed": animation_player.speed_scale if animation_player else 1.0,
 		"sequence": current_sequence,
 		"weapon_vnum": weapon_vnum,

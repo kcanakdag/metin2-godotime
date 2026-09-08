@@ -1,7 +1,9 @@
 extends Node3D
 ## Presentation only. Resolve the exact subscribed target life; never grant damage.
 
+const Catalog = preload("res://scripts/content/projectile_catalog.gd")
 const Projectile = preload("res://scripts/actors/projectile_effect.gd")
+var error_message := ""
 var _flights: Dictionary = {}
 var _effects: Dictionary = {}
 var _textures: Dictionary = {}
@@ -9,6 +11,29 @@ var _meshes: Dictionary = {}
 var _resolve: Callable
 var _active: Array[Dictionary] = []
 var _seen: Dictionary = {}
+
+
+func prepare(actor_manifest: Dictionary, catalog_path: String, resolve_target: Callable) -> bool:
+	error_message = ""
+	var required: Dictionary = {}
+	for actor: Dictionary in actor_manifest.get("actors", []):
+		for mode: Dictionary in actor.get("modes", []):
+			for motion: Dictionary in mode.get("motions", []):
+				for launch: Dictionary in motion.get("projectile_launches", []):
+					required[str(launch.fly_definition)] = true
+	if required.is_empty():
+		return configure({}, {}, {}, {}, resolve_target)
+	var catalog := Catalog.new()
+	if not catalog.load_required(catalog_path):
+		error_message = catalog.error_message
+		return false
+	for path: String in required:
+		if not catalog.flights.has(path):
+			error_message = "Required mob projectile is missing: " + path
+			return false
+	return configure(
+		catalog.flights, catalog.effects, catalog.textures, catalog.meshes, resolve_target
+	)
 
 
 func configure(
