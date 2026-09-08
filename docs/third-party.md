@@ -449,3 +449,8 @@ one JPEG mesh texture at the existing client pin. Decoded PNG pixels are verifie
 against source images. The background Blender converter avoids the pinned glTF
 exporter's `fps * fps_base` timestamp calculation by using `fps_base=1` and rational
 integer key spacing; this is an owned converter adaptation, not a vendor patch.
+
+`mesh_frame_clock.gd` independently follows `EffectLib/FrameController.cpp:Update`
+and delayed activation in `EffectElementBaseInstance.cpp:Update` at the pinned
+client revision. It preserves exact-deadline behavior and the 20-frame catch-up
+bound without copying the original implementation.

@@ -2,6 +2,8 @@ extends Node3D
 ## Selected opaque arrow material: source-color / inverse-destination-alpha.
 ## The adaptation requires destination alpha 1; transparent viewports reject.
 
+const FrameClock = preload("res://scripts/actors/mesh_frame_clock.gd")
+
 const SHADER := """shader_type spatial;
 render_mode blend_mix, unshaded, cull_disabled, depth_draw_never;
 // Intentionally sample encoded RGB: original fixed-function blending squares it.
@@ -31,7 +33,7 @@ void fragment() {
 """
 
 var _mesh: MeshInstance3D
-var _remaining := 0.02
+var _clock := FrameClock.new()
 var _frame := 0
 var _count := 0
 
@@ -70,7 +72,7 @@ func configure(definition: Dictionary, scene: PackedScene, texture: Texture2D) -
 	add_child(model)
 	_mesh = mesh
 	_count = int(definition.frame_count)
-	_remaining = 0.02
+	_clock.configure(_count, 0.02, true, 0)
 	_frame = 0
 	_apply_frame()
 	return true
@@ -79,13 +81,8 @@ func configure(definition: Dictionary, scene: PackedScene, texture: Texture2D) -
 func advance(delta: float, _camera: Camera3D = null) -> Dictionary:
 	if _mesh == null or not is_finite(delta) or delta <= 0 or delta > 1:
 		return {"error": "Invalid mesh effect step"}
-	_remaining -= delta
-	# Original FrameController limits catch-up to 20 frames per update.
-	for unused: int in range(20):
-		if _remaining >= 0:
-			break
-		_remaining += 0.02
-		_frame = (_frame + 1) % _count
+	var state: Dictionary = _clock.advance(delta)
+	_frame = int(state.frame)
 	_apply_frame()
 	return {"frame": _frame, "finished": false}
 

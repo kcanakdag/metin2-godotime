@@ -20,10 +20,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--godot", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--scenario", choices=("actor", "mesh_clock"), default="actor")
     args = parser.parse_args()
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     files = ["scripts/actors/actor_presentation.gd", "tests/motion_effect_playback_smoke.gd"]
+    if args.scenario == "mesh_clock":
+        files = ["scripts/actors/mesh_frame_clock.gd", "tests/mesh_frame_clock_smoke.gd"]
     inputs = {str(ROOT / "client" / f): digest(ROOT / "client" / f) for f in files}
     inputs[str(Path(__file__).resolve())] = digest(Path(__file__))
     (output / "project.godot").write_text(
@@ -50,6 +53,7 @@ def main():
         raise RuntimeError("Playback test inputs changed during execution")
     report = {
         **rows[0],
+        "scenario": args.scenario,
         "inputs": inputs,
         "rendering_verified": False,
         "server_integration_verified": False,

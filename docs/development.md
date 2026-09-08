@@ -2142,3 +2142,8 @@ The candidate mesh catalog includes `particle_effect`, decoded/hash-verified par
 Neither mode installs runtime content. Mesh positions must currently be constant.
 Frame delays use a bounded rational Blender timeline with integer key spacing and
 `fps_base=1`; geometry, UVs, morph weights and animation boundaries are audited.
+
+Add `--scenario mesh_clock` to `tools/test_motion_effect_playback.py` for isolated
+original mesh timing checks (delay, finite/infinite loops, exact deadlines and
+bounded catch-up). The default actor scenario remains unchanged. The native
+`test_particle_emission.py --scenario mesh` checks the arrow renderer using this clock.

@@ -71,6 +71,8 @@ def main():
         ]
     if args.scenario == "flight":
         files += ["scripts/actors/particle_motion.gd", "scripts/actors/projectile_flight.gd"]
+    if "scripts/actors/projectile_mesh_effect.gd" in files:
+        files.append("scripts/actors/mesh_frame_clock.gd")
     inputs = [ROOT / "client" / f for f in files] + [args.catalog.resolve(), Path(__file__)]
     if args.scenario == "projectile":
         inputs.append(args.flights.resolve())

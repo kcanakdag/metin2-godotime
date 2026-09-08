@@ -5,6 +5,23 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Shared original mesh frame clock — 2026-09-09
+
+`mesh_frame_clock.gd` implements the original effect-frame deadlines, finite/infinite
+loop counts, frame-zero reset at completion and 20-advance catch-up bound with
+retained backlog. Delayed activation displays frame zero without consuming the
+activation update's overshoot or advancing local time. The clock is rendering-free;
+its snapshot exposes frame, visibility, completion and local time.
+
+The existing arrow mesh renderer now uses this shared clock, preserving its infinite
+50 FPS behavior. The isolated clock runner passes 31 checks, and native arrow
+render/material regression passes 527 checks. Evidence:
+`.local/p6-skill-effects-r12/clock/report.json` and `arrow-render/report.json`.
+Touched Python/GDScript lint and format checks pass. Bash can use the same finite
+clock with its imported 7 ms interval and staggered layer delays; its mesh material
+and mixed-renderer integration remain next. No installed content or public build
+changed, and no original-client pixel-parity claim is made.
+
 ## Complete Bash effect conversion candidate — 2026-09-09
 
 `import_projectile_mesh.py --mixed` now converts the full parsed effect: mesh GLBs,
