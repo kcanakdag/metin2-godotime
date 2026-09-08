@@ -18,6 +18,7 @@ fn within_reach(a: (f32, f32, f32), b: (f32, f32, f32), range: f32) -> bool {
 }
 
 #[spacetimedb::table(accessor = monster, public)]
+#[derive(Clone, PartialEq)]
 pub struct Monster {
     #[primary_key]
     pub id: u32,
@@ -45,6 +46,7 @@ pub struct Monster {
 }
 
 #[spacetimedb::table(accessor = monster_clock)]
+#[derive(Clone, PartialEq)]
 pub struct MonsterClock {
     #[primary_key]
     pub id: u32,
@@ -1233,12 +1235,14 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
         if crate::knockback::locks_ai(ctx, monster.id, monster.life_sequence) {
             continue;
         }
+        let previous_monster = monster.clone();
         let mut clock = ctx
             .db
             .monster_clock()
             .id()
             .find(monster.id)
             .unwrap_or_else(|| fresh_monster_clock(spawn));
+        let previous_clock = clock.clone();
         if (clock.home_x, clock.home_z) != (spawn.home_x, spawn.home_z) {
             clock.home_x = spawn.home_x;
             clock.home_z = spawn.home_z;
@@ -1299,8 +1303,14 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
             clear_monster_attack_target(&mut monster);
         }
         let monster_id = monster.id;
-        ctx.db.monster().id().update(monster);
-        ctx.db.monster_clock().id().update(clock);
+        // Idle population must not rewrite thousands of identical rows each tick.
+        // Compare all fields so action timing, life and target changes still publish.
+        if monster != previous_monster {
+            ctx.db.monster().id().update(monster);
+        }
+        if clock != previous_clock {
+            ctx.db.monster_clock().id().update(clock);
+        }
         if immediate_hit {
             // Publish the accepted source action before resolving its exact target.
             // Consume the pending record in this transaction, never on a client fly event.

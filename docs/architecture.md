@@ -1662,3 +1662,16 @@ position rejection, movement without row updates, terrain readiness and life re-
 The existing four projectile checks/captures also pass; the 301 capture was reviewed.
 Afterward, a test-local preload variable was renamed to satisfy lint; runtime code
 is unchanged from the qualified run. This is not full-world browser performance QA.
+
+
+## Avoid identical mob simulation writes — 2026-09-08
+
+The ordinary mob simulation compares all fields of the accepted mob and private
+clock before publishing updates. Identical idle rows remain untouched; changed
+position, health, action, target and clock fields follow the existing transaction
+order, including publishing the attack action before an immediate source hit.
+This changes write behavior only, with no table/schema/protocol change. The selected
+combat/regeneration replay passes 74 checks; the original-population exported replay
+passes 110. The same 2,835-mob database was retained for the exported comparison.
+Instrumented FPS remained low (Chrome median 24; Xvfb native 7), so this is not a
+claim that rendering performance is solved.

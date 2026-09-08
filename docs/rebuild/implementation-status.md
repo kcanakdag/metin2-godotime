@@ -5,6 +5,34 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Changed mob writes and complete exported field/lifecycle replay — 2026-09-08
+
+Simulation now compares the complete before/after `Monster` and `MonsterClock`
+records and writes only changed values. This preserves publication of action,
+target, life and timing changes while avoiding identical writes for idle population.
+No database fields, protocol or bindings changed. Strict selected-Yongan library
+Clippy passed. The selected two-member regeneration fixture passed all 74 real
+combat/reconnect checks in `mt2-p2-changed-writes-r1-20260908`.
+
+The frozen optimized Yongan module was applied without data deletion to existing
+`mt2-p2-original-linked-r1-20260908`. Using the same frozen client exports and route,
+`.local/mobs/changed-writes-field-r1/report.json` passed all 110 checks with no browser
+engine errors. Both exports received the same 2,835 mobs across 44 species, rendered
+original field mobs, walked out/back, rejected invalid movement/foreign character
+selection, switched characters, disconnected/reconnected, recovered browser reload,
+and completed logout/password-login paths. The earlier foreign-selection timeout
+did not recur; this is consistent with timing/load sensitivity but does not prove
+its exact cause. No permission or auth checks were weakened.
+
+Field medians were Chrome 24 FPS (previous 22) and Xvfb native 7 FPS (previous 7).
+That small browser difference does not establish a material rendering improvement;
+normal release performance remains unqualified. Server publication work is reduced,
+but further profiling, probe overhead and rendering work remain. Existing reviewed
+field captures from the baseline and new captures remain in their run directories.
+Next: field combat and performance work before the public progress update.
+Public endpoint still uses protocol 19. Artifact hashes and scoped acceptance:
+`.local/mobs/changed-writes-r1/acceptance.json`.
+
 ## Generated field route and exported mob baseline — 2026-09-08
 
 `server/examples/world_route.rs` adds a bounded offline route planner using the
