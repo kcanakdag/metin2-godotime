@@ -2099,3 +2099,13 @@ character previews do. `Main` now explicitly selects them at startup and content
 reload. The older default catalog mode retains the base Warrior fixture for
 fixture consumers; using it for the live player omitted newly imported skill
 motions even though native equipped tests using expanded models passed.
+
+## Original motion-effect extraction
+
+`python3 tools/motion_effects.py --msa LOCAL_MSA --msa ANOTHER_MSA --output NEW_JSON`
+extracts selected original type-1 effect events into a candidate manifest. It preserves
+source hashes, microsecond timestamps, explicit root/bone follow or capture modes,
+and converted metre offsets. Unknown fields/invalid flags reject; other unsupported
+motion metadata is retained in the report. The output must not already exist.
+This command does not fetch assets, install content or enable gameplay. Link referenced
+MSE effects and converted skeleton bones before installing motion presentation.

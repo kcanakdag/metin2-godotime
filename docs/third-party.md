@@ -421,3 +421,8 @@ uses doubled RGB modulation per Microsoft's
 [D3DTEXTUREOP reference](https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dtextureop).
 The adapter preserves the original separate alpha modulation; these references do
 not establish pixel parity across the original Direct3D and Godot renderers.
+
+`tools/motion_effects.py` independently adapts the effect-event loading contract in
+`GameLib/RaceMotionDataEvent.h` and attachment branch behavior in
+`GameLib/ActorInstanceMotionEvent.cpp` at the existing client pin. The selected
+MSA source files remain ignored; no original implementation is copied.

@@ -5,6 +5,24 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Typed original motion-effect extraction — 2026-09-09
+
+`tools/motion_effects.py` adds a reusable, explicit local-MSA extraction command.
+It adapts original effect type 1 into source identity/time, normalized MSE reference,
+metre offset, and root/bone follow or capture semantics. IndependentFlag overrides
+attachment; notably AttachingEnable=0 follows the actor root in the original client.
+Required fields, flag values, finite bounded offsets and timestamp consistency are
+validated. Unknown fields reject; unrelated unsupported metadata remains reported.
+No live catalog/actor dispatch was changed and no events were silently installed.
+
+Three focused unit tests cover all eight flag combinations, source preservation,
+coordinate conversion and malformed metadata rejection. Actual pinned source extraction
+and CLI replay match 16 events from eight motions (four skills, both Warrior sexes),
+referencing six MSE effects. The male/female effect declarations match. Evidence:
+`.local/p6-skill-effects-r4/motion-effects.json` and `compiled.json`. Python lint and
+format checks pass for both new files. Next: link these event records to converted
+skeletons and complete effect resources, then exercise timed runtime attachment.
+
 ## Warrior ground-plane particle rendering — 2026-09-09
 
 The shared renderer now handles original billboard type 3 (ground-plane quads)
