@@ -1,6 +1,25 @@
 //! Exact-life hit admission shared by single- and multi-event skill casts.
 //! Event zero retains the existing persisted `monster:life` representation.
 
+/// Select active motion events without merging gaps or replaying expired windows.
+/// Times share one clock (absolute for saved casts, relative for authored motions).
+/// Inclusive endpoints preserve the current live skill-window contract.
+pub fn active_events(windows: &[[i64; 2]], now: i64) -> Result<u32, String> {
+    if windows.len() > 32 {
+        return Err("Too many skill hit events".into());
+    }
+    let mut active = 0;
+    for (index, &[start, end]) in windows.iter().enumerate() {
+        if start < 0 || end < start || end.checked_sub(start).is_none_or(|span| span > 13_200_000) {
+            return Err("Invalid skill hit interval".into());
+        }
+        if now >= start && now <= end {
+            active |= 1 << index;
+        }
+    }
+    Ok(active)
+}
+
 fn decode(value: &str) -> Result<(u32, u32, u8), String> {
     let mut parts = value.split(':');
     let monster = parts
@@ -61,6 +80,30 @@ pub fn admits(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn separate_windows_preserve_gaps_overlap_and_expiration() {
+        let windows = [[10, 20], [30, 40], [35, 50]];
+        for (now, expected) in [
+            (9, 0),
+            (10, 1),
+            (20, 1),
+            (21, 0),
+            (30, 2),
+            (35, 6),
+            (41, 4),
+            (51, 0),
+        ] {
+            assert_eq!(active_events(&windows, now).unwrap(), expected);
+        }
+        assert_eq!(active_events(&[], 0).unwrap(), 0);
+        assert_eq!(active_events(&[[0, 0]], 0).unwrap(), 1);
+        assert!(active_events(&[[2, 1]], 0).is_err());
+        assert!(active_events(&[[-1, 1]], 0).is_err());
+        assert!(active_events(&[[0, i64::MAX]], 0).is_err());
+        assert!(active_events(&[[0, 1]; 33], 0).is_err());
+        assert_eq!(active_events(&[[0, 1]; 32], 1).unwrap(), u32::MAX);
+    }
 
     #[test]
     fn legacy_single_hit_and_respawn_identity_are_preserved() {

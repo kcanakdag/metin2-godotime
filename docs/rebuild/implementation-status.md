@@ -5,6 +5,19 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Shared skill event selection — 2026-09-08
+
+The live single-window resolver now calls the shared event selector in `skill_hits`.
+Six focused skill tests pass, including separated/overlapping windows, boundaries,
+expired windows, invalid timing and the 32-event bound. The candidate qualification
+runs both compiled Three-Way Cut appearances through the actual selector and ledger;
+repeated ticks produce exactly three receipts. All existing formula, metadata,
+window and geometry checks also pass. Evidence: `.local/p6-skill-events-r1/`.
+Strict library Clippy passes. No new ability is enabled: this replay assumes an
+eligible target and does not establish shape intersection, damage or two-client
+casting. Multi-event capture/state and original area endpoint policy remain pending.
+The public server is unchanged.
+
 ## Shared runtime collision primitives — 2026-09-08
 
 The existing combo fixed-area resolver now uses shared rotation and full-3D

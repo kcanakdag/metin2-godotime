@@ -309,7 +309,7 @@ pub fn simulate(ctx: &ReducerContext, now: i64) -> Result<(), String> {
             clear(ctx, cast.character_id);
             continue;
         }
-        if now < cast.hit_at_us {
+        if crate::skill_hits::active_events(&[[cast.hit_at_us, cast.hit_until_us]], now)? == 0 {
             continue;
         }
         let owner = owner.expect("validated owner");

@@ -191,3 +191,13 @@ ordinary finite geometry retains the previous inclusive boundary and crossing
 behavior. Eight existing area tests and two geometry tests pass. Compiled skill
 shapes are not yet dispatched through this runtime path; multi-event activation
 state and original hit/reaction policies remain to be integrated.
+
+The live resolver now uses the shared bounded `skill_hits::active_events` selector
+for its existing saved interval. The selector preserves gaps and overlapping event
+IDs, returns no expired events, supports at most 32 events, and retains the live
+inclusive-endpoint contract. It does not synthesize missed damage after a stall.
+The qualification executable runs both compiled Three-Way Cut appearances through
+this same selector and hit ledger: repeated ticks within each interval yield exactly
+three distinct receipts. This replay assumes a hit-eligible target; it does not
+prove collision, damage, network casting or animation fidelity. Pending cast state
+still contains the original single interval until multi-event capture is integrated.

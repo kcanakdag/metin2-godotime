@@ -41,6 +41,7 @@ def main():
         "runtime": ROOT / "server/src/skill_formula.rs",
         "compiler": ROOT / "server/build_class_skills.rs",
         "geometry_compiler": ROOT / "server/build_skill_geometry.rs",
+        "hit_runtime": ROOT / "server/src/skill_hits.rs",
         "harness": Path(__file__).resolve(),
     }
     hashes = {name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in inputs.items()}
@@ -132,7 +133,12 @@ def main():
         "#[path="
         + json.dumps(str(ROOT / "server/src/skill_formula.rs"))
         + "] pub mod skill_formula;\n"
-        "pub mod definitions { include!(" + json.dumps(str(generated)) + "); }\n"
+        + "#[path="
+        + json.dumps(str(ROOT / "server/src/skill_hits.rs"))
+        + "] pub mod skill_hits;\n"
+        + "pub mod definitions { include!("
+        + json.dumps(str(generated))
+        + "); }\n"
         "fn main() {\n"
         + "".join(metadata_checks)
         + "".join(window_checks)
@@ -140,6 +146,18 @@ def main():
         + """
     assert_eq!(definitions::CLASS_SKILLS.len(),44);
     assert_eq!(definitions::CLASS_SKILL_MOTIONS.len(),88);
+    for motion in definitions::CLASS_SKILL_MOTIONS.iter().filter(|m| m.skill_vnum == 1) {
+        let mut receipts = Vec::new();
+        for now in [0,162206,200000,362207,434712,500000,634713,849959,900000,1049960] {
+            let active = skill_hits::active_events(motion.hit_windows_us, now).unwrap();
+            for event in 0..motion.hit_windows_us.len() {
+                if active & (1 << event) != 0 && skill_hits::admits(&receipts, 10, 1, event as u8, 3, 5).unwrap() {
+                    receipts.push(skill_hits::receipt(10, 1, event as u8));
+                }
+            }
+        }
+        assert_eq!(receipts, vec!["10:1", "10:1:1", "10:1:2"]);
+    }
     let powers = definitions::CLASS_SKILL_RANK_POWERS;
     let mut checks = 0;
     for skill in definitions::CLASS_SKILLS {
@@ -176,10 +194,12 @@ def main():
         "metadata_checks": len(metadata_checks) * 5 + 1,
         "motion_window_checks": len(window_checks),
         "motion_geometry_checks": len(window_checks),
+        "three_way_cut_timing_replays": 2,
         "catalog_sha256": initial,
         "runtime_sha256": hashes["runtime"],
         "compiler_sha256": hashes["compiler"],
         "geometry_compiler_sha256": hashes["geometry_compiler"],
+        "hit_runtime_sha256": hashes["hit_runtime"],
         "harness_sha256": hashes["harness"],
     }
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
