@@ -1,5 +1,35 @@
 # Original mob pipeline
 
+## Original regeneration runtime contract
+
+Population discovery now emits a `runtime_policy` for persistent overworld
+regeneration and an `enabled` flag per entry. A zero interval disables initial
+spawning too; disabled entries retain their source dependencies but contribute
+zero to the initial population bound. Dungeon and stone summons are separate
+source paths and are not covered by this contract.
+
+Enabled entries fill immediately, then first tick after their interval plus a
+uniform integer 0–16 seconds of jitter. Subsequent ticks use the entry interval
+and attempt each missing unit once. A group counts as one unit owned by its
+leader. The original `CHARACTER::Destroy` releases that unit; damage/death alone
+does not release it. Surviving members retain independent lives and must not be
+removed or respawned merely because the group leader was replaced.
+
+The first member uses the entry rectangle. Each successful member establishes
+the next rectangle around its own position, with four independently sampled
+300–500 cm offsets. Each member gets up to 16 range-placement attempts. Leader
+failure aborts the group; follower failure skips that follower and retains the
+last successful rectangle. Range spawning uses section zero and random 0–360
+degree headings; the file's direction/section apply to the separate point path.
+The source's range-regeneration exception check is commented out. Modern collision
+validation must still validate actual sampled positions through the map adapter.
+
+`yongan-runtime-policy-r1` and `r2` preserve the full 945-entry, 54-group,
+44-definition closure and 2,963 initial member bound. The new receipt includes
+`char.cpp` in source hashes to bind the destruction contract. This metadata is
+not yet connected to live regeneration; the existing authored dog homes still
+use their current lifecycle.
+
 `content/profiles/yongan-wildlife.json` explicitly selects Wild Dog 101, Wolf 102,
 Wild Boar 108, Bear 110 and Tiger 114. This is a candidate source inventory, not
 an installed runtime registry or a new spawn layout.

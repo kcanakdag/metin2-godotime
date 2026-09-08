@@ -52,6 +52,7 @@ def main():
         "src/game/src/mob_manager.cpp",
         "src/game/src/mob_manager.h",
         "src/game/src/char_manager.cpp",
+        "src/game/src/char.cpp",
         "gamefiles/conf/mob_proto.txt",
         "gamefiles/conf/mob_names_en.txt",
     ]

@@ -5,6 +5,32 @@ import re
 from content_formats import parse_legacy_script
 
 
+def runtime_policy():
+    """Reviewed overworld behavior; dungeon/stone spawning has separate rules."""
+    return {
+        "scope": "persistent-overworld",
+        "zero_interval": "disabled-including-initial-spawn",
+        "initial_spawn": "immediate",
+        "first_tick_jitter_us": [0, 16_000_000],
+        "first_tick_jitter_step_us": 1_000_000,
+        "following_ticks": "fixed-entry-interval",
+        "refill": "attempt-missing-units-once-per-tick",
+        "group_unit_owner": "leader",
+        "unit_release": "owner-destruction",
+        "surviving_members": "retain-independent-lives",
+        "range_attempts_per_member": 16,
+        "group_leader_failure": "abort-group",
+        "group_member_failure": "skip-member",
+        "group_next_bounds": "last-successful-member-position",
+        "group_bound_offsets_cm": [300, 500],
+        "group_bound_offset_draws": "independent-left-top-right-bottom",
+        "range_heading_degrees": [0, 360],
+        "range_source_direction": "ignored",
+        "range_source_section": "ignored-use-zero",
+        "range_regen_exceptions": "disabled-in-pinned-source",
+    }
+
+
 def integer(token, low=0, high=2**31 - 1):
     if not re.fullmatch(r"-?[0-9]+", token):
         raise ValueError("Population field must be an integer")
@@ -131,6 +157,7 @@ def compile_population(regen, groups_text, choices_text, selected_vnums):
             variants = [[{"vnum": reference}]]
         required = sorted({m["vnum"] for variant in variants for m in variant})
         maximum = integer(count, high=1000)
+        period = interval_us(interval)
         entries.append(
             {
                 "source_line": line_number,
@@ -139,19 +166,23 @@ def compile_population(regen, groups_text, choices_text, selected_vnums):
                 "bounds_cm": [(x - rx) * 100, (y - ry) * 100, (x + rx) * 100, (y + ry) * 100],
                 "section": integer(section, high=255),
                 "source_direction": integer(heading, high=8),
-                "interval_us": interval_us(interval),
+                "interval_us": period,
+                "enabled": period != 0,
                 "source_percent": integer(chance, high=100),
                 "percent_policy": "ignored-by-original-loader",
                 "max_live_units": maximum,
                 "forced_aggressive": kind == "ga",
                 "required_mob_vnums": required,
-                "initial_member_upper_bound": maximum * max(len(v) for v in variants),
+                "initial_member_upper_bound": maximum * max(len(v) for v in variants)
+                if period
+                else 0,
                 "covered_by_selection": set(required).issubset(selected_vnums),
             }
         )
     if not entries:
         raise ValueError("Population contains no spawn entries")
     return {
+        "runtime_policy": runtime_policy(),
         "entries": entries,
         "groups": [group_rows[k] for k in sorted(group_rows)],
         "group_selectors": [choice_rows[k] for k in sorted(choice_rows)],

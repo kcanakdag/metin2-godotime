@@ -56,6 +56,17 @@ class MobPopulationTests(unittest.TestCase):
         self.assertFalse(result["entries"][0]["forced_aggressive"])
         self.assertTrue(result["entries"][1]["forced_aggressive"])
         self.assertEqual(result["entries"][0]["interval_us"], 0)
+        self.assertFalse(result["entries"][0]["enabled"])
+        self.assertEqual(result["entries"][0]["initial_member_upper_bound"], 0)
+        self.assertTrue(result["entries"][1]["enabled"])
+        self.assertEqual(result["initial_member_upper_bound"], 3)
+
+    def test_disabled_selector_retains_dependencies_without_inflating_population(self):
+        result = compile_population(REGEN.replace("1m5s", "0s"), GROUPS, CHOICES, {101, 102})
+        self.assertEqual(result["initial_member_upper_bound"], 0)
+        self.assertEqual(result["required_mob_vnums"], [101, 102, 110, 114])
+        self.assertEqual(result["outside_selected_vnums"], [110, 114])
+        self.assertEqual(len(result["groups"]), 2)
 
     def test_source_loader_stops_after_slot_gap_and_records_ignored_data(self):
         choices = CHOICES.replace("2 901 0", "3 999 0")

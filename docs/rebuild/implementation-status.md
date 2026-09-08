@@ -22,6 +22,17 @@ evidence. No server or public deployment changed in this recheck.
 
 ### Original wildlife definitions in progress
 
+Regeneration contract checkpoint: the population compiler now records the
+reviewed overworld scheduling, group ownership and chained placement rules in
+`runtime_policy`. It fixes zero-interval entries incorrectly contributing to the
+initial member bound; they are disabled but retain their dependency metadata.
+Source evidence adds `char.cpp` because group capacity is released on destruction
+of the owning leader, rather than on follower death or immediately on lethal damage.
+The regenerated `yongan-runtime-policy-r1/r2` inventories are identical and retain
+945 entries, 54 groups, 44 definitions and the 2,963 initial member upper bound.
+Twenty-seven focused Python tests and Python lint pass. This is the input contract
+for pending server regeneration integration, not a change to live spawning.
+
 Full selected asset conversion checkpoint: `population-converted-r3` now covers
 **44 definitions using 19 GLBs and 271 unique clips** (628 per-definition motion
 references). Identical inputs share files with explicit owner and action mappings;
