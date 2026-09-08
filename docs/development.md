@@ -2204,3 +2204,12 @@ local installation is from `.local/p6-skill-effects-r16/package-r2/runtime`.
 The packaged actor scenario now exercises the actual `play_action` event join and
 world-controller prepare/clear/rebind lifecycle. Browser/subscription acceptance
 remains a separate check.
+
+
+The browser skill replay also checks new motion-effect instances on both clients
+and saves per-context videos under its private evidence directory. Use those
+recordings for short bursts that have ended by a post-damage screenshot. The
+read-only `motion_effects` snapshot reports the loaded package hash, spawn count,
+active instances, bindings and renderer error. It does not expose effect-spawning
+commands or confer gameplay authority. Existing visible skill controls are reused
+without resetting scroll before a drag.

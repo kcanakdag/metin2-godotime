@@ -70,6 +70,8 @@ def main() -> None:
         if not panel().get("visible"):
             pages[0].keyboard.press("k")
             wait("skill_panel_open", lambda: panel().get("visible"))
+        if control(vnum)["fully_visible"]:
+            return control(vnum)
         point = panel()["scroll_center"]
         pages[0].mouse.move(*point)
         pages[0].mouse.wheel(0, -1000)
@@ -99,7 +101,11 @@ def main() -> None:
         )
         try:
             for index, account in enumerate(accounts):
-                context = browser.new_context(viewport={"width": 1280, "height": 800})
+                context = browser.new_context(
+                    viewport={"width": 1280, "height": 800},
+                    record_video_dir=str(args.output / "videos"),
+                    record_video_size={"width": 1280, "height": 800},
+                )
                 context.add_init_script("window.mt2ProbeEnabled = true;")
                 page = context.new_page()
                 pages.append(page)
@@ -223,6 +229,9 @@ def main() -> None:
                 sequences = [
                     int(_player(snapshot(index), owner)["attack_sequence"]) for index in [0, 1]
                 ]
+                effect_counts = [
+                    snapshot(i).get("motion_effects", {}).get("spawned", 0) for i in [0, 1]
+                ]
                 pages[0].keyboard.press(str(slot_index + 1))
                 wait(
                     f"skill_{vnum}_server_cooldown",
@@ -247,8 +256,17 @@ def main() -> None:
                         and dummy(0)["health"] == dummy(1)["health"]
                     ),
                 )
+                wait(
+                    f"skill_{vnum}_effects_spawn_on_both_clients",
+                    lambda effect_counts=effect_counts: all(
+                        snapshot(i).get("motion_effects", {}).get("spawned", 0) > effect_counts[i]
+                        and not snapshot(i).get("motion_effects", {}).get("error", "")
+                        for i in [0, 1]
+                    ),
+                )
                 samples[str(vnum)] = {
                     "rank": int(skill_row(vnum)["rank"]),
+                    "effects": [snapshot(i).get("motion_effects", {}) for i in [0, 1]],
                     "attack_sequences_before": sequences,
                     "attack_sequences_after": [
                         int(_player(snapshot(index), owner)["attack_sequence"]) for index in [0, 1]
@@ -271,6 +289,8 @@ def main() -> None:
             if pages:
                 pages[0].screenshot(path=str(args.output / "failure.png"))
         finally:
+            for context in browser.contexts:
+                context.close()
             browser.close()
             report = {
                 "scope": "exported-skill-controls",

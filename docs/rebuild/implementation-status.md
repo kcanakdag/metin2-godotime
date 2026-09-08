@@ -5,6 +5,29 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Exported two-client skill effects — 2026-09-09
+
+The web export at `.local/p6-world-effects-r1/web` completed its existing actor,
+NPC, mob and target-effect pack audits. The package inventory includes the motion
+effect catalog/resource remaps. The local QA proxy on 8187 now serves this build,
+using the existing `mt2-p2-skill-reaction-16-v26-r1-20260908` database and unchanged
+auth routing. No database was reset and the public endpoint is unchanged.
+
+Two independent hardware Chrome clients passed 34 focused checks at
+`.local/p6-world-effects-r1/browser/report.json`: Spirit Strike and Bash cooldowns,
+new action sequences, matching dummy damage and effect creation on both clients,
+with no browser engine errors. Read-only world snapshots now expose package hash,
+cumulative spawn count, active instances, bindings and renderer errors.
+
+Post-cast screenshots missed Bash's brief burst. A video replay exposed an
+unnecessary QA scroll reset that reused stale slot coordinates; the helper now
+keeps an already-visible control in place. The failed recording remains at
+`browser-video/`. The focused corrected Bash replay passed 22 checks at
+`browser-video-r2/report.json`; both browser recordings and extracted burst grids
+are retained. The caster grid visibly shows the burst extending through/beyond the
+dummy and then fading. This is exported rendering evidence, not an original-client
+pixel comparison. Public full-map export/deployment remains next.
+
 ## World skill-effect wiring and lifecycle — 2026-09-09
 
 Main now prepares the installed motion-effect package against character/skill hashes

@@ -46,3 +46,13 @@ func bind_presentation(presentation: Node3D) -> void:
 	presentation.motion_effect_catalog = package
 	if not bind_actor(presentation, float(package.document.source_to_actor_yaw_degrees)):
 		error_message = "Player motion effect binding failed"
+
+
+func snapshot() -> Dictionary:
+	return {
+		"package_hash": str(package.document.get("content_hash", "")),
+		"spawned": _next_seed,
+		"active": _instances.size(),
+		"bindings": _bindings.size(),
+		"error": error_message,
+	}

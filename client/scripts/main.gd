@@ -309,6 +309,7 @@ func dev_snapshot() -> Dictionary:
 		"profile": _profile,
 		"identity": connection.local_identity,
 		"players": connection.players.size(),
+		"motion_effects": _skill_effects.snapshot(),
 		"player_rows": connection.players.duplicate(true),
 		"appearances": connection.appearances.duplicate(true),
 		"progression": connection.progression.duplicate(true),
