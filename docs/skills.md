@@ -174,3 +174,12 @@ state; the resolver records a receipt only after damage calculation succeeds.
 Three-event repeat limits, duplicate event rejection, respawn identity and invalid
 receipts/limits have focused unit coverage. This prepares shared runtime admission;
 additional skills still need event scheduling, collision geometry and live QA.
+
+Candidate motions also retain a `hit_geometry` entry aligned with every hit window:
+actor-local sphere lists for attack areas, or the named bone and length for weapon
+windows. The compiler validates coordinate space, finite bounded coordinates,
+positive sphere radii and bounded geometry lists. Explicit empty-bone/zero-length
+weapon windows remain as authored; no fallback shape is invented. The qualification
+harness compares all 88 generated geometry arrays to input records and hashes the
+separate geometry compiler as an input. Six compiler tests pass. Runtime shape
+sampling, attack/reaction parameters and two-client acceptance remain pending.

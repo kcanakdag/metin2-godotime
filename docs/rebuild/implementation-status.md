@@ -5,6 +5,18 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Candidate skill collision geometry — 2026-09-08
+
+The full-class compiler now emits typed attack-area spheres and weapon-window
+bone/length data in source event order alongside the hit intervals. It rejects
+unknown coordinate systems, invalid lists, nonfinite/out-of-range positions and
+nonpositive sphere radii. Zero-length source weapon windows are preserved.
+Six compiler tests and generated-Rust comparisons for all 88 geometry arrays pass,
+alongside 88 timing comparisons and existing formula/metadata qualification.
+Evidence: `.local/p6-skill-geometry-r3/`. This remains candidate content work;
+no additional live skills or protocol changes are included. Runtime shape sampling
+and attack/reaction parameters remain necessary for source-faithful resolution.
+
 ## Shared skill hit admission — 2026-09-08
 
 `server/src/skill_hits.rs` now separates per-event deduplication, exact monster-life

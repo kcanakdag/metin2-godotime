@@ -1,4 +1,6 @@
 //! Strict compiler for the full classic skill catalog and bounded formula programs.
+#[path = "build_skill_geometry.rs"]
+mod geometry;
 use serde_json::Value;
 use std::collections::BTreeSet;
 use std::fmt::Write;
@@ -204,6 +206,9 @@ pub fn validate(root: &Value) -> Result<(), String> {
             }
             let duration = integer(&variant["duration_us"], 1, 3_200_000)?;
             hit_windows(variant, duration)?;
+            for hit in variant["hits"].as_array().unwrap() {
+                geometry::generate(hit)?;
+            }
             let root = variant["root_m"]
                 .as_array()
                 .filter(|a| a.len() == 3)
@@ -239,6 +244,7 @@ pub fn validate(root: &Value) -> Result<(), String> {
 pub fn generate(root: &Value) -> Result<String, String> {
     validate(root)?;
     let mut out = String::from("use crate::skill_formula::Op;\n");
+    out.push_str(geometry::TYPES);
     out.push_str("#[derive(Clone,Copy,Debug,PartialEq,Eq)] pub enum SkillHandler { Damage, PeriodicDamage, Buff, Healing }\n");
     out.push_str("#[derive(Clone,Copy,Debug,PartialEq,Eq)] pub enum SkillTarget { SelfOnly, Monster, Friendly }\n");
     out.push_str("#[derive(Clone,Copy,Debug,PartialEq,Eq)] pub enum SkillAttribute { Normal, Melee, Range, Magic }\n");
@@ -255,7 +261,7 @@ pub fn generate(root: &Value) -> Result<String, String> {
     .unwrap();
     out.push_str("#[derive(Clone,Copy,Debug)] pub struct SkillPrograms { pub amount:&'static [Op],pub secondary:&'static [Op],pub duration:&'static [Op],pub secondary_duration:&'static [Op],pub upkeep:&'static [Op],pub splash_scale:&'static [Op] }\n");
     out.push_str("#[derive(Clone,Copy,Debug)] pub struct ClassSkillDefinition { pub vnum:u16,pub class_id:u8,pub group:u8,pub minimum_level:u8,pub maximum_rank:u8,pub handler:SkillHandler,pub target:SkillTarget,pub attribute:SkillAttribute,pub affect:Option<u16>,pub secondary_affect:Option<u16>,pub point:&'static str,pub secondary_point:&'static str,pub flags:&'static [&'static str],pub weapon_limits:&'static [&'static str],pub rank_costs:[u32;21],pub rank_cooldowns_us:[i64;21],pub programs:SkillPrograms,pub radius_m:f32,pub range_m:f32,pub max_targets:u8 }\n");
-    out.push_str("#[derive(Clone,Copy,Debug)] pub struct ClassSkillMotion {pub skill_vnum:u16,pub actor_id:&'static str,pub action_id:&'static str,pub duration_us:i64,pub root_m:[f32;3],pub activation_us:&'static [i64],pub hit_windows_us:&'static [[i64;2]]}\n");
+    out.push_str("#[derive(Clone,Copy,Debug)] pub struct ClassSkillMotion {pub skill_vnum:u16,pub actor_id:&'static str,pub action_id:&'static str,pub duration_us:i64,pub root_m:[f32;3],pub activation_us:&'static [i64],pub hit_windows_us:&'static [[i64;2]],pub hit_geometry:&'static [SkillHitGeometry]}\n");
     let mut definitions = Vec::new();
     let mut motions = Vec::new();
     for skill in root["skills"].as_array().unwrap() {
@@ -347,7 +353,14 @@ pub fn generate(root: &Value) -> Result<String, String> {
                 .map(|v| v.as_u64().unwrap())
                 .collect::<Vec<_>>();
             let windows = hit_windows(variant, duration)?;
-            motions.push(format!("ClassSkillMotion{{skill_vnum:{id},actor_id:{actor:?},action_id:{action:?},duration_us:{duration},root_m:{root:?},activation_us:&{activations:?},hit_windows_us:&{windows:?}}}"));
+            let shapes = variant["hits"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(geometry::generate)
+                .collect::<Result<Vec<_>, _>>()?
+                .join(",");
+            motions.push(format!("ClassSkillMotion{{skill_vnum:{id},actor_id:{actor:?},action_id:{action:?},duration_us:{duration},root_m:{root:?},activation_us:&{activations:?},hit_windows_us:&{windows:?},hit_geometry:&[{shapes}]}}"));
         }
     }
     writeln!(
@@ -380,7 +393,9 @@ mod tests {
                         let actor = format!("actor.player.{name}-{sex}");
                         json!({"actor_id":actor,"action_id":format!("{actor}.general.skill_{id}"),
                             "duration_us":1_000_000,"root_m":[0,0,0],"activation_us":[0],
-                            "hits":[{"kind":"attack_area","start_us":0,"end_us":200_000}]})
+                            "hits":[{"kind":"attack_area","start_us":0,"end_us":200_000,
+                                "coordinate_space":"output_actor_local_godot",
+                                "spheres":[{"position_m":[0,1,-2],"radius_m":1.2}]}]})
                     });
                     let programs = [
                         "formula",

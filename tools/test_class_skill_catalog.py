@@ -40,6 +40,7 @@ def main():
         "catalog": catalog,
         "runtime": ROOT / "server/src/skill_formula.rs",
         "compiler": ROOT / "server/build_class_skills.rs",
+        "geometry_compiler": ROOT / "server/build_skill_geometry.rs",
         "harness": Path(__file__).resolve(),
     }
     hashes = {name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in inputs.items()}
@@ -50,13 +51,46 @@ def main():
     for skill in source["skills"]:
         for variant in skill["variants"]:
             windows = [[hit["start_us"], hit["end_us"]] for hit in variant["hits"]]
+            shapes = []
+            for hit in variant["hits"]:
+                if hit["kind"] == "attack_area":
+                    spheres = []
+                    for sphere in hit["spheres"]:
+                        position = ",".join(f"{float(v)!r}f32" for v in sphere["position_m"])
+                        spheres.append(
+                            "definitions::SkillHitSphere { position_m:["
+                            + position
+                            + "],radius_m:"
+                            + f"{float(sphere['radius_m'])!r}f32"
+                            + "}"
+                        )
+                    shapes.append(
+                        "definitions::SkillHitGeometry::Area { spheres:&["
+                        + ",".join(spheres)
+                        + "]}"
+                    )
+                else:
+                    shapes.append(
+                        "definitions::SkillHitGeometry::Weapon { bone:"
+                        + json.dumps(hit["bone"])
+                        + ",length_m:"
+                        + f"{float(hit['weapon_length_m'])!r}f32"
+                        + "}"
+                    )
+            shape_assert = (
+                "let shapes: &[definitions::SkillHitGeometry] = &["
+                + ",".join(shapes)
+                + "]; assert_eq!(motion.hit_geometry, shapes);"
+            )
             window_checks.append(
                 "{ let motion = definitions::CLASS_SKILL_MOTIONS.iter().find(|m|"
                 + f"m.skill_vnum == {skill['vnum']} && m.actor_id == "
                 + json.dumps(variant["actor_id"])
                 + " ).unwrap(); let expected: &[[i64; 2]] = &"
                 + json.dumps(windows)
-                + "; assert_eq!(motion.hit_windows_us, expected); }\n"
+                + "; assert_eq!(motion.hit_windows_us, expected); "
+                + shape_assert
+                + " }\n"
             )
         attribute = {"NORMAL": "Normal", "MELEE": "Melee", "RANGE": "Range", "MAGIC": "Magic"}[
             skill["attribute"]
@@ -141,9 +175,11 @@ def main():
         "formula_checks": checks,
         "metadata_checks": len(metadata_checks) * 5 + 1,
         "motion_window_checks": len(window_checks),
+        "motion_geometry_checks": len(window_checks),
         "catalog_sha256": initial,
         "runtime_sha256": hashes["runtime"],
         "compiler_sha256": hashes["compiler"],
+        "geometry_compiler_sha256": hashes["geometry_compiler"],
         "harness_sha256": hashes["harness"],
     }
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
