@@ -17,6 +17,14 @@ from skill_tuning import apply_tuning
 RANK_POWERS = [0, 5, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 50]
 
 
+def player_cooldown_us(seconds: float) -> int:
+    # char_skill.cpp::UseSkill truncates seconds before ComputeCooltime(ms).
+    # UseMobSkill has a different millisecond conversion; this is for players.
+    if not math.isfinite(seconds) or not 0 <= seconds <= 600:
+        raise ValueError("Player skill cooldown exceeds runtime bounds")
+    return int(seconds) * 1_000_000
+
+
 def skill_handler(source: dict) -> str:
     flags = set(source["flags"])
     if source["vnum"] == 5:
@@ -90,7 +98,7 @@ def compile_catalog(inventory: dict, characters: dict) -> dict:
             raise ValueError(f"Skill {vnum} has no original damage activation metadata")
         costs = [int(rank_value(source["sp_cost"], power)) for power in RANK_POWERS]
         cooldowns = [
-            int(rank_value(source["cooldown"], power) * 1_000_000) for power in RANK_POWERS
+            player_cooldown_us(rank_value(source["cooldown"], power)) for power in RANK_POWERS
         ]
         if any(not 0 <= v <= 10_000 for v in costs) or any(
             not 0 <= v <= 600_000_000 for v in cooldowns

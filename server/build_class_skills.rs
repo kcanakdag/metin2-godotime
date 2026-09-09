@@ -198,7 +198,10 @@ pub fn validate(root: &Value) -> Result<(), String> {
                 .filter(|a| a.len() == 21)
                 .ok_or("Invalid rank lookup table")?;
             for value in values {
-                integer(value, 0, maximum)?;
+                let number = integer(value, 0, maximum)?;
+                if field == "rank_cooldowns_us" && number % 1_000_000 != 0 {
+                    return Err("Player skill base cooldown must use whole source seconds".into());
+                }
             }
         }
         for field in [
@@ -474,6 +477,15 @@ mod tests {
         assert!(hit_windows(&v, 100).is_err());
         v["hits"] = Value::Null;
         assert!(hit_windows(&v, 100).is_err());
+    }
+
+    #[test]
+    fn fractional_player_cooldown_tables_reject() {
+        let mut root = catalog();
+        root["skills"][0]["rank_cooldowns_us"][1] = json!(67_500_000);
+        assert!(generate(&root).is_err());
+        root["skills"][0]["rank_cooldowns_us"][1] = json!(67_000_000);
+        assert!(generate(&root).is_ok());
     }
 
     #[test]

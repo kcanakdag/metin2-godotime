@@ -5,6 +5,31 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Player cooldown source rounding corrected — 2026-09-09
+
+The full-class linker now truncates player cooldown formula results to seconds
+before converting to microseconds, matching pinned `char_skill.cpp::UseSkill`.
+It validates finite bounds before truncation; negative fractions cannot become
+accepted zeroes. The Rust compiler independently rejects fractional-second base
+cooldown tables. This is specifically player behavior: `UseMobSkill` uses a
+different conversion and was not changed.
+
+Three focused Python tests and nine Rust example/compiler tests pass. The rebuilt
+44-skill/88-appearance candidate at `.local/p6-buffs-r1/catalog.v2.json` has SHA
+`381206c5edffd7ab2fa26c7bc05d1d4188b6a762e1ce9916cc39e70d80d8fe21`.
+Its `qualification-r2/report.json` passes 21,120 formula evaluations, 309 metadata,
+88 motion-window and 88 geometry comparisons, plus six Three-Way Cut replays.
+`cooldown-comparison.json` checks all 924 values against truncation of the prior
+candidate: seven skills change, while the five installed abilities' cooldowns
+are unaffected. Scoped format/lint and diff checks pass.
+
+The first rebuild attempt supplied the stripped runtime character catalog and
+failed for missing `unsupported_motion_metadata`; the successful build uses
+`.local/p6-class-skills/characters-r4/normalized.v1.json`. The previous candidate
+and installed content are preserved. No server/client publication occurred.
+Next integrate trusted Berserk value capture with the timed-buff core, followed
+by authorized persistence and stat/damage adapters; Berserk is still not playable.
+
 ## Shared timed-buff lifecycle started — 2026-09-09
 
 The next gameplay slice is Berserk with reusable multi-point timed buffs. Source

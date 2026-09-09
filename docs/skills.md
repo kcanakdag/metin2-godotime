@@ -43,8 +43,10 @@ Percent modifiers from different original mechanics may have ordered application
 the generic sum is for additive point contributions, not a universal damage stack.
 
 UseSkill truncates the cooldown formula to whole seconds before speed adjustment.
-The prepared full-class candidate currently retains fractional cooldown seconds;
-that compiler behavior needs correction before buff installation. Rank-1 Berserk
+The full-class compiler now applies that order and its Rust validator rejects
+fractional-second base cooldown tables. Older candidates must be rebuilt from
+the normalized character import metadata, not the stripped runtime catalog.
+Rank-1 Berserk
 at power 5 has 2 attack speed, 1 movement speed, 64-second duration, 67-second
 base cooldown and 57 SP cost. Rank-20 power 50 gives 25/10 speed, 105-second
 duration, 108-second base cooldown, 120 SP cost and a 12-percent incoming-normal
