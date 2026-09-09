@@ -27,12 +27,13 @@ signal server_clock_changed(server_time_us: int)
 signal progression_changed(rows: Array)
 signal command_feedback_changed(rows: Array)
 signal skills_changed(rows: Array)
+signal charges_changed(rows: Array)
 signal combat_target_changed(info: Dictionary)
 signal npc_interaction_changed(info: Dictionary)
 signal npc_spawns_changed(rows: Array)
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
-const EXPECTED_PROTOCOL_VERSION := 26
+const EXPECTED_PROTOCOL_VERSION := 27
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
 const TABLES := [
@@ -50,6 +51,7 @@ const TABLES := [
 	"simulation_clock",
 	"character_progression",
 	"character_skill",
+	"charge_status",
 	"command_feedback",
 	"combat_target_view",
 	"npc_interaction",
@@ -76,6 +78,7 @@ const QUERIES := [
 	"SELECT * FROM combat_target_view",
 	"SELECT * FROM npc_interaction",
 	"SELECT * FROM npc_spawn",
+	"SELECT * FROM charge_status",
 ]
 
 var local_identity := ""
@@ -106,6 +109,7 @@ var appearances: Array = []
 var server_time_us := 0
 var progression: Array = []
 var skills: Array = []
+var charges: Array = []
 var command_feedback: Array = []
 var combat_target: Dictionary = {}
 var npc_interaction: Dictionary = {}
@@ -644,6 +648,9 @@ func _flush_snapshots() -> void:
 				)
 				progression = rows
 				progression_changed.emit(progression)
+			"charge_status":
+				charges = rows
+				charges_changed.emit(charges)
 			"character_skill":
 				skills = rows
 				skills_changed.emit(skills)
@@ -811,6 +818,8 @@ func _clear_world_snapshots() -> void:
 	combat_target = {}
 	npc_interaction = {}
 	npc_interaction_changed.emit(npc_interaction)
+	charges = []
+	charges_changed.emit(charges)
 	npc_spawns = []
 	npc_spawns_changed.emit(npc_spawns)
 	server_time_us = 0

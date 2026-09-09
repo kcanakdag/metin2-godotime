@@ -20,9 +20,27 @@ cargo run --manifest-path server/Cargo.toml --locked --offline \
 ```
 
 This produces Rust source; it does not build or publish a module using that
-candidate. Charge gameplay currently rejects in the reducer until its adapter is
-implemented. Do not install/export the five-skill candidate as a playable build.
-The normal four-skill profile remains the installed and public selection.
+candidate. To build an isolated candidate module, set `MT2_SKILL_CATALOG` to its
+absolute path for the Cargo build. The selector defaults to the installed catalog;
+leave it unset for normal builds and the default compiler fixture tests. This
+does not install client assets or publish a database.
+
+Protocol 27 currently permits untargeted charge activation with an equipped sword.
+Target strikes remain disabled, and two-handed weapon runtime support is pending.
+The normal four-skill profile remains the installed and public selection; the
+public release is still protocol 26. Use matching regenerated bindings and a
+fresh disposable database for protocol-27 QA.
+
+`tools/test_progression_admin.py charge --fixture PRIVATE --report REPORT` uses
+the existing retained-account workflow to exercise charge payment, shared status,
+boosted movement, expiry, rejection, disconnect and reconnect. Supply the normal
+`--server`, `--game-server`, `--database` and `--godot` arguments. It requires a
+fresh five-skill candidate database with only the first fixture account authorized
+for the level-five setup command; the second account remains unprivileged. Do not
+reset an existing world or repeat this setup against already-mutated skill rows.
+The latest replay passes 34 checks. Normal `--network-only --movement-attacks`
+account QA passes 84 checks against the same protocol-27 schema. This is headless
+network acceptance, not normal UI, rendered effects or exported-browser evidence.
 
 Opening an installed actor package in Godot may create a PNG alias that removes
 an embedded image's `.dds` suffix (for example, `actor_face.dds.png` becomes

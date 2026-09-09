@@ -322,7 +322,9 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
     Ok(out)
 }
 pub fn build() -> String {
-    let path = "../client/assets/imported/skills/catalog.v1.json";
+    println!("cargo:rerun-if-env-changed=MT2_SKILL_CATALOG");
+    let path = std::env::var("MT2_SKILL_CATALOG")
+        .unwrap_or_else(|_| "../client/assets/imported/skills/catalog.v1.json".into());
     println!("cargo:rerun-if-changed={path}");
     generate(&fs::read(path).expect("Run tools/build_skill_catalog.py before building skills"))
         .expect("Invalid skill catalog")

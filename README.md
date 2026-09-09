@@ -26,7 +26,12 @@ remain incomplete.
 Local mob threat behavior now has a reusable two-account passive
 retaliation and target-switching scenario (42 checks passed). See the
 [development replay instructions](docs/development.md#test-scope-and-passive-mob-replay).
-The worktree now uses protocol 26 with selectable mob packages and a shared mob
+The worktree now uses protocol 27 with private charge ownership and a minimal
+public charge-status projection. An isolated five-skill candidate passes 34
+two-client charge activation/movement/expiry/reconnect checks and 84 account/
+movement checks. Dash's target strike, two-handed weapons and normal UI/export
+integration remain pending; the public release above remains on protocol 26.
+The server supports selectable mob packages and a shared mob
 content hash. Its selected-registry training replay passed 74 checks, including
 leader replacement, surviving followers and reconnect. The original Yongan population now runs locally: 2,835 mobs across 44 species,
 with 22 two-client population/movement/reconnect checks passed. Full-population

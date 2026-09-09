@@ -10,6 +10,7 @@ const AccountState = Types.AccountState
 const AdminLevelRoll = Types.AdminLevelRoll
 const CharacterProgression = Types.CharacterProgression
 const CharacterSkill = Types.CharacterSkill
+const ChargeStatus = Types.ChargeStatus
 const ChatMessage = Types.ChatMessage
 const CombatTargetView = Types.CombatTargetView
 const CommandFeedback = Types.CommandFeedback

@@ -1,6 +1,7 @@
 # Charge skill implementation contract
 
-Dash is not yet enabled. This records source behavior needed to implement it,
+Full Dash gameplay is not yet enabled. Untargeted activation is available in an
+isolated protocol-27 candidate; target strikes remain disabled. This records source behavior needed to implement it,
 separately from its already qualified model, animation and effect conversion.
 It also identifies the shared mechanics needed by later charge/buff abilities.
 
@@ -41,9 +42,9 @@ The selected catalog now supports `physical_charge_v1` and compiles a typed
 Rank cost and cooldown remain part of the skill row; `activation_policy` combines
 them with that definition for the lifecycle transition. Original collision events
 are retained under `source_hit_events` and do not populate charge damage windows.
-The live reducer currently rejects a charge definition explicitly. The candidate
-is not installed, and persistence, immediate damage and client approach remain
-required before removing that gate.
+The live reducer now accepts untargeted charge activation in the selected candidate.
+The candidate is not installed in normal client content. Immediate damage, client
+approach, two-handed weapon support and UI/export integration remain required.
 
 `server/src/charge_lifecycle.rs` now provides pure activation, consumption and
 invalidation transitions. Activation returns the remaining SP and next skill
@@ -52,15 +53,17 @@ payment or cooldown restart. Proposals leave their inputs unchanged so the
 future reducer adapter can validate all combat conditions before persisting.
 The adapter must atomically persist resource/state changes and damage. This
 component does not itself establish database atomicity, validate combat targets
-or authorize a supplied owner snapshot. It is compiled into the server but not
-yet called by a reducer or movement simulation.
+or authorize a supplied owner snapshot. The protocol-27 adapter now uses activation
+with selected server rows and a validated controller lease. Movement consumes the
+private effect; expiry and invalid ownership remove its public/private records.
 
 Six focused tests cover approach/immediate consumption, repeated activation and
 consumption, exclusive expiry, captured owner character/connection/life, stale
 revisions, insufficient SP, bounded policy/rank values and arithmetic overflow.
-Protocol 26 and the live four-skill catalog remain unchanged. Next integration
-requires a persisted charge record, its authoritative client projection, movement
-interval handling and the separate immediate damage path described below.
+The default client still uses the four-skill catalog and the public release remains
+on protocol 26. The isolated protocol-27 candidate passes 34 real two-client checks
+for activation, movement, expiry and reconnect. The separate immediate damage path
+described below remains pending.
 
 Use a separate, server-owned timed affect/charge record. The current
 `PendingSkill` lifetime is tied to an attack action revision and owns animation

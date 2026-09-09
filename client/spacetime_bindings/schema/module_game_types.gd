@@ -6,6 +6,7 @@ const AccountState = preload('res://spacetime_bindings/schema/types/game_account
 const AdminLevelRoll = preload('res://spacetime_bindings/schema/types/game_admin_level_roll.gd')
 const CharacterProgression = preload('res://spacetime_bindings/schema/types/game_character_progression.gd')
 const CharacterSkill = preload('res://spacetime_bindings/schema/types/game_character_skill.gd')
+const ChargeStatus = preload('res://spacetime_bindings/schema/types/game_charge_status.gd')
 const ChatMessage = preload('res://spacetime_bindings/schema/types/game_chat_message.gd')
 const CombatTargetView = preload('res://spacetime_bindings/schema/types/game_combat_target_view.gd')
 const CommandFeedback = preload('res://spacetime_bindings/schema/types/game_command_feedback.gd')

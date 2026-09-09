@@ -5,6 +5,45 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Persisted charge activation and protocol 27 — 2026-09-09
+
+`charges.rs` persists private ownership/rank/life and a minimal public timing/speed
+projection. Untargeted candidate casts validate learning, revision, cooldown,
+health, equipped sword and controller lease, then write SP, cooldown and charge
+in one transaction. Movement reads the valid owner effect before maintenance
+removes expired/disconnected/dead/changed ownership. Expiry advances skill revision
+and preserves SP/cooldown; revision exhaustion cannot stall global cleanup.
+Godot now expects protocol 27, subscribes to `charge_status` and clears it on exit.
+
+The original five-skill candidate builds as an actual WASM module using the new
+`MT2_SKILL_CATALOG` selector, with QA-only authorization for the first retained
+fixture account. It was published only to fresh local database
+`mt2-p2-charge-v27-20260909-04f474f5`. Artifact:
+`.local/p6-charge-r2/module.wasm`, SHA-256
+`dba765119df4e3e1d0a34b111f5652b79a6b925eba02cd66263274bca051d913`.
+The generator produced/instantiated 99 Godot binding files from its schema, hash
+`e6c2eaf9139ab22ba47c90bc14586675ea465303e9a3e2977adfbb74803575c8`.
+The schema explicitly marks `active_charge` private and `charge_status` public.
+
+The real two-client charge replay passes 34 checks, including single payment,
+matching minimal public projections, observed boosted travel, three-second expiry,
+twelve-second cooldown, stale/duplicate/unlearned rejection and disconnect/
+reconnect without restoring charge or resources. Evidence:
+`.local/p6-charge-r2/charge-r2.json`. The first run's `charge.log` records a fixture
+lambda parser failure before gameplay; the bound-callable fix passes actual Godot.
+The separate protocol-27 account/movement/attack replay passes 84 checks in
+`accounts.json`. Six lifecycle and fifteen movement unit tests, strict Rust lint,
+and touched Python/GDScript checks pass.
+The isolated Godot protocol gate passes six checks at
+`.local/p6-charge-r2/protocol-gate`, accepting 27 and rejecting the old 26 contract.
+
+This does not qualify charge-specific death/switch behavior, private subscription
+rejection, precise speed benchmarking, target-strike consumption/damage, CRUSH/stun,
+two-handed weapons, normal UI or exported playback. Target strikes explicitly
+reject. Installed client skills and the public protocol-26 release are unchanged.
+Do not deploy this QA-bootstrap artifact publicly. Next is the target-centered
+strike and its transactional consumption/reaction acceptance.
+
 ## Movement accounting before attack replacement — 2026-09-09
 
 Accepted action replacement now advances outgoing root motion and ordinary

@@ -226,9 +226,6 @@ pub fn cast_skill(
     let (character, mut p) = progression::selected_supported_progression(ctx)?;
     let d = definition(skill_vnum)?;
     let mut state = owned_state(ctx, character, skill_vnum)?;
-    if d.charge.is_some() {
-        return Err("Charge gameplay is not enabled in this build.".into());
-    }
     check_learning(d, p.character_class, p.level, state.rank)?;
     if state.rank == 0 {
         return Err("Learn this skill first.".into());
@@ -260,6 +257,19 @@ pub fn cast_skill(
         return Err("This skill requires an equipped sword.".into());
     }
     let appearance = crate::characters::owned_appearance(ctx, character)?;
+    if d.charge.is_some() {
+        if control.combat_target_id != 0 {
+            return Err("Charge target strikes are not enabled in this build.".into());
+        }
+        let activation =
+            crate::charges::activate(ctx, &control, &player, &state, d, p.current_sp, now)?;
+        p.current_sp = activation.remaining_sp;
+        state.ready_at_us = activation.state.ready_at_us;
+        state.revision = activation.state.revision;
+        ctx.db.character_progression().character_id().update(p);
+        store(ctx, state);
+        return Ok(());
+    }
     let action = &definitions::SKILL_ACTIONS
         .iter()
         .find(|(id, actor, _)| *id == skill_vnum && *actor == appearance.actor_id)

@@ -1,5 +1,16 @@
 # Architecture
 
+Protocol 27 adds private `active_charge` and public `charge_status` tables.
+The private record captures controller connection, character life and rank;
+the public projection contains character/skill identity, timing and speed bonus.
+Untargeted activation persists charge, SP payment and skill cooldown/revision in
+one reducer transaction. Both ordinary movement and pre-attack advancement read
+the lease-validated effect. Maintenance runs after movement, removing expired or
+invalid ownership and advancing the owner's skill revision without refunding SP
+or cooldown. The Godot connection subscribes to and clears the public projection.
+Bindings were regenerated from a fresh local database. Target-strike consumption
+and damage remain disabled, and the public development game remains on protocol 26.
+
 Accepted attack replacement advances both outgoing root motion and ordinary
 movement through its server timestamp before setting the next attack lock. Normal
 simulation and replacement share one movement calculation with bounded travel,

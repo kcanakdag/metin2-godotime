@@ -196,6 +196,98 @@
               "elements": [
                 {
                   "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U256": []
+                          },
+                          "name": {
+                            "some": "__identity__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "character_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U128": []
+                          },
+                          "name": {
+                            "some": "__connection_id__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "connection_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "source_life"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U16": []
+                  },
+                  "name": {
+                    "some": "skill_vnum"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U8": []
+                  },
+                  "name": {
+                    "some": "rank"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "starts_at_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "expires_at_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I32": []
+                  },
+                  "name": {
+                    "some": "speed_bonus"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
                     "U64": []
                   },
                   "name": {
@@ -540,7 +632,7 @@
                 {
                   "algebraic_type": {
                     "Array": {
-                      "Ref": 4
+                      "Ref": 5
                     }
                   },
                   "name": {
@@ -1139,6 +1231,63 @@
                   },
                   "name": {
                     "some": "ready_at_us"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
+                    "Product": {
+                      "elements": [
+                        {
+                          "algebraic_type": {
+                            "U256": []
+                          },
+                          "name": {
+                            "some": "__identity__"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "name": {
+                    "some": "character_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U16": []
+                  },
+                  "name": {
+                    "some": "skill_vnum"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "starts_at_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "expires_at_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I32": []
+                  },
+                  "name": {
+                    "some": "speed_bonus"
                   }
                 }
               ]
@@ -3395,7 +3544,7 @@
                 {
                   "algebraic_type": {
                     "Array": {
-                      "Ref": 37
+                      "Ref": 39
                     }
                   },
                   "name": {
@@ -3412,7 +3561,7 @@
                 },
                 {
                   "algebraic_type": {
-                    "Ref": 40
+                    "Ref": 42
                   },
                   "name": {
                     "some": "attacker"
@@ -3464,7 +3613,7 @@
                       "variants": [
                         {
                           "algebraic_type": {
-                            "Ref": 38
+                            "Ref": 40
                           },
                           "name": {
                             "some": "some"
@@ -3536,7 +3685,7 @@
                 {
                   "algebraic_type": {
                     "Array": {
-                      "Ref": 39
+                      "Ref": 41
                     }
                   },
                   "name": {
@@ -4462,7 +4611,7 @@
             "scope": [],
             "source_name": "MonsterVictim"
           },
-          "ty": 31
+          "ty": 33
         },
         {
           "custom_ordering": true,
@@ -4470,7 +4619,7 @@
             "scope": [],
             "source_name": "ItemRecovery"
           },
-          "ty": 19
+          "ty": 21
         },
         {
           "custom_ordering": true,
@@ -4502,7 +4651,7 @@
             "scope": [],
             "source_name": "MonsterForce"
           },
-          "ty": 25
+          "ty": 27
         },
         {
           "custom_ordering": true,
@@ -4510,7 +4659,7 @@
             "scope": [],
             "source_name": "TickSchedule"
           },
-          "ty": 45
+          "ty": 47
         },
         {
           "custom_ordering": true,
@@ -4518,269 +4667,13 @@
             "scope": [],
             "source_name": "MonsterAllocationCursor"
           },
-          "ty": 22
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "SkillEventTiming"
-          },
-          "ty": 37
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "MonsterDamage"
-          },
           "ty": 24
         },
         {
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "AdminRequestReceipt"
-          },
-          "ty": 7
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "AdminRequestCollision"
-          },
-          "ty": 6
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "CapturedPlayerAttacker"
-          },
-          "ty": 40
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "CharacterProgression"
-          },
-          "ty": 8
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "InventoryState"
-          },
-          "ty": 16
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "PendingSkill"
-          },
-          "ty": 36
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "Obstacle"
-          },
-          "ty": 35
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "PlayerAppearance"
-          },
-          "ty": 42
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "MonsterClock"
-          },
-          "ty": 23
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "Monster"
-          },
-          "ty": 21
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "MonsterOrigin"
-          },
-          "ty": 26
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "MonsterSpawnGroup"
-          },
-          "ty": 29
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "InventoryItem"
-          },
-          "ty": 15
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "SimulationClock"
-          },
-          "ty": 46
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "SpecialAreaVictim"
-          },
-          "ty": 48
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "Session"
-          },
-          "ty": 44
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "SpecialArea"
-          },
-          "ty": 47
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "ChatMessage"
-          },
-          "ty": 10
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "Controller"
-          },
-          "ty": 13
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "MonsterThreat"
-          },
-          "ty": 30
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "NpcSpawn"
-          },
-          "ty": 33
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "AdminRate"
-          },
-          "ty": 5
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "AdminLevelRoll"
-          },
-          "ty": 4
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "MonsterRegeneration"
-          },
-          "ty": 28
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "InventoryAccess"
-          },
-          "ty": 14
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "CharacterSkill"
-          },
-          "ty": 9
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "NpcInteraction"
-          },
-          "ty": 32
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "SkillAreaVictim"
-          },
-          "ty": 39
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "MonsterReaction"
-          },
-          "ty": 27
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "Player"
-          },
-          "ty": 41
-        },
-        {
-          "custom_ordering": true,
-          "source_name": {
-            "scope": [],
-            "source_name": "CombatTargetView"
+            "source_name": "ChargeStatus"
           },
           "ty": 11
         },
@@ -4788,47 +4681,55 @@
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "ItemAudit"
+            "source_name": "SkillEventTiming"
           },
-          "ty": 17
+          "ty": 39
         },
         {
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "CommandFeedback"
+            "source_name": "MonsterDamage"
           },
-          "ty": 12
+          "ty": 26
         },
         {
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "ItemDrop"
+            "source_name": "AdminRequestReceipt"
           },
-          "ty": 18
+          "ty": 8
         },
         {
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "SkillAreaPlacement"
+            "source_name": "AdminRequestCollision"
           },
-          "ty": 38
+          "ty": 7
         },
         {
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "ProgressionOperator"
+            "source_name": "CapturedPlayerAttacker"
           },
-          "ty": 43
+          "ty": 42
         },
         {
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "AdminAudit"
+            "source_name": "CharacterProgression"
+          },
+          "ty": 9
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "ActiveCharge"
           },
           "ty": 3
         },
@@ -4836,7 +4737,183 @@
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "NpcSpawnRetry"
+            "source_name": "InventoryState"
+          },
+          "ty": 18
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "Obstacle"
+          },
+          "ty": 37
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "PendingSkill"
+          },
+          "ty": 38
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "PlayerAppearance"
+          },
+          "ty": 44
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "MonsterClock"
+          },
+          "ty": 25
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "Monster"
+          },
+          "ty": 23
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "MonsterOrigin"
+          },
+          "ty": 28
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "MonsterSpawnGroup"
+          },
+          "ty": 31
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "InventoryItem"
+          },
+          "ty": 17
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "SimulationClock"
+          },
+          "ty": 48
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "SpecialAreaVictim"
+          },
+          "ty": 50
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "Session"
+          },
+          "ty": 46
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "SpecialArea"
+          },
+          "ty": 49
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "ChatMessage"
+          },
+          "ty": 12
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "Controller"
+          },
+          "ty": 15
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "MonsterThreat"
+          },
+          "ty": 32
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "NpcSpawn"
+          },
+          "ty": 35
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "AdminRate"
+          },
+          "ty": 6
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "AdminLevelRoll"
+          },
+          "ty": 5
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "MonsterRegeneration"
+          },
+          "ty": 30
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "InventoryAccess"
+          },
+          "ty": 16
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "CharacterSkill"
+          },
+          "ty": 10
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "NpcInteraction"
           },
           "ty": 34
         },
@@ -4844,7 +4921,55 @@
           "custom_ordering": true,
           "source_name": {
             "scope": [],
-            "source_name": "Loot"
+            "source_name": "SkillAreaVictim"
+          },
+          "ty": 41
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "MonsterReaction"
+          },
+          "ty": 29
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "Player"
+          },
+          "ty": 43
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "CombatTargetView"
+          },
+          "ty": 13
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "ItemAudit"
+          },
+          "ty": 19
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "CommandFeedback"
+          },
+          "ty": 14
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "ItemDrop"
           },
           "ty": 20
         },
@@ -4852,9 +4977,49 @@
           "custom_ordering": true,
           "source_name": {
             "scope": [],
+            "source_name": "SkillAreaPlacement"
+          },
+          "ty": 40
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "ProgressionOperator"
+          },
+          "ty": 45
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "AdminAudit"
+          },
+          "ty": 4
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "NpcSpawnRetry"
+          },
+          "ty": 36
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "Loot"
+          },
+          "ty": 22
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
             "source_name": "WorldInfo"
           },
-          "ty": 49
+          "ty": 51
         }
       ]
     },
@@ -4895,7 +5060,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 16,
+          "product_type_ref": 18,
           "sequences": [],
           "source_name": "inventory_state",
           "table_access": {
@@ -4940,7 +5105,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 20,
+          "product_type_ref": 22,
           "sequences": [
             {
               "column": 0,
@@ -5002,7 +5167,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 18,
+          "product_type_ref": 20,
           "sequences": [
             {
               "column": 0,
@@ -5090,7 +5255,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 9,
+          "product_type_ref": 10,
           "sequences": [],
           "source_name": "character_skill",
           "table_access": {
@@ -5135,7 +5300,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 46,
+          "product_type_ref": 48,
           "sequences": [],
           "source_name": "simulation_clock",
           "table_access": {
@@ -5193,7 +5358,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 48,
+          "product_type_ref": 50,
           "sequences": [
             {
               "column": 0,
@@ -5255,7 +5420,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 25,
+          "product_type_ref": 27,
           "sequences": [],
           "source_name": "monster_force",
           "table_access": {
@@ -5300,7 +5465,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 36,
+          "product_type_ref": 38,
           "sequences": [],
           "source_name": "pending_skill",
           "table_access": {
@@ -5345,7 +5510,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 10,
+          "product_type_ref": 12,
           "sequences": [
             {
               "column": 0,
@@ -5432,7 +5597,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 32,
+          "product_type_ref": 34,
           "sequences": [
             {
               "column": 2,
@@ -5494,7 +5659,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 35,
+          "product_type_ref": 37,
           "sequences": [],
           "source_name": "obstacle",
           "table_access": {
@@ -5565,7 +5730,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 15,
+          "product_type_ref": 17,
           "sequences": [
             {
               "column": 0,
@@ -5672,7 +5837,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 22,
+          "product_type_ref": 24,
           "sequences": [],
           "source_name": "monster_allocation_cursor",
           "table_access": {
@@ -5775,7 +5940,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 19,
+          "product_type_ref": 21,
           "sequences": [],
           "source_name": "item_recovery",
           "table_access": {
@@ -5833,7 +5998,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 8,
+          "product_type_ref": 9,
           "sequences": [],
           "source_name": "character_progression",
           "table_access": {
@@ -5878,7 +6043,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 23,
+          "product_type_ref": 25,
           "sequences": [],
           "source_name": "monster_clock",
           "table_access": {
@@ -5936,7 +6101,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 24,
+          "product_type_ref": 26,
           "sequences": [
             {
               "column": 0,
@@ -5998,7 +6163,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 42,
+          "product_type_ref": 44,
           "sequences": [],
           "source_name": "player_appearance",
           "table_access": {
@@ -6043,7 +6208,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 43,
+          "product_type_ref": 45,
           "sequences": [],
           "source_name": "progression_operator",
           "table_access": {
@@ -6114,7 +6279,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 30,
+          "product_type_ref": 32,
           "sequences": [],
           "source_name": "monster_threat",
           "table_access": {
@@ -6159,7 +6324,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 47,
+          "product_type_ref": 49,
           "sequences": [],
           "source_name": "special_area",
           "table_access": {
@@ -6204,7 +6369,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 21,
+          "product_type_ref": 23,
           "sequences": [],
           "source_name": "monster",
           "table_access": {
@@ -6262,7 +6427,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 14,
+          "product_type_ref": 16,
           "sequences": [],
           "source_name": "inventory_access",
           "table_access": {
@@ -6307,7 +6472,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 27,
+          "product_type_ref": 29,
           "sequences": [],
           "source_name": "monster_reaction",
           "table_access": {
@@ -6365,7 +6530,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 3,
+          "product_type_ref": 4,
           "sequences": [
             {
               "column": 0,
@@ -6453,7 +6618,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 17,
+          "product_type_ref": 19,
           "sequences": [
             {
               "column": 0,
@@ -6515,7 +6680,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 31,
+          "product_type_ref": 33,
           "sequences": [],
           "source_name": "monster_victim",
           "table_access": {
@@ -6560,7 +6725,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 34,
+          "product_type_ref": 36,
           "sequences": [],
           "source_name": "npc_spawn_retry",
           "table_access": {
@@ -6605,7 +6770,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 29,
+          "product_type_ref": 31,
           "sequences": [],
           "source_name": "monster_spawn_group",
           "table_access": {
@@ -6626,7 +6791,7 @@
                 }
               },
               "source_name": {
-                "some": "npc_spawn_spawn_id_key"
+                "some": "charge_status_character_id_key"
               }
             }
           ],
@@ -6634,7 +6799,7 @@
           "indexes": [
             {
               "accessor_name": {
-                "some": "spawn_id"
+                "some": "character_id"
               },
               "algorithm": {
                 "BTree": [
@@ -6642,7 +6807,7 @@
                 ]
               },
               "source_name": {
-                "some": "npc_spawn_spawn_id_idx_btree"
+                "some": "charge_status_character_id_idx_btree"
               }
             }
           ],
@@ -6650,9 +6815,9 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 33,
+          "product_type_ref": 11,
           "sequences": [],
-          "source_name": "npc_spawn",
+          "source_name": "charge_status",
           "table_access": {
             "Public": []
           },
@@ -6695,7 +6860,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 6,
+          "product_type_ref": 7,
           "sequences": [],
           "source_name": "admin_request_collision",
           "table_access": {
@@ -6766,7 +6931,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 12,
+          "product_type_ref": 14,
           "sequences": [
             {
               "column": 0,
@@ -6828,11 +6993,56 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 26,
+          "product_type_ref": 28,
           "sequences": [],
           "source_name": "monster_origin",
           "table_access": {
             "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "npc_spawn_spawn_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "spawn_id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "npc_spawn_spawn_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 35,
+          "sequences": [],
+          "source_name": "npc_spawn",
+          "table_access": {
+            "Public": []
           },
           "table_type": {
             "User": []
@@ -6873,7 +7083,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 44,
+          "product_type_ref": 46,
           "sequences": [],
           "source_name": "session",
           "table_access": {
@@ -6918,7 +7128,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 45,
+          "product_type_ref": 47,
           "sequences": [
             {
               "column": 0,
@@ -6938,6 +7148,96 @@
             }
           ],
           "source_name": "tick_schedule",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "controller_identity_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "identity"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "controller_identity_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 15,
+          "sequences": [],
+          "source_name": "controller",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "active_charge_character_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "character_id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "active_charge_character_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 3,
+          "sequences": [],
+          "source_name": "active_charge",
           "table_access": {
             "Private": []
           },
@@ -6980,56 +7280,11 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 49,
+          "product_type_ref": 51,
           "sequences": [],
           "source_name": "world_info",
           "table_access": {
             "Public": []
-          },
-          "table_type": {
-            "User": []
-          }
-        },
-        {
-          "constraints": [
-            {
-              "data": {
-                "Unique": {
-                  "columns": [
-                    0
-                  ]
-                }
-              },
-              "source_name": {
-                "some": "controller_identity_key"
-              }
-            }
-          ],
-          "default_values": [],
-          "indexes": [
-            {
-              "accessor_name": {
-                "some": "identity"
-              },
-              "algorithm": {
-                "BTree": [
-                  0
-                ]
-              },
-              "source_name": {
-                "some": "controller_identity_idx_btree"
-              }
-            }
-          ],
-          "is_event": false,
-          "primary_key": [
-            0
-          ],
-          "product_type_ref": 13,
-          "sequences": [],
-          "source_name": "controller",
-          "table_access": {
-            "Private": []
           },
           "table_type": {
             "User": []
@@ -7070,7 +7325,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 28,
+          "product_type_ref": 30,
           "sequences": [],
           "source_name": "monster_regeneration",
           "table_access": {
@@ -7115,7 +7370,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 41,
+          "product_type_ref": 43,
           "sequences": [],
           "source_name": "player",
           "table_access": {
@@ -7160,56 +7415,11 @@
           "primary_key": [
             1
           ],
-          "product_type_ref": 11,
+          "product_type_ref": 13,
           "sequences": [],
           "source_name": "combat_target_view",
           "table_access": {
             "Public": []
-          },
-          "table_type": {
-            "User": []
-          }
-        },
-        {
-          "constraints": [
-            {
-              "data": {
-                "Unique": {
-                  "columns": [
-                    0
-                  ]
-                }
-              },
-              "source_name": {
-                "some": "admin_request_receipt_request_id_key"
-              }
-            }
-          ],
-          "default_values": [],
-          "indexes": [
-            {
-              "accessor_name": {
-                "some": "request_id"
-              },
-              "algorithm": {
-                "BTree": [
-                  0
-                ]
-              },
-              "source_name": {
-                "some": "admin_request_receipt_request_id_idx_btree"
-              }
-            }
-          ],
-          "is_event": false,
-          "primary_key": [
-            0
-          ],
-          "product_type_ref": 7,
-          "sequences": [],
-          "source_name": "admin_request_receipt",
-          "table_access": {
-            "Private": []
           },
           "table_type": {
             "User": []
@@ -7295,9 +7505,54 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 5,
+          "product_type_ref": 6,
           "sequences": [],
           "source_name": "admin_rate",
+          "table_access": {
+            "Private": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
+                "some": "admin_request_receipt_request_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "request_id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "admin_request_receipt_request_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 8,
+          "sequences": [],
+          "source_name": "admin_request_receipt",
           "table_access": {
             "Private": []
           },
@@ -8189,7 +8444,7 @@
             "elements": [
               {
                 "algebraic_type": {
-                  "Ref": 45
+                  "Ref": 47
                 },
                 "name": {
                   "some": "_schedule"
@@ -8553,8 +8808,8 @@
           },
           {
             "Table": {
-              "canonical_name": "npc_spawn",
-              "source_name": "npc_spawn"
+              "canonical_name": "charge_status",
+              "source_name": "charge_status"
             }
           },
           {
@@ -8577,6 +8832,12 @@
           },
           {
             "Table": {
+              "canonical_name": "npc_spawn",
+              "source_name": "npc_spawn"
+            }
+          },
+          {
+            "Table": {
               "canonical_name": "session",
               "source_name": "session"
             }
@@ -8589,14 +8850,20 @@
           },
           {
             "Table": {
-              "canonical_name": "world_info",
-              "source_name": "world_info"
+              "canonical_name": "controller",
+              "source_name": "controller"
             }
           },
           {
             "Table": {
-              "canonical_name": "controller",
-              "source_name": "controller"
+              "canonical_name": "active_charge",
+              "source_name": "active_charge"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "world_info",
+              "source_name": "world_info"
             }
           },
           {
@@ -8619,12 +8886,6 @@
           },
           {
             "Table": {
-              "canonical_name": "admin_request_receipt",
-              "source_name": "admin_request_receipt"
-            }
-          },
-          {
-            "Table": {
               "canonical_name": "account_state",
               "source_name": "account_state"
             }
@@ -8633,6 +8894,12 @@
             "Table": {
               "canonical_name": "admin_rate",
               "source_name": "admin_rate"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "admin_request_receipt",
+              "source_name": "admin_request_receipt"
             }
           },
           {

@@ -2,7 +2,7 @@
 # FILE WILL NOT BE SAVED. MODIFY TABLES IN YOUR MODULE SOURCE CODE INSTEAD.
 class_name GameModuleDb extends RefCounted
 
-const table_names : Array[String] = ["loot", "item_drop", "character_skill", "simulation_clock", "chat_message", "npc_interaction", "obstacle", "inventory_item", "account_character", "character_progression", "player_appearance", "monster", "inventory_access", "npc_spawn", "command_feedback", "world_info", "player", "combat_target_view", "account_state"]
+const table_names : Array[String] = ["loot", "item_drop", "character_skill", "simulation_clock", "chat_message", "npc_interaction", "obstacle", "inventory_item", "account_character", "character_progression", "player_appearance", "monster", "inventory_access", "charge_status", "command_feedback", "npc_spawn", "world_info", "player", "combat_target_view", "account_state"]
 
 var loot: GameLootTable
 var item_drop: GameItemDropTable
@@ -17,8 +17,9 @@ var character_progression: GameCharacterProgressionTable
 var player_appearance: GamePlayerAppearanceTable
 var monster: GameMonsterTable
 var inventory_access: GameInventoryAccessTable
-var npc_spawn: GameNpcSpawnTable
+var charge_status: GameChargeStatusTable
 var command_feedback: GameCommandFeedbackTable
+var npc_spawn: GameNpcSpawnTable
 var world_info: GameWorldInfoTable
 var player: GamePlayerTable
 var combat_target_view: GameCombatTargetViewTable
@@ -38,8 +39,9 @@ func _init(p_local_db: LocalDatabase) -> void:
 	player_appearance = preload('res://spacetime_bindings/schema/tables/game_player_appearance_table.gd').create(p_local_db)
 	monster = preload('res://spacetime_bindings/schema/tables/game_monster_table.gd').create(p_local_db)
 	inventory_access = preload('res://spacetime_bindings/schema/tables/game_inventory_access_table.gd').create(p_local_db)
-	npc_spawn = preload('res://spacetime_bindings/schema/tables/game_npc_spawn_table.gd').create(p_local_db)
+	charge_status = preload('res://spacetime_bindings/schema/tables/game_charge_status_table.gd').create(p_local_db)
 	command_feedback = preload('res://spacetime_bindings/schema/tables/game_command_feedback_table.gd').create(p_local_db)
+	npc_spawn = preload('res://spacetime_bindings/schema/tables/game_npc_spawn_table.gd').create(p_local_db)
 	world_info = preload('res://spacetime_bindings/schema/tables/game_world_info_table.gd').create(p_local_db)
 	player = preload('res://spacetime_bindings/schema/tables/game_player_table.gd').create(p_local_db)
 	combat_target_view = preload('res://spacetime_bindings/schema/tables/game_combat_target_view_table.gd').create(p_local_db)

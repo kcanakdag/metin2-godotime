@@ -6,6 +6,7 @@ mod area_lifecycle;
 mod attack_timing;
 mod characters;
 pub mod charge_lifecycle;
+mod charges;
 mod combat;
 mod combat_geometry;
 mod combo;
@@ -37,7 +38,7 @@ mod skill_target;
 mod skills;
 mod training_targets;
 
-const PROTOCOL_VERSION: u32 = 26;
+const PROTOCOL_VERSION: u32 = 27;
 mod special_area;
 mod targeting;
 
@@ -604,13 +605,22 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
         } else {
             player.action_started_at_us = 0;
             player.action_ends_at_us = 0;
-            apply_player_movement(&mut controller, &mut player, previous_tick_us, now, &bounds)?;
+            let effect = charges::movement_effect(ctx, &controller, &player);
+            apply_player_movement(
+                &mut controller,
+                &mut player,
+                previous_tick_us,
+                now,
+                &bounds,
+                effect,
+            )?;
         }
         if before != (player.x, player.z, player.heading, player.activity) {
             ctx.db.player().identity().update(player);
         }
         ctx.db.controller().identity().update(controller);
     }
+    charges::maintain(ctx, now);
     combat::simulate(ctx, elapsed)?;
     item_effects::simulate(ctx, now);
     npcs::maintain(ctx, now);
@@ -647,7 +657,15 @@ pub(crate) fn advance_movement_for_attack(
         return Err("Movement requires a living character and active controller lease".into());
     }
     let bounds = collision_bounds(ctx);
-    apply_player_movement(controller, &mut player, previous_us, through_us, &bounds)?;
+    let effect = charges::movement_effect(ctx, controller, &player);
+    apply_player_movement(
+        controller,
+        &mut player,
+        previous_us,
+        through_us,
+        &bounds,
+        effect,
+    )?;
     ctx.db.player().identity().update(player);
     Ok(())
 }
@@ -658,6 +676,7 @@ fn apply_player_movement(
     previous_tick_us: i64,
     now: i64,
     bounds: &[Bounds],
+    effect: Option<movement::SpeedEffect>,
 ) -> Result<(), String> {
     if controller.mode == 1 && now - controller.last_input_us > INPUT_TIMEOUT_US {
         controller.mode = 0;
@@ -667,7 +686,7 @@ fn apply_player_movement(
         now,
         controller.attack_until_us,
         movement::BASE_SPEED_POINTS,
-        None,
+        effect,
     )?;
     let (dx, dz) = match controller.mode {
         1 => step(controller.direction_x, controller.direction_z, travel)?,
