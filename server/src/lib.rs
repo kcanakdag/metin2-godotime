@@ -19,6 +19,7 @@ mod item_effects;
 mod item_security;
 mod knockback;
 mod mob_actions;
+mod mob_affects;
 mod mob_aggro;
 pub mod mob_damage;
 mod mob_regeneration;
@@ -40,7 +41,7 @@ mod skill_target;
 mod skills;
 mod training_targets;
 
-const PROTOCOL_VERSION: u32 = 27;
+const PROTOCOL_VERSION: u32 = 28;
 mod special_area;
 mod targeting;
 

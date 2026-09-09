@@ -5,6 +5,48 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Live CRUSH adapter and protocol 28 candidate — 2026-09-09
+
+The live ordinary-monster replay now passes **27 checks** using the original
+Brown Bear (113, 845 HP), unchanged imported stats, and two authenticated clients.
+Both receive the two-metre displacement and matching four-second exact-life stun.
+The target survives, remains still with no attack progression or player damage
+during the observed stun interval, loses the stun on both subscriptions, and
+resumes AI after expiry. Evidence: `.local/p6-crush-live-r1/crush.json`.
+Fresh database: `mt2-p2-crush-live-v28-20260909-ab736c84`. Frozen module SHA-256:
+`4d382c6a8dfa8df3b5aa1d886ac730487978725a5d18f1f99289ad73df95bb65`.
+The imported mob package was rebuilt through `build_mob_catalog.py` into
+`.local/p6-crush-r1/mob-catalog`; the generated immunity fields compile in the
+selected WASM build. The fixture passes isolated native Godot parsing and
+touched Python/GDScript lint. This does not establish kill-during-stun cleanup,
+stun-immune targets, overlapping GREAT reactions, Yongan collision or rendered
+presentation. Those remain explicit follow-up gates. No public deployment changed.
+
+Dash now invokes the CRUSH policy for surviving ordinary monsters, applies the
+collision-limited position change, and stores public `monster_stun` timing tied
+to the exact monster life. Stun cancels pending melee hits, gates ordinary AI,
+does not refresh an active stun, and clears on expiry/death/changed life. Authored
+stationary training targets remain unaffected. Ordinary NOMOVE imports remain
+unsupported. The adapter currently supports the selected Dash PC/short-CRUSH
+policy; this does not implement every skill's displacement behavior.
+
+The working client expects protocol 28 and subscribes/clears `monster_stun` state.
+102 bindings were generated from fresh local database
+`mt2-p2-crush-v28-20260909-205f246b`, schema SHA-256
+`65ba529d39815d40a49d0201a57854e3d013c80bf1a20a455164e6b5429fae6e`.
+Frozen local QA module `.local/p6-crush-r1/module.wasm` SHA-256:
+`f7a53c2b6d0f60a4ec2d5240cd8e286a1260407ee98cc9c8d8431ead2aa295a9`.
+It contains QA bootstrap authorization; do not deploy it publicly.
+
+Strict Rust lint, touched GDScript lint, the native protocol gate and the 39-check
+two-client dummy strike replay pass (`.local/p6-crush-r1/strike.json` and
+`protocol-gate`). The dummy replay qualifies matching subscriptions and existing
+charge strikes, **not live stun/push**: the dummy intentionally bypasses CRUSH.
+The subsequent ordinary-monster evidence above qualifies push, stun and expiry;
+death/life cleanup, knockback interaction and rendered presentation remain open.
+Source fidelity for concurrent reactions remains open.
+Public protocol 26 and its deployment are unchanged.
+
 ## CRUSH eligibility policy — 2026-09-09
 
 `crush::displace` now computes a radial endpoint truncated to centimetres and

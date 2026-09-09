@@ -3105,6 +3105,44 @@
               "elements": [
                 {
                   "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "monster_id"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "U32": []
+                  },
+                  "name": {
+                    "some": "life_sequence"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "starts_at_us"
+                  }
+                },
+                {
+                  "algebraic_type": {
+                    "I64": []
+                  },
+                  "name": {
+                    "some": "expires_at_us"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Product": {
+              "elements": [
+                {
+                  "algebraic_type": {
                     "String": []
                   },
                   "name": {
@@ -3544,7 +3582,7 @@
                 {
                   "algebraic_type": {
                     "Array": {
-                      "Ref": 39
+                      "Ref": 40
                     }
                   },
                   "name": {
@@ -3561,7 +3599,7 @@
                 },
                 {
                   "algebraic_type": {
-                    "Ref": 42
+                    "Ref": 43
                   },
                   "name": {
                     "some": "attacker"
@@ -3613,7 +3651,7 @@
                       "variants": [
                         {
                           "algebraic_type": {
-                            "Ref": 40
+                            "Ref": 41
                           },
                           "name": {
                             "some": "some"
@@ -3685,7 +3723,7 @@
                 {
                   "algebraic_type": {
                     "Array": {
-                      "Ref": 41
+                      "Ref": 42
                     }
                   },
                   "name": {
@@ -4611,7 +4649,7 @@
             "scope": [],
             "source_name": "MonsterVictim"
           },
-          "ty": 33
+          "ty": 34
         },
         {
           "custom_ordering": true,
@@ -4659,7 +4697,7 @@
             "scope": [],
             "source_name": "TickSchedule"
           },
-          "ty": 47
+          "ty": 48
         },
         {
           "custom_ordering": true,
@@ -4683,7 +4721,7 @@
             "scope": [],
             "source_name": "SkillEventTiming"
           },
-          "ty": 39
+          "ty": 40
         },
         {
           "custom_ordering": true,
@@ -4715,7 +4753,7 @@
             "scope": [],
             "source_name": "CapturedPlayerAttacker"
           },
-          "ty": 42
+          "ty": 43
         },
         {
           "custom_ordering": true,
@@ -4747,7 +4785,7 @@
             "scope": [],
             "source_name": "Obstacle"
           },
-          "ty": 37
+          "ty": 38
         },
         {
           "custom_ordering": true,
@@ -4755,7 +4793,7 @@
             "scope": [],
             "source_name": "PendingSkill"
           },
-          "ty": 38
+          "ty": 39
         },
         {
           "custom_ordering": true,
@@ -4763,7 +4801,7 @@
             "scope": [],
             "source_name": "PlayerAppearance"
           },
-          "ty": 44
+          "ty": 45
         },
         {
           "custom_ordering": true,
@@ -4811,7 +4849,7 @@
             "scope": [],
             "source_name": "SimulationClock"
           },
-          "ty": 48
+          "ty": 49
         },
         {
           "custom_ordering": true,
@@ -4819,7 +4857,7 @@
             "scope": [],
             "source_name": "SpecialAreaVictim"
           },
-          "ty": 50
+          "ty": 51
         },
         {
           "custom_ordering": true,
@@ -4827,7 +4865,7 @@
             "scope": [],
             "source_name": "Session"
           },
-          "ty": 46
+          "ty": 47
         },
         {
           "custom_ordering": true,
@@ -4835,7 +4873,7 @@
             "scope": [],
             "source_name": "SpecialArea"
           },
-          "ty": 49
+          "ty": 50
         },
         {
           "custom_ordering": true,
@@ -4859,7 +4897,7 @@
             "scope": [],
             "source_name": "MonsterThreat"
           },
-          "ty": 32
+          "ty": 33
         },
         {
           "custom_ordering": true,
@@ -4867,7 +4905,7 @@
             "scope": [],
             "source_name": "NpcSpawn"
           },
-          "ty": 35
+          "ty": 36
         },
         {
           "custom_ordering": true,
@@ -4915,7 +4953,7 @@
             "scope": [],
             "source_name": "NpcInteraction"
           },
-          "ty": 34
+          "ty": 35
         },
         {
           "custom_ordering": true,
@@ -4923,7 +4961,7 @@
             "scope": [],
             "source_name": "SkillAreaVictim"
           },
-          "ty": 41
+          "ty": 42
         },
         {
           "custom_ordering": true,
@@ -4939,7 +4977,7 @@
             "scope": [],
             "source_name": "Player"
           },
-          "ty": 43
+          "ty": 44
         },
         {
           "custom_ordering": true,
@@ -4948,6 +4986,14 @@
             "source_name": "CombatTargetView"
           },
           "ty": 13
+        },
+        {
+          "custom_ordering": true,
+          "source_name": {
+            "scope": [],
+            "source_name": "MonsterStun"
+          },
+          "ty": 32
         },
         {
           "custom_ordering": true,
@@ -4979,7 +5025,7 @@
             "scope": [],
             "source_name": "SkillAreaPlacement"
           },
-          "ty": 40
+          "ty": 41
         },
         {
           "custom_ordering": true,
@@ -4987,7 +5033,7 @@
             "scope": [],
             "source_name": "ProgressionOperator"
           },
-          "ty": 45
+          "ty": 46
         },
         {
           "custom_ordering": true,
@@ -5003,7 +5049,7 @@
             "scope": [],
             "source_name": "NpcSpawnRetry"
           },
-          "ty": 36
+          "ty": 37
         },
         {
           "custom_ordering": true,
@@ -5019,7 +5065,7 @@
             "scope": [],
             "source_name": "WorldInfo"
           },
-          "ty": 51
+          "ty": 52
         }
       ]
     },
@@ -5276,6 +5322,51 @@
                 }
               },
               "source_name": {
+                "some": "monster_stun_monster_id_key"
+              }
+            }
+          ],
+          "default_values": [],
+          "indexes": [
+            {
+              "accessor_name": {
+                "some": "monster_id"
+              },
+              "algorithm": {
+                "BTree": [
+                  0
+                ]
+              },
+              "source_name": {
+                "some": "monster_stun_monster_id_idx_btree"
+              }
+            }
+          ],
+          "is_event": false,
+          "primary_key": [
+            0
+          ],
+          "product_type_ref": 32,
+          "sequences": [],
+          "source_name": "monster_stun",
+          "table_access": {
+            "Public": []
+          },
+          "table_type": {
+            "User": []
+          }
+        },
+        {
+          "constraints": [
+            {
+              "data": {
+                "Unique": {
+                  "columns": [
+                    0
+                  ]
+                }
+              },
+              "source_name": {
                 "some": "simulation_clock_id_key"
               }
             }
@@ -5300,7 +5391,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 48,
+          "product_type_ref": 49,
           "sequences": [],
           "source_name": "simulation_clock",
           "table_access": {
@@ -5358,7 +5449,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 50,
+          "product_type_ref": 51,
           "sequences": [
             {
               "column": 0,
@@ -5465,7 +5556,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 38,
+          "product_type_ref": 39,
           "sequences": [],
           "source_name": "pending_skill",
           "table_access": {
@@ -5597,7 +5688,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 34,
+          "product_type_ref": 35,
           "sequences": [
             {
               "column": 2,
@@ -5659,7 +5750,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 37,
+          "product_type_ref": 38,
           "sequences": [],
           "source_name": "obstacle",
           "table_access": {
@@ -6163,7 +6254,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 44,
+          "product_type_ref": 45,
           "sequences": [],
           "source_name": "player_appearance",
           "table_access": {
@@ -6208,7 +6299,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 45,
+          "product_type_ref": 46,
           "sequences": [],
           "source_name": "progression_operator",
           "table_access": {
@@ -6279,7 +6370,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 32,
+          "product_type_ref": 33,
           "sequences": [],
           "source_name": "monster_threat",
           "table_access": {
@@ -6324,7 +6415,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 49,
+          "product_type_ref": 50,
           "sequences": [],
           "source_name": "special_area",
           "table_access": {
@@ -6680,7 +6771,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 33,
+          "product_type_ref": 34,
           "sequences": [],
           "source_name": "monster_victim",
           "table_access": {
@@ -6725,7 +6816,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 36,
+          "product_type_ref": 37,
           "sequences": [],
           "source_name": "npc_spawn_retry",
           "table_access": {
@@ -7038,7 +7129,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 35,
+          "product_type_ref": 36,
           "sequences": [],
           "source_name": "npc_spawn",
           "table_access": {
@@ -7083,7 +7174,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 46,
+          "product_type_ref": 47,
           "sequences": [],
           "source_name": "session",
           "table_access": {
@@ -7128,7 +7219,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 47,
+          "product_type_ref": 48,
           "sequences": [
             {
               "column": 0,
@@ -7280,7 +7371,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 51,
+          "product_type_ref": 52,
           "sequences": [],
           "source_name": "world_info",
           "table_access": {
@@ -7370,7 +7461,7 @@
           "primary_key": [
             0
           ],
-          "product_type_ref": 43,
+          "product_type_ref": 44,
           "sequences": [],
           "source_name": "player",
           "table_access": {
@@ -8444,7 +8535,7 @@
             "elements": [
               {
                 "algebraic_type": {
-                  "Ref": 47
+                  "Ref": 48
                 },
                 "name": {
                   "some": "_schedule"
@@ -8642,6 +8733,12 @@
             "Table": {
               "canonical_name": "character_skill",
               "source_name": "character_skill"
+            }
+          },
+          {
+            "Table": {
+              "canonical_name": "monster_stun",
+              "source_name": "monster_stun"
             }
           },
           {

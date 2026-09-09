@@ -845,6 +845,7 @@ pub fn resolve_player_hit(ctx: &ReducerContext, character: Identity, hit: Pendin
 
 pub(crate) fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, character: Identity) {
     let now = now_us(ctx);
+    crate::mob_affects::clear(ctx, monster.id);
     crate::combo::clear_chains_targeting(ctx, monster.id, monster.life_sequence);
     monster.activity = 3;
     clear_monster_attack_target(monster);
@@ -1185,6 +1186,7 @@ pub fn pickup_loot(ctx: &ReducerContext, id: u64) -> Result<(), String> {
 
 pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
     let now = now_us(ctx);
+    crate::mob_affects::maintain(ctx, now);
     inventory::expire_drops(ctx);
     let bounds = collision_bounds(ctx);
     for loot in ctx.db.loot().iter() {
@@ -1233,7 +1235,9 @@ pub fn simulate(ctx: &ReducerContext, elapsed: f32) -> Result<(), String> {
             continue;
         }
         let definition = ordinary_definition(ctx, &monster)?;
-        if crate::knockback::locks_ai(ctx, monster.id, monster.life_sequence) {
+        if crate::knockback::locks_ai(ctx, monster.id, monster.life_sequence)
+            || crate::mob_affects::stunned(ctx, &monster, now)
+        {
             continue;
         }
         let previous_monster = monster.clone();

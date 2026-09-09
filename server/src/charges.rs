@@ -4,6 +4,7 @@ use crate::combat::monster;
 use crate::progression::character_progression;
 use crate::skills::{CharacterSkill, character_skill};
 use crate::{Controller, Player, accounts, controller, definitions, player};
+use spacetimedb::rand::Rng;
 use spacetimedb::{ConnectionId, Identity, ReducerContext, Table};
 
 #[spacetimedb::table(accessor = active_charge)]
@@ -206,6 +207,32 @@ pub(crate) fn strike(
         )?;
         if crate::combat::apply_damage(&mut victim.health, amount) {
             crate::combat::kill_monster(ctx, &mut victim, caster.identity);
+        } else if crate::training_targets::validate(&victim)?.is_none() {
+            let species = crate::combat::ordinary_definition(ctx, &victim)?;
+            let outcome = crate::crush::resolve(
+                true,
+                false,
+                crate::crush::Victim {
+                    // Selected ordinary registries still reject NOMOVE at compile time.
+                    no_move: false,
+                    main_target: victim.id == target.id,
+                    already_stunned: crate::mob_affects::stunned(ctx, &victim, now),
+                    stun_immune: species.immunity_flags & 1 != 0,
+                },
+                ctx.rng().gen_range(1..=100),
+            )?;
+            let position = crate::crush::displace(
+                [caster.x, caster.z],
+                [victim.x, victim.z],
+                outcome.push_distance_m,
+                &bounds,
+            )?;
+            victim.x = position[0];
+            victim.z = position[1];
+            victim.y = crate::content::height(victim.x, victim.z);
+            if outcome.stun_duration_us > 0 {
+                crate::mob_affects::stun(ctx, &mut victim, now, outcome.stun_duration_us)?;
+            }
         }
         ctx.db.monster().id().update(victim);
     }

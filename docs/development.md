@@ -25,12 +25,15 @@ absolute path for the Cargo build. The selector defaults to the installed catalo
 leave it unset for normal builds and the default compiler fixture tests. This
 does not install client assets or publish a database.
 
-Protocol 27 permits untargeted charge activation with an equipped sword. The
+Protocol 28 permits untargeted charge activation with an equipped sword. The
 working candidate also implements immediate target strikes and active-charge
-consumption; CRUSH/stun and two-handed weapon runtime support remain pending.
+consumption. CRUSH/stun is now wired for surviving ordinary monsters, with public
+exact-life `monster_stun` state; the two-client Brown Bear replay verifies push,
+stun and expiry. Death-during-stun and overlapping reactions remain unqualified.
+Two-handed weapon runtime support remains pending.
 The normal four-skill profile remains the installed and public selection; the
 public release is still protocol 26. Use matching regenerated bindings and a
-fresh disposable database for protocol-27 QA.
+fresh disposable database for protocol-28 QA.
 
 `tools/test_progression_admin.py charge --fixture PRIVATE --report REPORT` uses
 the existing retained-account workflow to exercise charge payment, shared status,
@@ -50,6 +53,16 @@ replayed requests. Use a separate fresh database from the `charge` activation
 phase because both phases learn the skill from revision zero. Check the current
 implementation ledger for actual replay results; adding a phase is not evidence
 that its gameplay acceptance passed.
+
+The `crush` phase uses the same retained-account arguments with a fresh training
+database whose placement 1 is original Brown Bear vnum 113 (845 HP). Compile a
+current imported mob package with `build_mob_catalog.py`, select it using
+`MT2_MOB_CONTENT`, and select the authored training placement using
+`MT2_POPULATION_PROFILE`. Keep the five-skill Dash candidate and QA-only bootstrap
+authorization. The replay checks a surviving monster's shared displacement,
+four-second stun, held position, no attacks/damage during observation, expiry and
+AI recovery. The ordinary dummy phase cannot qualify these effects because the
+dummy is intentionally stationary. Never publish a bootstrap QA module publicly.
 
 Opening an installed actor package in Godot may create a PNG alias that removes
 an embedded image's `.dds` suffix (for example, `actor_face.dds.png` becomes

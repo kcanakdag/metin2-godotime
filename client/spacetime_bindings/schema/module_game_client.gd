@@ -19,6 +19,7 @@ const InventoryItem = Types.InventoryItem
 const ItemDrop = Types.ItemDrop
 const Loot = Types.Loot
 const Monster = Types.Monster
+const MonsterStun = Types.MonsterStun
 const NpcInteraction = Types.NpcInteraction
 const NpcSpawn = Types.NpcSpawn
 const Obstacle = Types.Obstacle

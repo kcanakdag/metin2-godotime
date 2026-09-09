@@ -28,12 +28,13 @@ signal progression_changed(rows: Array)
 signal command_feedback_changed(rows: Array)
 signal skills_changed(rows: Array)
 signal charges_changed(rows: Array)
+signal monster_stuns_changed(rows: Array)
 signal combat_target_changed(info: Dictionary)
 signal npc_interaction_changed(info: Dictionary)
 signal npc_spawns_changed(rows: Array)
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
-const EXPECTED_PROTOCOL_VERSION := 27
+const EXPECTED_PROTOCOL_VERSION := 28
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
 const TABLES := [
@@ -52,6 +53,7 @@ const TABLES := [
 	"character_progression",
 	"character_skill",
 	"charge_status",
+	"monster_stun",
 	"command_feedback",
 	"combat_target_view",
 	"npc_interaction",
@@ -79,6 +81,7 @@ const QUERIES := [
 	"SELECT * FROM npc_interaction",
 	"SELECT * FROM npc_spawn",
 	"SELECT * FROM charge_status",
+	"SELECT * FROM monster_stun",
 ]
 
 var local_identity := ""
@@ -110,6 +113,7 @@ var server_time_us := 0
 var progression: Array = []
 var skills: Array = []
 var charges: Array = []
+var monster_stuns: Array = []
 var command_feedback: Array = []
 var combat_target: Dictionary = {}
 var npc_interaction: Dictionary = {}
@@ -648,6 +652,9 @@ func _flush_snapshots() -> void:
 				)
 				progression = rows
 				progression_changed.emit(progression)
+			"monster_stun":
+				monster_stuns = rows
+				monster_stuns_changed.emit(monster_stuns)
 			"charge_status":
 				charges = rows
 				charges_changed.emit(charges)
@@ -818,6 +825,8 @@ func _clear_world_snapshots() -> void:
 	combat_target = {}
 	npc_interaction = {}
 	npc_interaction_changed.emit(npc_interaction)
+	monster_stuns = []
+	monster_stuns_changed.emit(monster_stuns)
 	charges = []
 	charges_changed.emit(charges)
 	npc_spawns = []
