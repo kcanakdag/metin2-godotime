@@ -5,6 +5,32 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Probe batching removes reproduced first-cast stall — 2026-09-09
+
+The fixed runtime from `c7c79fa` is exported at `.local/p6-probe-batch-web-r1/web`,
+served locally on 8186 with manifest hash
+`e805011c444c82911869d7d46bbf7514f8c16c25bf2c0e5f9c4afb0ae3158e1d`.
+The module/database/auth services are unchanged; public deployment is unchanged.
+All **25 populated two-browser checks pass** in `browser/report.json`, with no
+browser engine errors. The same dummy life loses 142 HP at rank 12 and both
+clients spawn the original effect. Core/map export checks completed.
+
+The first-cast acknowledgement falls from **4,419 ms to 121 ms** versus the
+profiled pre-fix build. Its monster dispatch falls from **4,385,700 us to 60,500 us**
+on the caster and from **4,148,200 us to 50,200 us** on the peer. Initial monster
+dispatch is also below 42 ms on each client. This verifies the reproduced
+multi-second dispatch stall was caused by repeated QA history publication.
+It is a test-probe fix, not proof of a corresponding improvement in ordinary
+exports that exclude the probe.
+
+Caster input-to-action/damage observation is **943 ms** including automatic
+approach and snapshot cadence. The peer first publishes action/damage after
+**1,987 ms**, together with its effect; caster effect observation is at 2,109 ms.
+That remaining observer/publication delay is not claimed fixed. These are single
+casts in successive fresh browser sessions; setup increased skill rank between
+runs. The 45-check native batching regression and this exported replay qualify
+the focused fix, not full population scalability or original visual parity.
+
 ## First-cast stall traced to monster dispatch; probe batching fix prepared — 2026-09-09
 
 Profiled export `.local/p6-profile-web-r1/web` has served manifest hash

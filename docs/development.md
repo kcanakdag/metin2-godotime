@@ -2426,6 +2426,13 @@ The skill runner saves both clients' slow histories with each cast. Use local
 `observed_at_ticks_ms` to correlate them with request acknowledgements; histories
 can include initial loading, so do not attribute every slow record to the cast.
 
+Monster action history is published once per complete subscribed monster update,
+after retaining individual records in their original order (newest 256). Do not
+serialize and bridge the entire history once per row: at the selected population
+size this caused a measured four-second first-cast stall in instrumented Web
+clients. The focused `--suite probe` Godot test covers publication count, ordering,
+boundedness and unchanged updates using 2,800 rows.
+
 
 ## Batch class-skill effect discovery
 
