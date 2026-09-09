@@ -247,7 +247,7 @@ accepted and deployed; never claim full-game or original-client parity from one
 bounded fixture. Continue authorized work without repeatedly asking permission
 for routine implementation choices.
 
-## Current continuation snapshot — 2026-09-09
+## Current continuation snapshot — 2026-09-10
 
 The active slice is the protocol-31 reusable self-buff lifecycle for Berserk (3),
 Aura of the Sword (4) and Strong Body (19). The corrected local-only candidate is
@@ -258,10 +258,22 @@ each pass 41 authenticated lifecycle checks; Aura passes 45 with the actual HUD;
 Strong Body passes 17 death/respawn checks after a 39-check preparation pass.
 Rank-20 ordinary-combat replays pass 29 Aura outgoing checks, 26 Strong Body and
 26 Berserk incoming checks; movement passes 24 Berserk and 29 Strong Body checks.
-Next run exported/browser two-client casting and rendered world-effect QA. The
-candidate uses the local issuer/bootstrap identity and must not be published
-publicly. See the newest ledger entry for databases, reports and remaining
-limits.
+
+Exported Web two-client casting is now accepted for all three buffs. The r5
+build at `.local/p6-self-buffs-export-r5/web` stages the matching motion-effect
+package and passes **33 checks per buff** in Chromium against local database
+`mt2-p2-self-buffs-v31-export-r2-20260909-2ffc5096`. The reports are
+`.local/p6-self-buffs-browser-r1/berserk/report.json`,
+`.local/p6-self-buffs-browser-r1/aura-r2/report.json` and
+`.local/p6-self-buffs-browser-r2/strong-body-r3/report.json`. This covers the
+real HUD/quickslot, owner-only status, one SP payment, cooldown rejection,
+countdown, reconnect restoration and expiry with no browser engine errors.
+
+Next qualify native/Linux exported parity and rendered world-effect/UI
+presentation for the three buffs, then continue the remaining 41 prepared
+abilities and full world population. The candidate uses the local
+issuer/bootstrap identity and must not be published publicly. See the newest
+ledger entry for export hashes, databases, reports and remaining limits.
 Read the newest entries in `docs/rebuild/implementation-status.md`; the older
 snapshot below is historical. Source and generated bindings now use protocol 31.
 The selected candidate is `.local/p6-self-buffs-r1/catalog.v1.json`; installed
@@ -293,13 +305,15 @@ blend transitions, unarmed rendering or browser parity. Original source does not
 automatically suppress root movement for standing skills; female Berserk's MSA
 endpoint still needs comparison with actual GR2 trajectory before changing it.
 
-Next: exported/browser two-client casting, rendered world effect/UI presentation,
-then an authorized public update. The scoped local evidence now includes stored
-state, stats, action/payment, reconnect, expiry, quantitative combat and movement.
-Continue the full world/class/content objective afterward. Latest cleanup makes
-the legacy single-effect movement wrapper test-only; strict library Clippy and 14
-movement checks pass. The frozen QA module predates that non-gameplay cleanup.
-Preserve pre-existing untracked actor/content/test UID files when staging commits.
+Next: native/Linux exported parity and rendered world-effect/UI presentation,
+then continue the remaining prepared abilities and full world/class/content
+objective. An authorized public update still requires a production issuer/build.
+The scoped local evidence includes stored state, stats, action/payment, reconnect,
+expiry, quantitative combat, movement and exported browser casting. Latest
+cleanup makes the legacy single-effect movement wrapper test-only; strict library
+Clippy and 14 movement checks pass. The frozen QA module predates that
+non-gameplay cleanup. Preserve pre-existing untracked actor/content/test UID
+files when staging commits.
 
 ## Handoff snapshot — 2026-09-08
 

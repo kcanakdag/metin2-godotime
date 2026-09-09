@@ -5,6 +5,62 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Exported-browser self-buff casting accepted — 2026-09-10
+
+The protocol-31 candidate now has a reproducible Web export that binds the
+candidate skill catalog and the matching motion-effect package. The r5 build
+stages `.local/p6-self-buffs-r1/catalog.v1.json` (SHA
+`76ab6525b3b89a79e32377a0df702c1d89179c269c3f641dedeb44292dfd9b85`) and
+`.local/p6-self-buff-effects-r1/package` (runtime catalog SHA
+`1e201608ac1c2f74a9c92c524cf25a776ece88f1cab1901d7ef1903e75c6ccb0`).
+`tools/export_playable.py` gained `--motion-effect-package`, which validates the
+package schema, character and skill catalog hashes, content hash, resources and
+Godot import sidecars before staging `runtime/` to
+`assets/imported/motion_effects`. The export records
+`content_inputs.motion_effects_sha256`; `tools/export_client.py` audits the
+staged catalog through the real runtime catalog loader and records
+`pack_audit.motion_effect_catalog_sha256`. Both values match the generated
+package. Focused export/catalog tests and owned lint pass.
+
+The r5 pack audit checks 1,529 files, 249 UI images and 11 skill icons, and the
+package contains no raw `.mse`, `.msa`, `.gr2` or `.grn` runtime files. The local
+endpoint `http://127.0.0.1:8186` serves
+`.local/p6-self-buffs-export-r5/web` against
+`mt2-p2-self-buffs-v31-export-r2-20260909-2ffc5096`; the build manifest SHA-256
+is `e14d5d451c98fde4d0aa8a0451ee25d90921b43b19b8ac076f0b9828567df07e`.
+
+Exported Chromium two-client casting passes **33 checks per buff** through the
+real HUD and quickslot:
+
+- Berserk (3): `.local/p6-self-buffs-browser-r1/berserk/report.json`, report
+  SHA-256 `d757d79940323f2c93dded730d65fed9e64c22c2955198f7be9d02f8f216331b`.
+  This run predates the harness's catalog-derived duration assertion; the
+  observed 64 ticks match the compiled expectation.
+- Aura of the Sword (4):
+  `.local/p6-self-buffs-browser-r1/aura-r2/report.json`, report SHA-256
+  `106ee80c0bef6e458d50c644cb92f6491d036fbfc472bf9078244a27b5bd95ea`.
+- Strong Body (19):
+  `.local/p6-self-buffs-browser-r2/strong-body-r3/report.json`, report SHA-256
+  `624c17f8fc7842b74d1a1414d4a9aad21763f009d441f4387ae0a9d8925de7d7`.
+
+Each run verifies login, character creation/selection/entry, independent peer
+rendering, authorized `/level 12`, skill learning, quickslot binding, owner-only
+buff status, one SP payment, HUD icon and duration, cooling-cast rejection
+without a second payment or action, duration countdown, disconnect/reconnect
+restoration without replay, expiry, peer isolation and no browser engine errors.
+The new `tools/test_browser_self_buffs.py` derives rank-one duration and SP cost
+from the compiled catalog (Berserk and Strong Body 64 ticks, Aura 32 ticks),
+scrolls the skill panel proportionally, and honors the auth service's
+`x-retry-after` header. The fixture accounts are disposable QA identities;
+private credentials remain ignored and were not printed.
+
+This accepts exported browser casting, status, HUD, cooldown, reconnect and
+expiry behavior for the three selected self-buffs. It does not qualify the other
+41 prepared abilities, native/Linux exported parity, production-issuer
+deployment or the full world population. The candidate module
+`.local/p6-self-buffs-r1/module-r3.wasm` remains local-issuer/bootstrap-only and
+must not be published publicly.
+
 ## Protocol-31 self-buff lifecycle qualified — 2026-09-09
 
 The corrected protocol-31 candidate is published locally from

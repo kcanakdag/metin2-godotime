@@ -3,6 +3,7 @@
 
 import argparse
 import gzip
+import hashlib
 import json
 import os
 import shutil
@@ -10,6 +11,7 @@ import tempfile
 from pathlib import Path
 
 from check_world_packs import check_world_packs
+from content_compile import canonical_bytes
 from export_client import (
     ROOT,
     audit_pack,
@@ -26,6 +28,77 @@ from target_effect_export import (
     stage_target_effects,
     target_effect_requirements,
 )
+
+MOTION_EFFECTS_PATH = Path("assets/imported/motion_effects")
+
+
+def stage_motion_effect_package(package: Path, destination: Path, character_hash, skill_hash):
+    """Validate and stage a generated motion-effect runtime package."""
+    runtime = package / "runtime"
+    catalog = runtime / "catalog.v1.json"
+    if not catalog.is_file():
+        raise ValueError("Motion effect package runtime catalog is missing")
+    try:
+        document = json.loads(catalog.read_text())
+    except (OSError, json.JSONDecodeError) as error:
+        raise ValueError("Motion effect package catalog is invalid") from error
+    if (
+        not isinstance(document, dict)
+        or document.get("schema") != "mt2spacetime.motion-effects"
+        or document.get("version") != 1
+    ):
+        raise ValueError("Unsupported motion effect package")
+    if document.get("character_catalog_sha256") != character_hash:
+        raise ValueError("Motion effects do not match installed characters")
+    if document.get("skill_catalog_sha256") != skill_hash:
+        raise ValueError("Motion effects do not match the staged skills")
+    content_hash = document.get("content_hash")
+    if not isinstance(content_hash, str) or len(content_hash) != 64:
+        raise ValueError("Motion effect package content hash is invalid")
+    unsigned = dict(document)
+    unsigned.pop("content_hash", None)
+    if hashlib.sha256(canonical_bytes(unsigned)).hexdigest() != content_hash:
+        raise ValueError("Motion effect package content hash does not match")
+    files = document.get("files")
+    links = document.get("links")
+    sidecars = document.get("import_sidecars", {})
+    if (
+        not isinstance(files, dict)
+        or not files
+        or not isinstance(links, dict)
+        or not links
+        or not isinstance(sidecars, dict)
+    ):
+        raise ValueError("Motion effect package sections are invalid")
+    for relative, expected in files.items():
+        if (
+            not isinstance(relative, str)
+            or not isinstance(expected, str)
+            or Path(relative).is_absolute()
+            or ".." in Path(relative).parts
+            or Path(relative).suffix not in (".png", ".glb")
+            or relative != f"assets/{expected}{Path(relative).suffix}"
+        ):
+            raise ValueError("Motion effect package resource path is unsafe")
+        source = runtime / Path(relative)
+        if not source.is_file() or digest(source) != expected:
+            raise ValueError(f"Motion effect resource is missing or changed: {relative}")
+    for relative, expected in sidecars.items():
+        if (
+            not isinstance(relative, str)
+            or not isinstance(expected, str)
+            or Path(relative).is_absolute()
+            or ".." in Path(relative).parts
+        ):
+            raise ValueError("Motion effect import sidecar path is unsafe")
+        source = runtime / relative
+        if not source.is_file() or digest(source) != expected:
+            raise ValueError(f"Motion effect import sidecar is missing or changed: {relative}")
+    if destination.exists():
+        shutil.rmtree(destination)
+    shutil.copytree(runtime, destination)
+    if digest(destination / "catalog.v1.json") != digest(catalog):
+        raise ValueError("Motion effect catalog changed while staging")
 
 
 def main():
@@ -49,11 +122,21 @@ def main():
     )
     parser.add_argument("--skill-catalog", type=Path, help="Stage this candidate skill catalog")
     parser.add_argument("--ui-package", type=Path, help="Stage this converted UI package")
+    parser.add_argument(
+        "--motion-effect-package",
+        type=Path,
+        help="Stage this generated motion-effect package runtime directory",
+    )
     args = parser.parse_args()
     if args.skill_catalog and not args.skill_catalog.is_file():
         parser.error("Candidate skill catalog is missing")
     if args.ui_package and not (args.ui_package / "manifest.json").is_file():
         parser.error("Candidate UI package manifest is missing")
+    if (
+        args.motion_effect_package
+        and not (args.motion_effect_package / "runtime/catalog.v1.json").is_file()
+    ):
+        parser.error("Candidate motion effect package runtime catalog is missing")
     p1_requirements = p1_profile_requirements()
     live_target_effects = target_effect_requirements(ROOT / "client")
     templates = template_directory(args.templates)
@@ -97,9 +180,18 @@ def main():
         if args.ui_package:
             shutil.rmtree(stage / "assets/imported/ui")
             shutil.copytree(args.ui_package, stage / "assets/imported/ui")
+        if args.motion_effect_package:
+            stage_motion_effect_package(
+                args.motion_effect_package,
+                stage / MOTION_EFFECTS_PATH,
+                digest(stage / "assets/imported/characters/catalog.v1.json"),
+                digest(stage / "assets/imported/skills/catalog.v1.json"),
+            )
+        motion_effects_hash = digest(stage / MOTION_EFFECTS_PATH / "catalog.v1.json")
         content_inputs = {
             "skills_sha256": digest(stage / "assets/imported/skills/catalog.v1.json"),
             "ui_manifest_sha256": digest(stage / "assets/imported/ui/manifest.json"),
+            "motion_effects_sha256": motion_effects_hash,
         }
         staged_target_effects = stage_target_effects(ROOT / "client", stage, live_target_effects)
         config = {"server_url": args.server, "database": args.database}
@@ -167,6 +259,7 @@ def main():
             allow_test_probe=args.test_probe,
             content_root=stage,
             p1_requirements=p1_requirements,
+            motion_effect_hash=motion_effects_hash,
         )
         audit["target_effects"] = audit_target_effect_pack(
             args.godot,

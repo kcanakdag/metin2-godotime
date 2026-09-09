@@ -704,7 +704,15 @@ def validate_pack_paths(paths, *, allow_test_probe=False):
 
 
 def audit_pack(
-    godot, pck, output, env, *, allow_test_probe=False, p1_requirements=None, content_root=None
+    godot,
+    pck,
+    output,
+    env,
+    *,
+    allow_test_probe=False,
+    p1_requirements=None,
+    content_root=None,
+    motion_effect_hash="",
 ):
     # Load the actual exported PCK, checking remapped meshes and animations too.
     pck = Path(pck).resolve()
@@ -801,6 +809,7 @@ func _initialize() -> void:
             return
         p1_audit["characters"] = characters
         var skill_path := "res://assets/imported/skills/catalog.v1.json"
+        var character_hash := OS.get_cmdline_user_args()[5]
         var skill_hash := OS.get_cmdline_user_args()[6]
         if skill_hash.is_empty() or FileAccess.get_sha256(skill_path) != skill_hash:
             push_error("Packaged skill catalog differs from the expected catalog")
@@ -829,6 +838,19 @@ func _initialize() -> void:
                 skill_icons_checked += 1
         p1_audit["skill_icons_checked"] = skill_icons_checked
         p1_audit["skill_catalog_sha256"] = skill_hash
+        var motion_effect_hash := OS.get_cmdline_user_args()[8]
+        if not motion_effect_hash.is_empty():
+            var motion_effect_path := "res://assets/imported/motion_effects/catalog.v1.json"
+            if FileAccess.get_sha256(motion_effect_path) != motion_effect_hash:
+                push_error("Packaged motion effect catalog differs from the expected catalog")
+                quit(1)
+                return
+            var motion_effects = load("res://scripts/content/motion_effect_catalog.gd").new()
+            if not motion_effects.load_required(motion_effect_path, character_hash, skill_hash):
+                push_error("Packaged motion effects cannot load: " + motion_effects.error_message)
+                quit(1)
+                return
+            p1_audit["motion_effect_catalog_sha256"] = motion_effect_hash
         var authored = audit_authored(OS.get_cmdline_user_args()[7])
         if authored == null:
             quit(1)
@@ -1392,6 +1414,7 @@ func has_required_entities(manifest: Dictionary, artifacts: Dictionary) -> bool:
             character_hash,
             skill_hash,
             authored_hash,
+            motion_effect_hash,
         ],
         output / "pack-audit.log",
         env,
