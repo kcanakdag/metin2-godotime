@@ -88,6 +88,15 @@ approach/completion, repeated-request suppression and cancellation. The shared
 runner's ordinary phases continue staging only their existing network fixtures.
 This phase requires the same first-account-only setup authorization as `charge`.
 
+The `charge_moving` phase uses a fresh protocol-29 database with the same original
+Brown Bear placement as `crush` and stages the real input adapter. The ordinary
+second account approaches, lands an unarmed attack, then retreats to provoke a
+live chase. The Warrior uses normal Dash input against that moving bear. The
+replay requires observed target travel during approach, shared damage/stun on the
+same life, one SP payment, one begin/finish pair and no delayed duplicate damage.
+It uses actual server AI; no test reducer moves the bear. This is headless live
+acceptance, separate from the controlled stream-readiness fixture below.
+
 `tools/test_target_client.py --suite charge_input_stream --godot GODOT --output NEW_DIR`
 exercises the real Dash input adapter with captured reducer intents and controlled
 subscription rows. Main supplies `WorldStream.ready_at`: activation and chase

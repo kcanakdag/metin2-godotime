@@ -5,6 +5,31 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Live moving-target Dash acceptance — 2026-09-09
+
+The reusable `charge_moving` phase passes **28 live two-account checks** at
+`.local/p6-charge-moving-r1/moving.json`, using fresh database
+`mt2-p2-charge-moving-v29-20260909-bd886b01`. It stages the real current
+`ChargeSkillInput` adapter. The unprivileged second player approaches the original
+Brown Bear, provokes it with an ordinary unarmed attack, then retreats. The caster
+selects that life and requests Dash while the bear is chasing the other player.
+
+The bear moves more than 0.3 m during approach before strike damage, both clients
+receive matching damage and stun, the target life remains unchanged, SP is paid
+once, and exactly one successful begin and finish occur. A subsequent observation
+finds no delayed damage and the local reservation is cleared. Movement and damage
+come from normal server AI/reducers; no test action relocates or damages the bear.
+
+The module in that evidence directory was built from current protocol-29 code,
+installed five-skill content, the selected 44-mob registry, and the earlier
+authored Brown Bear training placement. Only the first retained QA account has
+bootstrap authorization; do not deploy this module publicly. Module SHA-256:
+`40384aaa9fd55926519fdc2d3ddc37d6db76e94b5450cfc0f779d60f2f2c954e`.
+Touched Python and
+GDScript lint/format checks pass. This is live headless acceptance, not rendered
+moving-mob or streamed-map/browser qualification. Local served/public exports
+remain unchanged; full-map export testing is next.
+
 ## Charge terrain-readiness guard — 2026-09-09
 
 Inspection found that automatic Dash movement bypassed Main's loaded-terrain

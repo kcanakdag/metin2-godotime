@@ -70,6 +70,7 @@ def stage_project(stage: Path, *, client_input: bool = False) -> None:
         (ROOT / "tools/crush_death_smoke.gd", stage / "tests/crush_death_smoke.gd"),
         (ROOT / "tools/crush_overlap_smoke.gd", stage / "tests/crush_overlap_smoke.gd"),
         (ROOT / "tools/charge_input_smoke.gd", stage / "tests/charge_input_smoke.gd"),
+        (ROOT / "tools/charge_moving_smoke.gd", stage / "tests/charge_moving_smoke.gd"),
     ):
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
@@ -114,6 +115,7 @@ def run_godot(
         "crush_death": "crush_death_smoke.gd",
         "crush_overlap": "crush_overlap_smoke.gd",
         "charge_input": "charge_input_smoke.gd",
+        "charge_moving": "charge_moving_smoke.gd",
     }.get(str(config["mode"]), "progression_admin_smoke.gd")
     command = [
         godot,
@@ -200,6 +202,7 @@ def arguments() -> argparse.Namespace:
             "crush_death",
             "crush_overlap",
             "charge_input",
+            "charge_moving",
         ),
     )
     parser.add_argument("--server", default="http://127.0.0.1:8186")
@@ -261,7 +264,7 @@ def main() -> None:
         (ROOT / ".local").mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="progression-admin-", dir=ROOT / ".local") as raw:
             stage = Path(raw)
-            stage_project(stage, client_input=mode == "charge_input")
+            stage_project(stage, client_input=mode in {"charge_input", "charge_moving"})
             result = run_godot(
                 options.godot,
                 stage,
