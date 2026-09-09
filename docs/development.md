@@ -2303,3 +2303,10 @@ blends accept alpha-bearing textures because texture alpha does not participate
 in their supported RGB equation; transparent viewports still reject. The native
 mixed scenario derives layer counts from its catalog and verifies each surface's
 material/factor, so it can exercise complete Dash as well as Bash.
+
+
+The equipped candidate skill-effect fixture accepts arbitrary selected skill pairs:
+each vnum must have unique installed motions for both appearances of one class.
+Screenshots follow clip duration (25/50/75 percent), with the existing dedicated
+Bash burst capture retained. The current fixture still equips sword 10; other
+weapon-specific skills require the corresponding equipped fixture extension.

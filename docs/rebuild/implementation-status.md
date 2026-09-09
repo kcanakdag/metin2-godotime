@@ -5,6 +5,29 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Equipped Dash effect and reusable actor selection — 2026-09-09
+
+The skill-effect actor fixture now validates any selected skill set against installed
+motions and both appearances of its class, rejecting duplicates/incomplete pairs
+instead of requiring exactly six/eight Warrior rows. Captures use quarter/half/
+three-quarter clip times so short clips retain three meaningful captures. Existing
+Bash burst capture remains separate.
+
+Dash passes 23 native equipped checks on both Warrior appearances, with six
+captures at `.local/p6-all-skill-effects-r1/dash-actors-timed/`. Both frame-12
+captures were reviewed: the original effect surrounds the equipped animated actor.
+The initial `dash-actors/` run passed its actor assertions but failed the runner's
+capture requirement because the 0.8-second clip ended before frame 80. It remains
+separate; duration-relative captures fix that fixture limitation. Touched lint passes.
+
+Gameplay remains pending. Source `skill.h::IsChargeSkill` and
+`char_skill.cpp::UseSkill` identify Dash as a two-stage charge: a targeted use
+establishes charge if needed, computes the target strike and removes the skill
+affect. Selected skill-table metadata gives MOV_SPEED +150 for three seconds,
+cooldown 12 seconds and cost `60+120*k`. These must be modeled as server-owned
+charge state and validated target intents, not an ordinary extra damage skill.
+No installed skill catalog, server state or public build changed.
+
 ## Full Dash multi-surface runtime — 2026-09-09
 
 The shared mesh renderer now instantiates one converted scene, assigns one material

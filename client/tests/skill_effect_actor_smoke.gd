@@ -42,10 +42,9 @@ func _run() -> void:
 		for path: String in mixed.textures:
 			textures[path] = load("res://mixed-candidate/" + str(mixed.textures[path].path))
 	_build_stage()
-	_check(
-		links.size() == (6 if _mixed.is_empty() else 8),
-		"complete selected skills across both Warrior sexes"
-	)
+	if not _validate_selected_links(links):
+		_finish()
+		return
 	for link: Dictionary in links:
 		await _exercise(link, effects.effects, textures)
 	_finish()
@@ -81,7 +80,9 @@ func _exercise(link: Dictionary, recipes: Array, textures: Dictionary) -> void:
 	var peak := 0
 	var sane := true
 	var clean := true
-	var frames := int(ceil(float(motion.duration_us) / 1000000.0 * 60)) + 30
+	var clip_frames := int(ceil(float(motion.duration_us) / 1000000.0 * 60))
+	var frames := clip_frames + 30
+	var captures := [int(clip_frames * 0.25), int(clip_frames * 0.5), int(clip_frames * 0.75)]
 	for frame: int in range(frames):
 		actor.animation_player.advance(1.0 / 60)
 		actor._process(1.0 / 60)
@@ -94,7 +95,7 @@ func _exercise(link: Dictionary, recipes: Array, textures: Dictionary) -> void:
 				Vector3(5, 4, -8),
 				Vector3(0, 1, -2)
 			)
-		if frame in [20, 50, 80]:
+		if frame in captures:
 			var center := _skeleton_pose_center(actor)
 			await _capture_from(
 				(
@@ -175,3 +176,27 @@ func _prepare_manager(manager: Node3D) -> bool:
 		_package.document.skill_catalog_sha256,
 		"res://effect-package/catalog.v1.json"
 	)
+
+
+func _validate_selected_links(links: Array) -> bool:
+	var groups: Dictionary = {}
+	var valid := not links.is_empty()
+	for link: Dictionary in links:
+		var action := str(link.actor_id) + ".general.skill_" + str(int(link.skill_vnum))
+		valid = valid and not _catalog.motion(link.actor_id, "general", action).is_empty()
+		var members: Array = groups.get(int(link.skill_vnum), [])
+		valid = valid and not members.has(link.actor_id)
+		members.append(link.actor_id)
+		groups[int(link.skill_vnum)] = members
+	for members: Array in groups.values():
+		var matched := false
+		for cls: Dictionary in _catalog.characters.classes:
+			var expected: Array = []
+			for variant: Dictionary in cls.variants:
+				expected.append(variant.actor_id)
+			expected.sort()
+			members.sort()
+			matched = matched or members == expected
+		valid = valid and matched
+	_check(valid, "selected effects cover both appearances with unique installed motions")
+	return valid
