@@ -5,6 +5,32 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Full-population Dash effect failure resolved in browser replay — 2026-09-09
+
+Source `6bfff67` was exported to `.local/p6-dash-world-r4/web` and exercised against
+the unchanged full-population QA database/module recorded below. The new manifest
+SHA-256 is `1a9b570e4b1728f2b02f0fe1860c3d9e390c328341e4ef1277cf1b6739ed6d8b`.
+The 1,555-file core audit, 243-image UI pixel audit and all 20 isolated map-section
+dependency audits pass. Local proxy 8186 now serves this export; its previous
+configuration and PID are retained in this evidence directory.
+
+**All 23 focused two-browser checks pass** in `browser/report.json`, including
+the shared original population, learning/dragging/hotbar input, action and damage
+replication, and one new effect instance on each client. Rank-6 Dash reduced the
+same dummy life from 29,551 to 29,444 HP in both subscriptions. Both clients loaded
+the expected effect hash, and no browser engine errors were reported. This
+resolves the reproduced zero-spawn failure without changing the server module.
+
+Reviewed cast frames `browser/cast-peak-0.png` and `cast-peak-1.png` show the
+blue-white original burst in both views (video positions about 89.46 and 104.21 s).
+The observer's effect is partially clipped by the bottom viewport edge; the
+caster's view shows it clearly. The closing 20-second contact sheets missed the
+earlier burst, so they were not treated as visual acceptance. Source videos remain
+in `browser/videos`. This qualifies a male Warrior town/dummy cast with the full
+population loaded, not every map section, moving-target browser behavior, female
+browser casting, precise original visual parity, or resolution of the previously
+observed multi-second reducer delay. Public protocol-26 deployment is unchanged.
+
 ## Attack-observation trace and clock-driven effect flush — 2026-09-09
 
 Added a bounded read-only `last_action_observation` to player presentation
