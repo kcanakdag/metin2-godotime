@@ -17,7 +17,7 @@ from content_formats import LegacyNode, parse_legacy_script
 
 MDE_V001_HEADER = b"EffectData\0"
 MAX_MDE_BYTES = 8 * 1024 * 1024
-MAX_GEOMETRIES = 8
+MAX_GEOMETRIES = 32
 MAX_FRAMES = 256
 MAX_VERTICES = 65_536
 MAX_INDICES = 196_608

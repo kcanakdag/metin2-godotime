@@ -77,6 +77,18 @@ Group Mesh
 
 
 class MdeTests(unittest.TestCase):
+    def test_multi_element_payload_is_complete_and_bounded(self):
+        single = mde_fixture()
+        header_size = len(b"EffectData\0") + 8
+        raw = b"EffectData\0" + struct.pack("<ii", 24, 2) + single[header_size:] * 24
+        parsed = parse_mde(raw)
+        self.assertEqual(len(parsed.geometries), 24)
+        self.assertTrue(all(len(g.frames) == 2 for g in parsed.geometries))
+        with self.assertRaisesRegex(EffectMeshFormatError, "Truncated"):
+            parse_mde(raw[:-1])
+        with self.assertRaisesRegex(EffectMeshFormatError, "geometry count"):
+            parse_mde(mde_fixture(geometry_count=33))
+
     def test_reads_v001_frames_and_preserves_visibility_outside_unit_range(self):
         parsed = parse_mde(mde_fixture())
         self.assertEqual(parsed.version, 1)

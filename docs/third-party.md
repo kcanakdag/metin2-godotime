@@ -488,3 +488,11 @@ mesh rotation to identity, compares consecutive position samples, and rotates on
 for nonzero displacement above its threshold. The independent renderer accepts
 the constant direct-key case without introducing camera-facing rotation. Moving
 tracks remain rejected until their source rotation is implemented and qualified.
+
+
+The selected Warrior Dash (`tanhwan.mse`) conversion includes its referenced pinned
+`gitu.mde`: 24 geometries, six frames, SHA-256
+`8e4ba4132215fa9c0af18de148ad515d47dc6da26b37c725f4873ec96094ddc8`.
+Original MSE/MDE/textures and generated derivatives remain ignored. The existing
+independent Blender conversion/audit handles every geometry; the bounded parser
+limit increased from eight to 32 based on this concrete selected source asset.

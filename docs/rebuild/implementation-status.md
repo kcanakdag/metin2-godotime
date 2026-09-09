@@ -5,6 +5,29 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Complete Dash multi-element conversion — 2026-09-09
+
+The selected original `gitu.mde` is 23,155 bytes, 24 geometries and six frames,
+SHA-256 `8e4ba4132215fa9c0af18de148ad515d47dc6da26b37c725f4873ec96094ddc8`.
+The parser geometry bound is now 32, retaining its 8 MiB byte limit, per-geometry
+vertex/index/frame limits and complete payload checks. Sixteen mesh-format tests
+pass, including a complete 24-element payload, truncated last geometry and
+out-of-bound geometry counts. Touched Ruff checks pass.
+
+Pinned Blender conversion of the complete `tanhwan.mse` succeeded at
+`.local/p6-all-skill-effects-r1/dash-mixed/`: one GLB containing all 24 geometries,
+six source frames, three particle systems and original material recipes. The
+existing conversion audit checks positions, UVs, morph frames and timing against
+all original geometry. `receipt.json` records sources and audit results. The
+initial mesh-only invocation rejected mixed content and remains at `dash-mesh/`;
+the successful mixed invocation did not discard particles.
+
+All 59 selected effect definitions now parse in
+`.local/p6-all-skill-effects-r1/resource-audit-multi-mesh.json`. This closes the
+known parser gaps, not full rendering: Dash requires multi-element scene/material
+handling and nonwhite color factors in the runtime, which still rejects it.
+Other effects also need conversion and runtime qualification; public unchanged.
+
 ## Stationary movement-facing mesh case — 2026-09-09
 
 The source audit found that Shaman `yongpa_a` uses MOVE billboard type 3, not

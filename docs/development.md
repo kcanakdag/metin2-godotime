@@ -2280,3 +2280,10 @@ Mesh MOVE billboard type 3 is currently renderable only for a singleton direct
 position track, matching the original zero-displacement identity rotation. The
 parser preserves the type for discovery, but moving tracks require further runtime
 work. The native skill-mesh fixture exercises this distinction.
+
+
+Selected MDE/MSE mesh geometry counts are bounded at 32, allowing original Dash's
+24 elements without dropping geometry. The binary byte/vertex/frame/payload limits
+remain enforced. Mixed conversion audits every element, but the current Godot
+runtime still requires one geometry per mesh recipe; conversion acceptance is not
+runtime acceptance for multi-element effects.
