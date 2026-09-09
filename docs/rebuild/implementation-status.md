@@ -5,6 +5,34 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Browser snapshot-cache comparison: delay not resolved — 2026-09-09
+
+The optimized source `94dc6c2` was exported to `.local/p6-snapshot-web-r1/web`;
+served manifest SHA-256 is
+`a921493cd496f7ca20b98f6f09298789a8e2cad6bd6db250af1e73d5fa63af16`.
+Local proxy 8186 now serves it on the unchanged original-population QA database.
+The baseline served manifest was verified against the previous r4 export before
+switching. Core and map export audits completed. Public deployment is unchanged.
+
+Added browser-side keydown and first snapshot-observation timing to the existing
+skill replay. The Node-backed helper test passes, as do touched Python checks.
+Both baseline and optimized full-map runs pass all 23 checks, including Dash
+damage/effect replication, with no browser engine errors. Reports are
+`baseline/report.json` and `optimized/report.json` in that evidence directory.
+
+| Input to published observation | Baseline caster / peer | Optimized caster / peer |
+| --- | --- | --- |
+| New action and matching-life damage | 4,823 / 4,954 ms | 4,992 / 4,776 ms |
+| New effect instance | 6,076 / 6,237 ms | 6,331 / 6,090 ms |
+
+This single cast per build does **not** show an end-to-end latency improvement.
+The native conversion microbenchmark below remains valid but is not the dominant
+explanation established by these observations. Timings include automatic charge
+approach, browser work and the 200 ms test snapshot cadence; successive replays
+also spend another skill point. They are not reducer RTT or a controlled broad
+performance benchmark. Next distinguish ordinary request latency from charge's
+begin/move/finish timing using existing validated intents and acknowledgements.
+
 ## Reuse unchanged monster snapshot conversions — 2026-09-09
 
 Inspection found the facade reflected every field of every subscribed monster on

@@ -2382,6 +2382,17 @@ live attack. It retains only one record and grants no authority. A zero interval
 or non-attacking activity at first observation helps identify an attack transition
 lost before presentation; failure-time FPS alone cannot establish that timing.
 
+The skill runner also records `observation_timing` for each cast. Its test-only
+browser helper timestamps the actual hotbar keydown and the first published
+snapshot containing the new action, matching-life damage and a new effect count.
+Times use `performance.timeOrigin + performance.now()`; subtract the caster's
+input time from each client's observations on the same workstation. These are
+input-to-published-snapshot measurements, including charge approach, rendering
+work and the probe's 200 ms publication cadence. They are not reducer RTT or
+cross-machine clock synchronization. The helper preserves ordinary snapshot
+access and is not installed in the game export. Its Node-backed unit test checks
+matching, first-observation retention, key repeats and empty loading snapshots.
+
 
 ## Batch class-skill effect discovery
 

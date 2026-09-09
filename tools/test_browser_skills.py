@@ -10,6 +10,7 @@ import os
 import time
 from pathlib import Path
 
+from browser_skill_timing import INSTALL_SKILL_TIMING_JS
 from playwright.sync_api import sync_playwright
 from progression_operator import private_json
 from test_browser_target import _pick, _player
@@ -108,6 +109,7 @@ def main() -> None:
                     record_video_size={"width": 1280, "height": 800},
                 )
                 context.add_init_script("window.mt2ProbeEnabled = true;")
+                context.add_init_script(INSTALL_SKILL_TIMING_JS)
                 page = context.new_page()
                 pages.append(page)
                 page.on("pageerror", lambda error: errors.append(redact(str(error))))
@@ -252,6 +254,20 @@ def main() -> None:
                 effect_counts = [
                     snapshot(i).get("motion_effects", {}).get("spawned", 0) for i in [0, 1]
                 ]
+                for index in [0, 1]:
+                    pages[index].evaluate(
+                        "config => window.mt2ArmSkillTiming(config)",
+                        {
+                            "key": str(slot_index + 1),
+                            "owner": owner,
+                            "sequence": sequences[index],
+                            "vnum": vnum,
+                            "target": 900001,
+                            "life": target["life_sequence"],
+                            "health": before,
+                            "effects": effect_counts[index],
+                        },
+                    )
                 pages[0].keyboard.press(str(slot_index + 1))
                 wait(
                     f"skill_{vnum}_server_cooldown",
@@ -285,6 +301,9 @@ def main() -> None:
                     ),
                 )
                 samples[str(vnum)] = {
+                    "observation_timing": [
+                        page.evaluate("() => window.mt2SkillTiming") for page in pages
+                    ],
                     "rank": int(skill_row(vnum)["rank"]),
                     "effects": [snapshot(i).get("motion_effects", {}) for i in [0, 1]],
                     "attack_sequences_before": sequences,
