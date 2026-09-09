@@ -2,8 +2,8 @@
 # FILE WILL NOT BE SAVED. MODIFY TABLES IN YOUR MODULE SOURCE CODE INSTEAD.
 class_name GameNpcInteractionTable extends _ModuleTable
 
-var session_id: GameNpcInteractionSessionIdUniqueIndex
 var character_id: GameNpcInteractionCharacterIdUniqueIndex
+var session_id: GameNpcInteractionSessionIdUniqueIndex
 
 func _init() -> void:
 	set_meta("table_name", "npc_interaction")
@@ -13,8 +13,8 @@ func _init() -> void:
 static func create(p_local_db: LocalDatabase) -> GameNpcInteractionTable:
 	var table: GameNpcInteractionTable = GameNpcInteractionTable.new()
 	table._db = p_local_db
-	table.session_id = GameNpcInteractionSessionIdUniqueIndex.create(p_local_db)
 	table.character_id = GameNpcInteractionCharacterIdUniqueIndex.create(p_local_db)
+	table.session_id = GameNpcInteractionSessionIdUniqueIndex.create(p_local_db)
 	return table
 
 func iter() -> Array[GameNpcInteraction]:

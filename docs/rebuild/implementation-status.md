@@ -5,6 +5,157 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Protocol-30 buff database and bindings staged — 2026-09-09
+
+Integration review: strict `cargo clippy --lib -- -D warnings` passes after marking
+the unused legacy single-effect travel adapter test-only. Fourteen movement tests
+pass after that change; scoped Rust formatting, Python/GDScript lint and diff
+checks pass. The frozen QA module and its receipts remain unchanged and predate
+this test-only cleanup. The default-training test build still reports the existing
+`MONSTER_HOME` warning; the strict library check is clean. This is a checkpoint,
+not whole-skill, all-class or public-deployment acceptance.
+
+The six-skill candidate now passes **196 native actor checks** with both equipped
+Warrior appearances at `.local/p6-buffs-render-r2/report.json`. All eight Berserk
+pose captures were visually inspected: hair/body/sword are present and no gross
+deformation or detached weapon was observed. Capture hashes and limits are in
+`berserk-review.json`. This is isolated actor presentation, not live world root
+travel, continuous blend, unarmed or browser qualification. Source review confirms
+standing skills do not automatically suppress Granny displacement; see skills.md.
+The female linear MSA root remains unqualified against the actual GR2 trajectory.
+
+`tools/test_actors.py --skill-catalog CANDIDATE` now stages and hashes a candidate
+without installing it. R1 caught an unrelated live charge-input adapter copied
+without its HUD/network dependencies; the render-only fixture now excludes that
+adapter, whose input tests remain in the authenticated harness. R2 passes, and
+owned Python lint/format passes. No game assets or public exports changed.
+
+The extended replay passes **29 checks** in `multiplayer-r3.json` on the same
+database, without resetting or relearning the existing rank-one character.
+Attack speed returns to 100 after **66,427 ms** wall time, including a two-second
+offline pause; rank/cooldown remain unchanged and expiry does not replay the cast.
+The full tested harness is retained as `buff-smoke-r3.gd` with its hash in
+`multiplayer-r3-input.json`. After this run, the final test branch was inverted
+to remove a redundant return flagged by lint; assertions are unchanged.
+Death, damage, boosted-travel and rendered acceptance remain outstanding.
+
+The new `buff` phase in `tools/test_progression_admin.py` now passes **26 actual
+authenticated two-client checks** against this database at
+`.local/p6-buffs-server-r1/multiplayer-r2.json`. Both independent accounts enter;
+the authorized operator raises/learns rank-one Berserk and casts without a weapon.
+Both clients receive the action, the owner receives attack speed 102, SP payment
+57 and the 67-second cooldown. Unlearned peer/stale/early casts reject; disconnect
+removes presence, and reconnect restores the buff speed and persisted skill state.
+That earlier run did not qualify full expiry duration, death, damage, boosted travel or
+rendered animation. R1 failed before connecting on a Godot multiline-lambda parser
+error; a named helper fixes it. Scoped lint passes. The report, frozen-module
+receipt and exact harness/client hashes are bound in `multiplayer-r2-receipt.json`.
+Next extend this live scenario to expiry/death/combat and inspect actual rendering.
+
+The six-skill training module is frozen at `.local/p6-buffs-server-r1/module.wasm`,
+SHA `e81e5a1c3ece04c6b680b8046a97e6a35283a99238a0c7d2ac177cd980c2c2ed`,
+and published to fresh local database `mt2-p2-buffs-v30-r1-20260909-e81e5a1c`
+on `http://127.0.0.1:13223`. It uses the existing local auth issuer, disables
+guests and bootstraps only the retained first QA identity. It must not be deployed
+publicly. Existing DB/auth/proxy processes were inspected and reused unchanged.
+The CLI's stored token failed signature validation; supported anonymous publishing
+created this disposable database without changing gameplay authentication.
+
+Bindings were regenerated from that actual database: 104 scripts, schema SHA
+`ef43f76768f3a55af1224031f4f5c729b7b548a74e5fa9e1665c661004fb1648`.
+The generator's isolated actual-client instantiation passes. Client protocol is
+now 30; `.local/p6-buffs-protocol-r1/report.json` passes six protocol/component
+checks. Module/source/catalog/schema identities are recorded in
+`p6-buffs-server-r1/receipt.json`. Release compilation reports the now-unused
+single-effect `Travel::tick` compatibility helper; no warning was suppressed.
+
+This supersedes earlier binding-mismatch notes below. The six-skill catalog is
+still a candidate, and the served local/public exports are unchanged. Next run
+authenticated buff casts, lifecycle/stat/damage replays and render qualification;
+publication and generated-client checks do not prove gameplay acceptance.
+
+## Persisted buff adapter in progress — 2026-09-09
+
+Berserk's incoming-normal-damage modifier now feeds the trusted mob finalizer.
+Normal and NormalRange truncate the percentage adjustment before critical
+doubling and penetration defense; Magic skips the affect. Bounds/overflow
+rejection remains explicit. Monster damage is now calculated after exact-life,
+range and collision admission at the hit, not at wind-up acceptance, so changing
+buffs/defenses during wind-up are sampled at damage time. Immediate ranged/magic
+hits retain their existing immediate scheduling. The unused private
+`monster_clock.pending_damage` field is removed from the protocol-30 worktree.
+Eight mob-damage tests and twenty combat lifecycle tests pass. These are unit
+regressions; live wind-up/cast/expiry, RNG-sequence changes and two-client combat
+qualification remain required before publishing.
+
+Godot's skill catalog now accepts the self-buff presentation capability with
+validated 21-entry cost/cooldown tables and no enemy targeting/charge metadata.
+Rank costs and tooltip cooldowns use those generated tables; the tooltip omits
+the sword requirement for `weapon_class: any`. Existing physical handlers reject
+misplaced buff metadata. The isolated actual-Godot capability test passes 105
+checks at `.local/p6-buffs-client-r2/report.json`, with source hashes in
+`source-receipt.json`; scoped GDScript lint/format passes. R1 stopped during import
+because sandbox socket creation was denied; R2 used approved local socket access.
+These are synthetic catalog/accessor checks and parser evidence, not rendered UI,
+the installed six-skill candidate, server bindings or gameplay acceptance.
+
+The buff cast now resolves the selected appearance's generated action, rejects
+damage windows/special areas, settles outgoing root and ordinary movement before
+replacing captured modifiers, and starts the shared player action. It clears
+combo/pending skill/NPC interaction state and persists the new controller action
+in the same transaction as buff/payment/revision. This closes the previously
+noted missing movement-settlement/action-lock wiring; live recast qualification
+is still required. The six-skill candidate compiles with fourteen focused buff
+checks passing. Those checks do not execute authenticated cast transactions.
+The imported female Berserk root endpoint still needs source/render adjudication;
+the action currently preserves generated motion metadata. Do not silently call
+that standing-skill visual parity or install the unfinished candidate.
+
+Movement integration now projects exact-life saved movement modifiers into trusted
+time intervals, combined with the existing charge interval in both simulation
+and pre-action movement. The shared travel calculation splits at interval
+boundaries, sums points before source quantization/capping, and keeps the 100 ms
+catch-up bound. Private rows now retain `active_since_us`; resume starts a new
+online interval without spending the paused remaining ticks. Fourteen movement
+tests pass, including overlapping Berserk/charge, order independence, recovery
+and future/expired intervals; the `buff_` selection passes fourteen checks
+(overlapping test selections, not twenty-eight unique checks).
+The subsequent action wiring above accounts for movement before replacement.
+No installed buff profile, live database or exported movement evidence is claimed.
+The binding/schema mismatch below remains deliberate unfinished work.
+
+Attack-speed integration now reads lease/life-validated current buff contributions
+when capturing ordinary attack clocks. Saved rows are advanced in memory on read,
+so an affect cannot grant another attack after its duration elapsed while waiting
+for maintenance. Equipment and affect points add before the existing 170 cap;
+skill-action clocks retain their existing separate rule. Display-speed refreshes
+are connected to activation, tick/expiry, pause, death clear and completed entry,
+writing the progression row only when its displayed speed changes. Negative attack
+speed affects explicitly reject until their different source duration rule exists.
+Twelve focused buff tests and four attack-timing tests passed at that checkpoint.
+No live stat or client evidence is claimed. Incoming-damage modifiers and cast
+action integration remain required.
+
+The working server now connects selected self-buff casts to private
+`character_buff` rows. Captured modifiers, remaining ticks and exact character
+life are persisted with SP payment and skill revision/cooldown in the reducer
+transaction. Character stop pauses durations; entry resumes paused rows; death
+and maintenance remove invalid lives. The generated `SELF_BUFFS` registry is
+available even when the installed selection contains no buffs.
+
+Eleven focused Rust library tests pass, including three new saved-row transition
+checks for exact tick boundaries, delayed catch-up, independent point expiry,
+offline pause and invalid saved points/clocks. These exercise the adapter's
+transition logic, not a published database or authenticated persistence replay.
+The known default-training `MONSTER_HOME` warning remains.
+
+This is an unfinished integration: server source declares protocol 30 for the
+new private schema, while generated bindings and the client still use 29. Do not
+publish this intermediate state. Next finish stat/action/client integration,
+publish an isolated matching module to a fresh database, regenerate bindings and
+qualify authenticated casts/reconnect/death before exporting. Berserk remains
+uninstalled; no served artifact or database changed.
+
 ## Buff payment/revision transition implemented — 2026-09-09
 
 `server/src/buff_activation.rs` now combines captured buff definitions, current

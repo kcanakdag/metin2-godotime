@@ -26,7 +26,10 @@ remain incomplete.
 Local mob threat behavior now has a reusable two-account passive
 retaliation and target-switching scenario (42 checks passed). See the
 [development replay instructions](docs/development.md#test-scope-and-passive-mob-replay).
-The worktree now uses protocol 29 with private charge ownership, public charge
+The worktree now uses protocol 30 with staged private timed buffs and matching
+bindings from an isolated training QA database. Berserk remains an unfinished
+candidate; see the implementation ledger for qualification status.
+The last accepted local protocol-29 build has private charge ownership, public charge
 status and exact-life monster stun state. The isolated five-skill candidate passes
 43 two-client charge-begin/strike checks and 27 live Brown Bear push/stun/expiry checks.
 Earlier activation/reconnect and account/movement checks remain documented in

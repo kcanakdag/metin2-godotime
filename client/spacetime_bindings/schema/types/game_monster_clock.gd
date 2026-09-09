@@ -16,7 +16,6 @@ const table_names: Array[String] = []
 @export var pending_source_generation: int
 @export var pending_hit_at_us: int
 @export var pending_hit_until_us: int
-@export var pending_damage: int
 @export var area_invulnerable_until_us: int
 
 #BSATN metadata
@@ -32,7 +31,6 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"pending_source_generation": "U32",
 	"pending_hit_at_us": "I64",
 	"pending_hit_until_us": "I64",
-	"pending_damage": "U16",
 	"area_invulnerable_until_us": "I64"
 }
 
@@ -46,9 +44,8 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 ## 8. pending_source_generation: int[br]
 ## 9. pending_hit_at_us: int[br]
 ## 10. pending_hit_until_us: int[br]
-## 11. pending_damage: int[br]
-## 12. area_invulnerable_until_us: int[br]
-static func create(p_id: int, p_home_x: float, p_home_z: float, p_next_attack_us: int, p_attack_until_us: int, p_pending_target: PackedByteArray, p_pending_target_generation: int, p_pending_source_generation: int, p_pending_hit_at_us: int, p_pending_hit_until_us: int, p_pending_damage: int, p_area_invulnerable_until_us: int) -> GameMonsterClock:
+## 11. area_invulnerable_until_us: int[br]
+static func create(p_id: int, p_home_x: float, p_home_z: float, p_next_attack_us: int, p_attack_until_us: int, p_pending_target: PackedByteArray, p_pending_target_generation: int, p_pending_source_generation: int, p_pending_hit_at_us: int, p_pending_hit_until_us: int, p_area_invulnerable_until_us: int) -> GameMonsterClock:
 	var result: GameMonsterClock = GameMonsterClock.new()
 	result.id = p_id
 	result.home_x = p_home_x
@@ -60,6 +57,5 @@ static func create(p_id: int, p_home_x: float, p_home_z: float, p_next_attack_us
 	result.pending_source_generation = p_pending_source_generation
 	result.pending_hit_at_us = p_pending_hit_at_us
 	result.pending_hit_until_us = p_pending_hit_until_us
-	result.pending_damage = p_pending_damage
 	result.area_invulnerable_until_us = p_area_invulnerable_until_us
 	return result

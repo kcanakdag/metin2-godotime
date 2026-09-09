@@ -44,12 +44,33 @@ pub fn finish_with_penetration(
     resistance: u8,
     critical_percent: u8,
     penetration: Penetration,
+    draw: impl FnMut(u8, u8) -> u8,
+) -> Result<u16, String> {
+    finish_with_affects(
+        kind,
+        melee_damage,
+        resistance,
+        critical_percent,
+        penetration,
+        0,
+        draw,
+    )
+}
+
+pub fn finish_with_affects(
+    kind: Kind,
+    melee_damage: u16,
+    resistance: u8,
+    critical_percent: u8,
+    penetration: Penetration,
+    normal_damage_taken_percent: i32,
     mut draw: impl FnMut(u8, u8) -> u8,
 ) -> Result<u16, String> {
     if resistance > 100
         || critical_percent > 100
         || penetration.percent > 100
         || (kind == Kind::Normal && resistance != 0)
+        || !(0..=100_000).contains(&normal_damage_taken_percent)
     {
         return Err("Invalid ordinary mob damage modifiers.".into());
     }
@@ -58,6 +79,12 @@ pub fn finish_with_penetration(
         damage = u32::from(checked_draw(&mut draw, 1, 5)?);
     }
     damage = damage * u32::from(100 - resistance) / 100;
+    if kind != Kind::Magic {
+        // JEONGWIHON precedes normal-hit critical and penetration. Magic skips it.
+        damage =
+            u32::try_from(u64::from(damage) * (100 + normal_damage_taken_percent as u64) / 100)
+                .map_err(|_| "Ordinary damage affect overflow")?;
+    }
     if critical_percent != 0 {
         let chance = proc_chance(kind, critical_percent);
         // A nonzero source percentage still draws when its reduced chance is 0.
@@ -92,6 +119,50 @@ fn checked_draw(draw: &mut impl FnMut(u8, u8) -> u8, low: u8, high: u8) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn berserk_penalty_truncates_before_critical_and_never_boosts_penetration_or_magic() {
+        for kind in [Kind::Normal, Kind::NormalRange, Kind::Magic] {
+            let result = finish_with_affects(
+                kind,
+                37,
+                0,
+                100,
+                Penetration {
+                    percent: 100,
+                    defense: 11,
+                },
+                12,
+                |_, _| 1,
+            )
+            .unwrap();
+            assert_eq!(result, if kind == Kind::Magic { 85 } else { 93 });
+        }
+        assert!(
+            finish_with_affects(
+                Kind::Normal,
+                u16::MAX,
+                0,
+                0,
+                Penetration::default(),
+                100_000,
+                |_, _| panic!("no RNG needed")
+            )
+            .is_err()
+        );
+        assert!(
+            finish_with_affects(
+                Kind::Normal,
+                1,
+                0,
+                0,
+                Penetration::default(),
+                -1,
+                |_, _| panic!("invalid inputs must not draw")
+            )
+            .is_err()
+        );
+    }
 
     #[test]
     fn penetration_adds_defense_after_resistance_and_critical() {

@@ -65,6 +65,8 @@ pub struct SpeedEffect {
 pub struct Travel(f32);
 
 impl Travel {
+    /// Legacy single-charge test adapter; production combines all trusted intervals.
+    #[cfg(test)]
     pub fn tick(
         previous_us: i64,
         now_us: i64,
@@ -72,13 +74,38 @@ impl Travel {
         base_points: i32,
         effect: Option<SpeedEffect>,
     ) -> Result<Self, String> {
-        if let Some(effect) = effect
-            && (effect.starts_at_us < 0
-                || effect.expires_at_us <= effect.starts_at_us
-                || effect.expires_at_us.saturating_sub(effect.starts_at_us) > 600_000_000
-                || !(0..=1000).contains(&effect.bonus_points))
-        {
+        if effect.is_some_and(|effect| {
+            effect.expires_at_us.saturating_sub(effect.starts_at_us) > 600_000_000
+                || !(0..=1000).contains(&effect.bonus_points)
+        }) {
             return Err("Invalid timed movement speed effect".into());
+        }
+        Self::with_effects(
+            previous_us,
+            now_us,
+            blocked_until_us,
+            base_points,
+            effect.as_slice(),
+        )
+    }
+
+    /// Sum trusted points per interval before applying the original speed cap.
+    pub fn with_effects(
+        previous_us: i64,
+        now_us: i64,
+        blocked_until_us: i64,
+        base_points: i32,
+        effects: &[SpeedEffect],
+    ) -> Result<Self, String> {
+        if effects.len() > 256
+            || effects.iter().any(|effect| {
+                effect.starts_at_us < 0
+                    || effect.expires_at_us <= effect.starts_at_us
+                    || effect.expires_at_us.saturating_sub(effect.starts_at_us) > 86_400_000_000
+                    || !(-100_000..=100_000).contains(&effect.bonus_points)
+            })
+        {
+            return Err("Invalid timed movement speed effects".into());
         }
         // Only the latest 100 ms can grant travel after a stalled simulation.
         // In particular, an old expired charge cannot be banked until this tick.
@@ -88,20 +115,30 @@ impl Travel {
         if previous_us < 0 || now_us <= start || now_us < 0 {
             return Ok(Self(0.0));
         }
-        let elapsed_us = now_us - start;
-        let boosted_us = effect.map_or(0, |effect| {
-            now_us
-                .min(effect.expires_at_us)
-                .saturating_sub(start.max(effect.starts_at_us))
-                .max(0)
-        });
-        let ordinary = speed_multiplier(base_points);
-        let boosted =
-            speed_multiplier(base_points.saturating_add(effect.map_or(0, |e| e.bonus_points)));
-        let distance = f64::from(SPEED)
-            * ((elapsed_us - boosted_us) as f64 * f64::from(ordinary)
-                + boosted_us as f64 * f64::from(boosted))
-            / 1_000_000.0;
+        let mut boundaries = vec![start, now_us];
+        for effect in effects {
+            for boundary in [effect.starts_at_us, effect.expires_at_us] {
+                if boundary > start && boundary < now_us {
+                    boundaries.push(boundary);
+                }
+            }
+        }
+        boundaries.sort_unstable();
+        boundaries.dedup();
+        let mut distance = 0.0_f64;
+        for interval in boundaries.windows(2) {
+            let bonus: i32 = effects
+                .iter()
+                .filter(|effect| {
+                    effect.starts_at_us <= interval[0] && effect.expires_at_us > interval[0]
+                })
+                .map(|effect| effect.bonus_points)
+                .sum();
+            distance += f64::from(SPEED)
+                * (interval[1] - interval[0]) as f64
+                * f64::from(speed_multiplier(base_points.saturating_add(bonus)))
+                / 1_000_000.0;
+        }
         Ok(Self(distance as f32))
     }
 }
@@ -154,6 +191,53 @@ pub fn slide(x: f32, z: f32, dx: f32, dz: f32, obstacles: &[Bounds]) -> (f32, f3
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn overlapping_buff_and_charge_sum_points_before_cap_at_each_boundary() {
+        let effects = [
+            SpeedEffect {
+                starts_at_us: 1_000_000,
+                expires_at_us: 1_060_000,
+                bonus_points: 20,
+            },
+            SpeedEffect {
+                starts_at_us: 1_040_000,
+                expires_at_us: 2_000_000,
+                bonus_points: 150,
+            },
+        ];
+        let travel = Travel::with_effects(1_000_000, 1_100_000, 0, 100, &effects).unwrap();
+        let expected = SPEED * (0.04 * speed_multiplier(120) + 0.06 * speed_multiplier(200));
+        assert!((travel.0 - expected).abs() < 0.000001);
+        let reversed = [effects[1], effects[0]];
+        assert_eq!(
+            travel.0,
+            Travel::with_effects(1_000_000, 1_100_000, 0, 100, &reversed)
+                .unwrap()
+                .0
+        );
+        let blocked = Travel::with_effects(1_000_000, 1_100_000, 1_050_000, 100, &effects).unwrap();
+        assert!((blocked.0 - 0.5).abs() < 0.000001);
+    }
+
+    #[test]
+    fn buff_movement_never_banks_expired_or_future_intervals() {
+        let effects = [SpeedEffect {
+            starts_at_us: 2_000_000,
+            expires_at_us: 3_000_000,
+            bonus_points: 20,
+        }];
+        for (previous, now) in [(0, 1_000_000), (1_000_000, 4_000_000)] {
+            assert_eq!(
+                Travel::with_effects(previous, now, 0, 100, &effects)
+                    .unwrap()
+                    .0,
+                0.5
+            );
+        }
+        let too_many = vec![effects[0]; 257];
+        assert!(Travel::with_effects(0, 1, 0, 100, &too_many).is_err());
+    }
 
     #[test]
     fn timed_speed_counts_only_overlap_after_attack_recovery() {

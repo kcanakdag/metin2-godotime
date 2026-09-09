@@ -1,5 +1,15 @@
 # Architecture
 
+The unfinished protocol-30 worktree adds private remaining-duration character
+buffs and removes precomputed damage from private monster clocks. Ordinary mob
+hits resolve current target defenses/affects only after exact-life, range and
+collision validation. Berserk modifies normal melee/ranged damage before critical
+and penetration; magic skips this modifier. Buff casts use the existing action
+transaction and settle prior movement before replacing modifiers. Bindings now
+match the fresh protocol-30 training QA database; served protocol-29 local artifacts
+remain unchanged. This intermediate worktree is not qualified for deployment. See the implementation ledger for
+component evidence and remaining live integration.
+
 The Godot facade caches converted monster snapshots by SDK row Resource identity.
 The pinned SDK replaces updated row objects; update callbacks also invalidate
 both old and new objects. Each flush retains only currently subscribed resources,

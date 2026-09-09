@@ -447,6 +447,8 @@ pub fn leave_world(ctx: &ReducerContext) -> Result<(), String> {
 }
 
 pub fn stop_character(ctx: &ReducerContext, character: Identity) {
+    crate::player_buffs::pause(ctx, character)
+        .unwrap_or_else(|error| panic!("cannot pause character buffs: {error}"));
     crate::npcs::clear(ctx, character);
     crate::item_effects::clear(ctx, character);
     crate::appearance::remove(ctx, character);

@@ -37,8 +37,21 @@ func show_item(row: Dictionary) -> void:
 						% skills.cost(int(row.skill_vnum), maxi(1, int(row.get("rank", 0))))
 					)
 				)
-				lines.append("Cooldown %d sec" % (int(skill.cooldown_us) / 1000000))
-				lines.append("Requires level %d and an equipped sword" % skill.minimum_level)
+				lines.append(
+					(
+						"Cooldown %d sec"
+						% (
+							skills.cooldown_us(
+								int(row.skill_vnum), maxi(1, int(row.get("rank", 0)))
+							)
+							/ 1000000
+						)
+					)
+				)
+				var requirement := "Requires level %d" % skill.minimum_level
+				if skill.get("weapon_class") != "any":
+					requirement += " and an equipped sword"
+				lines.append(requirement)
 	elif definition.get("kind") == "weapon":
 		var physical: Dictionary = definition.get("weapon", {})
 		var minimum := int(physical.get("power_min", 0)) + int(physical.get("refine_attack", 0))

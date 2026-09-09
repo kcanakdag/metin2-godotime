@@ -247,6 +247,48 @@ accepted and deployed; never claim full-game or original-client parity from one
 bounded fixture. Continue authorized work without repeatedly asking permission
 for routine implementation choices.
 
+## Current continuation snapshot — 2026-09-09
+
+The active slice is Berserk (`self_buff_v1`) and reusable persisted timed buffs.
+Read the newest entries in `docs/rebuild/implementation-status.md`; the older
+snapshot below is historical. Source and generated bindings now use protocol 30.
+The six-skill candidate is `.local/p6-buffs-live-r1/catalog.v1.json`; installed
+content still selects the five accepted Warrior skills. Do not call all 44
+prepared definitions/motions playable.
+
+The frozen training QA module `.local/p6-buffs-server-r1/module.wasm` is published
+to `mt2-p2-buffs-v30-r1-20260909-e81e5a1c` on local port 13223. Its receipt binds
+module/source/catalog/schema identities. It uses local issuer
+`http://127.0.0.1:8186/auth`, disables guests and bootstraps the retained first QA
+identity. It is not public-deployable. Existing auth/database/proxy processes were
+reused; the served local protocol-29 and public protocol-26 builds are unchanged.
+The saved CLI token failed signature validation; supported anonymous publication
+created only this new disposable database. Do not change global credentials to
+repeat QA or reset existing databases.
+
+Live `tools/test_progression_admin.py buff` evidence: `multiplayer-r2.json` passes
+26 activation/rejection/reconnect checks; `multiplayer-r3.json` passes 29 checks
+including full expiry after a two-second offline pause (66,427 ms wall time).
+Private accounts remain `.local/p6-charge-r2/private.json`; never print its content.
+The replay reuses rank one and requires cooldown to have elapsed. Test source and
+the post-run lint-only refactor are distinguished in the ledger.
+
+Native candidate actor qualification passes 196 checks in
+`.local/p6-buffs-render-r2/report.json`. All eight Berserk captures were reviewed
+and hashed in `berserk-review.json`. The actor runner now accepts `--skill-catalog`
+without installing content. These captures do not prove live world displacement,
+blend transitions, unarmed rendering or browser parity. Original source does not
+automatically suppress root movement for standing skills; female Berserk's MSA
+endpoint still needs comparison with actual GR2 trajectory before changing it.
+
+Next: live death/damage/movement qualification, remaining effect/UI presentation,
+then exported two-client acceptance and an authorized public update. Only buffs'
+stored state, stats, action/payment, reconnect and expiry have the scoped evidence
+above. Continue the full world/class/content objective afterward. Latest cleanup
+makes the legacy single-effect movement wrapper test-only; strict library Clippy
+and 14 movement checks pass. The frozen QA module predates that non-gameplay cleanup.
+Preserve pre-existing untracked actor/content/test UID files when staging commits.
+
 ## Handoff snapshot — 2026-09-08
 
 This section records observed state at handoff, not immutable configuration.

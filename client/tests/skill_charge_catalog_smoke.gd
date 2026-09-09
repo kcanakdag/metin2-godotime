@@ -49,6 +49,38 @@ func _initialize() -> void:
 			not SkillCatalog.supported_handler({"handler": handler, "charge": row.charge}),
 			"misplaced charge"
 		)
+	var buffs := {
+		"vnum": 3,
+		"handler": "self_buff_v1",
+		"buff": {},
+		"requires_target": false,
+		"weapon_class": "any",
+		"target_range_m": 0,
+		"radius_m": 0,
+		"rank_costs": [],
+		"rank_cooldowns_us": []
+	}
+	for rank in range(21):
+		buffs.rank_costs.append(50 + rank)
+		buffs.rank_cooldowns_us.append((63 + rank) * 1000000)
+	_check(SkillCatalog.supported_handler(buffs), "buff presentation capability")
+	var catalog := SkillCatalog.new()
+	catalog.document = {"skills": [buffs]}
+	for rank in range(21):
+		_check(catalog.cost(3, rank) == 50 + rank, "compiled buff cost")
+		_check(catalog.cooldown_us(3, rank) == (63 + rank) * 1000000, "compiled buff cooldown")
+	for key in ["rank_costs", "rank_cooldowns_us"]:
+		for invalid in [null, [], "wrong"]:
+			var malformed := buffs.duplicate(true)
+			malformed[key] = invalid
+			_check(not SkillCatalog.supported_handler(malformed), "invalid buff rank table")
+		for invalid in [NAN, INF, -1, "12", true, 0.5, 600000001]:
+			var malformed := buffs.duplicate(true)
+			malformed[key][12] = invalid
+			_check(not SkillCatalog.supported_handler(malformed), "invalid buff rank value")
+	var targeted := buffs.duplicate(true)
+	targeted.requires_target = true
+	_check(not SkillCatalog.supported_handler(targeted), "self buff cannot target enemies")
 	if not _failed:
 		print("SKILL_CHARGE_CATALOG_SMOKE PASS ", _checks, " checks")
 	quit(1 if _failed else 0)

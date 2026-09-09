@@ -271,6 +271,12 @@ fn cast(
     if player.health == 0 {
         return Err("You cannot use a skill while dead.".into());
     }
+    if let Some(buff) = definitions::SELF_BUFFS
+        .iter()
+        .find(|buff| buff.skill_vnum == skill_vnum)
+    {
+        return crate::player_buffs::activate(ctx, &mut control, p, state, buff, now);
+    }
     let active_charge =
         d.charge.is_some() && crate::charges::is_active(ctx, &control, &player, skill_vnum, now);
     if now < state.ready_at_us && !active_charge {

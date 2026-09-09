@@ -1,5 +1,19 @@
 # Development workflow
 
+## Timed-buff multiplayer replay
+
+`tools/test_progression_admin.py buff --server AUTH_ORIGIN --game-server GAME_URL
+--database FRESH_BUFF_DB --godot GODOT --fixture PRIVATE_QA_ACCOUNTS --report NEW_REPORT`
+runs the two-account Berserk activation/reconnect scenario. Use a training module
+compiled with the six-skill candidate and only the first fixture identity's
+authorized progression bootstrap. The scenario raises the first character to level
+five and learns rank one if unlearned, or reuses an existing rank-one character.
+Allow its cooldown to finish before repeating; do not reset the database.
+It verifies subscribed action/payment/speed, rejection/reconnect and full expiry
+after a two-second offline pause, but not death, damage or rendered gameplay. Keep the
+private account file out of logs and commits. See the implementation ledger for
+the frozen module/database and remaining acceptance work.
+
 ## Monster snapshot conversion checks
 
 `tools/test_target_client.py --suite monster_snapshot_cache --godot GODOT --output NEW_DIR`

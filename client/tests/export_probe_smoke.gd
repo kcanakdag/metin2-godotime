@@ -131,7 +131,7 @@ func _run() -> void:
 		"single changed monster publishes its latest action record"
 	)
 	batch_probe.free()
-	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 29, "client accepts only protocol 29")
+	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 30, "client accepts only protocol 30")
 	# Use the real scene without entering the tree, so this verifies the probe's
 	# node lookup without starting account flow or a game connection.
 	var scene := load("res://scenes/main.tscn") as PackedScene

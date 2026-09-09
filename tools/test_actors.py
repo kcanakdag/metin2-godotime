@@ -89,6 +89,9 @@ def main() -> None:
         "--character-package", type=Path, default=ROOT / "client/assets/imported/characters"
     )
     parser.add_argument("--authored-package", type=Path)
+    parser.add_argument(
+        "--skill-catalog", type=Path, help="Stage a candidate skill catalog without installing it"
+    )
     parser.add_argument("--mob-content", type=Path, help="Converted wildlife for the mobs scenario")
     parser.add_argument("--native", action="store_true", help="Render under Xvfb and save a PNG.")
     parser.add_argument(
@@ -131,7 +134,15 @@ def main() -> None:
         shutil.copytree(
             ROOT / "client" / "assets/imported/skills", stage / "assets/imported/skills"
         )
-        shutil.copytree(ROOT / "client/scripts/actors", stage / "scripts/actors")
+        if options.skill_catalog:
+            shutil.copy2(options.skill_catalog, stage / "assets/imported/skills/catalog.v1.json")
+        # This gallery stages actor rendering, not the live HUD/network controller.
+        # That adapter is qualified by the authenticated charge-input harness.
+        shutil.copytree(
+            ROOT / "client/scripts/actors",
+            stage / "scripts/actors",
+            ignore=shutil.ignore_patterns("charge_skill_input.gd", "charge_skill_input.gd.uid"),
+        )
         shutil.copytree(ROOT / "client/scripts/content", stage / "scripts/content")
         (stage / "scripts/world").mkdir()
         shutil.copy2(
@@ -326,6 +337,8 @@ def main() -> None:
         if options.mob_content:
             tested_files["mob_gameplay"] = sha256(stage / "mob-gameplay.json")
             tested_files["mob_presentation"] = sha256(stage / "mob-candidate/presentation.v1.json")
+        tested_files["skill_catalog"] = sha256(stage / "assets/imported/skills/catalog.v1.json")
+        tested_files["skill_loader"] = sha256(stage / "scripts/content/skill_catalog.gd")
         if options.authored_package:
             tested_files["authored_manifest"] = sha256(authored / "manifest.v1.json")
             tested_files["authored_model"] = sha256(authored / "training-dummy.glb")

@@ -59,7 +59,6 @@ pub struct MonsterClock {
     pub pending_source_generation: u32,
     pub pending_hit_at_us: i64,
     pub pending_hit_until_us: i64,
-    pub pending_damage: u16,
     pub area_invulnerable_until_us: i64,
 }
 
@@ -117,7 +116,6 @@ struct PendingMonsterHit {
     target: Identity,
     target_generation: u32,
     source_generation: u32,
-    damage: u16,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -331,7 +329,6 @@ fn fresh_monster_clock(spawn: MonsterSpawnDefinition) -> MonsterClock {
         pending_source_generation: 0,
         pending_hit_at_us: 0,
         pending_hit_until_us: 0,
-        pending_damage: 0,
         area_invulnerable_until_us: 0,
     }
 }
@@ -1420,7 +1417,6 @@ fn schedule_monster_hit(
         ctx.rng().gen_range(1..=100)
     };
     let attack = crate::mob_actions::select(definition, roll)?;
-    let damage = crate::physical_damage::roll_monster_hit(ctx, monster, target)?;
     clock.next_attack_us = now.saturating_add(attack.cooldown_us);
     clock.attack_until_us = now.saturating_add(attack.duration_us);
     clock.pending_target = target;
@@ -1429,7 +1425,6 @@ fn schedule_monster_hit(
     let immediate = definition.damage_kind != crate::mob_damage::Kind::Normal;
     clock.pending_hit_at_us = now.saturating_add(attack.hit_start_us);
     clock.pending_hit_until_us = now.saturating_add(attack.hit_end_us);
-    clock.pending_damage = damage;
     monster.attack_action_id = attack.id.into();
     monster.attack_target = target;
     monster.attack_target_life_sequence = target_generation;
@@ -1477,7 +1472,11 @@ fn resolve_monster_hit(ctx: &ReducerContext, monster_id: u32, hit: PendingMonste
     {
         return;
     }
-    if apply_damage(&mut player.health, hit.damage) {
+    // Sample current defenses and affects only after this exact-life hit qualifies.
+    let damage = crate::physical_damage::roll_monster_hit(ctx, &monster, player.identity)
+        .unwrap_or_else(|error| panic!("cannot resolve trusted monster damage: {error}"));
+    if apply_damage(&mut player.health, damage) {
+        crate::player_buffs::clear(ctx, player.identity);
         crate::npcs::clear(ctx, player.identity);
         player.activity = 3;
         player.action_started_at_us = now;
@@ -1509,7 +1508,6 @@ fn take_due_monster_hit(clock: &mut MonsterClock, now: i64) -> Option<PendingMon
         target: clock.pending_target,
         target_generation: clock.pending_target_generation,
         source_generation: clock.pending_source_generation,
-        damage: clock.pending_damage,
     });
     cancel_monster_hit(clock);
     hit
@@ -1527,7 +1525,6 @@ pub(crate) fn cancel_monster_hit(clock: &mut MonsterClock) {
     clock.pending_source_generation = 0;
     clock.pending_hit_at_us = 0;
     clock.pending_hit_until_us = 0;
-    clock.pending_damage = 0;
 }
 
 #[cfg(test)]
@@ -1690,7 +1687,6 @@ mod tests {
             pending_source_generation: 3,
             pending_hit_at_us: hit_at_us,
             pending_hit_until_us: hit_until_us,
-            pending_damage: 20,
             area_invulnerable_until_us: 0,
         }
     }
@@ -1860,10 +1856,7 @@ mod tests {
         let mut clock = monster_clock_with_hit(now, now);
         assert!(take_due_monster_hit(&mut clock, now - 1).is_none());
         let hit = take_due_monster_hit(&mut clock, now).unwrap();
-        assert_eq!(
-            (hit.source_generation, hit.target_generation, hit.damage),
-            (3, 4, 20)
-        );
+        assert_eq!((hit.source_generation, hit.target_generation), (3, 4));
         assert!(take_due_monster_hit(&mut clock, now).is_none());
         assert!(take_due_monster_hit(&mut clock, now + 50_000).is_none());
         assert_eq!(clock.pending_target, Identity::ZERO);
@@ -1876,7 +1869,6 @@ mod tests {
         let hit = take_due_monster_hit(&mut due, 1_400_000).unwrap();
         assert_eq!(hit.source_generation, 3);
         assert_eq!(hit.target_generation, 4);
-        assert_eq!(hit.damage, 20);
         assert_eq!(take_due_monster_hit(&mut due, 1_450_000), None);
         assert_eq!(due.pending_source_generation, 0);
 

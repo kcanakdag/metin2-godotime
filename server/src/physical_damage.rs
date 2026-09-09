@@ -1016,7 +1016,7 @@ pub fn roll_monster_hit(
     let defense =
         u16::try_from(defense).map_err(|_| "Penetration defense exceeds supported range")?;
     let damage = roll_damage(ctx, mob_attacker(definition)?, victim)?;
-    crate::mob_damage::finish_with_penetration(
+    crate::mob_damage::finish_with_affects(
         crate::combat::ordinary_definition(ctx, monster)?.damage_kind,
         damage,
         0,
@@ -1025,6 +1025,11 @@ pub fn roll_monster_hit(
             percent: definition.penetrate_percent,
             defense,
         },
+        crate::player_buffs::bonus(
+            ctx,
+            target,
+            crate::buff_lifecycle::Point::NormalDamageTakenPercent,
+        )?,
         |low, high| ctx.rng().gen_range(low..=high),
     )
 }

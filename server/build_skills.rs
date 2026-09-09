@@ -320,14 +320,12 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
             actions.push(format!("({id},{actor:?},AttackDefinition{{id:{action:?},duration_us:{duration},cooldown_us:{duration},ordinary_hit_invulnerability_us:200000,hit_start_us:{start},hit_end_us:{end},range_m:{radius:?},combo_input:None,root_motion:Some(RootMotionDefinition{{endpoint_x_m:{x:?},endpoint_z_m:{z:?},duration_us:{duration}}}),special_area:None,screen_wave:None,ordinary_knockback:None}})"));
         }
     }
-    if !buff_definitions.is_empty() {
-        writeln!(
-            out,
-            "pub const SELF_BUFFS:&[crate::buff_capture::Definition<'static>]=&[{}];",
-            buff_definitions.join(",")
-        )
-        .unwrap();
-    }
+    writeln!(
+        out,
+        "pub const SELF_BUFFS:&[crate::buff_capture::Definition<'static>]=&[{}];",
+        buff_definitions.join(",")
+    )
+    .unwrap();
     writeln!(
         out,
         "pub const SKILL_DEFINITIONS:&[SkillDefinition]=&[{}];",

@@ -34,6 +34,7 @@ pub mod npc_placement;
 mod npc_spawns;
 mod npcs;
 mod physical_damage;
+mod player_buffs;
 mod progression;
 pub mod regeneration;
 mod root_motion;
@@ -45,7 +46,7 @@ mod skill_target;
 mod skills;
 mod training_targets;
 
-const PROTOCOL_VERSION: u32 = 29;
+const PROTOCOL_VERSION: u32 = 30;
 mod special_area;
 mod targeting;
 
@@ -380,6 +381,7 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
     player.online = true;
     player.activity = if player.health == 0 { 3 } else { 0 };
     ctx.db.player().identity().update(player);
+    player_buffs::resume(ctx, character)?;
     inventory::ensure_starter(ctx, character)?;
     appearance::sync(ctx, character);
     if let Some(mut controller) = previous_controller {
@@ -442,6 +444,7 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
             next_chat_us: 0,
         });
     }
+    player_buffs::refresh_speed(ctx, character)?;
     Ok(())
 }
 
@@ -612,14 +615,15 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
         } else {
             player.action_started_at_us = 0;
             player.action_ends_at_us = 0;
-            let effect = charges::movement_effect(ctx, &controller, &player);
+            let mut effects = player_buffs::movement_effects(ctx, &controller, &player)?;
+            effects.extend(charges::movement_effect(ctx, &controller, &player));
             apply_player_movement(
                 &mut controller,
                 &mut player,
                 previous_tick_us,
                 now,
                 &bounds,
-                effect,
+                &effects,
             )?;
         }
         if before != (player.x, player.z, player.heading, player.activity) {
@@ -628,6 +632,7 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
         ctx.db.controller().identity().update(controller);
     }
     charges::maintain(ctx, now);
+    player_buffs::maintain(ctx, now)?;
     combat::simulate(ctx, elapsed)?;
     item_effects::simulate(ctx, now);
     npcs::maintain(ctx, now);
@@ -664,14 +669,15 @@ pub(crate) fn advance_movement_for_attack(
         return Err("Movement requires a living character and active controller lease".into());
     }
     let bounds = collision_bounds(ctx);
-    let effect = charges::movement_effect(ctx, controller, &player);
+    let mut effects = player_buffs::movement_effects(ctx, controller, &player)?;
+    effects.extend(charges::movement_effect(ctx, controller, &player));
     apply_player_movement(
         controller,
         &mut player,
         previous_us,
         through_us,
         &bounds,
-        effect,
+        &effects,
     )?;
     ctx.db.player().identity().update(player);
     Ok(())
@@ -683,17 +689,17 @@ fn apply_player_movement(
     previous_tick_us: i64,
     now: i64,
     bounds: &[Bounds],
-    effect: Option<movement::SpeedEffect>,
+    effects: &[movement::SpeedEffect],
 ) -> Result<(), String> {
     if controller.mode == 1 && now - controller.last_input_us > INPUT_TIMEOUT_US {
         controller.mode = 0;
     }
-    let travel = movement::Travel::tick(
+    let travel = movement::Travel::with_effects(
         previous_tick_us,
         now,
         controller.attack_until_us,
         movement::BASE_SPEED_POINTS,
-        effect,
+        effects,
     )?;
     let (dx, dz) = match controller.mode {
         1 => step(controller.direction_x, controller.direction_z, travel)?,

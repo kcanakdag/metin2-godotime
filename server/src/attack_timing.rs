@@ -8,6 +8,21 @@ pub fn speed_with_bonus(bonus: u16) -> u16 {
     BASE_SPEED.saturating_add(bonus).min(MAX_SPEED)
 }
 
+fn speed_with_buff(equipment_bonus: u16, buff_bonus: i32) -> Result<u16, String> {
+    // Slowing affects need the original sub-100 duration rule; the selected
+    // positive self-buff must not silently enable an unsupported clock range.
+    if buff_bonus < 0 {
+        return Err("Slowing attack affects are not supported yet.".into());
+    }
+    if buff_bonus == 0 {
+        return Ok(speed_with_bonus(equipment_bonus));
+    }
+    Ok(
+        (i64::from(BASE_SPEED) + i64::from(equipment_bonus) + i64::from(buff_bonus))
+            .min(i64::from(MAX_SPEED)) as u16,
+    )
+}
+
 pub fn equipped_speed(ctx: &ReducerContext, character: Identity) -> Result<u16, String> {
     let vnum = crate::inventory::equipped_weapon(ctx, character);
     let bonus = if vnum == 0 {
@@ -15,7 +30,10 @@ pub fn equipped_speed(ctx: &ReducerContext, character: Identity) -> Result<u16, 
     } else {
         crate::item_catalog::definition(vnum)?.attack_speed_bonus
     };
-    Ok(speed_with_bonus(bonus))
+    speed_with_buff(
+        bonus,
+        crate::player_buffs::bonus(ctx, character, crate::buff_lifecycle::Point::AttackSpeed)?,
+    )
 }
 
 /// Ceil to a whole microsecond: never open a source boundary early.
@@ -43,6 +61,20 @@ pub fn combo_input(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn buff_attack_speed_adds_to_equipment_before_cap_and_scales_all_clocks() {
+        assert_eq!(speed_with_buff(22, 25), Ok(147));
+        assert_eq!(speed_with_buff(0, 25), Ok(125));
+        assert_eq!(speed_with_buff(22, 0), Ok(122));
+        assert_eq!(speed_with_buff(22, 50), Ok(170));
+        assert_eq!(speed_with_buff(u16::MAX, i32::MAX), Ok(170));
+        assert!(speed_with_buff(22, -1).is_err());
+        assert_eq!(
+            scaled_us(1_000_000, speed_with_buff(22, 25).unwrap()),
+            Ok(680_273)
+        );
+    }
 
     #[test]
     fn clocks_are_bounded_precise_and_never_early() {

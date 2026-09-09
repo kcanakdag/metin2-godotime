@@ -70,6 +70,7 @@ func _run() -> void:
 			"skill_reactions",
 			"skill_batch",
 			"charge",
+			"buff",
 			"charge_strike",
 			"crush",
 			"crush_death",

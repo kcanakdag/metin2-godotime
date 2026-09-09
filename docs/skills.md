@@ -1,5 +1,15 @@
 # Selected skills
 
+Standing-skill metadata is not proof of zero animation displacement. In the pinned
+client, `InstanceBaseBattle.cpp::NEW_UseSkill` stops ordinary walking for nonmoving
+skills, while `InstanceBase.cpp::Update` still calls `AccumulationMovement`.
+`ActorInstance.cpp::__AccumulationMovement` skips the wait motion, not all standing
+skills, and `ModelInstanceUpdate.cpp::UpdateTransform` delegates displacement to
+`GrannyUpdateModelMatrix`. Preserve the imported female Berserk endpoint until
+actual GR2 displacement is compared; clearing it merely because the skill is
+standing would not follow this source. The current linear MSA endpoint runtime
+does not establish exact Granny trajectory or blending parity.
+
 The first supported ability is Warrior Sword Spin (vnum 2), using the original
 male/female `palbang` motions and selected original icon. This is a bounded first
 ability, not complete skill-system or original-client parity.

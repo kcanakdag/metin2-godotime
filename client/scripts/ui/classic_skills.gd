@@ -98,7 +98,7 @@ func set_state(progression: Dictionary, rows: Array) -> void:
 				definition.maximum_rank,
 				definition.minimum_level,
 				catalog.cost(int(definition.vnum), maxi(1, rank)),
-				int(definition.cooldown_us) / 1000000
+				catalog.cooldown_us(int(definition.vnum), maxi(1, rank)) / 1000000
 			]
 		)
 		_list.add_child(slot)
