@@ -41,6 +41,14 @@ inherit floating-point formula rounding. Random buff formulas reject until their
 source evaluation order is supported. Authentication, rank authorization,
 payment and database writes remain the reducer adapter's responsibility.
 
+`buff_activation.rs` combines trusted captured values with the current skill
+revision/cooldown and SP balance into one activation proposal. It validates the
+entire replacement before returning updated effects, remaining SP and the next
+revision/deadline. Stale retries and insufficient payment cannot partially modify
+an active buff. The database adapter must authenticate the living selected owner
+and persist all proposal fields in one reducer transaction; the proposal itself
+does not authenticate an identity or write state.
+
 The selected live compiler now accepts a candidate `self_buff_v1` Berserk entry
 with `weapon_class: "any"`. `tools/live_buff_skill.py` preserves both point
 programs, durations, SP/cooldown programs, integer damage-penalty policy and

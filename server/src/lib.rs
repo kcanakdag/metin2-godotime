@@ -4,6 +4,7 @@ mod admin;
 mod appearance;
 mod area_lifecycle;
 mod attack_timing;
+pub mod buff_activation;
 pub mod buff_capture;
 pub mod buff_lifecycle;
 mod characters;

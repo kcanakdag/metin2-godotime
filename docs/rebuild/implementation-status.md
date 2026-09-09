@@ -5,6 +5,23 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Buff payment/revision transition implemented — 2026-09-09
+
+`server/src/buff_activation.rs` now combines captured buff definitions, current
+skill state, SP and existing effects into an atomic activation proposal. It checks
+skill identity, learned rank, revision, cooldown, payment and clock/revision
+overflow before returning replacement effects and the new SP/deadline/revision.
+Existing effects remain unchanged on every rejection. Recasting at the exact
+cooldown boundary replaces rather than stacks the skill's modifiers.
+
+All **eight focused buff tests pass** through the actual Rust library, including
+stale replay, early recast, insufficient SP, malformed capture and overflow.
+Formatting/diff checks pass; the known default-training `MONSTER_HOME` warning
+remains. This is core activation logic, not database persistence or authentication.
+Next connect it to a server-owned persisted buff state and the existing cast
+handler, with matching schema/bindings and lifecycle/stat integration. No served
+artifact or database changed; Berserk remains uninstalled and not playable.
+
 ## Live-format Berserk definition compiler connected — 2026-09-09
 
 The selected live skill compiler now builds a six-skill candidate containing
