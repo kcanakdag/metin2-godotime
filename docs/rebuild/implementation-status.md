@@ -5,6 +5,24 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Installed five-skill original motion effects — 2026-09-09
+
+The effect packager assembled all ten selected skill/appearance links from the
+source-resolved inventory, the existing particle/Bash packages, and the previously
+converted original Dash mesh/particle package. Selection provenance is in
+`.local/p6-dash-effects-r1/selection-receipt.json`; packaging provenance remains
+outside runtime in `package/receipt.json`. The new package has 23 runtime resources
+and content hash `79ae990543872fcb698781883a62bdd12069e090a0d3a3129938c312793c0111`.
+
+All 153 native equipped actor checks pass at `.local/p6-dash-effects-r1/actors`.
+Reviewed captures show the original Dash effect on male and female Warriors.
+The generated `package/runtime` directory is now installed at
+`client/assets/imported/motion_effects`; the previous runtime is preserved at
+`.local/p6-dash-effects-r1/previous-runtime`. No source archives or receipts were
+installed in the client. This qualifies packaged ResourceLoader/actor behavior,
+not live-world or browser appearance. The local skill/effect hashes now match;
+use a newly built matching server for world QA. Public export remains unchanged.
+
 ## Live automatic charge-input acceptance — 2026-09-09
 
 The `charge_input` phase stages the real owned client scripts and installed skill

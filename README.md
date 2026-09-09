@@ -36,7 +36,8 @@ on protocol 26.
 
 The local selected catalog now includes Dash and its original icon for both
 converted Warrior appearances. Its automatic approach adapter passes 33 live
-two-client checks; original effects and rendered-world acceptance remain pending.
+two-client checks. Original Dash effects are installed and pass native equipped
+actor checks; rendered-world and browser acceptance remain pending.
 This does not update the public export.
 The server supports selectable mob packages and a shared mob
 content hash. Its selected-registry training replay passed 74 checks, including
