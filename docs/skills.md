@@ -20,6 +20,43 @@ feedback, request receipts and audit trail. Ordinary accounts cannot grant ranks
 
 ## Content pipeline
 
+### Timed self-buff integration in progress
+
+The next shared runtime slice starts with Berserk (3), not an additional live
+damage-only approximation. `server/src/buff_lifecycle.rs` supplies a bounded
+captured-modifier collection: replacing a skill replaces all its points atomically,
+different skill sources coexist, each point retains its own remaining online
+affect ticks, and derived bonuses are recomputed rather than repeatedly added to
+already-modified stats. The adapter must persist remaining duration across logout,
+remove ordinary skill buffs on death, and authorize all casts. This core does not
+yet create database rows, change stats or make Berserk playable.
+
+Pinned server `7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318` is the behavioral reference:
+`char_affect.cpp` AddAffect/ProcessAffect/SaveAffect/LoadAffect and
+`char_skill.cpp` UseSkill/ComputeSkill retain multi-point replacement and saved
+remaining durations. At the selected normal-grade powers, Berserk grants
+`int(50*k)` attack speed and `int(20*k)` movement speed for `int(60+90*k)` online
+seconds. It also increases incoming **normal melee/ranged** damage by
+`power_percent*25/100` integer percent, from `char_battle.cpp`'s JEONGWIHON branch;
+that penalty must not be silently omitted or applied to all skill/magic damage.
+Percent modifiers from different original mechanics may have ordered application;
+the generic sum is for additive point contributions, not a universal damage stack.
+
+UseSkill truncates the cooldown formula to whole seconds before speed adjustment.
+The prepared full-class candidate currently retains fractional cooldown seconds;
+that compiler behavior needs correction before buff installation. Rank-1 Berserk
+at power 5 has 2 attack speed, 1 movement speed, 64-second duration, 67-second
+base cooldown and 57 SP cost. Rank-20 power 50 gives 25/10 speed, 105-second
+duration, 108-second base cooldown, 120 SP cost and a 12-percent incoming-normal
+damage penalty. Gameplay caps, cast-speed adjustment and damage ordering belong
+in the authoritative adapters. Cast animation, persistent affect visuals/UI and
+two-client lifecycle qualification remain required.
+
+Focused core check: `cargo test --manifest-path server/Cargo.toml --locked --offline
+--lib buff_lifecycle`. It covers atomic rejection, no recast stacking, independent
+secondary expiry, preserved paused state and bounded arithmetic; it does not
+qualify database persistence or multiplayer buffs.
+
 Run the existing pinned base-actor, character and UI importers first:
 
 ```sh

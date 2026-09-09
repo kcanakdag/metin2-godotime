@@ -5,6 +5,24 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Shared timed-buff lifecycle started — 2026-09-09
+
+The next gameplay slice is Berserk with reusable multi-point timed buffs. Source
+review confirmed its attack/movement speed pair, incoming-normal-damage penalty,
+replacement semantics and persisted remaining duration. It also identified a
+fractional-cooldown discrepancy in the prepared full-class compiler; see
+`docs/skills.md` for the pinned reference and exact integration requirements.
+
+`server/src/buff_lifecycle.rs` now provides atomic validated per-skill replacement,
+independent point expiry, remaining online ticks and bounded derived bonuses.
+All **four focused Rust tests pass** both standalone and through the actual Cargo
+library (`--lib buff_lifecycle`, 184 unrelated tests filtered). Rust formatting
+and diff checks pass. Cargo reports the existing unused `MONSTER_HOME` warning
+in the default training build. No server publication or asset installation took
+place. This core is not a playable buff: trusted value compilation, persistent
+authorized activation, stat/damage integration, visuals and multiplayer QA are
+the next work; five abilities remain playable locally.
+
 ## Probe batching removes reproduced first-cast stall — 2026-09-09
 
 The fixed runtime from `c7c79fa` is exported at `.local/p6-probe-batch-web-r1/web`,
