@@ -29,8 +29,8 @@ Protocol 28 permits untargeted charge activation with an equipped sword. The
 working candidate also implements immediate target strikes and active-charge
 consumption. CRUSH/stun is now wired for surviving ordinary monsters, with public
 exact-life `monster_stun` state; the two-client Brown Bear replay verifies push,
-stun and expiry. The death-during-stun replay also passes; overlapping reactions
-remain unqualified.
+stun and expiry. Death-during-stun and reaction-arrival-during-stun/expiry replays
+also pass; reverse ordering and rendered playback remain unqualified.
 Two-handed weapon runtime support remains pending.
 The normal four-skill profile remains the installed and public selection; the
 public release is still protocol 26. Use matching regenerated bindings and a
@@ -71,6 +71,13 @@ normal Dash and Sword Spin damage to kill the original bear before stun expiry.
 It checks shared stun removal, a new respawned life, full health and no restored
 stun. Its two-leg approach deliberately establishes facing toward the target:
 Sword Spin follows the caster's current facing and does not require a target.
+
+The `crush_overlap` phase uses the same fresh Brown Bear module/placement contract
+and prepares rank-one skill 16 through authorized setup. It schedules a GREAT
+reaction during Dash stun and verifies that the reaction chain crosses the stun
+deadline, then checks shared motion cancellation, no queued restart and AI
+recovery. Use the updated module containing the motion-queue fix; the older
+CRUSH/death frozen modules predate it.
 
 Opening an installed actor package in Godot may create a PNG alias that removes
 an embedded image's `.dds` suffix (for example, `actor_face.dds.png` becomes

@@ -270,6 +270,11 @@ fn publish_reaction(
 
 pub fn clear(ctx: &ReducerContext, monster_id: u32) {
     ctx.db.monster_force().monster_id().delete(monster_id);
+    clear_reaction(ctx, monster_id);
+}
+
+/// Original affect Stop clears queued motion, independently of physical force.
+pub fn clear_reaction(ctx: &ReducerContext, monster_id: u32) {
     ctx.db.monster_reaction().monster_id().delete(monster_id);
 }
 

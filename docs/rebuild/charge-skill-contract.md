@@ -154,6 +154,18 @@ species exemptions in the damage handler or silently treat missing flags as none
 
 ### Gameplay and lifecycle gates
 
+Original client reaction interaction: `InstanceBaseEffect.cpp::SetAffect` routes
+`AFFECT_STUN` to `SetSleep(isVisible)`. `ActorInstance.cpp::SetSleep` calls `Stop`
+for both insertion and removal; `Stop` clears queued motion and loops WAIT.
+Therefore clearing the visible action while retaining our private
+`monster_reaction` queue is inconsistent: the old queue can restart standup.
+The working adapter now clears that queue on stun application and timed expiry,
+without clearing the independent force row. Expiry only affects the matching
+living monster life. The 29-check `crush_overlap` replay qualifies reaction arrival
+during stun and cancellation at expiry, including no queued restart and AI
+recovery. Reverse ordering and rendered playback remain unqualified; the earlier
+expiry/death reports predate this change.
+
 - Two subscribed clients observe one payment and cooldown start on approach,
   boosted movement, one in-range strike and one charge removal.
 - Immediate in-range use pays once and strikes once; ordinary approach does not

@@ -31,6 +31,14 @@ pub fn clear(ctx: &ReducerContext, id: u32) {
 pub fn maintain(ctx: &ReducerContext, now: i64) {
     for row in ctx.db.monster_stun().iter() {
         if now >= row.expires_at_us
+            && let Some(mut victim) = ctx.db.monster().id().find(row.monster_id)
+            && victim.health > 0
+            && victim.life_sequence == row.life_sequence
+        {
+            stop_motion(ctx, &mut victim);
+            ctx.db.monster().id().update(victim);
+        }
+        if now >= row.expires_at_us
             || ctx
                 .db
                 .monster()
@@ -73,8 +81,13 @@ pub fn stun(
         ctx.db.monster_clock().id().update(clock);
     }
     crate::combat::clear_monster_attack_target(victim);
+    stop_motion(ctx, victim);
+    Ok(())
+}
+
+fn stop_motion(ctx: &ReducerContext, victim: &mut Monster) {
+    crate::knockback::clear_reaction(ctx, victim.id);
     victim.activity = 0;
     victim.action_started_at_us = 0;
     victim.action_ends_at_us = 0;
-    Ok(())
 }

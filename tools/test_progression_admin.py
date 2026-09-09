@@ -65,6 +65,7 @@ def stage_project(stage: Path) -> None:
         (ROOT / "tools/charge_strike_smoke.gd", stage / "tests/charge_strike_smoke.gd"),
         (ROOT / "tools/crush_smoke.gd", stage / "tests/crush_smoke.gd"),
         (ROOT / "tools/crush_death_smoke.gd", stage / "tests/crush_death_smoke.gd"),
+        (ROOT / "tools/crush_overlap_smoke.gd", stage / "tests/crush_overlap_smoke.gd"),
     ):
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
@@ -107,6 +108,7 @@ def run_godot(
         "charge_strike": "charge_strike_smoke.gd",
         "crush": "crush_smoke.gd",
         "crush_death": "crush_death_smoke.gd",
+        "crush_overlap": "crush_overlap_smoke.gd",
     }.get(str(config["mode"]), "progression_admin_smoke.gd")
     command = [
         godot,
@@ -191,6 +193,7 @@ def arguments() -> argparse.Namespace:
             "charge_strike",
             "crush",
             "crush_death",
+            "crush_overlap",
         ),
     )
     parser.add_argument("--server", default="http://127.0.0.1:8186")

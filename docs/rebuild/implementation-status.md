@@ -5,6 +5,26 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Stun and queued reaction interaction — 2026-09-09
+
+The original client routes stun insertion/removal through `SetSleep` → `Stop`,
+which clears queued motion. Our adapter reset visible action timing but left
+`monster_reaction` alive, allowing a later stand-up transition to restart it.
+Stun insertion and matching-life timed expiry now clear the reaction queue while
+preserving independent physical force state. The seven focused knockback tests
+and strict Rust lint pass.
+
+The new `crush_overlap` replay passes **29 two-client checks**. It casts an
+ordinary GREAT-reaction skill during Dash stun, verifies the authored reaction
+chain extends beyond the stun deadline, observes reaction cancellation at shared
+expiry, checks three seconds without queued reaction restart, and observes AI
+recovery. Evidence: `.local/p6-crush-overlap-r1/overlap.json`; fresh local database
+`mt2-p2-crush-overlap-v28-20260909-d8b24848`. Frozen QA module SHA-256:
+`361a2ad746069a47466bb91c1cfededb41a2a7f66e39a22dfaa78019d2b4dfdb`.
+Native Godot parsing and touched Python/GDScript lint pass. This covers reaction
+arrival during stun and expiry; the reverse ordering and rendered playback are
+not separately qualified. Protocol remains 28; no public deployment changed.
+
 ## Live CRUSH adapter and protocol 28 candidate — 2026-09-09
 
 The `crush_death` phase now passes **29 checks** on fresh local database
