@@ -13,6 +13,7 @@ from pathlib import Path
 
 from content_compile import ROOT, canonical_bytes, source_archive
 from fetch_test_assets import METIN_COMMIT
+from live_buff_skill import berserk_metadata
 
 PROFILE = ROOT / "content/profiles/classic-skills.json"
 OUTPUT = ROOT / "client/assets/imported/skills/catalog.v1.json"
@@ -54,6 +55,11 @@ def polynomial(text: str) -> dict[tuple[str, ...], float]:
 
 def motion_hits(motion: dict, handler: str) -> dict:
     """Link ordered source collision events without inventing a radial replacement."""
+    if handler == "self_buff_v1":
+        hits = [e for e in motion["events"] if e["kind"] in ("attack_area", "attack_window")]
+        if hits:
+            raise ValueError("Self-buff motion cannot silently schedule collision damage")
+        return {}
     if handler == "physical_charge_v1":
         # UseSkill computes a charge strike immediately on the selected target.
         # Keep authored collision data for inspection, never turn it into a timer.
@@ -163,9 +169,13 @@ def compile_catalog(profile: dict, *, offline: bool) -> dict:
         if (
             set(selected) - {"hits_per_life"} != fields
             or selected["handler"]
-            not in {"physical_splash_v1", "physical_area_v1", "physical_charge_v1"}
+            not in {"physical_splash_v1", "physical_area_v1", "physical_charge_v1", "self_buff_v1"}
             or selected["weapon_class"]
-            != ("sword_or_two_handed" if selected["handler"] == "physical_charge_v1" else "sword")
+            != (
+                {"physical_charge_v1": "sword_or_two_handed", "self_buff_v1": "any"}.get(
+                    selected["handler"], "sword"
+                )
+            )
         ):
             raise ValueError("Unsupported skill selection or handler")
         limit = selected.get("hits_per_life", 1)
@@ -201,7 +211,8 @@ def compile_catalog(profile: dict, *, offline: bool) -> dict:
                 raise ValueError("Skill source row is missing or ambiguous")
             rows[key] = matches[0]
         row, desc = rows["table"], rows["description"]
-        if (
+        buff = berserk_metadata(row, powers) if selected["handler"] == "self_buff_v1" else {}
+        if not buff and (
             len(row) != 27
             or int(row[2]) != selected["class_id"] + 1
             or row[6] != "HP"
@@ -212,7 +223,7 @@ def compile_catalog(profile: dict, *, offline: bool) -> dict:
         ):
             raise ValueError("Unsupported source skill mechanic")
         charge = charge_metadata(row, desc) if selected["handler"] == "physical_charge_v1" else {}
-        damage = {term: -value for term, value in polynomial(row[7]).items()}
+        damage = {} if buff else {term: -value for term, value in polynomial(row[7]).items()}
         if set(damage) - set(TERMS) or any(not 0 <= value <= 1000 for value in damage.values()):
             raise ValueError("Unsupported damage coefficients")
         cost = polynomial(row[8])
@@ -249,12 +260,12 @@ def compile_catalog(profile: dict, *, offline: bool) -> dict:
                     "root_z_m": root[2],
                 }
             )
-        cooldown = int(row[11]) * 1_000_000
+        cooldown = buff["cooldown_us"] if buff else int(row[11]) * 1_000_000
         radius = int(row[26]) / 100
         targets = int(row[23])
         if (
             not 1_000_000 <= cooldown <= 300_000_000
-            or not 0 < radius <= 10
+            or not (radius == 0 if buff else 0 < radius <= 10)
             or not 1 <= targets <= 32
         ):
             raise ValueError("Invalid cooldown/range/target count")
@@ -282,6 +293,7 @@ def compile_catalog(profile: dict, *, offline: bool) -> dict:
                 "sp_per_power": int(cost.get(("k",), 0)),
                 "damage_milli": [round(damage.get(term, 0) * 1000) for term in TERMS],
                 "variants": variants,
+                **buff,
             }
         )
     return {

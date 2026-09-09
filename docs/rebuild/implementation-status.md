@@ -5,6 +5,32 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Live-format Berserk definition compiler connected — 2026-09-09
+
+The selected live skill compiler now builds a six-skill candidate containing
+Berserk's `self_buff_v1` data, both existing imported motions and source-correct
+rank tables. Typed buff programs use the shared bounded arithmetic generator,
+extracted to `server/build_skill_program.rs`; full-class qualification receipts
+now bind that dependency too. The installed five-skill profile/catalog is intact.
+
+Candidate `.local/p6-buffs-live-r1/catalog.v1.json` has SHA
+`557e2cf572bf9a17a8146fcdebbea38e7863a39616528ea2a81d3d1076746d40`.
+It compiles through the live compiler and actual server module with six focused
+buff runtime tests passing. The generated `SELF_BUFFS` programs independently
+execute four Berserk power cases in `generated-capture-report.json`. Nine focused
+Python tests, nine full-class compiler tests and seven live compiler tests pass.
+Three actual candidate mutations reject physical damage, targeting and motion
+damage windows on the buff handler. The full-class regression passes its existing
+21,120 formula / 309 metadata / 88 window / 88 geometry checks and six replays.
+Formatting/lint checks pass. Candidate compilation reports unused `SELF_BUFFS`
+because the live dispatcher is not connected yet, alongside the known training
+`MONSTER_HOME` warning; these were not suppressed.
+
+No schema, database, installed assets or deployed exports changed. The candidate
+must remain uninstalled while the server dispatcher and Godot catalog reject or
+lack buff activation. Next wire authorized activation and persistent remaining
+duration, apply the speed/damage changes, then qualify visuals and multiplayer.
+
 ## Trusted buff capture connected to lifecycle core — 2026-09-09
 
 `buff_capture.rs` now evaluates deterministic trusted skill programs through the

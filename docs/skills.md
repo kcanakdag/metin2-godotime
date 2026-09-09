@@ -41,6 +41,17 @@ inherit floating-point formula rounding. Random buff formulas reject until their
 source evaluation order is supported. Authentication, rank authorization,
 payment and database writes remain the reducer adapter's responsibility.
 
+The selected live compiler now accepts a candidate `self_buff_v1` Berserk entry
+with `weapon_class: "any"`. `tools/live_buff_skill.py` preserves both point
+programs, durations, SP/cooldown programs, integer damage-penalty policy and
+source-rounded rank display tables. Both imported skill motions must be present
+and contain no collision events. `server/build_buff_skills.rs` generates typed
+`SELF_BUFFS` definitions using the arithmetic compiler shared with the full-class
+pipeline. Self buffs reject target damage, physical damage coefficients and
+animation damage windows. The current server cast dispatcher and Godot catalog
+do not yet enable this handler; compile into an isolated candidate, not installed
+content, until activation and presentation integration are complete.
+
 Pinned server `7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318` is the behavioral reference:
 `char_affect.cpp` AddAffect/ProcessAffect/SaveAffect/LoadAffect and
 `char_skill.cpp` UseSkill/ComputeSkill retain multi-point replacement and saved

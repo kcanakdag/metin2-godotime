@@ -1,4 +1,6 @@
 //! Compile bounded skill definitions shared with the exported client.
+#[path = "build_buff_skills.rs"]
+mod buffs;
 #[path = "build_skill_geometry.rs"]
 mod geometry;
 use serde_json::Value;
@@ -119,14 +121,17 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
     let mut definitions = Vec::new();
     let mut actions = Vec::new();
     let mut event_lists = Vec::new();
+    let mut buff_definitions = Vec::new();
     let mut ids = BTreeSet::new();
     for row in rows {
         if !matches!(
             row["handler"].as_str(),
-            Some("physical_splash_v1" | "physical_area_v1" | "physical_charge_v1")
+            Some("physical_splash_v1" | "physical_area_v1" | "physical_charge_v1" | "self_buff_v1")
         ) || row["weapon_class"]
             != if row["handler"] == "physical_charge_v1" {
                 "sword_or_two_handed"
+            } else if row["handler"] == "self_buff_v1" {
+                "any"
             } else {
                 "sword"
             }
@@ -142,7 +147,8 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
         let rank = n(row, "maximum_rank", 1, 20)?;
         let cooldown = n(row, "cooldown_us", 1_000_000, 300_000_000)?;
         let radius = f(row, "radius_m", 10.0)?;
-        if radius <= 0.0 {
+        let is_buff = row["handler"] == "self_buff_v1";
+        if (is_buff && radius != 0.0) || (!is_buff && radius <= 0.0) {
             return Err("Invalid skill radius".into());
         }
         let targets = n(row, "max_targets", 1, 32)?;
@@ -162,6 +168,14 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
         };
         if target_range < 0.0 || (!requires_target && target_range != 0.0) {
             return Err("Invalid skill target range policy".into());
+        }
+        if is_buff {
+            if requires_target || targets != 1 || hits_per_life != 1 {
+                return Err("Self buff cannot target damage victims".into());
+            }
+            buff_definitions.push(buffs::generate(id, &row["buff"])?);
+        } else if row.get("buff").is_some() {
+            return Err("Buff programs require self-buff dispatch".into());
         }
         let charge = if row["handler"] == "physical_charge_v1" {
             if !requires_target || target_range <= 0.0 || hits_per_life != 1 {
@@ -200,6 +214,9 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
                     .ok_or("Invalid skill coefficient")
             })
             .collect::<Result<Vec<_>, _>>()?;
+        if is_buff && coefficients.iter().any(|coefficient| *coefficient != 0) {
+            return Err("Self buff cannot carry physical damage coefficients".into());
+        }
         definitions.push(format!("SkillDefinition{{vnum:{id},class_id:{class},minimum_level:{level},maximum_rank:{rank},cooldown_us:{cooldown},radius_m:{radius:?},max_targets:{targets},hits_per_life:{hits_per_life},requires_target:{requires_target},target_range_m:{target_range:?},sp_base:{sp},sp_per_power:{per},damage_milli:{coefficients:?},charge:{charge}}}"));
         let variants = row["variants"]
             .as_array()
@@ -219,7 +236,21 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
                 return Err("Duplicate skill appearance".into());
             }
             let duration = n(v, "duration_us", 1, 3_200_000)?;
-            let (start, end, events) = if row["handler"] == "physical_charge_v1" {
+            let (start, end, events) = if is_buff {
+                if [
+                    "hit_start_us",
+                    "hit_end_us",
+                    "hit_windows_us",
+                    "hit_geometry",
+                    "source_hit_events",
+                ]
+                .iter()
+                .any(|field| v.get(field).is_some())
+                {
+                    return Err("Self buff cannot schedule motion damage".into());
+                }
+                (0, 0, Vec::new())
+            } else if row["handler"] == "physical_charge_v1" {
                 for field in [
                     "hit_start_us",
                     "hit_end_us",
@@ -288,6 +319,14 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
             let z = f(v, "root_z_m", 4.0)?;
             actions.push(format!("({id},{actor:?},AttackDefinition{{id:{action:?},duration_us:{duration},cooldown_us:{duration},ordinary_hit_invulnerability_us:200000,hit_start_us:{start},hit_end_us:{end},range_m:{radius:?},combo_input:None,root_motion:Some(RootMotionDefinition{{endpoint_x_m:{x:?},endpoint_z_m:{z:?},duration_us:{duration}}}),special_area:None,screen_wave:None,ordinary_knockback:None}})"));
         }
+    }
+    if !buff_definitions.is_empty() {
+        writeln!(
+            out,
+            "pub const SELF_BUFFS:&[crate::buff_capture::Definition<'static>]=&[{}];",
+            buff_definitions.join(",")
+        )
+        .unwrap();
     }
     writeln!(
         out,
