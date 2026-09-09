@@ -1,5 +1,13 @@
 # Architecture
 
+Accepted attack replacement advances both outgoing root motion and ordinary
+movement through its server timestamp before setting the next attack lock. Normal
+simulation and replacement share one movement calculation with bounded travel,
+input timeout, collision and target stopping. Queue-only combo input and pure
+animation-event sampling retain their existing paths. This accounts for movement
+earned before an attack starts and supplies the boundary required for future
+charge consumption; persisted charge state is not yet connected.
+
 World presentation now selects the installed expanded character catalog at startup
 and reload, matching character previews. The legacy base Warrior remains a fixture
 input; using it for live world actors omitted imported skill motions despite

@@ -96,6 +96,11 @@ to the consumption time exactly once. The adapter needs either movement advancem
 with a per-character accounted-through timestamp or retained ended-effect history;
 blindly passing only currently active affects loses that portion of movement.
 
+Accepted attack replacement now calls the shared ordinary movement calculation
+after outgoing root-motion advancement, before the new attack lock is installed.
+This provides movement accounting up to a strike timestamp. The charge adapter
+must project the effect during that advancement and consume it only afterward.
+
 Publish the minimal authoritative affect state needed for speed presentation,
 the charged icon and the ability to finish a charge during its original cooldown.
 The client should reserve an approach/strike intent for an exact target life and

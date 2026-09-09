@@ -61,6 +61,14 @@ Use it for protocol/schema work and run the relevant combat replay separately.
 The legacy combat fixture still expects one-second basic swings and fixed 35
 physical damage; its failures must not be reported as passing network-only QA.
 
+Add `--movement-attacks` to `--network-only` to exercise moving into an accepted
+attack, matching attack clocks, recovery and resumed movement for both clients.
+The report uses scope `account-movement-attacks`; it adds ten checks without
+invoking the old damage fixture. `client/tests/movement_attack_smoke.gd` holds the
+focused replay and is staged by the runner. This proves acceptance/subscriptions,
+not exact sub-tick displacement, damage balance or rendered animation. The latest
+fresh local replay passes 84 checks; the unextended network replay passes 74.
+
 ## Test scope and passive mob replay
 
 The original-population browser replay distinguishes installed catalog species

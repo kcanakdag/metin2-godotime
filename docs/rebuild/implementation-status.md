@@ -5,6 +5,32 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Movement accounting before attack replacement — 2026-09-09
+
+Accepted action replacement now advances outgoing root motion and ordinary
+movement through the reducer timestamp before installing the new attack lock.
+The simulation and replacement path share the same movement function. This
+prevents the new lock from discarding movement earned since the previous tick,
+and provides the boundary needed before consuming a charge. Replacement validates
+the living player's controller lease. Queue-only and animation-event sampling
+do not use this ordinary movement path.
+
+Fifteen focused movement tests and strict Rust lint pass. A fresh local module
+was published only to `mt2-p2-movement-boundary-v26-20260909-8342fbf9`, with no
+existing database reset. The original network-only replay passes 74 checks.
+The new `tools/test_accounts.py --network-only --movement-attacks` replay passes
+84 checks: both authenticated clients enter movement, accept an attack, observe
+matching action clocks, recover and move again, alongside rejection/disconnect/
+reconnect checks. Evidence is `.local/p6-charge-r1/movement-boundary/`; its frozen
+module hash is `c9910d20a817ecef46a9c027e52a52b6e88f9b37a6d88cb4fc7a9facbd6f5ede`.
+
+The replay exercises actual reducer/subscription behavior but does not measure
+the exact sub-tick displacement or prove rendered animation/damage fidelity.
+Godot MCP is not exposed in this session; the replay uses isolated headless Godot
+clients, not the user's editor. Touched GDScript/Python lint passes. Protocol 26
+and public deployment are unchanged. Charge persistence, authoritative affect
+projection and the target-centered strike remain pending.
+
 ## Timed movement allowance — 2026-09-09
 
 Both held and click movement now consume `movement::Travel`, calculated from the

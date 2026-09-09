@@ -604,46 +604,7 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
         } else {
             player.action_started_at_us = 0;
             player.action_ends_at_us = 0;
-            if controller.mode == 1 && now - controller.last_input_us > INPUT_TIMEOUT_US {
-                controller.mode = 0;
-            }
-            let travel = movement::Travel::tick(
-                previous_tick_us,
-                now,
-                controller.attack_until_us,
-                movement::BASE_SPEED_POINTS,
-                None,
-            )?;
-            let (dx, dz) = match controller.mode {
-                1 => step(controller.direction_x, controller.direction_z, travel)?,
-                2 => movement::target_step(
-                    player.x,
-                    player.z,
-                    controller.target_x,
-                    controller.target_z,
-                    travel,
-                ),
-                _ => (0.0, 0.0),
-            };
-            let (x, z) = content::slide(player.x, player.z, dx, dz, &bounds);
-            let actual_x = x - player.x;
-            let actual_z = z - player.z;
-            player.activity = if actual_x.hypot(actual_z) > 0.00001 {
-                1
-            } else {
-                0
-            };
-            if player.activity == 1 {
-                player.heading = (-actual_x).atan2(-actual_z);
-            }
-            player.x = x;
-            player.z = z;
-            player.y = content::height(x, z);
-            if controller.mode == 2
-                && (controller.target_x - x).hypot(controller.target_z - z) < 0.02
-            {
-                controller.mode = 0;
-            }
+            apply_player_movement(&mut controller, &mut player, previous_tick_us, now, &bounds)?;
         }
         if before != (player.x, player.z, player.heading, player.activity) {
             ctx.db.player().identity().update(player);
@@ -654,6 +615,88 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
     item_effects::simulate(ctx, now);
     npcs::maintain(ctx, now);
     npc_spawns::maintain(ctx)?;
+    Ok(())
+}
+
+/// Account for ordinary travel before replacing its interval with an attack lock.
+/// Callers commit the updated controller with the accepted attack; rejection rolls
+/// back the root/movement update as part of the same reducer transaction.
+pub(crate) fn advance_movement_for_attack(
+    ctx: &ReducerContext,
+    controller: &mut Controller,
+    through_us: i64,
+) -> Result<(), String> {
+    let previous_us = ctx
+        .db
+        .simulation_clock()
+        .id()
+        .find(1)
+        .ok_or("Simulation clock is missing")?
+        .last_tick
+        .to_micros_since_unix_epoch();
+    let mut player = ctx
+        .db
+        .player()
+        .identity()
+        .find(controller.identity)
+        .ok_or("Enter the world first")?;
+    if !player.online
+        || player.health == 0
+        || !accounts::controller_has_active_lease(ctx, controller)
+    {
+        return Err("Movement requires a living character and active controller lease".into());
+    }
+    let bounds = collision_bounds(ctx);
+    apply_player_movement(controller, &mut player, previous_us, through_us, &bounds)?;
+    ctx.db.player().identity().update(player);
+    Ok(())
+}
+
+fn apply_player_movement(
+    controller: &mut Controller,
+    player: &mut Player,
+    previous_tick_us: i64,
+    now: i64,
+    bounds: &[Bounds],
+) -> Result<(), String> {
+    if controller.mode == 1 && now - controller.last_input_us > INPUT_TIMEOUT_US {
+        controller.mode = 0;
+    }
+    let travel = movement::Travel::tick(
+        previous_tick_us,
+        now,
+        controller.attack_until_us,
+        movement::BASE_SPEED_POINTS,
+        None,
+    )?;
+    let (dx, dz) = match controller.mode {
+        1 => step(controller.direction_x, controller.direction_z, travel)?,
+        2 => movement::target_step(
+            player.x,
+            player.z,
+            controller.target_x,
+            controller.target_z,
+            travel,
+        ),
+        _ => (0.0, 0.0),
+    };
+    let (x, z) = content::slide(player.x, player.z, dx, dz, bounds);
+    let actual_x = x - player.x;
+    let actual_z = z - player.z;
+    player.activity = if actual_x.hypot(actual_z) > 0.00001 {
+        1
+    } else {
+        0
+    };
+    if player.activity == 1 {
+        player.heading = (-actual_x).atan2(-actual_z);
+    }
+    player.x = x;
+    player.z = z;
+    player.y = content::height(x, z);
+    if controller.mode == 2 && (controller.target_x - x).hypot(controller.target_z - z) < 0.02 {
+        controller.mode = 0;
+    }
     Ok(())
 }
 

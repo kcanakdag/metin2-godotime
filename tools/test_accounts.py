@@ -125,6 +125,7 @@ def stage_project(stage: Path) -> None:
     for filename in (
         "scripts/net/game_connection.gd",
         "tests/account_smoke.gd",
+        "tests/movement_attack_smoke.gd",
         "tests/multiplayer_smoke.gd",
         "tests/progression_combat_smoke.gd",
         "tests/progression_shared_smoke.gd",
@@ -203,7 +204,14 @@ def main() -> None:
         action="store_true",
         help="Check account/network lifecycle without the legacy basic-combat fixture.",
     )
+    parser.add_argument(
+        "--movement-attacks",
+        action="store_true",
+        help="Add movement-to-attack acceptance and recovery for both network-only clients.",
+    )
     options = parser.parse_args()
+    if options.movement_attacks and not options.network_only:
+        parser.error("--movement-attacks requires --network-only")
     if options.network_only and options.progression:
         parser.error("--network-only cannot be combined with --progression")
     report_path = options.report.resolve()
@@ -289,6 +297,7 @@ def main() -> None:
                         "database": options.database,
                         "tokens": tokens,
                         "network_only": options.network_only,
+                        "movement_attacks": options.movement_attacks,
                         "definition_hash": definition_hash,
                         "report": str(private_report),
                     },
@@ -311,7 +320,11 @@ def main() -> None:
                 if private_report.is_file():
                     scoped_report = json.loads(auth.redact(private_report.read_text()))
                     scoped_report["scope"] = (
-                        "account-network" if options.network_only else "account-combat"
+                        "account-movement-attacks"
+                        if options.movement_attacks
+                        else "account-network"
+                        if options.network_only
+                        else "account-combat"
                     )
                     report_path.write_text(json.dumps(scoped_report, indent=2) + "\n")
             if not private_report.is_file():

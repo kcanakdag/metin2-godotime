@@ -291,7 +291,8 @@ pub fn advance_for_replacement(
     control: &mut Controller,
     through_us: i64,
 ) -> Result<(), String> {
-    advance_character(ctx, control, through_us, true)
+    advance_character(ctx, control, through_us, true)?;
+    crate::advance_movement_for_attack(ctx, control, through_us)
 }
 
 /// Inject a trusted action event at its exact action-relative boundary. This

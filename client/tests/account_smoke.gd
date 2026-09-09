@@ -5,6 +5,7 @@ var _tokens: Array = []
 var _name_suffix := ""
 var _expected_definition_hash := ""
 var _network_only := false
+var _movement_attacks := false
 
 
 func _initialize() -> void:
@@ -23,6 +24,7 @@ func _initialize() -> void:
 	_report_path = str(config.get("report", "user://account-smoke.json"))
 	_tokens = config.tokens
 	_network_only = bool(config.get("network_only", false))
+	_movement_attacks = bool(config.get("movement_attacks", false))
 	_expected_definition_hash = str(config.get("definition_hash", ""))
 	_name_suffix = Crypto.new().generate_random_bytes(6).hex_encode()
 	if _tokens.size() != 2 or str(_tokens[0]).is_empty() or str(_tokens[1]).is_empty():
@@ -223,6 +225,10 @@ func _run() -> void:
 	)
 	await _movement(first, second, first_id, 1.0, "first")
 	await _movement(second, first, second_id, -1.0, "second")
+	if _movement_attacks:
+		var replay = load("res://tests/movement_attack_smoke.gd")
+		await replay.run(self, first, second, first_id, 1.0, "first")
+		await replay.run(self, second, first, second_id, -1.0, "second")
 	await _raw_rejection(
 		first,
 		"set_move_input",
