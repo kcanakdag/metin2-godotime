@@ -24,7 +24,7 @@ pub struct SkillAffect {
 }
 
 impl SkillAffect {
-    fn validate(&self) -> Result<(), &'static str> {
+    pub(crate) fn validate(&self) -> Result<(), &'static str> {
         if !(1..=255).contains(&self.skill_vnum)
             || self.modifiers.is_empty()
             || self.modifiers.len() > 4

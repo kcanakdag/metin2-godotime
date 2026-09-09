@@ -5,6 +5,31 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Trusted buff capture connected to lifecycle core — 2026-09-09
+
+`buff_capture.rs` now evaluates deterministic trusted skill programs through the
+existing bounded interpreter and produces captured SP cost, base cooldown and
+validated per-point durations/values consumed by `buff_lifecycle::Effects`.
+Rank-power conversion preserves original float-to-double promotion; integer
+power-percentage modifiers have a separate path for Berserk's incoming-normal
+damage penalty. Invalid/duplicate values and unsupported random programs reject
+before any captured result is returned. This is a runtime core connection, not
+an enabled reducer or additional playable skill.
+
+Six buff capture/lifecycle Rust tests and two interpreter tests pass through the
+actual library. Ten focused Python tests pass; the unchanged training-build
+`MONSTER_HOME` dead-code warning remains. Source inspection exposed intermediate
+rank rounding omitted by the previous candidate, so the full-class linker now
+uses source float power for costs and cooldowns. Existing live content is retained.
+
+The rebuilt candidate `.local/p6-buffs-r2/catalog.v2.json` has SHA
+`9985aff36b2cdedda8cc491dbaf9084acf7ae46e810891255f7772161f577170`.
+Its `qualification/report.json` passes 21,120 formula checks, 309 metadata,
+88 window and 88 geometry comparisons and six area/timing replays. This does not
+qualify live buff persistence, casts, damage/stat application or visual effects.
+Next add the trusted definition adapter and atomic authorized persistence without
+accepting client-supplied values. No service or export changed in this checkpoint.
+
 ## Player cooldown source rounding corrected — 2026-09-09
 
 The full-class linker now truncates player cooldown formula results to seconds

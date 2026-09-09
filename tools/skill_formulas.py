@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import math
 import operator
+import struct
 
 VARIABLES = ("atk", "str", "dex", "con", "k", "lv", "iq", "mwep", "ar", "chain")
 OPERATORS = {ast.Add: "add", ast.Sub: "sub", ast.Mult: "mul", ast.Div: "div"}
@@ -55,7 +56,7 @@ def compile_formula(text: str) -> list[dict]:
     return result
 
 
-def rank_value(text: str, power_percent: int) -> float:
+def rank_value(text: str, power_percent: int, *, source_float_power: bool = False) -> float:
     """Constant-fold rank-only costs/clocks for identical client/server lookup tables."""
     program = compile_formula(text)
     stack = []
@@ -65,6 +66,8 @@ def rank_value(text: str, power_percent: int) -> float:
             value = instruction["value"]
         elif op == "variable" and instruction["index"] == VARIABLES.index("k"):
             value = power_percent / 100
+            if source_float_power:
+                value = struct.unpack("f", struct.pack("f", value))[0]
         elif op in ("neg", "floor"):
             a = stack.pop()
             value = -a if op == "neg" else math.floor(a)

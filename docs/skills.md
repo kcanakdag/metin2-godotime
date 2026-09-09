@@ -31,6 +31,16 @@ already-modified stats. The adapter must persist remaining duration across logou
 remove ordinary skill buffs on death, and authorize all casts. This core does not
 yet create database rows, change stats or make Berserk playable.
 
+`buff_capture.rs` evaluates trusted deterministic programs into owned cost,
+cooldown and modifier values, then validates the complete captured affect before
+returning it. It uses the existing bounded formula interpreter. Rank power is a
+separate validated integer input; formula variable `k` is replaced with the
+source's single-precision fraction promoted to double. Integer power-percentage
+mechanics use a separate `PowerPercent` operation, so Berserk's penalty does not
+inherit floating-point formula rounding. Random buff formulas reject until their
+source evaluation order is supported. Authentication, rank authorization,
+payment and database writes remain the reducer adapter's responsibility.
+
 Pinned server `7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318` is the behavioral reference:
 `char_affect.cpp` AddAffect/ProcessAffect/SaveAffect/LoadAffect and
 `char_skill.cpp` UseSkill/ComputeSkill retain multi-point replacement and saved
@@ -53,6 +63,14 @@ duration, 108-second base cooldown, 120 SP cost and a 12-percent incoming-normal
 damage penalty. Gameplay caps, cast-speed adjustment and damage ordering belong
 in the authoritative adapters. Cast animation, persistent affect visuals/UI and
 two-client lifecycle qualification remain required.
+
+The full-class linker also now uses the source float-power promotion for rank
+costs and cooldowns. This matters at intermediate ranks: power 6 evaluates
+`50*k` just below 3, and Aura's `33+50*k` just below 36, so their source integer
+results are 2 and 35 respectively. Integer Berserk penalty at power 12 is 3,
+even though its formula-based attack-speed bonus truncates to 5. Existing live
+five-skill coefficient/cost behavior is not silently replaced by this candidate;
+reconcile affected live values during content/runtime integration.
 
 Focused core check: `cargo test --manifest-path server/Cargo.toml --locked --offline
 --lib buff_lifecycle`. It covers atomic rejection, no recast stacking, independent

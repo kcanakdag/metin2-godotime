@@ -96,9 +96,13 @@ def compile_catalog(inventory: dict, characters: dict) -> dict:
         handler = skill_handler(source)
         if handler == "damage" and any(not v["activation_us"] for v in variants):
             raise ValueError(f"Skill {vnum} has no original damage activation metadata")
-        costs = [int(rank_value(source["sp_cost"], power)) for power in RANK_POWERS]
+        costs = [
+            int(rank_value(source["sp_cost"], power, source_float_power=True))
+            for power in RANK_POWERS
+        ]
         cooldowns = [
-            player_cooldown_us(rank_value(source["cooldown"], power)) for power in RANK_POWERS
+            player_cooldown_us(rank_value(source["cooldown"], power, source_float_power=True))
+            for power in RANK_POWERS
         ]
         if any(not 0 <= v <= 10_000 for v in costs) or any(
             not 0 <= v <= 600_000_000 for v in cooldowns

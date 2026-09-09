@@ -10,6 +10,14 @@ from skill_formulas import rank_value
 
 
 class PlayerSkillCooldownTests(unittest.TestCase):
+    def test_original_float_power_is_promoted_before_integer_truncation(self):
+        self.assertEqual(
+            player_cooldown_us(rank_value("33+50*k", 6, source_float_power=True)), 35_000_000
+        )
+        self.assertEqual(int(rank_value("100+200*k", 6, source_float_power=True)), 111)
+        self.assertEqual(int(rank_value("50*k", 6, source_float_power=True)), 2)
+        self.assertEqual(int(rank_value("50*k", 12, source_float_power=True)), 5)
+
     def test_berserk_and_aura_fractional_ranks_follow_player_source_order(self):
         self.assertEqual(player_cooldown_us(rank_value("63+90*k", 5)), 67_000_000)
         self.assertEqual(player_cooldown_us(rank_value("33+50*k", 5)), 35_000_000)
