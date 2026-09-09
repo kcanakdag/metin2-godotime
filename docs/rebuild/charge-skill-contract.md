@@ -82,6 +82,20 @@ expiry, preserving the existing anti-stall cap and swept collision. Disconnect,
 character switch, death and lease replacement must invalidate the charge.
 Network reconnection must not restore a consumed or expired charge.
 
+`movement::Travel::tick` now implements this interval calculation. Its optional
+`SpeedEffect` contains only a validated time range and bonus points; deriving it
+from a current owner lease remains the adapter's job. Movement consumes at most
+the most recent 100 ms after attack recovery. A charge that expired before that
+window contributes no boost, even if the simulation was stalled for seconds.
+Held and click movement use the same opaque allowance.
+
+Do not delete affect history before accounting for the elapsed movement interval.
+Expiry at the current tick still leaves a potentially boosted portion before it.
+Likewise, consuming charge between simulation ticks must account for movement up
+to the consumption time exactly once. The adapter needs either movement advancement
+with a per-character accounted-through timestamp or retained ended-effect history;
+blindly passing only currently active affects loses that portion of movement.
+
 Publish the minimal authoritative affect state needed for speed presentation,
 the charged icon and the ability to finish a charge during its original cooldown.
 The client should reserve an approach/strike intent for an exact target life and

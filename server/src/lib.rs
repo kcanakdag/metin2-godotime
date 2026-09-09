@@ -607,22 +607,21 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
             if controller.mode == 1 && now - controller.last_input_us > INPUT_TIMEOUT_US {
                 controller.mode = 0;
             }
-            let movement_elapsed =
-                movement_elapsed_after_attack(previous_tick_us, now, controller.attack_until_us);
+            let travel = movement::Travel::tick(
+                previous_tick_us,
+                now,
+                controller.attack_until_us,
+                movement::BASE_SPEED_POINTS,
+                None,
+            )?;
             let (dx, dz) = match controller.mode {
-                1 => step(
-                    controller.direction_x,
-                    controller.direction_z,
-                    movement_elapsed,
-                    movement::BASE_SPEED_POINTS,
-                )?,
+                1 => step(controller.direction_x, controller.direction_z, travel)?,
                 2 => movement::target_step(
                     player.x,
                     player.z,
                     controller.target_x,
                     controller.target_z,
-                    movement_elapsed,
-                    movement::BASE_SPEED_POINTS,
+                    travel,
                 ),
                 _ => (0.0, 0.0),
             };
@@ -660,11 +659,6 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
 
 fn now_us(ctx: &ReducerContext) -> i64 {
     ctx.timestamp.to_micros_since_unix_epoch()
-}
-
-fn movement_elapsed_after_attack(previous_tick_us: i64, now: i64, attack_until_us: i64) -> f32 {
-    let movement_started_at_us = previous_tick_us.max(attack_until_us);
-    now.saturating_sub(movement_started_at_us).max(0) as f32 / 1_000_000.0
 }
 
 fn active_session(ctx: &ReducerContext) -> Result<ConnectionId, String> {
@@ -773,26 +767,21 @@ mod tests {
     fn ordinary_movement_uses_only_the_tick_remainder_after_attack() {
         let previous = 1_000_000;
         let now = previous + 50_000;
-        assert_eq!(movement_elapsed_after_attack(previous, now, previous), 0.05);
-        assert_eq!(
-            movement_elapsed_after_attack(previous, now, previous + 25_000),
-            0.025
-        );
-        assert_eq!(movement_elapsed_after_attack(previous, now, now), 0.0);
-        assert_eq!(
-            movement_elapsed_after_attack(previous, now, now + 25_000),
-            0.0
-        );
-        assert_eq!(movement_elapsed_after_attack(now, previous, previous), 0.0);
-        assert_eq!(
+        let displacement = |previous, now, blocked| {
             step(
                 1.0,
                 0.0,
-                movement_elapsed_after_attack(previous, previous + 1_000_000, previous),
-                movement::BASE_SPEED_POINTS,
+                movement::Travel::tick(previous, now, blocked, movement::BASE_SPEED_POINTS, None)
+                    .unwrap(),
             )
-            .unwrap(),
-            (0.5, 0.0)
-        );
+            .unwrap()
+            .0
+        };
+        assert_eq!(displacement(previous, now, previous), 0.25);
+        assert_eq!(displacement(previous, now, previous + 25_000), 0.125);
+        assert_eq!(displacement(previous, now, now), 0.0);
+        assert_eq!(displacement(previous, now, now + 25_000), 0.0);
+        assert_eq!(displacement(now, previous, previous), 0.0);
+        assert_eq!(displacement(previous, previous + 1_000_000, previous), 0.5);
     }
 }

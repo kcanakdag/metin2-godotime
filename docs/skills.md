@@ -451,3 +451,9 @@ diagonal normalization and swept collision. The live simulation supplies the
 normal 100 points until charge state is implemented. The existing 5 m/s baseline
 is retained; original per-motion base speeds and whole-travel duration rounding
 are not yet reproduced by this tick-based movement model.
+
+`movement::Travel::tick` now shares one bounded movement allowance across held and
+click movement. It integrates normal/boosted portions around effect timestamps
+and attack recovery, considering only the latest 100 ms after a stalled tick.
+Persisted charge projection and accounting for effects consumed between ticks
+remain part of the pending adapter.

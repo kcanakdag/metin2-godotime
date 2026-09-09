@@ -5,6 +5,24 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Timed movement allowance — 2026-09-09
+
+Both held and click movement now consume `movement::Travel`, calculated from the
+trusted previous/current tick and attack-recovery timestamps. It integrates a
+validated timed speed effect only over the overlapping interval. The most recent
+100 ms is the maximum movement window, so a stalled tick cannot reuse an older,
+expired boost. Direction normalization, target stopping and swept collision still
+apply to the resulting allowance. The live simulation calls this path with normal
+100 speed points and no effect; charge persistence remains pending.
+
+Fifteen focused Rust movement tests pass, including mixed boosted/normal time,
+attack recovery inside an effect, expiry boundaries, split-tick equivalence,
+stalled ticks, collision and clock extremes. Strict Rust formatting/Clippy checks
+pass for all targets/features. No client, schema, database or public rollout
+changed. These are server component checks, not multiplayer charge acceptance.
+The persisted adapter must validate owner leases and account for an interval
+before discarding its consumed/expired affect; see the charge contract.
+
 ## Selected Dash catalog and typed charge policy — 2026-09-09
 
 The selected-skill importer supports `physical_charge_v1`, preserving original

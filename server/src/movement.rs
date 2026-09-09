@@ -52,38 +52,74 @@ fn speed_multiplier(points: i32) -> f32 {
     100.0 / duration_percent as f32
 }
 
-fn distance(elapsed: f32, speed_points: i32) -> f32 {
-    if elapsed.is_finite() {
-        SPEED * speed_multiplier(speed_points) * elapsed.clamp(0.0, 0.1)
-    } else {
-        0.0
+/// A trusted timed speed bonus, projected only after validating its owner lease.
+#[derive(Clone, Copy, Debug)]
+pub struct SpeedEffect {
+    pub starts_at_us: i64,
+    pub expires_at_us: i64,
+    pub bonus_points: i32,
+}
+
+/// Bounded movement allowance shared by held movement and click-to-move.
+#[derive(Clone, Copy, Debug)]
+pub struct Travel(f32);
+
+impl Travel {
+    pub fn tick(
+        previous_us: i64,
+        now_us: i64,
+        blocked_until_us: i64,
+        base_points: i32,
+        effect: Option<SpeedEffect>,
+    ) -> Result<Self, String> {
+        if let Some(effect) = effect
+            && (effect.starts_at_us < 0
+                || effect.expires_at_us <= effect.starts_at_us
+                || effect.expires_at_us.saturating_sub(effect.starts_at_us) > 600_000_000
+                || !(0..=1000).contains(&effect.bonus_points))
+        {
+            return Err("Invalid timed movement speed effect".into());
+        }
+        // Only the latest 100 ms can grant travel after a stalled simulation.
+        // In particular, an old expired charge cannot be banked until this tick.
+        let start = previous_us
+            .max(blocked_until_us)
+            .max(now_us.saturating_sub(100_000));
+        if previous_us < 0 || now_us <= start || now_us < 0 {
+            return Ok(Self(0.0));
+        }
+        let elapsed_us = now_us - start;
+        let boosted_us = effect.map_or(0, |effect| {
+            now_us
+                .min(effect.expires_at_us)
+                .saturating_sub(start.max(effect.starts_at_us))
+                .max(0)
+        });
+        let ordinary = speed_multiplier(base_points);
+        let boosted =
+            speed_multiplier(base_points.saturating_add(effect.map_or(0, |e| e.bonus_points)));
+        let distance = f64::from(SPEED)
+            * ((elapsed_us - boosted_us) as f64 * f64::from(ordinary)
+                + boosted_us as f64 * f64::from(boosted))
+            / 1_000_000.0;
+        Ok(Self(distance as f32))
     }
 }
 
-pub fn step(x: f32, z: f32, elapsed: f32, speed_points: i32) -> Result<(f32, f32), String> {
+pub fn step(x: f32, z: f32, travel: Travel) -> Result<(f32, f32), String> {
     valid_direction(x, z)?;
     let magnitude = x.hypot(z).max(1.0);
-    Ok((
-        x / magnitude * distance(elapsed, speed_points),
-        z / magnitude * distance(elapsed, speed_points),
-    ))
+    Ok((x / magnitude * travel.0, z / magnitude * travel.0))
 }
 
-pub fn target_step(
-    x: f32,
-    z: f32,
-    target_x: f32,
-    target_z: f32,
-    elapsed: f32,
-    speed_points: i32,
-) -> (f32, f32) {
+pub fn target_step(x: f32, z: f32, target_x: f32, target_z: f32, travel: Travel) -> (f32, f32) {
     let dx = target_x - x;
     let dz = target_z - z;
     let length = dx.hypot(dz);
     if length < 0.02 {
         return (0.0, 0.0);
     }
-    let travel = distance(elapsed, speed_points).min(length);
+    let travel = travel.0.min(length);
     (dx / length * travel, dz / length * travel)
 }
 
@@ -118,6 +154,120 @@ pub fn slide(x: f32, z: f32, dx: f32, dz: f32, obstacles: &[Bounds]) -> (f32, f3
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn timed_speed_counts_only_overlap_after_attack_recovery() {
+        let start = 1_000_000;
+        let now = start + 50_000;
+        for (a, b, blocked, expected) in [
+            (0, 25_000, 0, 0.375),
+            (25_000, 50_000, 0, 0.375),
+            (10_000, 30_000, 0, 0.35),
+            (0, 50_000, 0, 0.5),
+            (50_000, 60_000, 0, 0.25),
+            (-10_000, 0, 0, 0.25),
+            (0, 25_000, 25_000, 0.125),
+            (0, 50_000, 25_000, 0.25),
+            (0, 50_000, 50_000, 0.0),
+        ] {
+            let effect = SpeedEffect {
+                starts_at_us: start + a,
+                expires_at_us: start + b,
+                bonus_points: 150,
+            };
+            let travel = Travel::tick(start, now, start + blocked, 100, Some(effect)).unwrap();
+            let (distance, _) = step(1.0, 0.0, travel).unwrap();
+            assert!(
+                (distance - expected).abs() < 0.000001,
+                "{a}..{b}, blocked={blocked}: {distance}"
+            );
+            let (dx, dz) = step(1.0, 1.0, travel).unwrap();
+            assert!((dx.hypot(dz) - expected).abs() < 0.000001);
+            assert_eq!(target_step(0.0, 0.0, 10.0, 0.0, travel), (distance, 0.0));
+        }
+    }
+
+    #[test]
+    fn stalled_ticks_do_not_bank_expired_speed_bonuses() {
+        let now = 5_000_000;
+        for (expiry, expected) in [(4_900_000, 0.5), (4_950_000, 0.75), (5_000_000, 1.0)] {
+            let effect = SpeedEffect {
+                starts_at_us: 4_000_000,
+                expires_at_us: expiry,
+                bonus_points: 150,
+            };
+            let travel = Travel::tick(0, now, 0, 100, Some(effect)).unwrap();
+            assert_eq!(step(1.0, 0.0, travel).unwrap(), (expected, 0.0));
+            assert_eq!(slide(0.9, 0.0, travel.0, 0.0, &wall()), (1.0, 0.0));
+            assert_eq!(target_step(0.0, 0.0, 0.1, 0.0, travel), (0.1, 0.0));
+        }
+    }
+
+    #[test]
+    fn splitting_a_normal_tick_at_expiry_preserves_total_travel() {
+        let effect = SpeedEffect {
+            starts_at_us: 1_000_000,
+            expires_at_us: 1_025_000,
+            bonus_points: 150,
+        };
+        let distance = |start, end| Travel::tick(start, end, 0, 100, Some(effect)).unwrap().0;
+        assert_eq!(
+            distance(1_000_000, 1_050_000),
+            distance(1_000_000, 1_025_000) + distance(1_025_000, 1_050_000)
+        );
+    }
+
+    #[test]
+    fn clock_extremes_and_invalid_effects_never_grant_unbounded_travel() {
+        assert_eq!(Travel::tick(0, i64::MAX, 0, i32::MAX, None).unwrap().0, 1.0);
+        assert_eq!(Travel::tick(i64::MAX, 0, 0, 100, None).unwrap().0, 0.0);
+        assert_eq!(Travel::tick(-1, 50_000, 0, 100, None).unwrap().0, 0.0);
+        assert_eq!(Travel::tick(0, -1, 0, 100, None).unwrap().0, 0.0);
+        let base = SpeedEffect {
+            starts_at_us: 0,
+            expires_at_us: 100_000,
+            bonus_points: 150,
+        };
+        for bad in [
+            SpeedEffect {
+                starts_at_us: -1,
+                ..base
+            },
+            SpeedEffect {
+                expires_at_us: 0,
+                ..base
+            },
+            SpeedEffect {
+                expires_at_us: 600_000_001,
+                ..base
+            },
+            SpeedEffect {
+                bonus_points: -1,
+                ..base
+            },
+            SpeedEffect {
+                bonus_points: 1001,
+                ..base
+            },
+        ] {
+            assert!(Travel::tick(0, 50_000, 0, 100, Some(bad)).is_err());
+        }
+        assert_eq!(
+            Travel::tick(0, 100_000, 0, i32::MAX, Some(base)).unwrap().0,
+            1.0
+        );
+    }
+    fn travel(elapsed: f32, points: i32) -> Travel {
+        assert!(elapsed.is_finite());
+        Travel::tick(
+            0,
+            (f64::from(elapsed) * 1_000_000.0).round() as i64,
+            0,
+            points,
+            None,
+        )
+        .unwrap()
+    }
     #[test]
     fn original_player_speed_uses_capped_quantized_duration() {
         // Source CalculateDuration uses integer division, including above 100.
@@ -127,7 +277,7 @@ mod tests {
         assert_eq!(speed_multiplier(i32::MIN), 0.5);
         assert_eq!(speed_multiplier(i32::MAX), 2.0);
         assert_eq!(
-            step(1.0, 0.0, 0.1, BASE_SPEED_POINTS + 150).unwrap(),
+            step(1.0, 0.0, travel(0.1, BASE_SPEED_POINTS + 150)).unwrap(),
             (1.0, 0.0)
         );
     }
@@ -135,18 +285,18 @@ mod tests {
     #[test]
     fn boosted_movement_preserves_input_time_and_collision_limits() {
         let boosted = BASE_SPEED_POINTS + 150;
-        let (dx, dz) = step(1.0, 1.0, 3600.0, boosted).unwrap();
+        let (dx, dz) = step(1.0, 1.0, travel(3600.0, boosted)).unwrap();
         assert!((dx.hypot(dz) - 1.0).abs() < 0.00001);
-        assert_eq!(step(0.5, 0.0, 0.1, boosted).unwrap(), (0.5, 0.0));
-        for elapsed in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY, -1.0] {
-            assert_eq!(step(1.0, 0.0, elapsed, boosted).unwrap(), (0.0, 0.0));
-        }
-        assert!(step(f32::NAN, 0.0, 0.1, boosted).is_err());
-        assert!(step(2.0, 0.0, 0.1, boosted).is_err());
-        let (dx, dz) = step(1.0, 0.0, 0.1, boosted).unwrap();
+        assert_eq!(step(0.5, 0.0, travel(0.1, boosted)).unwrap(), (0.5, 0.0));
+        assert!(step(f32::NAN, 0.0, travel(0.1, boosted)).is_err());
+        assert!(step(2.0, 0.0, travel(0.1, boosted)).is_err());
+        let (dx, dz) = step(1.0, 0.0, travel(0.1, boosted)).unwrap();
         assert_eq!(slide(0.75, 0.0, dx, dz, &wall()), (1.0, 0.0));
-        assert_eq!(target_step(0.0, 0.0, 0.25, 0.0, 0.1, boosted), (0.25, 0.0));
-        let (dx, dz) = target_step(0.0, 0.0, 10.0, 10.0, 3600.0, boosted);
+        assert_eq!(
+            target_step(0.0, 0.0, 0.25, 0.0, travel(0.1, boosted)),
+            (0.25, 0.0)
+        );
+        let (dx, dz) = target_step(0.0, 0.0, 10.0, 10.0, travel(3600.0, boosted));
         assert!((dx.hypot(dz) - 1.0).abs() < 0.00001);
     }
 
@@ -160,27 +310,29 @@ mod tests {
     }
     #[test]
     fn diagonal_movement_has_no_speed_bonus() {
-        let (x, z) = step(1.0, 1.0, 0.1, BASE_SPEED_POINTS).unwrap();
+        let (x, z) = step(1.0, 1.0, travel(0.1, BASE_SPEED_POINTS)).unwrap();
         assert!((x.hypot(z) - 0.5).abs() < 0.00001);
-        assert_eq!(step(0.5, 0.0, 0.1, BASE_SPEED_POINTS).unwrap(), (0.25, 0.0));
+        assert_eq!(
+            step(0.5, 0.0, travel(0.1, BASE_SPEED_POINTS)).unwrap(),
+            (0.25, 0.0)
+        );
     }
     #[test]
     fn stalled_tick_cannot_bank_elapsed_time() {
         assert_eq!(
-            step(1.0, 0.0, 3600.0, BASE_SPEED_POINTS).unwrap(),
+            step(1.0, 0.0, travel(3600.0, BASE_SPEED_POINTS)).unwrap(),
             (0.5, 0.0)
         );
-        assert_eq!(step(1.0, 0.0, -1.0, BASE_SPEED_POINTS).unwrap(), (0.0, 0.0));
         assert_eq!(
-            step(1.0, 0.0, f32::NAN, BASE_SPEED_POINTS).unwrap(),
+            step(1.0, 0.0, travel(-1.0, BASE_SPEED_POINTS)).unwrap(),
             (0.0, 0.0)
         );
     }
     #[test]
     fn rejects_nonfinite_and_out_of_range_input() {
         for value in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY, 2.0, -2.0] {
-            assert!(step(value, 0.0, 0.1, BASE_SPEED_POINTS).is_err());
-            assert!(step(0.0, value, 0.1, BASE_SPEED_POINTS).is_err());
+            assert!(step(value, 0.0, travel(0.1, BASE_SPEED_POINTS)).is_err());
+            assert!(step(0.0, value, travel(0.1, BASE_SPEED_POINTS)).is_err());
         }
         for value in [f32::NAN, f32::INFINITY, 32.0, -32.0] {
             assert!(valid_target(value, 0.0).is_err());
@@ -202,11 +354,11 @@ mod tests {
     }
     #[test]
     fn click_target_stops_without_overshooting() {
-        let (dx, dz) = target_step(0.0, 0.0, 0.1, 0.1, 0.1, BASE_SPEED_POINTS);
+        let (dx, dz) = target_step(0.0, 0.0, 0.1, 0.1, travel(0.1, BASE_SPEED_POINTS));
         assert!((dx - 0.1).abs() < 0.00001);
         assert!((dz - 0.1).abs() < 0.00001);
         assert_eq!(
-            target_step(0.0, 0.0, 0.0, 0.0, 0.1, BASE_SPEED_POINTS),
+            target_step(0.0, 0.0, 0.0, 0.0, travel(0.1, BASE_SPEED_POINTS)),
             (0.0, 0.0)
         );
     }
