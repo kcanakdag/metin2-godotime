@@ -18,8 +18,9 @@ Protocol 31 additionally integrates the selected Warrior self-buffs Berserk
 (vnum 3), Aura of the Sword (vnum 4) and Strong Body (vnum 19). Their persisted
 lifecycle, owner-only status projection and HUD binding are accepted for the
 current candidate. Rank-20 quantitative combat and movement effects also pass
-ordinary local gameplay replays; exported-client casting remains separate
-acceptance work.
+ordinary local gameplay replays, and exported Web casting passes 33 checks per
+buff through the real HUD and quickslot. Native/Linux exported parity and
+rendered world-effect presentation remain separate acceptance work.
 
 At level 5 a Warrior has one skill point; each subsequent level adds one. Open
 Skills with **K** or the character window's Skills tab. The plus button learns
@@ -97,8 +98,9 @@ base cooldown and 57 SP cost. Rank-20 power 50 gives 25/10 speed, 105-second
 duration, 108-second base cooldown, 120 SP cost and a 12-percent incoming-normal
 damage penalty. Gameplay caps, cast-speed adjustment and damage ordering belong
 in the authoritative adapters. The cast animation, persistent affect UI and
-two-client lifecycle are accepted for the protocol-31 candidate; quantitative
-rank-20 damage/movement and exported-client evidence are tracked separately.
+two-client lifecycle are accepted for the protocol-31 candidate. Quantitative
+rank-20 damage/movement and exported Web casting are also accepted; native/Linux
+parity and rendered world effects remain outstanding.
 
 The full-class linker also now uses the source float-power promotion for rank
 costs and cooldowns. This matters at intermediate ranks: power 6 evaluates

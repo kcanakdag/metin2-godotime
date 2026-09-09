@@ -47,6 +47,16 @@ positive-coordinate Yongan; a training-map run needs its own clear corridor and
 does not qualify the same world. The measured ratio must be within `0.03` of the
 source-derived speed multiplier.
 
+`tools/test_browser_self_buffs.py --url EXPORT_URL --database DISPOSABLE_DB
+--fixture PRIVATE_QA_ACCOUNTS --catalog CANDIDATE --skill-vnum 3|4|19
+--output NEW_DIR` runs the same three self-buffs through an actual exported
+Chromium client and the real HUD/quickslot. It derives rank-one cost and duration
+from the compiled catalog, honors auth retry headers, and verifies payment,
+owner-only status, cooling-cast rejection, reconnect restoration and expiry
+without replay. Use only a disposable `mt2-p2-` database and never print the
+private fixture. The r5 candidate passes 33 checks per buff; this does not
+qualify native/Linux exports or rendered world effects.
+
 ## Monster snapshot conversion checks
 
 `tools/test_target_client.py --suite monster_snapshot_cache --godot GODOT --output NEW_DIR`

@@ -29,8 +29,10 @@ retaliation and target-switching scenario (42 checks passed). See the
 The worktree now uses protocol 31 with private timed buffs, owner-filtered status
 and matching bindings from an isolated training QA database. Berserk, Aura of the
 Sword and Strong Body pass local lifecycle, combat and movement qualification;
-exported/browser acceptance remains pending. See the implementation ledger for
-the scoped evidence and limits.
+the exported Web candidate passes 33 browser checks per buff through the real HUD
+and quickslot, including payment, cooldown, reconnect and expiry. See the
+implementation ledger for the scoped evidence and limits. This candidate remains
+local-issuer-only and is not the public deployment.
 The last accepted local protocol-29 build has private charge ownership, public charge
 status and exact-life monster stun state. The isolated five-skill candidate passes
 43 two-client charge-begin/strike checks and 27 live Brown Bear push/stun/expiry checks.
