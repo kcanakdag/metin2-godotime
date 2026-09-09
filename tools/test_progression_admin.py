@@ -62,6 +62,7 @@ def stage_project(stage: Path) -> None:
         (ROOT / "tools/skill_reaction_smoke.gd", stage / "tests/skill_reaction_smoke.gd"),
         (ROOT / "tools/skill_batch_smoke.gd", stage / "tests/skill_batch_smoke.gd"),
         (ROOT / "tools/charge_smoke.gd", stage / "tests/charge_smoke.gd"),
+        (ROOT / "tools/charge_strike_smoke.gd", stage / "tests/charge_strike_smoke.gd"),
     ):
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
@@ -101,6 +102,7 @@ def run_godot(
         "skill_reactions": "skill_reaction_smoke.gd",
         "skill_batch": "skill_batch_smoke.gd",
         "charge": "charge_smoke.gd",
+        "charge_strike": "charge_strike_smoke.gd",
     }.get(str(config["mode"]), "progression_admin_smoke.gd")
     command = [
         godot,
@@ -182,6 +184,7 @@ def arguments() -> argparse.Namespace:
             "skill_reactions",
             "skill_batch",
             "charge",
+            "charge_strike",
         ),
     )
     parser.add_argument("--server", default="http://127.0.0.1:8186")

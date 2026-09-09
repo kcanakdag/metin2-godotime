@@ -5,6 +5,46 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Charge strike implementation checkpoint — 2026-09-09
+
+The working server now routes a targeted charge cast through exact-life and
+strict target-range validation, target-centered splash admission, damage and
+charge consumption in the reducer transaction. Immediate use composes activation
+and consumption; an existing active charge can finish during its original
+cooldown. Payment is stored before kill rewards so a later progression update
+cannot overwrite earned XP or a level-up SP refill. The adapter passes the two-client replay described below.
+
+The splash helper uses the original integer approximate-distance expression
+`(246 * max(dx, dz) + 102 * min(dx, dz)) >> 8`, with inclusive radius admission.
+World coordinates truncate after f32 metre-to-centimetre conversion: `2.10f32`
+projects to 209 cm, so a decimal literal cannot stand in for the exact 210-cm
+integer edge. Separate integer-edge and float-projection checks make this
+explicit. Radius validation accepts bounded whole centimetres despite f32
+representation error, including the one-centimetre lower limit.
+
+Ten focused charge geometry/lifecycle tests pass, and `tools/dev.py lint --only
+rust` passes formatting and strict all-target/all-feature Clippy. These checks
+do not establish transactional damage, subscription or rendered behavior. The
+strike currently prioritizes the selected victim and then stable monster IDs;
+this deterministic budget policy is not verified original sectree ordering.
+CRUSH, stun, two-handed weapon support and normal client approach/presentation
+remain outstanding. No public deployment was changed.
+
+The new `charge_strike` retained-account phase passes 39 checks on fresh local
+`mt2-p2-charge-strike-v27-20260909-0f61bace`, including immediate and active-charge
+strikes, both damage subscriptions, single payment, charge removal, retained
+cooldown, out-of-range rejection and stale/current-revision replay rejection
+without delayed extra damage. Evidence:
+`.local/p6-charge-strike-r1/strike-r4.json`. Frozen QA module SHA-256:
+`38216f5cd918d19b9b419541a1299c9ff7403427e7012cefbb94fa60ba0aa6c0`.
+It contains local auth/QA bootstrap authorization and must not be deployed publicly.
+Two preceding attempts failed on fixture callback parsing before gameplay; named
+callbacks pass isolated Godot import/check-only and the actual replay. An auth
+429 retry interval was respected. Touched Python/GDScript lint also passes.
+This dummy replay does not qualify splash victim ordering, kill/level-up rewards,
+CC, target death during approach or rendered/browser behavior. Next is the
+reusable original CRUSH/stun policy and client approach/presentation acceptance.
+
 ## Persisted charge activation and protocol 27 — 2026-09-09
 
 `charges.rs` persists private ownership/rank/life and a minimal public timing/speed

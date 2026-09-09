@@ -25,8 +25,9 @@ absolute path for the Cargo build. The selector defaults to the installed catalo
 leave it unset for normal builds and the default compiler fixture tests. This
 does not install client assets or publish a database.
 
-Protocol 27 currently permits untargeted charge activation with an equipped sword.
-Target strikes remain disabled, and two-handed weapon runtime support is pending.
+Protocol 27 permits untargeted charge activation with an equipped sword. The
+working candidate also implements immediate target strikes and active-charge
+consumption; CRUSH/stun and two-handed weapon runtime support remain pending.
 The normal four-skill profile remains the installed and public selection; the
 public release is still protocol 26. Use matching regenerated bindings and a
 fresh disposable database for protocol-27 QA.
@@ -41,6 +42,14 @@ reset an existing world or repeat this setup against already-mutated skill rows.
 The latest replay passes 34 checks. Normal `--network-only --movement-attacks`
 account QA passes 84 checks against the same protocol-27 schema. This is headless
 network acceptance, not normal UI, rendered effects or exported-browser evidence.
+
+The `charge_strike` phase uses the same arguments and fresh-database requirements
+to exercise immediate and previously activated strikes against the training
+dummy, range rejection, payment, shared damage/removal, cooldown preservation and
+replayed requests. Use a separate fresh database from the `charge` activation
+phase because both phases learn the skill from revision zero. Check the current
+implementation ledger for actual replay results; adding a phase is not evidence
+that its gameplay acceptance passed.
 
 Opening an installed actor package in Godot may create a PNG alias that removes
 an embedded image's `.dds` suffix (for example, `actor_face.dds.png` becomes

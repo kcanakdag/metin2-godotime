@@ -105,7 +105,7 @@ fn owned_state(
             ready_at_us: 0,
         }))
 }
-fn store(ctx: &ReducerContext, row: CharacterSkill) {
+pub(crate) fn store(ctx: &ReducerContext, row: CharacterSkill) {
     if ctx.db.character_skill().id().find(&row.id).is_some() {
         ctx.db.character_skill().id().update(row);
     } else {
@@ -234,7 +234,7 @@ pub fn cast_skill(
         return Err("Skill changed; refresh before casting.".into());
     }
     let now = now_us(ctx);
-    if now < state.ready_at_us {
+    if d.charge.is_none() && now < state.ready_at_us {
         return Err("Skill is cooling down.".into());
     }
     if now < control.attack_until_us || now < control.next_attack_us {
@@ -249,6 +249,11 @@ pub fn cast_skill(
     if player.health == 0 {
         return Err("You cannot use a skill while dead.".into());
     }
+    let active_charge =
+        d.charge.is_some() && crate::charges::is_active(ctx, &control, &player, skill_vnum, now);
+    if now < state.ready_at_us && !active_charge {
+        return Err("Skill is cooling down.".into());
+    }
     let weapon = crate::item_catalog::definition(inventory::equipped_weapon(ctx, character))?;
     if !weapon
         .weapon
@@ -256,10 +261,9 @@ pub fn cast_skill(
     {
         return Err("This skill requires an equipped sword.".into());
     }
-    let appearance = crate::characters::owned_appearance(ctx, character)?;
     if d.charge.is_some() {
         if control.combat_target_id != 0 {
-            return Err("Charge target strikes are not enabled in this build.".into());
+            return crate::charges::strike(ctx, &mut control, p, state, d, now);
         }
         let activation =
             crate::charges::activate(ctx, &control, &player, &state, d, p.current_sp, now)?;
@@ -270,6 +274,7 @@ pub fn cast_skill(
         store(ctx, state);
         return Ok(());
     }
+    let appearance = crate::characters::owned_appearance(ctx, character)?;
     let action = &definitions::SKILL_ACTIONS
         .iter()
         .find(|(id, actor, _)| *id == skill_vnum && *actor == appearance.actor_id)
