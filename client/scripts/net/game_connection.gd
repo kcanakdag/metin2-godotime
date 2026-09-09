@@ -34,7 +34,7 @@ signal npc_interaction_changed(info: Dictionary)
 signal npc_spawns_changed(rows: Array)
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
-const EXPECTED_PROTOCOL_VERSION := 28
+const EXPECTED_PROTOCOL_VERSION := 29
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
 const TABLES := [
@@ -905,6 +905,12 @@ func cast_skill(vnum: int) -> void:
 	if vnum < 1 or vnum > 255:
 		return
 	_call_reducer("cast_skill", [vnum, skill_revision(vnum)], [&"U16", &"U32"])
+
+
+func begin_charge(vnum: int) -> void:
+	if vnum < 1 or vnum > 255:
+		return
+	_call_reducer("begin_charge", [vnum, skill_revision(vnum)], [&"U16", &"U32"])
 
 
 func admin_set_skill(request_id: String, argument: String) -> void:

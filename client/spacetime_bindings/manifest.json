@@ -1,11 +1,11 @@
 {
   "sdk_commit": "f6c59d7068e5dacbde0559906746d0a6c5933ffb",
-  "schema_sha256": "65ba529d39815d40a49d0201a57854e3d013c80bf1a20a455164e6b5429fae6e",
+  "schema_sha256": "d8b354c578fd64b0d0016548100c9862d4899d7831e7b918c335f287bfe86629",
   "files": {
     "module_game_client.gd": "41a3ae0a7ee816180db226280c2e62e81528be079ffb302f74d5af673687a07b",
     "module_game_db.gd": "76c3d98f696c4ea553148273337eebe0a1944bff2a55601a11b3e7cac2724837",
     "module_game_procedures.gd": "2c2ac42c8f5d708902cc2112b5945c54fd54b4f2a37bf2f1a277c8a9fdbfcfea",
-    "module_game_reducers.gd": "d0f76a181de04027dfbed2840b53d275e1817fedf67aa756eb2cf174a1d74ce9",
+    "module_game_reducers.gd": "f037b40b767869bf5b5cfae73a8fc446064524d0d9d8b580d8b53f7a6d0ac398",
     "module_game_types.gd": "7c7f654cd1152f2321a2b33dc756b3676851912b45d4402c88676b5c43e7a1e9",
     "spacetime_autoload.gd": "3e5f5edc34f6dbc7ff44e3e6d4c296def7da5627e3db41e33a6f54d4ebb0edee",
     "tables/game_account_character_character_id_unique_index.gd": "2461b071a282081b049d783de71735e4d8815bb49c11b53d5a78930bccbac810",

@@ -7831,6 +7831,40 @@
               }
             ]
           },
+          "source_name": "begin_charge",
+          "visibility": {
+            "ClientCallable": []
+          }
+        },
+        {
+          "err_return_type": {
+            "String": []
+          },
+          "ok_return_type": {
+            "Product": {
+              "elements": []
+            }
+          },
+          "params": {
+            "elements": [
+              {
+                "algebraic_type": {
+                  "U16": []
+                },
+                "name": {
+                  "some": "skill_vnum"
+                }
+              },
+              {
+                "algebraic_type": {
+                  "U32": []
+                },
+                "name": {
+                  "some": "expected_revision"
+                }
+              }
+            ]
+          },
           "source_name": "cast_skill",
           "visibility": {
             "ClientCallable": []
@@ -9021,6 +9055,12 @@
             "Function": {
               "canonical_name": "allocate_stat",
               "source_name": "allocate_stat"
+            }
+          },
+          {
+            "Function": {
+              "canonical_name": "begin_charge",
+              "source_name": "begin_charge"
             }
           },
           {

@@ -222,9 +222,31 @@ pub fn cast_skill(
     skill_vnum: u16,
     expected_revision: u32,
 ) -> Result<(), String> {
+    cast(ctx, skill_vnum, expected_revision, false)
+}
+
+/// Original approach activation sends a zero victim without clearing selection.
+#[spacetimedb::reducer]
+pub fn begin_charge(
+    ctx: &ReducerContext,
+    skill_vnum: u16,
+    expected_revision: u32,
+) -> Result<(), String> {
+    cast(ctx, skill_vnum, expected_revision, true)
+}
+
+fn cast(
+    ctx: &ReducerContext,
+    skill_vnum: u16,
+    expected_revision: u32,
+    begin_only: bool,
+) -> Result<(), String> {
     let mut control = crate::active_controller(ctx)?;
     let (character, mut p) = progression::selected_supported_progression(ctx)?;
     let d = definition(skill_vnum)?;
+    if begin_only && d.charge.is_none() {
+        return Err("This skill has no charge activation.".into());
+    }
     let mut state = owned_state(ctx, character, skill_vnum)?;
     check_learning(d, p.character_class, p.level, state.rank)?;
     if state.rank == 0 {
@@ -262,7 +284,7 @@ pub fn cast_skill(
         return Err("This skill requires an equipped sword.".into());
     }
     if d.charge.is_some() {
-        if control.combat_target_id != 0 {
+        if control.combat_target_id != 0 && !begin_only {
             return crate::charges::strike(ctx, &mut control, p, state, d, now);
         }
         let activation =

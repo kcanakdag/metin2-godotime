@@ -26,9 +26,9 @@ remain incomplete.
 Local mob threat behavior now has a reusable two-account passive
 retaliation and target-switching scenario (42 checks passed). See the
 [development replay instructions](docs/development.md#test-scope-and-passive-mob-replay).
-The worktree now uses protocol 28 with private charge ownership, public charge
+The worktree now uses protocol 29 with private charge ownership, public charge
 status and exact-life monster stun state. The isolated five-skill candidate passes
-39 two-client strike checks and 27 live Brown Bear push/stun/expiry checks.
+43 two-client charge-begin/strike checks and 27 live Brown Bear push/stun/expiry checks.
 Earlier activation/reconnect and account/movement checks remain documented in
 the implementation ledger. Two-handed weapons, overlapping reaction qualification
 and normal UI/export integration remain pending; the public release above remains

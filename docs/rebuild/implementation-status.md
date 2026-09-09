@@ -5,6 +5,26 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Explicit charge-begin intent and protocol 29 — 2026-09-09
+
+`begin_charge(skill_vnum, expected_revision)` reuses the skill-cast authorization,
+learning, resource, cooldown, alive/weapon and ownership gates, then activates
+charge without clearing or striking the selected target. Noncharge skills reject.
+`cast_skill` still validates the exact selected target life/range for completion.
+This matches the original zero-victim approach activation while retaining modern
+explicit intents. The Godot facade exposes the reducer; automatic UI approach is
+not yet connected.
+
+The extended two-client strike replay passes 43 checks, including a far selected
+target preserved through activation, no activation damage, duplicate/noncharge
+rejection, subsequent approach and one paid strike during the existing cooldown.
+Evidence: `.local/p6-charge-begin-r1/begin.json`; fresh local database
+`mt2-p2-charge-begin-v29-20260909-f9778dd2`. Frozen QA module SHA-256:
+`a5b4db33eacb587e5ee18838ffdab940c669c534f9267c5f793f18cd2b24b063`.
+102 Godot binding files were generated; schema SHA-256:
+`d8b354c578fd64b0d0016548100c9862d4899d7831e7b918c335f287bfe86629`.
+Strict Rust and touched GDScript lint pass. Public protocol 26/export is unchanged.
+
 ## Client charge capability gate — 2026-09-09
 
 `SkillCatalog` now accepts `physical_charge_v1` with bounded typed timing, speed,

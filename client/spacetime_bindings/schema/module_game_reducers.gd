@@ -28,6 +28,11 @@ func allocate_stat(character_id: PackedByteArray, stat_code: String) -> Spacetim
 
 ## 0. skill_vnum: int [br]
 ## 1. expected_revision: int [br]
+func begin_charge(skill_vnum: int, expected_revision: int) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('begin_charge', [skill_vnum, expected_revision], [&'U16', &'U32'])
+
+## 0. skill_vnum: int [br]
+## 1. expected_revision: int [br]
 func cast_skill(skill_vnum: int, expected_revision: int) -> SpacetimeDBReducerCall:
 	return _client.call_reducer('cast_skill', [skill_vnum, expected_revision], [&'U16', &'U32'])
 

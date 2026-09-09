@@ -25,7 +25,9 @@ absolute path for the Cargo build. The selector defaults to the installed catalo
 leave it unset for normal builds and the default compiler fixture tests. This
 does not install client assets or publish a database.
 
-Protocol 28 permits untargeted charge activation with an equipped sword. The
+Protocol 29 permits explicit `begin_charge(vnum, expected_revision)` activation
+with an equipped sword while preserving a selected target. The normal
+`cast_skill` intent validates the selected target for completion. The
 working candidate also implements immediate target strikes and active-charge
 consumption. CRUSH/stun is now wired for surviving ordinary monsters, with public
 exact-life `monster_stun` state; the two-client Brown Bear replay verifies push,
@@ -34,7 +36,7 @@ also pass; reverse ordering and rendered playback remain unqualified.
 Two-handed weapon runtime support remains pending.
 The normal four-skill profile remains the installed and public selection; the
 public release is still protocol 26. Use matching regenerated bindings and a
-fresh disposable database for protocol-28 QA.
+fresh disposable database for protocol-29 QA.
 
 `tools/test_progression_admin.py charge --fixture PRIVATE --report REPORT` uses
 the existing retained-account workflow to exercise charge payment, shared status,

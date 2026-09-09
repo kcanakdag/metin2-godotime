@@ -57,11 +57,12 @@ func _verify_skill_reactions(first: GameConnection, second: GameConnection) -> v
 
 
 func _charged_strike(first: GameConnection, second: GameConnection, life: int) -> void:
-	if not _check("strike_clear_target", await _raw_success(first, "clear_combat_target", [], [])):
+	if not _check("strike_begin_outside_range", await _approach(first, second, -2.5)):
 		return
+	var before_health := int(_dog(second, 900001).health)
 	if not _check(
 		"strike_charge_activates",
-		await _raw_success(first, "cast_skill", [5, first.skill_revision(5)], [&"U16", &"U32"])
+		await _raw_success(first, "begin_charge", [5, first.skill_revision(5)], [&"U16", &"U32"])
 	):
 		return
 	if not _check(
@@ -71,10 +72,28 @@ func _charged_strike(first: GameConnection, second: GameConnection, life: int) -
 		return
 	var paid_sp := int(first.selected_progression().current_sp)
 	var ready := int(_skill(first).ready_at_us)
-	if not _check(
-		"strike_charge_reselect",
-		await _raw_success(first, "select_combat_target", [900001, life], [&"U32", &"U32"])
-	):
+	var selection := first.selected_combat_target()
+	_check(
+		"strike_begin_preserves_selection",
+		(
+			int(selection.get("target_id", 0)) == 900001
+			and int(selection.get("target_life_sequence", -1)) == life
+		)
+	)
+	_check(
+		"strike_begin_repeat_rejected",
+		not await _raw_success(
+			first, "begin_charge", [5, first.skill_revision(5)], [&"U16", &"U32"]
+		)
+	)
+	_check(
+		"strike_begin_noncharge_rejected",
+		not await _raw_success(
+			first, "begin_charge", [2, first.skill_revision(2)], [&"U16", &"U32"]
+		)
+	)
+	_check("strike_begin_no_damage", int(_dog(second, 900001).health) == before_health)
+	if not _check("strike_begin_approach_target", await _approach(first, second, -1.0)):
 		return
 	await _strike_once(first, second, "charged", paid_sp, ready)
 
