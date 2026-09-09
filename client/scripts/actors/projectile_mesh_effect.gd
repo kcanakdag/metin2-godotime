@@ -37,19 +37,21 @@ void fragment() {
 }
 """
 
+var materials: Array[ShaderMaterial] = []
 var _mesh: MeshInstance3D
 var _clock := FrameClock.new()
 var _frame := 0
 var _count := 0
 
 
-func configure(definition: Dictionary, scene: PackedScene, texture: Texture2D) -> bool:
+func configure(definition: Dictionary, scene: PackedScene, textures: Variant) -> bool:
 	if not is_inside_tree() or get_viewport().transparent_bg or _mesh != null:
 		return false
-	if not _supported(definition) or scene == null or texture == null:
-		return false
-	var image := texture.get_image()
-	if image == null or image.detect_alpha() != Image.ALPHA_NONE:
+	if (
+		not _supported(definition)
+		or scene == null
+		or not (textures is Texture2D or textures is Dictionary)
+	):
 		return false
 	var model := scene.instantiate() as Node3D
 	var meshes: Array[Node] = model.find_children("*", "MeshInstance3D", true, false)
@@ -60,29 +62,36 @@ func configure(definition: Dictionary, scene: PackedScene, texture: Texture2D) -
 		return false
 	var mesh := meshes[0] as MeshInstance3D
 	if (
-		mesh.mesh.get_surface_count() != 1
+		mesh.mesh.get_surface_count() != definition.geometries.size()
 		or mesh.mesh.get_blend_shape_count() != int(definition.frame_count) - 1
 	):
 		model.free()
 		return false
 	for player: AnimationPlayer in model.find_children("*", "AnimationPlayer", true, false):
 		player.stop()
-	var shader := Shader.new()
-	shader.code = (
-		additive_shader()
-		if int(definition.recipe.elements[0].blending_destination) == 2
-		else SHADER
-	)
-	var material := ShaderMaterial.new()
-	material.shader = shader
-	material.set_shader_parameter("source_texture", texture)
-	material.set_shader_parameter(
-		"color_operation", int(definition.recipe.elements[0].color_operation)
-	)
-	material.set_shader_parameter(
-		"color_factor", packed_factor(definition.recipe.elements[0].color_factor)
-	)
-	mesh.material_override = material
+	var loaded_materials: Array[ShaderMaterial] = []
+	for index: int in range(definition.geometries.size()):
+		var texture: Texture2D = (
+			textures
+			if textures is Texture2D
+			else textures.get(definition.geometries[index].texture)
+		)
+		if texture == null or texture.get_image() == null:
+			model.free()
+			return false
+		var element: Dictionary = definition.recipe.elements[index]
+		var shader := Shader.new()
+		shader.code = additive_shader() if int(element.blending_destination) == 2 else SHADER
+		var material := ShaderMaterial.new()
+		material.shader = shader
+		material.set_shader_parameter("source_texture", texture)
+		material.set_shader_parameter("color_operation", int(element.color_operation))
+		material.set_shader_parameter("color_factor", packed_factor(element.color_factor))
+		loaded_materials.append(material)
+		mesh.set_surface_override_material(index, material)
+	if loaded_materials.size() == 1:
+		mesh.material_override = loaded_materials[0]
+	materials = loaded_materials
 	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(model)
 	_mesh = mesh
@@ -118,16 +127,20 @@ func _apply_frame() -> void:
 
 static func _supported(definition: Dictionary) -> bool:
 	var recipe: Dictionary = definition.recipe
-	if definition.geometries.size() != 1 or recipe.elements.size() != 1:
+	if (
+		definition.geometries.is_empty()
+		or definition.geometries.size() > 32
+		or recipe.elements.size() != definition.geometries.size()
+	):
 		return false
-	var element: Dictionary = recipe.elements[0]
 	if int(definition.frame_count) < 1 or int(definition.frame_count) > 256:
 		return false
-	if definition.geometries[0].visibility.size() != int(definition.frame_count):
-		return false
-	for value: Variant in definition.geometries[0].visibility:
-		if not is_finite(float(value)):
+	for geometry: Dictionary in definition.geometries:
+		if geometry.visibility.size() != int(definition.frame_count):
 			return false
+		for value: Variant in geometry.visibility:
+			if not is_finite(float(value)):
+				return false
 	if not FrameClock.new().configure(
 		int(definition.frame_count),
 		float(recipe.frame_delay),
@@ -136,6 +149,13 @@ static func _supported(definition: Dictionary) -> bool:
 		float(recipe.start_time)
 	):
 		return false
+	for element: Dictionary in recipe.elements:
+		if not _element_supported(element, recipe):
+			return false
+	return true
+
+
+static func _element_supported(element: Dictionary, recipe: Dictionary) -> bool:
 	return (
 		_billboard_supported(element, recipe)
 		and element.blending_enabled

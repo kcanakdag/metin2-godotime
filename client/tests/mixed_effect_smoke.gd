@@ -43,12 +43,38 @@ func _run() -> void:
 	world.add_child(environment)
 	var effect := Mixed.new()
 	world.add_child(effect)
-	_check("complete Bash configures", effect.configure(catalog, scenes, textures, 42))
+	_check("complete mixed effect configures", effect.configure(catalog, scenes, textures, 42))
 	if effect._particles == null:
+		print("CONFIGURE_ERROR ", effect.error_message)
 		_finish()
 		return
-	_check("all particle systems present", effect._particles._layers.size() == 12)
-	_check("all mesh layers present", effect._meshes.size() == 3)
+	_check(
+		"all particle systems present",
+		effect._particles._layers.size() == catalog.particle_effect.systems.size()
+	)
+	_check("all mesh layers present", effect._meshes.size() == catalog.meshes.size())
+	for index: int in range(catalog.meshes.size()):
+		_check(
+			"every geometry has material",
+			effect._meshes[index].materials.size() == catalog.meshes[index].geometries.size()
+		)
+	for layer_index: int in range(catalog.meshes.size()):
+		var layer: Node3D = effect._meshes[layer_index]
+		for index: int in range(layer.materials.size()):
+			var material: ShaderMaterial = layer.materials[index]
+			_check(
+				"surface uses its ordered material",
+				layer._mesh.get_surface_override_material(index) == material
+			)
+			_check(
+				"surface factor follows original element",
+				(
+					material.get_shader_parameter("color_factor")
+					== layer.packed_factor(
+						catalog.meshes[layer_index].recipe.elements[index].color_factor
+					)
+				)
+			)
 	var peak := 0
 	var clean := true
 	var completed := false

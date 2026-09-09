@@ -59,7 +59,9 @@ func _run() -> void:
 	# approximations caused the original green-channel failure.
 	var ramp := Image.create(256, 1, false, Image.FORMAT_RGBA8)
 	for index: int in range(256):
-		ramp.set_pixel(index, 0, Color(index / 255.0, (255 - index) / 255.0, 64 / 255.0, 1))
+		ramp.set_pixel(
+			index, 0, Color(index / 255.0, (255 - index) / 255.0, 64 / 255.0, index / 255.0)
+		)
 	var ramp_texture := ImageTexture.create_from_image(ramp)
 	material.set_shader_parameter("source_texture", ramp_texture)
 	(swatch.mesh as QuadMesh).size = Vector2(256.0 / 240, 1)

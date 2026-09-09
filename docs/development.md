@@ -2294,3 +2294,12 @@ byte precision before modulation. Alpha remains constrained to 1 in this rendere
 The `skill_mesh` native scenario covers white, both original Dash gray values and
 an asymmetric colored factor across operations 3/4/6. Multi-element scene support
 is still separate from this material capability.
+
+
+The shared mesh renderer now supports up to 32 ordered surfaces in one scene,
+with a shared frame clock and per-surface factors/textures. Mixed effects pass the
+resource dictionary and assign priorities to every material. Source-color RGB
+blends accept alpha-bearing textures because texture alpha does not participate
+in their supported RGB equation; transparent viewports still reject. The native
+mixed scenario derives layer counts from its catalog and verifies each surface's
+material/factor, so it can exercise complete Dash as well as Bash.

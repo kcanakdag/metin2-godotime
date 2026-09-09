@@ -5,6 +5,30 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Full Dash multi-surface runtime — 2026-09-09
+
+The shared mesh renderer now instantiates one converted scene, assigns one material
+per ordered surface, and advances all surfaces with one morph-frame clock. Mixed
+effects resolve every geometry texture and preserve source element draw priorities.
+Single-surface callers retain their existing texture argument and material access.
+Dash's 24 elements no longer require separate scene copies.
+
+The first complete-render attempt rejected Dash's alpha-bearing texture. Its
+supported SRC_COLOR blend uses RGB independently of texture alpha, so that unused
+opacity restriction was removed while keeping opaque-viewport and existing blend
+validation. The ramp test now varies alpha across all byte values without changing
+the expected RGB result. Diagnostic failure evidence remains separate.
+
+Native Dash qualification passes 61 checks at
+`.local/p6-all-skill-effects-r1/dash-render-materials/report.json`: complete particles,
+24 ordered surface materials/factors, simulation, natural completion and missing
+resource rejection. The frame-14 capture from `dash-render-r2/` was reviewed.
+The alpha-varying material regression passes 6,182 checks at `mesh-alpha-colors/`.
+The existing complete Bash effect passes 21 checks at `bash-multi-regression/`.
+Touched Godot format/parser/lint checks pass. This is isolated native rendering;
+Dash gameplay, equipped playback, browser effects and public rollout remain pending.
+No installed package or server change is included.
+
 ## Packed mesh color factors — 2026-09-09
 
 The mesh renderer now accepts finite RGB factors in [0,1] while retaining its

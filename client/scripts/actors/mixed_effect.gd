@@ -3,6 +3,7 @@ extends Node3D
 
 const Particles = preload("res://scripts/actors/particle_effect.gd")
 const MeshEffect = preload("res://scripts/actors/projectile_mesh_effect.gd")
+var error_message := ""
 var _particles: Node3D
 var _meshes: Array[Node3D] = []
 var _finished := false
@@ -15,21 +16,24 @@ func configure(
 		return false
 	# Validate references before creating any visible portion of the effect.
 	for mesh: Dictionary in definition.meshes:
-		if not scenes.get(mesh.model) is PackedScene or mesh.geometries.size() != 1:
+		if not scenes.get(mesh.model) is PackedScene or mesh.geometries.is_empty():
 			return false
-		if not textures.get(mesh.geometries[0].texture) is Texture2D:
-			return false
+		for geometry: Dictionary in mesh.geometries:
+			if not textures.get(geometry.texture) is Texture2D:
+				return false
 	var particles := Particles.new()
 	add_child(particles)
 	if not particles.configure(definition.particle_effect, textures, seed_value):
 		particles.free()
+		error_message = "Particle layers could not configure"
 		return false
 	_particles = particles
 	for mesh: Dictionary in definition.meshes:
 		var layer := MeshEffect.new()
 		add_child(layer)
-		if not layer.configure(mesh, scenes[mesh.model], textures[mesh.geometries[0].texture]):
+		if not layer.configure(mesh, scenes[mesh.model], textures):
 			layer.free()
+			error_message = "Mesh layer could not configure: " + str(mesh.model)
 			_clear()
 			return false
 		_meshes.append(layer)
@@ -40,8 +44,9 @@ func configure(
 			material.render_priority = priority
 		priority += 1
 	for layer: Node3D in _meshes:
-		layer._mesh.material_override.render_priority = priority
-		priority += 1
+		for material: ShaderMaterial in layer.materials:
+			material.render_priority = priority
+			priority += 1
 	_finished = false
 	return true
 
