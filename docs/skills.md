@@ -436,3 +436,14 @@ cooldown and damage formulas instead of treating the two-stage action as an
 ordinary damage handler. Rust code generation preserves `SkillHandler::Charge`;
 this does not by itself enable the ability. Live reducer, movement and UI behavior
 must implement the charge lifecycle before installing this candidate.
+
+Movement now accepts a server-owned MOV_SPEED point total in both directional
+and click-to-move calculations. The source PC cap is 200 (`char.cpp`,
+`GetLimitPoint`); `utils.cpp::CalculateDuration` uses a duration percentage of
+`200 - points` below 100 and integer `10000 / points` at/above 100. Thus Dash's
+100 + 150 points cap at a 2× multiplier; 150 points use 66% duration, not an
+unquantized 1.5× multiplier. Both paths retain the 100 ms elapsed-time cap,
+diagonal normalization and swept collision. The live simulation supplies the
+normal 100 points until charge state is implemented. The existing 5 m/s baseline
+is retained; original per-motion base speeds and whole-travel duration rounding
+are not yet reproduced by this tick-based movement model.

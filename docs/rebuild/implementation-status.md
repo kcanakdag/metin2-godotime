@@ -5,6 +5,27 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Server-owned movement speed calculation — 2026-09-09
+
+Directional and click movement now take a server-owned speed-point total, using
+the original PC 0–200 cap and integer duration-percentage calculation. This
+provides the movement calculation needed for Dash's +150-point charge without
+accepting a speed value from client intents. Normal simulation explicitly uses
+100 points; charge activation/expiry/consumption is still pending. No schema,
+reducer arguments, bindings or public deployment changed.
+
+Eleven focused Rust movement tests pass, including speed caps, source duration
+quantization, boosted diagonal and elapsed-time limits, collision, target stopping
+and the movement remainder after an attack. The existing 5 m/s base remains;
+these tests do not establish original animation-dependent speeds or multiplayer
+charge behavior. Source evidence is the pinned server's `char.cpp::GetLimitPoint`
+and `utils.cpp::CalculateDuration` (see the movement contract in `docs/skills.md`).
+`python3 tools/dev.py lint --only rust` now passes (rustfmt and strict Clippy,
+all targets/features). Its first run exposed a missing `combat_geometry` module
+in the generated-definition integration harness. Importing the existing shared
+module fixes compilation; all 11 tests in that harness also pass. No generated
+files or lint exceptions were changed.
+
 ## Dash charge content contract — 2026-09-09
 
 The full-class compiler no longer classifies Dash as ordinary damage. It selects a

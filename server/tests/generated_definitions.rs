@@ -1,3 +1,6 @@
+#[path = "../src/combat_geometry.rs"]
+mod combat_geometry;
+
 #[path = "../src/mob_damage.rs"]
 mod mob_damage;
 

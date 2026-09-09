@@ -1,6 +1,7 @@
 //! Pure movement and collision rules; positions use meters on the X/Z plane.
 
 pub const SPEED: f32 = 5.0;
+pub const BASE_SPEED_POINTS: i32 = 100;
 pub const HALF_SIZE: f32 = 32.0;
 pub const PLAYER_RADIUS: f32 = 0.45;
 pub const TRAINING_OBSTACLES: &[(f32, f32, f32, f32, f32, &str)] = &[
@@ -39,31 +40,50 @@ pub fn valid_target(x: f32, z: f32) -> Result<(), String> {
     Ok(())
 }
 
-fn distance(elapsed: f32) -> f32 {
+/// Original PC MOV_SPEED limit and CalculateDuration integer quantization.
+/// Points are server-owned stats, never a value supplied by a movement intent.
+fn speed_multiplier(points: i32) -> f32 {
+    let points = points.clamp(0, 200);
+    let duration_percent = if points < BASE_SPEED_POINTS {
+        200 - points
+    } else {
+        10_000 / points
+    };
+    100.0 / duration_percent as f32
+}
+
+fn distance(elapsed: f32, speed_points: i32) -> f32 {
     if elapsed.is_finite() {
-        SPEED * elapsed.clamp(0.0, 0.1)
+        SPEED * speed_multiplier(speed_points) * elapsed.clamp(0.0, 0.1)
     } else {
         0.0
     }
 }
 
-pub fn step(x: f32, z: f32, elapsed: f32) -> Result<(f32, f32), String> {
+pub fn step(x: f32, z: f32, elapsed: f32, speed_points: i32) -> Result<(f32, f32), String> {
     valid_direction(x, z)?;
     let magnitude = x.hypot(z).max(1.0);
     Ok((
-        x / magnitude * distance(elapsed),
-        z / magnitude * distance(elapsed),
+        x / magnitude * distance(elapsed, speed_points),
+        z / magnitude * distance(elapsed, speed_points),
     ))
 }
 
-pub fn target_step(x: f32, z: f32, target_x: f32, target_z: f32, elapsed: f32) -> (f32, f32) {
+pub fn target_step(
+    x: f32,
+    z: f32,
+    target_x: f32,
+    target_z: f32,
+    elapsed: f32,
+    speed_points: i32,
+) -> (f32, f32) {
     let dx = target_x - x;
     let dz = target_z - z;
     let length = dx.hypot(dz);
     if length < 0.02 {
         return (0.0, 0.0);
     }
-    let travel = distance(elapsed).min(length);
+    let travel = distance(elapsed, speed_points).min(length);
     (dx / length * travel, dz / length * travel)
 }
 
@@ -98,6 +118,38 @@ pub fn slide(x: f32, z: f32, dx: f32, dz: f32, obstacles: &[Bounds]) -> (f32, f3
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn original_player_speed_uses_capped_quantized_duration() {
+        // Source CalculateDuration uses integer division, including above 100.
+        for (points, duration) in [(0, 200), (50, 150), (100, 100), (150, 66), (200, 50)] {
+            assert!((speed_multiplier(points) - 100.0 / duration as f32).abs() < 0.00001);
+        }
+        assert_eq!(speed_multiplier(i32::MIN), 0.5);
+        assert_eq!(speed_multiplier(i32::MAX), 2.0);
+        assert_eq!(
+            step(1.0, 0.0, 0.1, BASE_SPEED_POINTS + 150).unwrap(),
+            (1.0, 0.0)
+        );
+    }
+
+    #[test]
+    fn boosted_movement_preserves_input_time_and_collision_limits() {
+        let boosted = BASE_SPEED_POINTS + 150;
+        let (dx, dz) = step(1.0, 1.0, 3600.0, boosted).unwrap();
+        assert!((dx.hypot(dz) - 1.0).abs() < 0.00001);
+        assert_eq!(step(0.5, 0.0, 0.1, boosted).unwrap(), (0.5, 0.0));
+        for elapsed in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY, -1.0] {
+            assert_eq!(step(1.0, 0.0, elapsed, boosted).unwrap(), (0.0, 0.0));
+        }
+        assert!(step(f32::NAN, 0.0, 0.1, boosted).is_err());
+        assert!(step(2.0, 0.0, 0.1, boosted).is_err());
+        let (dx, dz) = step(1.0, 0.0, 0.1, boosted).unwrap();
+        assert_eq!(slide(0.75, 0.0, dx, dz, &wall()), (1.0, 0.0));
+        assert_eq!(target_step(0.0, 0.0, 0.25, 0.0, 0.1, boosted), (0.25, 0.0));
+        let (dx, dz) = target_step(0.0, 0.0, 10.0, 10.0, 3600.0, boosted);
+        assert!((dx.hypot(dz) - 1.0).abs() < 0.00001);
+    }
+
     fn wall() -> [Bounds; 1] {
         [Bounds {
             min_x: 1.0,
@@ -108,21 +160,27 @@ mod tests {
     }
     #[test]
     fn diagonal_movement_has_no_speed_bonus() {
-        let (x, z) = step(1.0, 1.0, 0.1).unwrap();
+        let (x, z) = step(1.0, 1.0, 0.1, BASE_SPEED_POINTS).unwrap();
         assert!((x.hypot(z) - 0.5).abs() < 0.00001);
-        assert_eq!(step(0.5, 0.0, 0.1).unwrap(), (0.25, 0.0));
+        assert_eq!(step(0.5, 0.0, 0.1, BASE_SPEED_POINTS).unwrap(), (0.25, 0.0));
     }
     #[test]
     fn stalled_tick_cannot_bank_elapsed_time() {
-        assert_eq!(step(1.0, 0.0, 3600.0).unwrap(), (0.5, 0.0));
-        assert_eq!(step(1.0, 0.0, -1.0).unwrap(), (0.0, 0.0));
-        assert_eq!(step(1.0, 0.0, f32::NAN).unwrap(), (0.0, 0.0));
+        assert_eq!(
+            step(1.0, 0.0, 3600.0, BASE_SPEED_POINTS).unwrap(),
+            (0.5, 0.0)
+        );
+        assert_eq!(step(1.0, 0.0, -1.0, BASE_SPEED_POINTS).unwrap(), (0.0, 0.0));
+        assert_eq!(
+            step(1.0, 0.0, f32::NAN, BASE_SPEED_POINTS).unwrap(),
+            (0.0, 0.0)
+        );
     }
     #[test]
     fn rejects_nonfinite_and_out_of_range_input() {
         for value in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY, 2.0, -2.0] {
-            assert!(step(value, 0.0, 0.1).is_err());
-            assert!(step(0.0, value, 0.1).is_err());
+            assert!(step(value, 0.0, 0.1, BASE_SPEED_POINTS).is_err());
+            assert!(step(0.0, value, 0.1, BASE_SPEED_POINTS).is_err());
         }
         for value in [f32::NAN, f32::INFINITY, 32.0, -32.0] {
             assert!(valid_target(value, 0.0).is_err());
@@ -144,9 +202,12 @@ mod tests {
     }
     #[test]
     fn click_target_stops_without_overshooting() {
-        let (dx, dz) = target_step(0.0, 0.0, 0.1, 0.1, 0.1);
+        let (dx, dz) = target_step(0.0, 0.0, 0.1, 0.1, 0.1, BASE_SPEED_POINTS);
         assert!((dx - 0.1).abs() < 0.00001);
         assert!((dz - 0.1).abs() < 0.00001);
-        assert_eq!(target_step(0.0, 0.0, 0.0, 0.0, 0.1), (0.0, 0.0));
+        assert_eq!(
+            target_step(0.0, 0.0, 0.0, 0.0, 0.1, BASE_SPEED_POINTS),
+            (0.0, 0.0)
+        );
     }
 }

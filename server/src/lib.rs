@@ -613,6 +613,7 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
                     controller.direction_x,
                     controller.direction_z,
                     movement_elapsed,
+                    movement::BASE_SPEED_POINTS,
                 )?,
                 2 => movement::target_step(
                     player.x,
@@ -620,6 +621,7 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
                     controller.target_x,
                     controller.target_z,
                     movement_elapsed,
+                    movement::BASE_SPEED_POINTS,
                 ),
                 _ => (0.0, 0.0),
             };
@@ -786,6 +788,7 @@ mod tests {
                 1.0,
                 0.0,
                 movement_elapsed_after_attack(previous, previous + 1_000_000, previous),
+                movement::BASE_SPEED_POINTS,
             )
             .unwrap(),
             (0.5, 0.0)
