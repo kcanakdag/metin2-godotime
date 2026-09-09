@@ -36,6 +36,23 @@ their authored ranges. This is a candidate compiler change, not a live rollout.
 
 ## Implementation boundaries
 
+`server/src/charge_lifecycle.rs` now provides pure activation, consumption and
+invalidation transitions. Activation returns the remaining SP and next skill
+state; consumption returns the captured rank and next state without a second
+payment or cooldown restart. Proposals leave their inputs unchanged so the
+future reducer adapter can validate all combat conditions before persisting.
+The adapter must atomically persist resource/state changes and damage. This
+component does not itself establish database atomicity, validate combat targets
+or authorize a supplied owner snapshot. It is compiled into the server but not
+yet called by a reducer or movement simulation.
+
+Six focused tests cover approach/immediate consumption, repeated activation and
+consumption, exclusive expiry, captured owner character/connection/life, stale
+revisions, insufficient SP, bounded policy/rank values and arithmetic overflow.
+Protocol 26 and the live four-skill catalog remain unchanged. Next integration
+requires a persisted charge record, its authoritative client projection, movement
+interval handling and the separate immediate damage path described below.
+
 Use a separate, server-owned timed affect/charge record. The current
 `PendingSkill` lifetime is tied to an attack action revision and owns animation
 hit windows. A charge must survive ordinary approach movement and must not

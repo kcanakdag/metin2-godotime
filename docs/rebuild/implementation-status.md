@@ -5,6 +5,23 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Charge lifecycle component — 2026-09-09
+
+`server/src/charge_lifecycle.rs` implements pure bounded activation, consumption
+and invalidation transitions. Activation returns SP/state changes together;
+consumption preserves cooldown, captures rank and removes the charge. Revision
+checks reject stale proposals, and owner matching binds the charge to character,
+connection and life. Invalidated/expired records are cleared without refunding
+resources or resetting cooldown. Six focused Rust tests pass, including immediate
+and delayed strikes, replay rejection, ownership changes and numeric overflow.
+Rustfmt and strict Clippy across all targets/features pass.
+
+This component is not yet wired into reducers, persistence, movement or client
+subscriptions. These tests do not prove transaction rollback, network security or
+playable Dash. The [charge contract](charge-skill-contract.md) records adapter
+requirements and remaining two-client acceptance. No protocol or public build
+changed.
+
 ## Charge approach range and source lifecycle — 2026-09-09
 
 The full-class Rust compiler now applies the original 170 cm melee/charge range

@@ -5,6 +5,7 @@ mod appearance;
 mod area_lifecycle;
 mod attack_timing;
 mod characters;
+pub mod charge_lifecycle;
 mod combat;
 mod combat_geometry;
 mod combo;
