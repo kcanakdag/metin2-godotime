@@ -5,6 +5,25 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Charge approach range and source lifecycle — 2026-09-09
+
+The full-class Rust compiler now applies the original 170 cm melee/charge range
+override rather than treating raw table zero as unlimited. This affects Dash,
+Ambush and Finger Strike. Raw source fields remain intact; malformed/duplicate
+client flags and invalid raw ranges reject even when an override would apply.
+Eleven focused compiler/interpreter tests pass. The full 44-skill candidate replay
+passes 309 metadata checks including every effective range, 21,120 formula checks,
+88 motion-window and 88 geometry checks at
+`.local/p6-charge-r1/compiler-target-range/report.json`. Strict Rust lint and
+touched Python lint/format checks pass.
+
+The [charge contract](charge-skill-contract.md) records the original two-stage
+approach, immediate target-centered strike, CRUSH/stun rules and required lifecycle
+acceptance. This changes the implementation path: Dash cannot reuse the current
+animation-window `PendingSkill` damage scheduler as-is. Its state, live reducers,
+client approach and multiplayer behavior are still pending. No public/schema
+change was made.
+
 ## Server-owned movement speed calculation — 2026-09-09
 
 Directional and click movement now take a server-owned speed-point total, using

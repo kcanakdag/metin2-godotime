@@ -109,6 +109,11 @@ def main():
             "healing": "Healing",
             "charge": "Charge",
         }[skill["handler"]]
+        target_cm = (
+            170
+            if set(skill["client_flags"]) & {"MELEE_ATTACK", "CHARGE_ATTACK"}
+            else skill["target_range_cm"]
+        )
         metadata_checks.append(
             "{ let skill = definitions::CLASS_SKILLS.iter().find(|s|s.vnum == "
             + str(skill["vnum"])
@@ -118,7 +123,8 @@ def main():
             + f"assert_eq!(skill.handler, definitions::SkillHandler::{handler});\n"
             + f"assert_eq!(skill.attribute, definitions::SkillAttribute::{attribute});\n"
             + f"assert_eq!(skill.affect, {affects[0]});\n"
-            + f"assert_eq!(skill.secondary_affect, {affects[1]}); }}\n"
+            + f"assert_eq!(skill.secondary_affect, {affects[1]});\n"
+            + f"assert_eq!(skill.range_m, {target_cm / 100!r}f32); }}\n"
         )
     generated = output / "definitions.rs"
     run(
@@ -240,7 +246,7 @@ def main():
         "skills": 44,
         "appearances": 88,
         "formula_checks": checks,
-        "metadata_checks": len(metadata_checks) * 6 + 1,
+        "metadata_checks": len(metadata_checks) * 7 + 1,
         "motion_window_checks": len(window_checks),
         "motion_geometry_checks": len(window_checks),
         "three_way_cut_timing_replays": 2,

@@ -113,6 +113,33 @@ pub fn program(value: &Value) -> Result<String, String> {
     Ok(format!("&[{}]", result.join(",")))
 }
 
+fn target_range_m(skill: &Value) -> Result<f32, String> {
+    // PythonSkill::GetTargetRange overrides the raw table range for these flags.
+    // In particular, Dash's table zero must not become an unlimited strike.
+    let authored = integer(&skill["target_range_cm"], 0, 10000)?;
+    let flags = skill["client_flags"]
+        .as_array()
+        .filter(|flags| flags.len() <= 16)
+        .ok_or("Invalid client skill flags")?;
+    let mut seen = BTreeSet::new();
+    for flag in flags {
+        let flag = flag
+            .as_str()
+            .filter(|flag| !flag.is_empty() && flag.len() <= 64)
+            .ok_or("Invalid client skill flag")?;
+        if !seen.insert(flag) {
+            return Err("Duplicate client skill flag".into());
+        }
+    }
+    Ok(
+        if seen.contains("MELEE_ATTACK") || seen.contains("CHARGE_ATTACK") {
+            1.7
+        } else {
+            authored as f32 / 100.0
+        },
+    )
+}
+
 pub fn validate(root: &Value) -> Result<(), String> {
     if root["schema"] != "mt2spacetime.skills" || root["version"] != 2 {
         return Err("Unsupported class skill catalog".into());
@@ -144,6 +171,7 @@ pub fn validate(root: &Value) -> Result<(), String> {
         }
         integer(&skill["minimum_level"], 1, 99)?;
         integer(&skill["maximum_rank"], 1, 20)?;
+        target_range_m(skill)?;
         if !matches!(
             skill["attribute"].as_str(),
             Some("NORMAL" | "MELEE" | "RANGE" | "MAGIC")
@@ -323,7 +351,7 @@ pub fn generate(root: &Value) -> Result<String, String> {
         let flags = strings("flags")?;
         let weapons = strings("weapon_limits")?;
         let radius = integer(&skill["splash_radius_cm"], 0, 10000)? as f32 / 100.0;
-        let range = integer(&skill["target_range_cm"], 0, 10000)? as f32 / 100.0;
+        let range = target_range_m(skill)?;
         let max_targets = integer(&skill["max_targets"], 0, 32)?;
         let fields = [
             ("amount", "formula"),
@@ -417,7 +445,7 @@ mod tests {
                         "rank_costs":vec![1;21],"rank_cooldowns_us":vec![1_000_000;21],
                         "programs":programs.into_iter().collect::<serde_json::Map<_,_>>(),
                         "variants":variants,"point":"HP","secondary_point":"NONE",
-                        "flags":["ATTACK"],"weapon_limits":[],"splash_radius_cm":200,
+                        "flags":["ATTACK"],"client_flags":[],"weapon_limits":[],"splash_radius_cm":200,
                         "target_range_cm":300,"max_targets":12
                     }));
                 }
@@ -455,6 +483,46 @@ mod tests {
             root["skills"][0]["attribute"] = json!(attribute);
             root["skills"][0]["secondary_affect"] = json!("30");
             assert!(generate(&root).is_ok());
+        }
+    }
+
+    #[test]
+    fn melee_and_charge_use_original_approach_range_without_changing_raw_data() {
+        let mut root = catalog();
+        for flags in [json!(["MELEE_ATTACK"]), json!(["CHARGE_ATTACK"])] {
+            for raw in [0, 300, 10000] {
+                root["skills"][0]["client_flags"] = flags.clone();
+                root["skills"][0]["target_range_cm"] = json!(raw);
+                assert_eq!(target_range_m(&root["skills"][0]).unwrap(), 1.7);
+                assert!(generate(&root).unwrap().contains("range_m:1.7"));
+                assert_eq!(root["skills"][0]["target_range_cm"], raw);
+            }
+        }
+        root["skills"][0]["client_flags"] = json!(["NEED_TARGET"]);
+        for (raw, expected) in [(0, 0.0), (300, 3.0), (10000, 100.0)] {
+            root["skills"][0]["target_range_cm"] = json!(raw);
+            assert_eq!(target_range_m(&root["skills"][0]).unwrap(), expected);
+        }
+    }
+
+    #[test]
+    fn malformed_target_policy_rejects_even_with_a_range_override() {
+        for flags in [
+            Value::Null,
+            json!("CHARGE_ATTACK"),
+            json!([true]),
+            json!([""]),
+            json!(["CHARGE_ATTACK", "CHARGE_ATTACK"]),
+        ] {
+            let mut root = catalog();
+            root["skills"][0]["client_flags"] = flags;
+            assert!(generate(&root).is_err());
+        }
+        for raw in [json!(-1), json!(10001), json!(true), Value::Null] {
+            let mut root = catalog();
+            root["skills"][0]["client_flags"] = json!(["CHARGE_ATTACK"]);
+            root["skills"][0]["target_range_cm"] = raw;
+            assert!(generate(&root).is_err());
         }
     }
 

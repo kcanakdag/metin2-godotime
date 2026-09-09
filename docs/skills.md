@@ -436,6 +436,10 @@ cooldown and damage formulas instead of treating the two-stage action as an
 ordinary damage handler. Rust code generation preserves `SkillHandler::Charge`;
 this does not by itself enable the ability. Live reducer, movement and UI behavior
 must implement the charge lifecycle before installing this candidate.
+See the [source-backed charge contract](rebuild/charge-skill-contract.md) for
+approach, immediate target-centered damage, push/stun and lifecycle acceptance.
+The full-class compiler resolves MELEE_ATTACK/CHARGE_ATTACK to the original
+1.7 m effective range; raw table zero does not grant unlimited charge range.
 
 Movement now accepts a server-owned MOV_SPEED point total in both directional
 and click-to-move calculations. The source PC cap is 200 (`char.cpp`,
