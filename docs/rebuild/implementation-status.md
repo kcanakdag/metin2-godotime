@@ -5,6 +5,29 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Same-session repeat points to first-use cast cost — 2026-09-09
+
+The browser runner now supports one to three same-rank Dash casts without
+relearning, restarting clients or bypassing cooldown. It reuses the unchanged
+timing export above (manifest `fdf15d0bd1c7f076f3f4aab69f1c7a3dfca0478a79f0700f3bd751afb56ce810`).
+The three-cast attempt is retained at `.local/p6-request-web-r1/repeated/report.json`.
+It is **not a passing full replay**: 41 checks completed before the caster entered
+`loading` during the third sample and dummy lookup raised `StopIteration`.
+The runner now reports that lost fixture/loading state explicitly; this diagnostic
+wording change was made after the attempt. Scoped Python lint/format checks pass.
+
+Both completed rank-10 samples retain separate acknowledgements and matching
+dummy-life damage/effects on both clients. The first cast acknowledgement takes
+**4,349 ms**, while the second takes **94 ms**. Caster input-to-action/damage falls
+from **5,064 ms to 881 ms**; peer observation falls from **5,207 ms to 866 ms**.
+This strongly suggests a first-use cost rather than a persistent multi-second
+approach delay. It does not identify the expensive function or prove all repeat
+casts are fast. Inspection confirms the pinned SDK applies transaction updates
+and invokes their listeners before emitting its reducer response, so that measured
+duration includes synchronous client subscription handling. Next profile that
+handling around the first cast; do not choose a renderer/server fix from timing
+alone. Auth refresh/loading behavior in the longer replay remains unqualified.
+
 ## Populated-browser request timing: delay concentrated at cast — 2026-09-09
 
 Source `e1d0b25` was exported to `.local/p6-request-web-r1/web`; its served

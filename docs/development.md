@@ -2407,6 +2407,16 @@ contain no arguments or credentials and exist only in explicitly activated test
 probes. The focused `test_target_client.py --suite probe` regression checks the
 bounded history, allowlist and local-failure distinction.
 
+For Dash, `--skills 5 --repeat-casts 2 --request-timing` repeats the cast in the
+same browser sessions at the same learned rank. The runner supports one to three
+casts, learns only once, waits 13 seconds after each completed result for the
+12-second cooldown, and restores the same approach positions. Samples and capture
+names retain separate `5`, `5-repeat-1`, etc. records. This can distinguish
+first-use costs from repeated costs; it does not isolate server versus client
+work. A disappearing dummy/loading transition fails the measurement rather than
+being treated as damage evidence. Longer runs can overlap session refresh; retain
+their failed-run diagnostics and do not claim the whole replay passed.
+
 
 ## Batch class-skill effect discovery
 

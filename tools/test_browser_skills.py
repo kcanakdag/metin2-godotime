@@ -26,6 +26,7 @@ def main() -> None:
     parser.add_argument("--skills", type=int, nargs="+", default=[16, 17])
     parser.add_argument("--original-world", action="store_true")
     parser.add_argument("--request-timing", action="store_true")
+    parser.add_argument("--repeat-casts", type=int, choices=range(1, 4), default=1)
     args = parser.parse_args()
     if not args.database.startswith("mt2-p2-"):
         parser.error(
@@ -33,6 +34,8 @@ def main() -> None:
         )
     if not args.skills or len(set(args.skills)) != len(args.skills):
         parser.error("Select distinct skills")
+    if args.repeat_casts > 1 and args.skills != [5]:
+        parser.error("Repeated timing currently qualifies only Dash (--skills 5)")
     accounts = private_json(args.fixture, "account fixture")["accounts"]
     if len(accounts) != 2:
         parser.error("The fixture must contain two existing accounts")
@@ -87,7 +90,13 @@ def main() -> None:
         raise AssertionError("Skill control is not accessible: " + str(vnum))
 
     def dummy(index):
-        return next(r for r in snapshot(index)["monsters"] if r["id"] == 900001)
+        state = snapshot(index)
+        target = next((r for r in state.get("monsters", []) if r["id"] == 900001), None)
+        assert target is not None, (
+            f"Client {index} lost the training dummy during measurement "
+            f"(connection_state={state.get('connection_state')})"
+        )
+        return target
 
     def redact(value):
         for account in accounts:
@@ -218,149 +227,161 @@ def main() -> None:
                 pages[0].screenshot(path=str(args.output / f"skill-{vnum}-learned.png"))
                 pages[0].keyboard.press("Escape")
                 wait("skill_panel_closed", lambda: not panel()["visible"])
-                target = dummy(0)
-                for offset in [-2.7, -2.0]:
-                    destination = [target["x"] + offset, target["z"]]
-                    command(0, "target", x=destination[0], z=destination[1])
-                    wait(
-                        f"skill_{vnum}_approach_{offset}",
-                        lambda destination=destination: (
-                            math.dist(
-                                [
-                                    _player(snapshot(1), owner).get("x", 1e6),
-                                    _player(snapshot(1), owner).get("z", 1e6),
-                                ],
-                                destination,
-                            )
-                            < 0.1
-                        ),
-                    )
-                timing_baseline = 0
-                stop_timing = None
-                if args.request_timing:
-                    state = snapshot()
-                    assert "request_timings" in state, "Export lacks request timing probe"
-                    timing_baseline = max(
-                        (row["sequence"] for row in state["request_timings"]), default=0
-                    )
-                command(0, "stop")
-                if args.request_timing:
-                    wait(
-                        "ordinary_stop_acknowledged",
-                        lambda timing_baseline=timing_baseline: any(
-                            row["sequence"] > timing_baseline
-                            and row["name"] == "stop_moving"
-                            and row["succeeded"]
+                learned_rank = int(skill_row(vnum)["rank"])
+                for cast_index in range(args.repeat_casts):
+                    if cast_index:
+                        # Dash has a 12-second cooldown. Wait a full interval after
+                        # the previous result; do not send speculative cast retries.
+                        print("Waiting for Dash cooldown before repeated cast", flush=True)
+                        time.sleep(13)
+                    assert int(skill_row(vnum)["rank"]) == learned_rank
+                    target = dummy(0)
+                    for offset in [-2.7, -2.0]:
+                        destination = [target["x"] + offset, target["z"]]
+                        command(0, "target", x=destination[0], z=destination[1])
+                        wait(
+                            f"skill_{vnum}_approach_{offset}",
+                            lambda destination=destination: (
+                                math.dist(
+                                    [
+                                        _player(snapshot(1), owner).get("x", 1e6),
+                                        _player(snapshot(1), owner).get("z", 1e6),
+                                    ],
+                                    destination,
+                                )
+                                < 0.1
+                            ),
+                        )
+                    timing_baseline = 0
+                    stop_timing = None
+                    if args.request_timing:
+                        state = snapshot()
+                        assert "request_timings" in state, "Export lacks request timing probe"
+                        timing_baseline = max(
+                            (row["sequence"] for row in state["request_timings"]), default=0
+                        )
+                    command(0, "stop")
+                    if args.request_timing:
+                        wait(
+                            "ordinary_stop_acknowledged",
+                            lambda timing_baseline=timing_baseline: any(
+                                row["sequence"] > timing_baseline
+                                and row["name"] == "stop_moving"
+                                and row["succeeded"]
+                                for row in snapshot()["request_timings"]
+                            ),
+                        )
+                        stop_timing = next(
+                            row
                             for row in snapshot()["request_timings"]
-                        ),
-                    )
-                    stop_timing = next(
-                        row
-                        for row in snapshot()["request_timings"]
-                        if row["sequence"] > timing_baseline and row["name"] == "stop_moving"
-                    )
-                    timing_baseline = stop_timing["sequence"]
-                wait(
-                    "dummy_has_pointer_projection",
-                    lambda target=target: (
-                        _pick(snapshot(), 900001, target["life_sequence"]) is not None
-                    ),
-                )
-                pages[0].mouse.click(*_pick(snapshot(), 900001, target["life_sequence"]))
-                wait(
-                    "pointer_selects_dummy",
-                    lambda: snapshot()["combat_target"].get("target_id") == 900001,
-                )
-                before = int(dummy(0)["health"])
-                ready = int(skill_row(vnum).get("ready_at_us", 0))
-                sequences = [
-                    int(_player(snapshot(index), owner)["attack_sequence"]) for index in [0, 1]
-                ]
-                effect_counts = [
-                    snapshot(i).get("motion_effects", {}).get("spawned", 0) for i in [0, 1]
-                ]
-                for index in [0, 1]:
-                    pages[index].evaluate(
-                        "config => window.mt2ArmSkillTiming(config)",
-                        {
-                            "key": str(slot_index + 1),
-                            "owner": owner,
-                            "sequence": sequences[index],
-                            "vnum": vnum,
-                            "target": 900001,
-                            "life": target["life_sequence"],
-                            "health": before,
-                            "effects": effect_counts[index],
-                        },
-                    )
-                pages[0].keyboard.press(str(slot_index + 1))
-                wait(
-                    f"skill_{vnum}_server_cooldown",
-                    lambda vnum=vnum, ready=ready: (
-                        int(skill_row(vnum).get("ready_at_us", 0)) > ready
-                    ),
-                )
-                wait(
-                    f"skill_{vnum}_action_replicates",
-                    lambda vnum=vnum, sequences=sequences: all(
-                        int(_player(snapshot(index), owner)["attack_sequence"]) > sequences[index]
-                        and str(
-                            _player(snapshot(index), owner).get("attack_action_id", "")
-                        ).endswith(f".skill_{vnum}")
-                        for index in [0, 1]
-                    ),
-                )
-                wait(
-                    f"skill_{vnum}_damage_replicates",
-                    lambda before=before: (
-                        int(dummy(0)["health"]) < before
-                        and dummy(0)["health"] == dummy(1)["health"]
-                    ),
-                )
-                wait(
-                    f"skill_{vnum}_effects_spawn_on_both_clients",
-                    lambda effect_counts=effect_counts: all(
-                        snapshot(i).get("motion_effects", {}).get("spawned", 0) > effect_counts[i]
-                        and not snapshot(i).get("motion_effects", {}).get("error", "")
-                        for i in [0, 1]
-                    ),
-                )
-                if args.request_timing:
+                            if row["sequence"] > timing_baseline and row["name"] == "stop_moving"
+                        )
+                        timing_baseline = stop_timing["sequence"]
                     wait(
-                        f"skill_{vnum}_cast_acknowledged",
-                        lambda timing_baseline=timing_baseline: any(
-                            row["sequence"] > timing_baseline
-                            and row["name"] == "cast_skill"
-                            and row["succeeded"]
-                            for row in snapshot()["request_timings"]
+                        "dummy_has_pointer_projection",
+                        lambda target=target: (
+                            _pick(snapshot(), 900001, target["life_sequence"]) is not None
                         ),
                     )
-                samples[str(vnum)] = {
-                    "ordinary_stop_timing": stop_timing,
-                    "cast_request_timings": [
-                        row
-                        for row in snapshot().get("request_timings", [])
-                        if args.request_timing and row["sequence"] > timing_baseline
-                    ],
-                    "observation_timing": [
-                        page.evaluate("() => window.mt2SkillTiming") for page in pages
-                    ],
-                    "rank": int(skill_row(vnum)["rank"]),
-                    "effects": [snapshot(i).get("motion_effects", {}) for i in [0, 1]],
-                    "attack_sequences_before": sequences,
-                    "attack_sequences_after": [
+                    pages[0].mouse.click(*_pick(snapshot(), 900001, target["life_sequence"]))
+                    wait(
+                        "pointer_selects_dummy",
+                        lambda: snapshot()["combat_target"].get("target_id") == 900001,
+                    )
+                    before = int(dummy(0)["health"])
+                    ready = int(skill_row(vnum).get("ready_at_us", 0))
+                    sequences = [
                         int(_player(snapshot(index), owner)["attack_sequence"]) for index in [0, 1]
-                    ],
-                    "health": [before, int(dummy(0)["health"])],
-                    "life": target["life_sequence"],
-                }
-                assert (
-                    dummy(0)["life_sequence"]
-                    == dummy(1)["life_sequence"]
-                    == target["life_sequence"]
-                )
-                pages[0].screenshot(path=str(args.output / f"skill-{vnum}-cast.png"))
-                time.sleep(2)
+                    ]
+                    effect_counts = [
+                        snapshot(i).get("motion_effects", {}).get("spawned", 0) for i in [0, 1]
+                    ]
+                    for index in [0, 1]:
+                        pages[index].evaluate(
+                            "config => window.mt2ArmSkillTiming(config)",
+                            {
+                                "key": str(slot_index + 1),
+                                "owner": owner,
+                                "sequence": sequences[index],
+                                "vnum": vnum,
+                                "target": 900001,
+                                "life": target["life_sequence"],
+                                "health": before,
+                                "effects": effect_counts[index],
+                            },
+                        )
+                    pages[0].keyboard.press(str(slot_index + 1))
+                    wait(
+                        f"skill_{vnum}_server_cooldown",
+                        lambda vnum=vnum, ready=ready: (
+                            int(skill_row(vnum).get("ready_at_us", 0)) > ready
+                        ),
+                    )
+                    wait(
+                        f"skill_{vnum}_action_replicates",
+                        lambda vnum=vnum, sequences=sequences: all(
+                            int(_player(snapshot(index), owner)["attack_sequence"])
+                            > sequences[index]
+                            and str(
+                                _player(snapshot(index), owner).get("attack_action_id", "")
+                            ).endswith(f".skill_{vnum}")
+                            for index in [0, 1]
+                        ),
+                    )
+                    wait(
+                        f"skill_{vnum}_damage_replicates",
+                        lambda before=before: (
+                            int(dummy(0)["health"]) < before
+                            and dummy(0)["health"] == dummy(1)["health"]
+                        ),
+                    )
+                    wait(
+                        f"skill_{vnum}_effects_spawn_on_both_clients",
+                        lambda effect_counts=effect_counts: all(
+                            snapshot(i).get("motion_effects", {}).get("spawned", 0)
+                            > effect_counts[i]
+                            and not snapshot(i).get("motion_effects", {}).get("error", "")
+                            for i in [0, 1]
+                        ),
+                    )
+                    if args.request_timing:
+                        wait(
+                            f"skill_{vnum}_cast_acknowledged",
+                            lambda timing_baseline=timing_baseline: any(
+                                row["sequence"] > timing_baseline
+                                and row["name"] == "cast_skill"
+                                and row["succeeded"]
+                                for row in snapshot()["request_timings"]
+                            ),
+                        )
+                    sample_key = str(vnum) if cast_index == 0 else f"{vnum}-repeat-{cast_index}"
+                    samples[sample_key] = {
+                        "ordinary_stop_timing": stop_timing,
+                        "cast_request_timings": [
+                            row
+                            for row in snapshot().get("request_timings", [])
+                            if args.request_timing and row["sequence"] > timing_baseline
+                        ],
+                        "observation_timing": [
+                            page.evaluate("() => window.mt2SkillTiming") for page in pages
+                        ],
+                        "rank": int(skill_row(vnum)["rank"]),
+                        "effects": [snapshot(i).get("motion_effects", {}) for i in [0, 1]],
+                        "attack_sequences_before": sequences,
+                        "attack_sequences_after": [
+                            int(_player(snapshot(index), owner)["attack_sequence"])
+                            for index in [0, 1]
+                        ],
+                        "health": [before, int(dummy(0)["health"])],
+                        "life": target["life_sequence"],
+                    }
+                    assert (
+                        dummy(0)["life_sequence"]
+                        == dummy(1)["life_sequence"]
+                        == target["life_sequence"]
+                    )
+                    pages[0].screenshot(path=str(args.output / f"skill-{sample_key}-cast.png"))
+                    time.sleep(2)
             assert not errors, "Browser engine errors: " + "; ".join(errors[:3])
             checks.append("no_browser_engine_errors")
             passed = True
@@ -395,6 +416,7 @@ def main() -> None:
                 "scope": "exported-skill-controls",
                 "database": args.database,
                 "skills": args.skills,
+                "repeat_casts": args.repeat_casts,
                 "passed": passed,
                 "checks": checks,
                 "samples": samples,
