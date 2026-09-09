@@ -5,6 +5,42 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Main charge-input adapter — 2026-09-09
+
+`ChargeSkillInput` now connects normal HUD skill requests to `ChargeApproach`.
+It reads subscribed owner/target/charge rows, sends the explicit begin action,
+updates ordinary movement, stops approach movement before one finishing cast,
+and reuses an existing paid charge after a cancelled approach. Repeated requests
+while a reservation is active do not send another activation. Manual movement,
+world clicks, attack input, logout/character changes, connection transitions and
+reducer rejection cancel the reservation. Ordinary skills retain direct casting.
+
+The isolated native Godot approach (15) and content-gate (42) checks pass at
+`.local/p6-charge-client-r2/integration/report.json`; touched GDScript lint passes.
+This verifies parsing/component behavior, **not rendered hotbar or live automatic
+approach acceptance**. Installed client content still selects four skills, so
+normal Dash input is not yet exposed. Next install/qualify the five-skill candidate
+and original presentation, then test automatic approach, cancellation and moving
+targets through the normal client. Godot MCP remains unavailable; no editor
+inspection is claimed. Public deployment is unchanged.
+
+## Client charge approach state machine — 2026-09-09
+
+Added `ChargeApproach`, a reservation state machine that emits begin, ordinary
+move, finish and stop intents from subscribed owner/target/charge state. It
+captures exact lives and selected target, waits for charge before moving, limits
+movement refresh to 200 ms, and emits completion once. Death/life replacement,
+selection loss, charge disappearance and a bounded local timeout cancel the
+reservation; no local position or speed is granted.
+
+The isolated native Godot `charge_approach` suite passes 15 transition checks;
+evidence: `.local/p6-charge-client-r1/approach/report.json`. Touched GDScript lint
+passes. This class is **not yet connected to Main or the hotbar**. Integration must
+route manual movement/world exit/rejections to cancellation, stop approach motion
+before completion, and avoid restarting a pending reservation on repeated hotbar
+input. It also needs actual moving-target/multiplayer and rendered acceptance.
+No installed content or public export changed.
+
 ## Explicit charge-begin intent and protocol 29 — 2026-09-09
 
 `begin_charge(skill_vnum, expected_revision)` reuses the skill-cast authorization,

@@ -42,6 +42,7 @@ var _world_picker := WorldPickerScript.new()
 var _hovered_actor: PveActor
 var _hovered_npc: NpcActor
 var _npc_approach: NpcApproach
+var _charge_input: ChargeSkillInput
 var _hover_elapsed := 0.0
 
 var _attack_input := preload("res://scripts/actors/attack_input.gd").new()
@@ -66,6 +67,7 @@ func _ready() -> void:
 	_npc_approach = NpcApproach.new()
 	add_child(_npc_approach)
 	_npc_approach.configure(connection)
+	_charge_input = ChargeSkillInput.attach(self, connection, hud, _npc_approach, _attack_input)
 	connection.npc_interaction_changed.connect(hud.npc_panel.set_interaction)
 	hud.npc_close_requested.connect(connection.close_npc_interaction)
 	_stream.progress.connect(
@@ -106,7 +108,6 @@ func _ready() -> void:
 	hud.chat_submitted.connect(connection.send_chat)
 	hud.command_requested.connect(_on_command_requested)
 	hud.learn_skill_requested.connect(connection.learn_skill)
-	hud.cast_skill_requested.connect(connection.cast_skill)
 	hud.stat_allocation_requested.connect(connection.allocate_stat)
 	hud.combat_target_clear_requested.connect(connection.clear_combat_target)
 	hud.debug_option_changed.connect(_on_debug_option)
@@ -224,6 +225,7 @@ func _physics_process(delta: float) -> void:
 		input.x = float(_key_down(KEY_D, KEY_RIGHT)) - float(_key_down(KEY_A, KEY_LEFT))
 		input.y = float(_key_down(KEY_S, KEY_DOWN)) - float(_key_down(KEY_W, KEY_UP))
 	if input.length_squared() > 0:
+		_charge_input.cancel()
 		_npc_approach.cancel()
 		var direction := camera_rig.move_direction(input.normalized())
 		if (
@@ -716,6 +718,7 @@ func _pickup() -> void:
 
 
 func _click_world(screen_position: Vector2) -> void:
+	_charge_input.cancel(true)
 	var pick: Dictionary = _world_picker.pick(
 		camera_rig.camera, get_world_3d().direct_space_state, screen_position
 	)
