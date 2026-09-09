@@ -5,6 +5,30 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Populated-browser request timing: delay concentrated at cast — 2026-09-09
+
+Source `e1d0b25` was exported to `.local/p6-request-web-r1/web`; its served
+manifest hash is `fdf15d0bd1c7f076f3f4aab69f1c7a3dfca0478a79f0700f3bd751afb56ce810`.
+Local proxy 8186 now serves this package against the unchanged protocol-29
+original-population QA database. Auth and database services were preserved;
+the public release is unchanged. Export/package checks completed.
+
+All **25 two-browser checks pass** in `browser/report.json` with no browser
+engine errors. Rank-9 Dash changes the same dummy life from 29,215 to 29,089 HP,
+with one effect on each client. The ordinary stop baseline takes 307 ms from
+send to callback. Dash's begin takes 287 ms, move 33 ms and stop 50 ms, but its
+final cast takes **4,547 ms**. Cast and stop were sent in the same local
+millisecond (receipt minus elapsed duration); their server timestamps differ
+by 14,571 us. Those timestamps do not measure reducer completion time.
+
+The caster sees action/damage 5,299 ms after browser keydown and the peer sees
+them after 4,875 ms. This localizes the dominant observed delay to the final
+cast/response path, not the brief automatic approach. It does not yet separate
+server execution, transport, callback processing or first-use rendering work.
+The standalone server's `/metrics` route returned HTTP 404; no execution-time
+measurement was obtained there. Next compare repeated casts in the same browser
+session at the same rank to test first-use costs before selecting an optimization.
+
 ## Per-request charge timing prepared — 2026-09-09
 
 The explicitly activated export probe now retains 64 typed acknowledgements for
