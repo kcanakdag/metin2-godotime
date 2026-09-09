@@ -5,11 +5,24 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+from build_class_skills import skill_handler
 from skill_definitions import CLASSES, classic_skill_ids, registered_skills, source_rows
 from skill_formulas import compile_formula
 
 
 class SkillDefinitionTests(unittest.TestCase):
+    def test_dash_keeps_its_two_phase_handler(self):
+        source = {
+            "vnum": 5,
+            "flags": ["ATTACK", "USE_MELEE_DAMAGE"],
+            "secondary_point": "MOV_SPEED",
+            "point": "HP",
+        }
+        self.assertEqual(skill_handler(source), "charge")
+        self.assertEqual(skill_handler({**source, "vnum": 1}), "damage")
+        with self.assertRaisesRegex(ValueError, "charge metadata"):
+            skill_handler({**source, "secondary_point": "NONE"})
+
     def registrations(self, class_id):
         lines = [f"def __LoadGame{CLASSES[class_id]}Ex(race, path):"]
         for vnum in classic_skill_ids(class_id):

@@ -154,7 +154,7 @@ pub fn validate(root: &Value) -> Result<(), String> {
         affect(&skill["secondary_affect"])?;
         if !matches!(
             skill["handler"].as_str(),
-            Some("damage" | "periodic_damage" | "buff" | "healing")
+            Some("damage" | "periodic_damage" | "buff" | "healing" | "charge")
         ) {
             return Err("Unsupported class skill handler".into());
         }
@@ -246,7 +246,7 @@ pub fn generate(root: &Value) -> Result<String, String> {
     let mut out = String::from("use crate::skill_formula::Op;\n");
     out.push_str(geometry::TYPES);
     out.push_str(geometry::RESOLVER);
-    out.push_str("#[derive(Clone,Copy,Debug,PartialEq,Eq)] pub enum SkillHandler { Damage, PeriodicDamage, Buff, Healing }\n");
+    out.push_str("#[derive(Clone,Copy,Debug,PartialEq,Eq)] pub enum SkillHandler { Damage, PeriodicDamage, Buff, Healing, Charge }\n");
     out.push_str("#[derive(Clone,Copy,Debug,PartialEq,Eq)] pub enum SkillTarget { SelfOnly, Monster, Friendly }\n");
     out.push_str("#[derive(Clone,Copy,Debug,PartialEq,Eq)] pub enum SkillAttribute { Normal, Melee, Range, Magic }\n");
     writeln!(
@@ -282,6 +282,7 @@ pub fn generate(root: &Value) -> Result<String, String> {
         let handler = match skill["handler"].as_str().unwrap() {
             "damage" => "Damage",
             "periodic_damage" => "PeriodicDamage",
+            "charge" => "Charge",
             "buff" => "Buff",
             _ => "Healing",
         };

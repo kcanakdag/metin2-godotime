@@ -428,3 +428,11 @@ respectively), original front knockdown/standup, recovery and the same surviving
 life. Spirit Strike pushes 3.675 m; Bash has zero displacement. These observations
 cover a rank-1 male Warrior and one species, not broad balance or browser casting.
 Use the reusable `skill_reactions --reaction-skill 16|17` progression replay.
+
+
+The candidate full-class catalog distinguishes Dash with `handler: "charge"`.
+Its generator retains the secondary movement-speed/duration programs, cost,
+cooldown and damage formulas instead of treating the two-stage action as an
+ordinary damage handler. Rust code generation preserves `SkillHandler::Charge`;
+this does not by itself enable the ability. Live reducer, movement and UI behavior
+must implement the charge lifecycle before installing this candidate.

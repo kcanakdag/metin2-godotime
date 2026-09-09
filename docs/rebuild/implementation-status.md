@@ -5,6 +5,25 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Dash charge content contract — 2026-09-09
+
+The full-class compiler no longer classifies Dash as ordinary damage. It selects a
+`charge` handler from the source-backed skill-5 contract and rejects changed
+attack/secondary MOV_SPEED metadata. The Rust generator preserves this as
+`SkillHandler::Charge`, alongside the existing damage/buff/healing/periodic types.
+No live reducer or protocol/schema changed; this is the candidate content contract
+needed before charge-state and movement integration.
+
+Four skill-definition tests pass. A fresh candidate built from the preserved full
+44-skill definitions uses the new classifier at `.local/p6-charge-r1/catalog.v2.json`.
+The actual Rust compiler/interpreter replay passes 21,120 formula checks, 265
+metadata checks (now explicitly including handler mapping), all 88 motion-window
+and geometry checks and existing Three-Way Cut replays. Evidence:
+`.local/p6-charge-r1/compiler-handlers/report.json` and `compiler-handlers.log`.
+Touched Ruff and rustfmt checks pass. The live four-skill catalog and public build
+remain unchanged. Next is server-owned charge duration/consumption and movement
+validation, then normal client targeting and two-client lifecycle coverage.
+
 ## Equipped Dash effect and reusable actor selection — 2026-09-09
 
 The skill-effect actor fixture now validates any selected skill set against installed

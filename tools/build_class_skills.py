@@ -17,6 +17,20 @@ from skill_tuning import apply_tuning
 RANK_POWERS = [0, 5, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 50]
 
 
+def skill_handler(source: dict) -> str:
+    flags = set(source["flags"])
+    if source["vnum"] == 5:
+        # Pinned skill.h::IsChargeSkill / char_skill.cpp::UseSkill.
+        if "ATTACK" not in flags or source["secondary_point"] != "MOV_SPEED":
+            raise ValueError("Dash charge metadata differs from the supported source contract")
+        return "charge"
+    if "TOGGLE" in flags and "ATTACK" in flags:
+        return "periodic_damage"
+    if "ATTACK" not in flags:
+        return "healing" if source["point"] == "HP" else "buff"
+    return "damage"
+
+
 def compile_catalog(inventory: dict, characters: dict) -> dict:
     if (
         inventory.get("schema") != "mt2spacetime.skill-source-inventory"
@@ -26,7 +40,7 @@ def compile_catalog(inventory: dict, characters: dict) -> dict:
         raise ValueError("Expected the pinned classic skill inventory")
     skills = []
     for source in inventory["skills"]:
-        flags, client_flags = set(source["flags"]), set(source["client_flags"])
+        client_flags = set(source["client_flags"])
         vnum = source["vnum"]
         variants = []
         cls = next(c for c in characters["classes"] if c["class_id"] == source["class_id"])
@@ -71,11 +85,7 @@ def compile_catalog(inventory: dict, characters: dict) -> dict:
                     ],
                 }
             )
-        handler = "damage"
-        if "TOGGLE" in flags and "ATTACK" in flags:
-            handler = "periodic_damage"
-        elif "ATTACK" not in flags:
-            handler = "healing" if source["point"] == "HP" else "buff"
+        handler = skill_handler(source)
         if handler == "damage" and any(not v["activation_us"] for v in variants):
             raise ValueError(f"Skill {vnum} has no original damage activation metadata")
         costs = [int(rank_value(source["sp_cost"], power)) for power in RANK_POWERS]

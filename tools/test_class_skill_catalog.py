@@ -102,12 +102,20 @@ def main():
             f"Some({int(skill[field])})" if skill[field] else "None"
             for field in ("affect", "secondary_affect")
         ]
+        handler = {
+            "damage": "Damage",
+            "periodic_damage": "PeriodicDamage",
+            "buff": "Buff",
+            "healing": "Healing",
+            "charge": "Charge",
+        }[skill["handler"]]
         metadata_checks.append(
             "{ let skill = definitions::CLASS_SKILLS.iter().find(|s|s.vnum == "
             + str(skill["vnum"])
             + ").unwrap();\n"
             + f"assert_eq!(skill.minimum_level, {skill['minimum_level']});\n"
             + f"assert_eq!(skill.maximum_rank, {skill['maximum_rank']});\n"
+            + f"assert_eq!(skill.handler, definitions::SkillHandler::{handler});\n"
             + f"assert_eq!(skill.attribute, definitions::SkillAttribute::{attribute});\n"
             + f"assert_eq!(skill.affect, {affects[0]});\n"
             + f"assert_eq!(skill.secondary_affect, {affects[1]}); }}\n"
@@ -232,7 +240,7 @@ def main():
         "skills": 44,
         "appearances": 88,
         "formula_checks": checks,
-        "metadata_checks": len(metadata_checks) * 5 + 1,
+        "metadata_checks": len(metadata_checks) * 6 + 1,
         "motion_window_checks": len(window_checks),
         "motion_geometry_checks": len(window_checks),
         "three_way_cut_timing_replays": 2,
