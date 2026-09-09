@@ -5,6 +5,23 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Client charge capability gate — 2026-09-09
+
+`SkillCatalog` now accepts `physical_charge_v1` with bounded typed timing, speed,
+push and stun metadata, positive target range, explicit target requirement,
+one hit per life and the sword/two-handed content category. Existing splash/area
+handlers reject misplaced charge policy. Reload starts by clearing the previous
+document/hash so a failed load cannot retain an old capability set.
+
+The isolated native Godot `skill_charge_catalog` suite passes 41 checks covering
+typed/JSON policy, missing fields, malformed/nonfinite values, wrong target/weapon/
+hit capabilities and ordinary handlers. Evidence:
+`.local/p6-charge-client-r1/catalog/report.json`. Touched GDScript/Python lint passes.
+Godot MCP was unavailable; no connected editor was inspected. This is a content
+gate change, not installed Dash UI or approach automation. The installed four-skill
+catalog and public export are unchanged. Next: explicit charge-begin intent that
+preserves selected target, then client approach/finish and cooldown presentation.
+
 ## Stun and queued reaction interaction — 2026-09-09
 
 The original client routes stun insertion/removal through `SetSleep` → `Stop`,
