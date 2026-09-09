@@ -139,6 +139,21 @@ func _live_effect_checks(actor: Node3D, motion: Dictionary) -> void:
 	actor._play_motion(motion, "general", 11, 1000000, 1600000, true, 1.0, true)
 	actor._process(0)
 	_check("forced initial pose suppresses elapsed events", _events.is_empty())
+	actor.reset_action()
+	_events.clear()
+	actor._play_motion(motion, "general", 12, 1000000, 950000, false, 1.0)
+	actor.flush_effects_through(950000)
+	_check("clock before action cannot emit", _events.is_empty())
+	actor.flush_effects_through(1600000)
+	_check("batched updates flush due events without render frame", _events == ["a", "b"])
+	actor.flush_effects_through(1700000)
+	_check("repeated state flush does not duplicate", _events == ["a", "b"])
+	actor.flush_effects_through(2500000)
+	_check("completed action drains final event", _events == ["a", "b", "end"])
+	actor.reset_action()
+	_events.clear()
+	actor.flush_effects_through(3000000)
+	_check("reset removes clock dispatch", _events.is_empty())
 
 
 func _record(event: Dictionary) -> void:

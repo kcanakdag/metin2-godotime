@@ -23,6 +23,7 @@ var _equipment: Node3D
 var _frozen_pose := false
 var _consumed_launches: Dictionary = {}
 var _consumed_effects: Dictionary = {}
+var _motion_started_at_us := 0
 
 
 func configure(value: RefCounted, definition_id: String) -> bool:
@@ -128,6 +129,7 @@ func _play_motion(
 	)
 	current_mode = resolved_mode
 	current_sequence = sequence
+	_motion_started_at_us = started_at_us
 	animation_player.speed_scale = playback_rate
 	animation_player.play(_clips[clip_name], 0.12)
 	var duration_seconds := float(int(motion.get("duration_us", 0))) / 1_000_000.0
@@ -184,6 +186,15 @@ func _emit_motion_effects(source_time_us: int) -> void:
 		_consumed_effects[identity] = true
 		if bool(effect.get("enabled", true)):
 			motion_effect_requested.emit(effect.duplicate(true))
+
+
+func flush_effects_through(server_time_us: int) -> void:
+	if _frozen_pose or _motion_started_at_us <= 0 or server_time_us < _motion_started_at_us:
+		return
+	var elapsed := int(
+		round(float(server_time_us - _motion_started_at_us) * animation_player.speed_scale)
+	)
+	_emit_motion_effects(mini(elapsed, int(current_motion.get("duration_us", 0))))
 
 
 func _on_animation_finished(clip: StringName) -> void:
@@ -258,6 +269,7 @@ func freeze_at_end() -> void:
 
 
 func reset_action() -> void:
+	_motion_started_at_us = 0
 	current_motion = {}
 	current_mode = ""
 	current_sequence = -1

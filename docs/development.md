@@ -2338,6 +2338,10 @@ pose; normal event polling then handles future events. This prevents transport
 delay from silently dropping early bursts. Initial subscriptions, new lives and
 forced resyncs keep past-event suppression, and projectile launch policy is
 unchanged. This presentation rule never applies damage or extends server actions.
+Before replacing a same-life player pose, presentation also flushes due visual
+events through the observed server clock, bounded by the outgoing motion's
+duration. This covers multiple received states between animation polls. Event
+consumption prevents repeats; resets and life changes discard the retained clock.
 
 The installed Dash export was exercised with the same runner (22 checks):
 
@@ -2360,6 +2364,12 @@ runner requires loaded map sections on both clients, no map content error, over
 both subscriptions. It records the observed count, definition vnums and loaded
 sections; this is a census, not all-species combat or every-section traversal.
 Failed runs retain focused timing, actor-presentation and effect diagnostics.
+Each player presentation snapshot includes `last_action_observation`: the newest
+positive attack sequence observed by that actor, previous sequence/life, activity,
+action interval, server clock at observation, and whether it qualified as a new
+live attack. It retains only one record and grants no authority. A zero interval
+or non-attacking activity at first observation helps identify an attack transition
+lost before presentation; failure-time FPS alone cannot establish that timing.
 
 
 ## Batch class-skill effect discovery

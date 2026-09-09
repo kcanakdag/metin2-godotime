@@ -5,6 +5,35 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Attack-observation trace and clock-driven effect flush — 2026-09-09
+
+Added a bounded read-only `last_action_observation` to player presentation
+snapshots. The diagnostic Web export at `.local/p6-dash-world-r3/web` has manifest
+SHA-256 `65c1e56f71193f2472a46ef2eba1848cf4060546c2120fd3580db5dfdb3094ef`.
+Its browser replay reproduces the failure, but **rules out initial expired-action
+rejection in that run**: both clients first observe sequence 5 as activity 2,
+same life, `live_attack=true`, with 848,613 us remaining. The observed simulation
+clock is 48,613 us before the action starts. Both still spawn zero effects.
+Evidence: `.local/p6-dash-world-r3/browser/report.json`. The diagnostic change
+passes 42 Main content checks in `.local/p6-action-observation-r1`.
+
+Inspection confirms the transport drains queued packets within a frame and Main
+defers/coalesces player reconciliation. A motion can consequently be replaced
+before animation polling emits its early effect. The next implementation retains
+the motion's authoritative start and flushes due visual events through the
+observed server clock before applying another same-life player state. It clamps
+to the motion duration and reuses event consumption to prevent duplicates.
+Different lives, first clock initialization, frozen poses and action reset do not
+flush old events. Projectile policy and gameplay damage remain unchanged.
+
+The focused real-Godot playback fixture passes 35 checks at
+`.local/p6-live-effect-r3/report.json`, including multiple state updates without
+a render frame, repeated flushes, pre-start clocks, final events and reset.
+Touched GDScript lint/format checks pass. **The clock-flush change has not yet been
+exported or browser-qualified.** Local proxy 8186 still serves the earlier
+diagnostic export on the existing full-population QA database; public deployment
+is unchanged. Next export the clock-flush change and rerun the focused Dash case.
+
 ## Delayed live-effect handling: component pass, world failure persists — 2026-09-09
 
 `PlayerActor` now identifies an increasing attack sequence on an already observed
