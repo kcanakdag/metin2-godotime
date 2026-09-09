@@ -7,6 +7,39 @@ or reclassify that scope.
 
 ## Live CRUSH adapter and protocol 28 candidate — 2026-09-09
 
+The `crush_death` phase now passes **29 checks** on fresh local database
+`mt2-p2-crush-death-v28-20260909-d97e2756`, using the same frozen Brown Bear module
+as the expiry replay. Evidence:
+`.local/p6-crush-death-r5/crush-death-r2.json`. Normal Dash leaves the bear alive;
+normal Sword Spin kills it before the server-authored stun deadline. Both clients
+remove the stun and observe a respawned life with original full health and no
+restored effect. Setup uses authorized level 99 and rank-20 Sword Spin; source
+mob stats and server damage rules are unchanged. Godot parsing and touched
+Python/GDScript lint pass. The preceding HTTP 429 pause was respected; its
+database was untouched before the accepted retry.
+
+The missing-hit investigation established a fixture facing error: after a single
+reposition, Sword Spin's untargeted root motion carried the caster away from the
+bear. A two-leg approach establishes forward facing (trace in
+`.local/p6-crush-death-r4/crush-death.log`), after which health falls 661→288.
+Level-50 finishing damage was insufficient; authorized level-99 setup completes
+the kill. No gameplay code was changed to force the result. The retained geometry
+trace makes future facing failures diagnosable. Earlier failed evidence follows.
+
+Death-during-stun acceptance initially failed via the new `crush_death` runner phase.
+Two fresh databases using the same frozen Brown Bear module reached a shared
+stun and accepted the normal Sword Spin follow-up, but neither observed death.
+The second run records 661 HP both after Dash and after the follow-up, so this
+is a missing-hit investigation, not evidence of insufficient finishing damage
+or working death cleanup. Evidence: `.local/p6-crush-death-r2/crush-death.log`;
+database `mt2-p2-crush-death-v28-20260909-63c6e624`. The fixture uses authorized
+level-50/rank-20 setup, preserves original mob stats, and requires a death
+timestamp earlier than the stun deadline before checking removal/respawn.
+Both attempts used fresh databases; no gameplay data was reset. Native parsing
+and touched lint pass, but **the death replay fails and is not accepted**.
+The later geometry trace and accepted retry above resolve this fixture failure.
+The previous 27-check expiry replay remains valid for its narrower behavior.
+
 The live ordinary-monster replay now passes **27 checks** using the original
 Brown Bear (113, 845 HP), unchanged imported stats, and two authenticated clients.
 Both receive the two-metre displacement and matching four-second exact-life stun.

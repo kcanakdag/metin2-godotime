@@ -65,7 +65,8 @@ func _run() -> void:
 	elif str(_config.mode) == "training_dummy":
 		await _verify_training_dummy(first, second)
 	elif (
-		str(_config.mode) in ["skill_reactions", "skill_batch", "charge", "charge_strike", "crush"]
+		str(_config.mode)
+		in ["skill_reactions", "skill_batch", "charge", "charge_strike", "crush", "crush_death"]
 	):
 		await _verify_skill_reactions(first, second)
 	elif str(_config.mode) == "three_way_cut":
