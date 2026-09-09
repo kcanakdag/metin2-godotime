@@ -1,5 +1,14 @@
 # Architecture
 
+The Godot facade caches converted monster snapshots by SDK row Resource identity.
+The pinned SDK replaces updated row objects; update callbacks also invalidate
+both old and new objects. Each flush retains only currently subscribed resources,
+and world exit/client retirement clear the cache. Monster snapshot dictionaries
+are read-only and contain the existing scalar fields (identity bytes converted
+to hex); consumers copy before editing. Other table snapshots retain their prior
+behavior. This reduces repeated conversion work, not subscription scope or server
+authority. It does not establish lower end-to-end latency by itself.
+
 Protocol 27 adds private `active_charge` and public `charge_status` tables.
 The private record captures controller connection, character life and rank;
 the public projection contains character/skill identity, timing and speed bonus.

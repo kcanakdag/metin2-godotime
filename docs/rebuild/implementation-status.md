@@ -5,6 +5,26 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Reuse unchanged monster snapshot conversions — 2026-09-09
+
+Inspection found the facade reflected every field of every subscribed monster on
+each monster-table update. It now reuses read-only converted dictionaries for
+unchanged SDK row Resources, invalidates replacements/updates, prunes removed
+resources at each flush and clears on world exit/client retirement. The pinned
+SDK replaces row Resources on update; no vendored SDK changes or protocol changes
+were needed. Full subscriptions, signals and authoritative validation remain.
+
+The isolated real-Godot cache fixture passes 9 checks and the Main content fixture
+passes 42 at `.local/p6-snapshot-cache-r1/report.json`. In the accompanying native
+microbenchmark, 20 snapshots of 2,800 unchanged rows take 352,275 us through the
+uncached conversion path versus 27,835 us through the warm cache (about 12.7x).
+This measures only conversion work, not full-world FPS or command delay.
+All **84 live account/multiplayer checks pass** at `network.json`, using two new
+unprivileged authenticated accounts on the existing full-population QA database,
+including movement/action updates, disconnect and reconnect. Touched Python and
+GDScript lint/format checks pass. Browser latency improvement remains unmeasured;
+the served local and public exports do not yet contain this optimization.
+
 ## Full-population Dash effect failure resolved in browser replay — 2026-09-09
 
 Source `6bfff67` was exported to `.local/p6-dash-world-r4/web` and exercised against

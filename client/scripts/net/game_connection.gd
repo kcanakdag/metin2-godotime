@@ -127,6 +127,7 @@ var _token_path := ""
 var _connection_deadline := 0
 var _pending_calls: Dictionary = {}
 var _dirty_tables: Dictionary = {}
+var _monster_snapshot_cache: Dictionary = {}
 var _account_mode := false
 var _auth_token := ""
 var _world_subscription: SpacetimeDBSubscription
@@ -610,6 +611,9 @@ func _on_row_updated(
 	table_name: String, _old_row: Resource, _new_row: Resource, session: int
 ) -> void:
 	if session == _session:
+		if table_name == "monster":
+			_monster_snapshot_cache.erase(_old_row)
+			_monster_snapshot_cache.erase(_new_row)
 		_dirty_tables[table_name] = true
 
 
@@ -625,13 +629,7 @@ func _flush_snapshots() -> void:
 	for table_name: String in _dirty_tables:
 		if table_name not in TABLES:
 			continue
-		var rows: Array = []
-		for row: Resource in local_db.get_all_rows(table_name):
-			var values: Dictionary = {}
-			for field: String in row.get("BSATN_TYPES"):
-				var value: Variant = row.get(field)
-				values[field] = value.hex_encode() if value is PackedByteArray else value
-			rows.append(values)
+		var rows := _snapshot_rows(table_name, local_db.get_all_rows(table_name))
 		match table_name:
 			"account_character":
 				rows.sort_custom(
@@ -735,6 +733,29 @@ func _flush_snapshots() -> void:
 	_dirty_tables.clear()
 
 
+func _snapshot_rows(table_name: String, resources: Array) -> Array:
+	# The pinned SDK replaces updated row Resources. Monster fields are scalar;
+	# read-only dictionaries can be shared until replacement without stale aliases.
+	var rows: Array = []
+	var retained: Dictionary = {}
+	for row: Resource in resources:
+		var values: Dictionary = (
+			_monster_snapshot_cache.get(row, {}) if table_name == "monster" else {}
+		)
+		if values.is_empty():
+			for field: String in row.get("BSATN_TYPES"):
+				var value: Variant = row.get(field)
+				values[field] = value.hex_encode() if value is PackedByteArray else value
+			if table_name == "monster":
+				values.make_read_only()
+		if table_name == "monster":
+			retained[row] = values
+		rows.append(values)
+	if table_name == "monster":
+		_monster_snapshot_cache = retained
+	return rows
+
+
 func _is_own_combat_target(row: Dictionary) -> bool:
 	return (
 		not account_identity.is_empty()
@@ -775,6 +796,7 @@ func _retire_client() -> void:
 	_connection_deadline = 0
 	_pending_calls.clear()
 	_dirty_tables.clear()
+	_monster_snapshot_cache.clear()
 	if is_instance_valid(_client):
 		# The SDK temporarily disables the OS close button while closing a socket.
 		# We retire that socket immediately, so its later reset would never execute.
@@ -813,6 +835,7 @@ func _clear_snapshots() -> void:
 
 
 func _clear_world_snapshots() -> void:
+	_monster_snapshot_cache.clear()
 	players = []
 	obstacles = []
 	chat = []

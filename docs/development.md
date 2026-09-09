@@ -1,5 +1,16 @@
 # Development workflow
 
+## Monster snapshot conversion checks
+
+`tools/test_target_client.py --suite monster_snapshot_cache --godot GODOT --output NEW_DIR`
+checks unchanged-row reuse, identity conversion, replacement and in-place update
+invalidation, old-snapshot stability, removal, and world-exit cleanup. It also
+prints a native 2,800-row/20-iteration conversion benchmark in the suite log.
+The benchmark has unchanged rows and excludes transport, rendering, changed-row
+decoding and server time; do not report it as overall FPS or latency improvement.
+Monster dictionaries emitted by `GameConnection` are read-only. Use `duplicate()`
+when a presentation/fixture needs an editable local copy.
+
 ## Staging selected charge skill content
 
 `tools/build_skill_catalog.py --profile PROFILE --output CANDIDATE --offline`
