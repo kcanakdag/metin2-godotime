@@ -64,10 +64,24 @@ func _run() -> void:
 	material.set_shader_parameter("source_texture", ramp_texture)
 	(swatch.mesh as QuadMesh).size = Vector2(256.0 / 240, 1)
 	var max_error := 0.0
-	for case: int in range(6):
-		var operation: int = [3, 4, 6][case / 2]
+	var factors := [
+		Vector3.ONE,
+		Vector3(175, 175, 175) / 255.0,
+		Vector3(176, 176, 176) / 255.0,
+		Vector3(123, 67, 0) / 255.0
+	]
+	_check(
+		"original gray factor rounds to 175",
+		MeshEffect.packed_factor([0.686275, 0.686275, 0.686275, 1]) == factors[1]
+	)
+	_check("nonfinite factor rejects", not MeshEffect._factor_supported([NAN, 0, 0, 1]))
+	_check("out-of-range factor rejects", not MeshEffect._factor_supported([2, 0, 0, 1]))
+	for case: int in range(24):
+		var operation: int = [3, 4, 6][(case / 2) % 3]
 		var background: Color = [Color(0.8, 0.1, 0.2), Color(0.1, 0.8, 0.2)][case % 2]
 		material.set_shader_parameter("color_operation", operation)
+		var factor: Vector3 = factors[case / 6]
+		material.set_shader_parameter("color_factor", factor)
 		environment.environment.background_color = background
 		swatch.visible = false
 		await process_frame
@@ -80,6 +94,8 @@ func _run() -> void:
 		for index: int in range(256):
 			var pixel := capture.get_pixel(272 + index, 240)
 			var source := Vector3(index, 255 - index, 64) / 255.0
+			if operation != 3:
+				source *= factor
 			if operation == 6:
 				source = (source * 4).clamp(Vector3.ZERO, Vector3.ONE)
 			var expected := source * source * 255
@@ -104,6 +120,7 @@ func _run() -> void:
 		definition = catalog.meshes[index].duplicate(true)
 		if index == 1:
 			definition.recipe.elements[0].billboard_type = 3
+			definition.recipe.elements[0].color_factor = [0.686275, 0.686275, 0.686275, 1.0]
 		scene = load("res://" + str(definition.model)) as PackedScene
 		texture = load("res://" + str(definition.geometries[0].texture)) as Texture2D
 		var effect := MeshEffect.new()

@@ -5,6 +5,23 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Packed mesh color factors — 2026-09-09
+
+The mesh renderer now accepts finite RGB factors in [0,1] while retaining its
+opaque alpha requirement. It rounds source factors to bytes as the original
+D3DXCOLOR conversion does, supplies encoded RGB to the shader, and applies the
+factor for modulation/fourfold modulation. Select-argument-2 ignores it, matching
+the original texture-stage arguments. Invalid factors reject before construction.
+
+Native skill-mesh QA passes 6,182 checks over 256 RGB entries, two framebuffer
+backgrounds, three operations and four factors (white, both Dash gray bytes and
+an asymmetric colored factor), plus original geometry/animation checks. An actual
+animated mesh uses Dash's 0.686275 factor; its saved capture was reviewed.
+Evidence: `.local/p6-all-skill-effects-r1/mesh-factors/report.json`. Godot parser
+and touched GDScript lint pass. This is native rendering qualification, not a
+browser or complete Dash effect claim. Multi-element scene/material handling is
+still needed; installed content and the public build are unchanged.
+
 ## Complete Dash multi-element conversion — 2026-09-09
 
 The selected original `gitu.mde` is 23,155 bytes, 24 geometries and six frames,

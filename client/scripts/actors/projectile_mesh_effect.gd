@@ -9,6 +9,7 @@ render_mode blend_mix, unshaded, cull_disabled, depth_draw_never;
 // Intentionally sample encoded RGB: original fixed-function blending squares it.
 uniform sampler2D source_texture : repeat_enable, filter_linear;
 uniform int color_operation = 4;
+uniform vec3 color_factor = vec3(1.0);
 vec3 decode_srgb(vec3 value) {
     return mix(value / 12.92, pow((value + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), value));
 }
@@ -27,7 +28,8 @@ vec3 compatibility_input(vec3 encoded) {
 }
 void fragment() {
     vec3 source = texture(source_texture, UV).rgb;
-    // Current renderer accepts white TFACTOR: select-arg2 and modulate agree.
+    // Fixed-function argument 1 is packed TFACTOR; argument 2 is texture.
+    if (color_operation != 3) source *= color_factor;
     if (color_operation == 6) source = min(source * 4.0, vec3(1.0));
     vec3 result = source * source;
     ALBEDO = OUTPUT_IS_SRGB ? compatibility_input(result) : decode_srgb(result);
@@ -76,6 +78,9 @@ func configure(definition: Dictionary, scene: PackedScene, texture: Texture2D) -
 	material.set_shader_parameter("source_texture", texture)
 	material.set_shader_parameter(
 		"color_operation", int(definition.recipe.elements[0].color_operation)
+	)
+	material.set_shader_parameter(
+		"color_factor", packed_factor(definition.recipe.elements[0].color_factor)
 	)
 	mesh.material_override = material
 	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -137,7 +142,7 @@ static func _supported(definition: Dictionary) -> bool:
 		and int(element.blending_source) == 3
 		and int(element.blending_destination) in [2, 8]
 		and int(element.color_operation) in [3, 4, 6]
-		and element.color_factor == [1.0, 1.0, 1.0, 1.0]
+		and _factor_supported(element.get("color_factor"))
 		and element.alpha_events.is_empty()
 		and int(element.texture_start_frame) == 0
 		and element.texture_animation_loop
@@ -162,4 +167,25 @@ static func _billboard_supported(element: Dictionary, recipe: Dictionary) -> boo
 		and keys.size() == 1
 		and keys[0] is Dictionary
 		and keys[0].get("movement_type") == "MOVING_TYPE_DIRECT"
+	)
+
+
+static func _factor_supported(value: Variant) -> bool:
+	if not value is Array or value.size() != 4:
+		return false
+	for component: Variant in value:
+		if not component is float and not component is int:
+			return false
+		if not is_finite(float(component)) or float(component) < 0 or float(component) > 1:
+			return false
+	return float(value[3]) == 1.0
+
+
+static func packed_factor(value: Array) -> Vector3:
+	# D3DXCOLOR conversion rounds each channel to the nearest byte.
+	return (
+		Vector3(
+			floorf(value[0] * 255 + 0.5), floorf(value[1] * 255 + 0.5), floorf(value[2] * 255 + 0.5)
+		)
+		/ 255.0
 	)

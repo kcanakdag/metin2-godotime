@@ -2287,3 +2287,10 @@ Selected MDE/MSE mesh geometry counts are bounded at 32, allowing original Dash'
 remain enforced. Mixed conversion audits every element, but the current Godot
 runtime still requires one geometry per mesh recipe; conversion acceptance is not
 runtime acceptance for multi-element effects.
+
+
+Mesh color factors now support finite RGB channels in [0,1], packed to original
+byte precision before modulation. Alpha remains constrained to 1 in this renderer.
+The `skill_mesh` native scenario covers white, both original Dash gray values and
+an asymmetric colored factor across operations 3/4/6. Multi-element scene support
+is still separate from this material capability.

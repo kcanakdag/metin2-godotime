@@ -496,3 +496,11 @@ The selected Warrior Dash (`tanhwan.mse`) conversion includes its referenced pin
 Original MSE/MDE/textures and generated derivatives remain ignored. The existing
 independent Blender conversion/audit handles every geometry; the bounded parser
 limit increased from eight to 32 based on this concrete selected source asset.
+
+
+Mesh color factors use the same independently implemented nearest-byte D3DXCOLOR
+packing as the existing source adapter. The original EffectMeshInstance sets the
+packed factor before drawing, while EffectInstance selects TFACTOR/texture as the
+two RGB arguments. Godot applies that encoded factor before source-color blending;
+select-argument-2 ignores it. Native measured framebuffer tests cover both selected
+Dash grays and an asymmetric color, without copying original renderer code.
