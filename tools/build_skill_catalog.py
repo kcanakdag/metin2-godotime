@@ -13,7 +13,7 @@ from pathlib import Path
 
 from content_compile import ROOT, canonical_bytes, source_archive
 from fetch_test_assets import METIN_COMMIT
-from live_buff_skill import berserk_metadata
+from live_buff_skill import self_buff_metadata
 
 PROFILE = ROOT / "content/profiles/classic-skills.json"
 OUTPUT = ROOT / "client/assets/imported/skills/catalog.v1.json"
@@ -211,7 +211,7 @@ def compile_catalog(profile: dict, *, offline: bool) -> dict:
                 raise ValueError("Skill source row is missing or ambiguous")
             rows[key] = matches[0]
         row, desc = rows["table"], rows["description"]
-        buff = berserk_metadata(row, powers) if selected["handler"] == "self_buff_v1" else {}
+        buff = self_buff_metadata(row, powers) if selected["handler"] == "self_buff_v1" else {}
         if not buff and (
             len(row) != 27
             or int(row[2]) != selected["class_id"] + 1

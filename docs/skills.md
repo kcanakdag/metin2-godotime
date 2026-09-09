@@ -14,6 +14,13 @@ The first supported ability is Warrior Sword Spin (vnum 2), using the original
 male/female `palbang` motions and selected original icon. This is a bounded first
 ability, not complete skill-system or original-client parity.
 
+Protocol 31 additionally integrates the selected Warrior self-buffs Berserk
+(vnum 3), Aura of the Sword (vnum 4) and Strong Body (vnum 19). Their persisted
+lifecycle, owner-only status projection and HUD binding are accepted for the
+current candidate. Rank-20 quantitative combat and movement effects also pass
+ordinary local gameplay replays; exported-client casting remains separate
+acceptance work.
+
 At level 5 a Warrior has one skill point; each subsequent level adds one. Open
 Skills with **K** or the character window's Skills tab. The plus button learns
 or upgrades the skill, spending one point after server acceptance. Drag a learned
@@ -30,16 +37,15 @@ feedback, request receipts and audit trail. Ordinary accounts cannot grant ranks
 
 ## Content pipeline
 
-### Timed self-buff integration in progress
+### Timed self-buffs integrated
 
-The next shared runtime slice starts with Berserk (3), not an additional live
-damage-only approximation. `server/src/buff_lifecycle.rs` supplies a bounded
-captured-modifier collection: replacing a skill replaces all its points atomically,
-different skill sources coexist, each point retains its own remaining online
-affect ticks, and derived bonuses are recomputed rather than repeatedly added to
-already-modified stats. The adapter must persist remaining duration across logout,
-remove ordinary skill buffs on death, and authorize all casts. This core does not
-yet create database rows, change stats or make Berserk playable.
+`server/src/buff_lifecycle.rs` supplies a bounded captured-modifier collection:
+replacing a skill replaces all its points atomically, different skill sources
+coexist, each point retains its own remaining online affect ticks, and derived
+bonuses are recomputed rather than repeatedly added to already-modified stats.
+The protocol-31 adapter authenticates the living selected controller, persists
+the complete transition, pauses ordinary skill durations while offline, removes
+them on death and projects owner-only status rows for the HUD.
 
 `buff_capture.rs` evaluates trusted deterministic programs into owned cost,
 cooldown and modifier values, then validates the complete captured affect before
@@ -48,27 +54,27 @@ separate validated integer input; formula variable `k` is replaced with the
 source's single-precision fraction promoted to double. Integer power-percentage
 mechanics use a separate `PowerPercent` operation, so Berserk's penalty does not
 inherit floating-point formula rounding. Random buff formulas reject until their
-source evaluation order is supported. Authentication, rank authorization,
-payment and database writes remain the reducer adapter's responsibility.
+source evaluation order is supported. The reducer adapter enforces
+authentication, rank authorization, payment and database writes.
 
 `buff_activation.rs` combines trusted captured values with the current skill
 revision/cooldown and SP balance into one activation proposal. It validates the
 entire replacement before returning updated effects, remaining SP and the next
 revision/deadline. Stale retries and insufficient payment cannot partially modify
-an active buff. The database adapter must authenticate the living selected owner
-and persist all proposal fields in one reducer transaction; the proposal itself
-does not authenticate an identity or write state.
+an active buff. The reducer persists all accepted proposal fields in one
+transaction; the proposal core itself does not authenticate an identity or write
+state.
 
-The selected live compiler now accepts a candidate `self_buff_v1` Berserk entry
-with `weapon_class: "any"`. `tools/live_buff_skill.py` preserves both point
-programs, durations, SP/cooldown programs, integer damage-penalty policy and
-source-rounded rank display tables. Both imported skill motions must be present
+The selected live compiler accepts the three source-backed `self_buff_v1` entries
+with `weapon_class: "any"`. `tools/live_buff_skill.py` preserves their point
+programs, durations, SP/cooldown programs, integer mechanics and source-rounded
+rank display tables. All imported skill motions must be present
 and contain no collision events. `server/build_buff_skills.rs` generates typed
 `SELF_BUFFS` definitions using the arithmetic compiler shared with the full-class
 pipeline. Self buffs reject target damage, physical damage coefficients and
-animation damage windows. The current server cast dispatcher and Godot catalog
-do not yet enable this handler; compile into an isolated candidate, not installed
-content, until activation and presentation integration are complete.
+animation damage windows. The protocol-31 candidate enables the reducer handler,
+owner-only `buff_status` projection, Godot catalog and HUD binding; keep it in a
+separate candidate database until exported multiplayer acceptance is complete.
 
 Pinned server `7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318` is the behavioral reference:
 `char_affect.cpp` AddAffect/ProcessAffect/SaveAffect/LoadAffect and
@@ -90,8 +96,9 @@ at power 5 has 2 attack speed, 1 movement speed, 64-second duration, 67-second
 base cooldown and 57 SP cost. Rank-20 power 50 gives 25/10 speed, 105-second
 duration, 108-second base cooldown, 120 SP cost and a 12-percent incoming-normal
 damage penalty. Gameplay caps, cast-speed adjustment and damage ordering belong
-in the authoritative adapters. Cast animation, persistent affect visuals/UI and
-two-client lifecycle qualification remain required.
+in the authoritative adapters. The cast animation, persistent affect UI and
+two-client lifecycle are accepted for the protocol-31 candidate; quantitative
+rank-20 damage/movement and exported-client evidence are tracked separately.
 
 The full-class linker also now uses the source float-power promotion for rank
 costs and cooldowns. This matters at intermediate ranks: power 6 evaluates
@@ -103,8 +110,25 @@ reconcile affected live values during content/runtime integration.
 
 Focused core check: `cargo test --manifest-path server/Cargo.toml --locked --offline
 --lib buff_lifecycle`. It covers atomic rejection, no recast stacking, independent
-secondary expiry, preserved paused state and bounded arithmetic; it does not
-qualify database persistence or multiplayer buffs.
+secondary expiry, preserved paused state and bounded arithmetic.
+
+The protocol-31 candidate passes authenticated two-client lifecycle replay for
+all three buffs: Berserk, Aura of the Sword and Strong Body each record 41 checks
+on fresh disposable databases. Aura's actual HUD binding adds four checks, and
+Strong Body death/respawn passes 17 checks after a separate 39-check preparation
+run. Coverage includes cast/payment, owner-only status, peer isolation, shared
+action visibility, stale/cooldown rejection, reconnect persistence, offline
+pause, expiry, no replay and rank/cooldown preservation. The death replay uses
+ordinary monster combat and verifies cleanup before respawn. See
+`docs/rebuild/implementation-status.md` for the exact modules, databases, reports
+and remaining limits.
+
+Rank-20 quantitative local evidence now covers Aura's outgoing ordinary damage
+(29 checks), Strong Body's incoming reduction and movement penalty (26 and 29
+checks), and Berserk's incoming-normal penalty and movement bonus (26 and 24
+checks). Each replay derives its expected values from the candidate catalog and
+uses ordinary attacks or held movement input. These are controlled local
+fixtures, not rendered or exported-client acceptance.
 
 Run the existing pinned base-actor, character and UI importers first:
 

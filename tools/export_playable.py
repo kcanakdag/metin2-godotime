@@ -47,7 +47,13 @@ def main():
         type=Path,
         help="Use this isolated directory for staging, imports, logs and temporary export files",
     )
+    parser.add_argument("--skill-catalog", type=Path, help="Stage this candidate skill catalog")
+    parser.add_argument("--ui-package", type=Path, help="Stage this converted UI package")
     args = parser.parse_args()
+    if args.skill_catalog and not args.skill_catalog.is_file():
+        parser.error("Candidate skill catalog is missing")
+    if args.ui_package and not (args.ui_package / "manifest.json").is_file():
+        parser.error("Candidate UI package manifest is missing")
     p1_requirements = p1_profile_requirements()
     live_target_effects = target_effect_requirements(ROOT / "client")
     templates = template_directory(args.templates)
@@ -86,6 +92,15 @@ def main():
             include_maps=args.include_map,
             p1_enabled=p1_requirements is not None,
         )
+        if args.skill_catalog:
+            shutil.copy2(args.skill_catalog, stage / "assets/imported/skills/catalog.v1.json")
+        if args.ui_package:
+            shutil.rmtree(stage / "assets/imported/ui")
+            shutil.copytree(args.ui_package, stage / "assets/imported/ui")
+        content_inputs = {
+            "skills_sha256": digest(stage / "assets/imported/skills/catalog.v1.json"),
+            "ui_manifest_sha256": digest(stage / "assets/imported/ui/manifest.json"),
+        }
         staged_target_effects = stage_target_effects(ROOT / "client", stage, live_target_effects)
         config = {"server_url": args.server, "database": args.database}
         (stage / "client_config.json").write_text(json.dumps(config) + "\n")
@@ -150,6 +165,7 @@ def main():
             local,
             env,
             allow_test_probe=args.test_probe,
+            content_root=stage,
             p1_requirements=p1_requirements,
         )
         audit["target_effects"] = audit_target_effect_pack(
@@ -198,6 +214,7 @@ def main():
             "test_probe": args.test_probe,
             "template_sha256": digest(template),
             "pack_audit": audit,
+            "content_inputs": content_inputs,
             "files": files,
         }
         (build / "build-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")

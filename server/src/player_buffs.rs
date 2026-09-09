@@ -3,7 +3,27 @@ use crate::buff_lifecycle::{Effects, Modifier, Point, SkillAffect};
 use crate::progression::{CharacterProgression, character_progression};
 use crate::skills::CharacterSkill;
 use crate::{Controller, accounts, controller, definitions, now_us, player};
-use spacetimedb::{Identity, ReducerContext, Table};
+use spacetimedb::{Filter, Identity, ReducerContext, Table};
+
+/// Owner-only UI state; captured modifier values remain in the private table.
+#[spacetimedb::table(accessor = buff_status, public)]
+#[derive(Clone, PartialEq)]
+pub struct BuffStatus {
+    #[primary_key]
+    pub id: String,
+    #[index(btree)]
+    pub account: Identity,
+    #[index(btree)]
+    pub character_id: Identity,
+    pub skill_vnum: u16,
+    pub life_sequence: u32,
+    pub remaining_ticks: u32,
+    pub paused: bool,
+}
+
+#[spacetimedb::client_visibility_filter]
+const OWN_BUFFS: Filter =
+    Filter::Sql("SELECT * FROM buff_status WHERE buff_status.account = :sender");
 
 #[derive(Clone, spacetimedb::SpacetimeType)]
 pub struct SavedBuffModifier {
@@ -31,7 +51,8 @@ fn point(code: u8) -> Result<Point, String> {
         0 => Ok(Point::AttackSpeed),
         1 => Ok(Point::MovementSpeed),
         2 => Ok(Point::AttackGrade),
-        3 => Ok(Point::NormalDamageTakenPercent),
+        3 => Ok(Point::DefenseGrade),
+        4 => Ok(Point::NormalDamageTakenPercent),
         _ => Err("Invalid saved buff point".into()),
     }
 }
@@ -42,7 +63,8 @@ fn saved(modifier: &Modifier) -> SavedBuffModifier {
             Point::AttackSpeed => 0,
             Point::MovementSpeed => 1,
             Point::AttackGrade => 2,
-            Point::NormalDamageTakenPercent => 3,
+            Point::DefenseGrade => 3,
+            Point::NormalDamageTakenPercent => 4,
         },
         value: modifier.value,
         remaining_ticks: modifier.remaining_ticks,
@@ -77,16 +99,56 @@ pub fn clear(ctx: &ReducerContext, character: Identity) {
 }
 
 pub fn refresh_speed(ctx: &ReducerContext, character: Identity) -> Result<(), String> {
-    if let Some(mut row) = ctx
+    sync_status(ctx, character)?;
+    if ctx
         .db
         .character_progression()
         .character_id()
         .find(character)
+        .is_some()
     {
-        let speed = crate::attack_timing::equipped_speed(ctx, character)?;
-        if row.display_attack_speed != speed {
-            row.display_attack_speed = speed;
-            ctx.db.character_progression().character_id().update(row);
+        crate::progression::rebuild_display_projection(ctx, character)?;
+    }
+    Ok(())
+}
+
+fn sync_status(ctx: &ReducerContext, character: Identity) -> Result<(), String> {
+    let progression = ctx
+        .db
+        .character_progression()
+        .character_id()
+        .find(character);
+    let mut retained = std::collections::BTreeSet::new();
+    if let Some(progression) = progression {
+        for row in ctx.db.character_buff().character_id().filter(character) {
+            restore(&row)?;
+            let status = BuffStatus {
+                id: row.id.clone(),
+                account: progression.account,
+                character_id: character,
+                skill_vnum: row.skill_vnum,
+                life_sequence: row.life_sequence,
+                remaining_ticks: row
+                    .modifiers
+                    .iter()
+                    .map(|value| value.remaining_ticks)
+                    .max()
+                    .ok_or("Buff has no remaining modifiers")?,
+                paused: row.next_tick_us == 0,
+            };
+            retained.insert(row.id.clone());
+            if let Some(previous) = ctx.db.buff_status().id().find(&row.id) {
+                if previous != status {
+                    ctx.db.buff_status().id().update(status);
+                }
+            } else {
+                ctx.db.buff_status().insert(status);
+            }
+        }
+    }
+    for previous in ctx.db.buff_status().character_id().filter(character) {
+        if !retained.contains(&previous.id) {
+            ctx.db.buff_status().id().delete(previous.id);
         }
     }
     Ok(())
@@ -234,7 +296,9 @@ pub fn resume(ctx: &ReducerContext, character: Identity) -> Result<(), String> {
 pub fn maintain(ctx: &ReducerContext, now: i64) -> Result<(), String> {
     for row in ctx.db.character_buff().iter() {
         let Some(owner) = ctx.db.player().identity().find(row.character_id) else {
+            let character = row.character_id;
             ctx.db.character_buff().id().delete(row.id);
+            sync_status(ctx, character)?;
             continue;
         };
         if owner.health == 0 || owner.life_sequence != row.life_sequence {
@@ -451,5 +515,29 @@ mod tests {
         let mut invalid = fixture();
         invalid.next_tick_us = -1;
         assert!(elapsed_row(invalid, 2_000_000, false).is_err());
+    }
+
+    #[test]
+    fn saved_points_round_trip_every_supported_effect() {
+        for (code, expected) in [
+            (0, Point::AttackSpeed),
+            (1, Point::MovementSpeed),
+            (2, Point::AttackGrade),
+            (3, Point::DefenseGrade),
+            (4, Point::NormalDamageTakenPercent),
+        ] {
+            let point = point(code).unwrap();
+            assert_eq!(point, expected);
+            assert_eq!(
+                saved(&Modifier {
+                    point,
+                    value: 1,
+                    remaining_ticks: 1,
+                })
+                .point,
+                code
+            );
+        }
+        assert!(point(5).is_err());
     }
 }

@@ -549,6 +549,7 @@ pub fn simulate(ctx: &ReducerContext, now: i64) -> Result<(), String> {
                 }
                 let amount = crate::physical_damage::roll_skill_hit(
                     ctx,
+                    cast.character_id,
                     d,
                     cast.rank,
                     cast.attacker,

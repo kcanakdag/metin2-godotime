@@ -7,6 +7,7 @@ pub enum Point {
     AttackSpeed,
     MovementSpeed,
     AttackGrade,
+    DefenseGrade,
     NormalDamageTakenPercent,
 }
 

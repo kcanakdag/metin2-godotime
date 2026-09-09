@@ -458,6 +458,7 @@ fn apply_hit(
         .ok_or("The special-area owner is no longer present.")?;
     let damage = crate::physical_damage::roll_player_hit(
         ctx,
+        area.character_id,
         crate::physical_damage::CapturedPlayerAttacker {
             level: area.attacker_level,
             strength: area.attacker_strength,

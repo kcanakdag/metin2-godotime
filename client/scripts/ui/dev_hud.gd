@@ -66,6 +66,8 @@ var skill_clock_us: int = 0:
 		if is_instance_valid(_hotbar):
 			_hotbar.update_skill_clock(value)
 
+var buff_strip: Control
+
 var _root: Control
 var _connection: PanelContainer
 var _server: LineEdit
@@ -125,6 +127,8 @@ func _ready() -> void:
 	_build_status()
 	_skills_panel = preload("res://scripts/ui/classic_skills.gd").new()
 	_root.add_child(_skills_panel)
+	buff_strip = preload("res://scripts/ui/classic_buffs.gd").new()
+	_root.add_child(buff_strip)
 	_skills_panel.learn_requested.connect(func(vnum): learn_skill_requested.emit(vnum))
 	_skills_panel.cast_requested.connect(func(vnum): cast_skill_requested.emit(vnum))
 	_status.skills_requested.connect(_skills_panel.toggle)
@@ -160,6 +164,7 @@ func set_connection_state(state: String, message: String) -> void:
 	_connection.visible = not _connected and not _account_entry
 	_chat_panel.set_connected(_connected)
 	_minimap.visible = _connected
+	buff_strip.visible = _connected
 	if not _connected:
 		_inventory.hide()
 		target_panel.clear_view()

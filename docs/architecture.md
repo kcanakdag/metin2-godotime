@@ -1,5 +1,17 @@
 # Architecture
 
+Protocol 31 adds `buff_status`, an account-filtered UI projection of private
+`character_buff` state. It contains character/skill/life identity, remaining ticks
+and paused state, but no captured modifier values or internal tick clock.
+The server's `:sender` filter enforces ownership. Activation, duration updates,
+pause/resume and removal synchronize the projection; unchanged rows are not
+rewritten. Godot subscribes during world entry and clears buff snapshots on exit.
+The HUD consumes owner-only rows through `skill_hud_binding.gd` and
+`classic_buffs.gd`, including the original active-affect icon strip. The new local
+training QA module and bindings are staged; normal exported builds remain on
+their previous protocols. Rendered world and exported/browser presentation still
+require separate qualification.
+
 The unfinished protocol-30 worktree adds private remaining-duration character
 buffs and removes precomputed damage from private monster clocks. Ordinary mob
 hits resolve current target defenses/affects only after exact-life, range and

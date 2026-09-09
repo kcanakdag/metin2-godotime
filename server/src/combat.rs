@@ -452,6 +452,7 @@ pub fn start_player_action(
         |monster| {
             crate::physical_damage::roll_player_hit(
                 ctx,
+                controller.identity,
                 captured_attacker.expect("ordinary physical hits capture an attacker"),
                 &monster,
             )

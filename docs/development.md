@@ -3,16 +3,49 @@
 ## Timed-buff multiplayer replay
 
 `tools/test_progression_admin.py buff --server AUTH_ORIGIN --game-server GAME_URL
---database FRESH_BUFF_DB --godot GODOT --fixture PRIVATE_QA_ACCOUNTS --report NEW_REPORT`
-runs the two-account Berserk activation/reconnect scenario. Use a training module
-compiled with the six-skill candidate and only the first fixture identity's
-authorized progression bootstrap. The scenario raises the first character to level
-five and learns rank one if unlearned, or reuses an existing rank-one character.
-Allow its cooldown to finish before repeating; do not reset the database.
-It verifies subscribed action/payment/speed, rejection/reconnect and full expiry
-after a two-second offline pause, but not death, damage or rendered gameplay. Keep the
-private account file out of logs and commits. See the implementation ledger for
-the frozen module/database and remaining acceptance work.
+--database FRESH_BUFF_DB --godot GODOT --fixture PRIVATE_QA_ACCOUNTS
+--skill-catalog CANDIDATE --buff-skill 3|4|19 --report NEW_REPORT` runs the
+two-account activation/reconnect scenario for the selected Warrior self-buff.
+Use a training module compiled with the matching candidate and only the first
+fixture identity's authorized progression bootstrap. The scenario raises the
+first character to level five and learns rank one if unlearned, or reuses an
+existing rank-one character. Allow its cooldown to finish before repeating; do
+not reset the database. It verifies subscribed action/payment/projection,
+rejection/reconnect and full expiry after a two-second offline pause, but not
+death, quantitative combat/movement or rendered gameplay. Keep the private
+account file out of logs and commits. See the implementation ledger for the
+frozen module/database and remaining acceptance work.
+
+The same runner's `buff_death` phase is a reuse phase: run a normal `buff` pass
+for the same `--buff-skill` on the same disposable database first, then wait for
+cooldown before invoking `buff_death`. It selects that database account's first
+prepared rank-one character. In Training Grounds it approaches the dog, provokes
+one ordinary hit, waits for low health and casts before lethal retaliation. Both
+clients must see death before expiry, base attack speed and a respawned life
+without the buff. This changes the QA character through normal combat; it
+performs no health edits.
+
+The `buff_hud` phase additionally requires `--skill-catalog CANDIDATE` and
+`--ui-package CONVERTED_UI_DIR`. It stages the real HUD and production binding
+in an isolated headless project, then verifies icon updates against live owner
+subscriptions through the same replay. Expiry acceptance also requires a living,
+connected owner in the original life; sanitized logs record that state and elapsed
+time. This does not replace rendered native/browser world qualification.
+
+The `buff_combat` phase prepares a fresh database at level 20/rank 20. For Aura
+(`--buff-skill 4`) it equips the starter sword and samples ordinary attacks
+against the passive training dummy. For Berserk (`3`) and Strong Body (`19`) it
+approaches a live Wild Dog and samples ordinary incoming damage. The harness
+derives the expected domains from `--skill-catalog`; it never edits health,
+damage, stats or buff state. Use a fresh disposable database for this phase.
+
+The `buff_movement` phase also prepares a fresh level-20/rank-20 fixture and
+supports Berserk and Strong Body. It selects a map-aware clear corridor and
+measures three held-input travel samples before and after the cast on the
+subscribed authoritative player row. The protocol-31 candidate uses
+positive-coordinate Yongan; a training-map run needs its own clear corridor and
+does not qualify the same world. The measured ratio must be within `0.03` of the
+source-derived speed multiplier.
 
 ## Monster snapshot conversion checks
 

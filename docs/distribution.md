@@ -107,6 +107,20 @@ checks for map/chat panels, inventory and multiplayer. Earlier Yongan gameplay,
 terrain and normal-release checks remain historical evidence; they do not prove
 the new account flow. See the evidence table below.
 
+## Candidate content exports
+
+`tools/export_playable.py` accepts `--skill-catalog CANDIDATE_JSON` and
+`--ui-package CONVERTED_UI_DIRECTORY` for isolated content qualification. These
+replace only the temporary export project's selected inputs. The installed
+client content stays unchanged. Use a matching server catalog/module and pass
+its database explicitly; these options do not publish a server or route traffic.
+
+The export manifest records `content_inputs.skills_sha256` and
+`content_inputs.ui_manifest_sha256`. The actual-PCK audit compares the skill
+catalog with the staged input, loads its selected skill/buff icons, and retains
+the existing UI decoded-pixel checks. Package success alone does not establish
+live skill, input or rendered-world acceptance.
+
 ## Select a frozen deployment module
 
 `tools/deploy.py --module <frozen-release.wasm>` selects a specific server artifact

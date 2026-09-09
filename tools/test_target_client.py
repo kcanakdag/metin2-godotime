@@ -30,6 +30,7 @@ SMOKES = {
     "charge_approach": ("charge_approach_smoke.gd", "CHARGE_APPROACH_SMOKE"),
     "skill_charge_catalog": ("skill_charge_catalog_smoke.gd", "SKILL_CHARGE_CATALOG_SMOKE"),
     "skills_ui": ("skills_ui_smoke.gd", "SKILLS_UI_SMOKE"),
+    "buffs_ui": ("buffs_ui_smoke.gd", "BUFFS_UI_SMOKE"),
     "content_gate": ("main_content_gate_smoke.gd", "MAIN_CONTENT_GATE_SMOKE"),
     "options": ("classic_system_options_smoke.gd", "CLASSIC_SYSTEM_OPTIONS_SMOKE"),
     "panel": ("classic_target_smoke.gd", "CLASSIC_TARGET_SMOKE"),
@@ -73,18 +74,21 @@ def main() -> None:
     parser.add_argument(
         "--native", action="store_true", help="Capture the physical_ui component under Xvfb."
     )
+    parser.add_argument("--skill-catalog", type=Path)
+    parser.add_argument("--ui-package", type=Path, default=CLIENT / "assets/imported/ui")
     options = parser.parse_args()
     selected = options.suite or list(SMOKES)
     if options.native and (
-        selected not in (["physical_ui"], ["skills_ui"]) or not shutil.which("xvfb-run")
+        selected not in (["physical_ui"], ["skills_ui"], ["buffs_ui"])
+        or not shutil.which("xvfb-run")
     ):
-        parser.error("--native requires --suite physical_ui or skills_ui and xvfb-run")
+        parser.error("--native requires --suite physical_ui, skills_ui or buffs_ui and xvfb-run")
     options.output = options.output.resolve()
     options.output.mkdir(parents=True, exist_ok=True)
     report_path = options.output / "report.json"
     report_path.write_text(json.dumps({"passed": False, "status": "started"}, indent=2) + "\n")
     actor_profile = CLIENT / "assets/imported/content/p0-warrior-dog"
-    ui_profile = CLIENT / "assets/imported/ui"
+    ui_profile = options.ui_package
     character_profile = CLIENT / "assets/imported/characters"
     if not (actor_profile / "manifest.v1.json").is_file():
         raise SystemExit("Missing P1 actor profile; run the content import first.")
@@ -95,6 +99,8 @@ def main() -> None:
     with tempfile.TemporaryDirectory(prefix="project-", dir=options.output) as scratch:
         stage = Path(scratch)
         shutil.copytree(CLIENT / "assets/imported/skills", stage / "assets/imported/skills")
+        if options.skill_catalog:
+            shutil.copy2(options.skill_catalog, stage / "assets/imported/skills/catalog.v1.json")
         shutil.copytree(CLIENT / "scripts", stage / "scripts")
         shutil.copytree(CLIENT / "addons/SpacetimeDB", stage / "addons/SpacetimeDB")
         shutil.copytree(CLIENT / "spacetime_bindings", stage / "spacetime_bindings")
@@ -110,6 +116,8 @@ def main() -> None:
             shutil.copy2(CLIENT / "tests" / script, stage / "tests" / script)
         (stage / "project.godot").write_text(PROJECT)
         tested_files = {
+            "skill_catalog": sha256(stage / "assets/imported/skills/catalog.v1.json"),
+            "buff_strip": sha256(stage / "scripts/ui/classic_buffs.gd"),
             "character_catalog": sha256(stage / "assets/imported/characters/catalog.v1.json"),
             "main": sha256(stage / "scripts/main.gd"),
             "main_scene": sha256(stage / "scenes/main.tscn"),

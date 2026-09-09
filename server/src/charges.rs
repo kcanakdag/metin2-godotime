@@ -190,6 +190,7 @@ pub(crate) fn strike(
     {
         let amount = crate::physical_damage::roll_skill_hit(
             ctx,
+            caster.identity,
             definition,
             consumed.captured_rank,
             attacker,

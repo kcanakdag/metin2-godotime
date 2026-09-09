@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "skills": [
+    {
+      "id": "skill.warrior.three-way-cut",
+      "vnum": 1,
+      "class_id": 0,
+      "minimum_level": 5,
+      "maximum_rank": 20,
+      "handler": "physical_area_v1",
+      "motion": "skill_1",
+      "weapon_class": "sword",
+      "hits_per_life": 3
+    },
+    {
+      "id": "skill.warrior.sword-spin",
+      "vnum": 2,
+      "class_id": 0,
+      "minimum_level": 5,
+      "maximum_rank": 20,
+      "handler": "physical_splash_v1",
+      "motion": "skill_2",
+      "weapon_class": "sword"
+    },
+    {
+      "id": "skill.warrior.berserk",
+      "vnum": 3,
+      "class_id": 0,
+      "minimum_level": 5,
+      "maximum_rank": 20,
+      "handler": "self_buff_v1",
+      "motion": "skill_3",
+      "weapon_class": "any"
+    },
+    {
+      "id": "skill.warrior.aura-of-the-sword",
+      "vnum": 4,
+      "class_id": 0,
+      "minimum_level": 5,
+      "maximum_rank": 20,
+      "handler": "self_buff_v1",
+      "motion": "skill_4",
+      "weapon_class": "any"
+    },
+    {
+      "id": "skill.warrior.dash",
+      "vnum": 5,
+      "class_id": 0,
+      "minimum_level": 5,
+      "maximum_rank": 20,
+      "handler": "physical_charge_v1",
+      "motion": "skill_5",
+      "weapon_class": "sword_or_two_handed",
+      "hits_per_life": 1
+    },
+    {
+      "id": "skill.warrior.spirit-strike",
+      "vnum": 16,
+      "class_id": 0,
+      "minimum_level": 5,
+      "maximum_rank": 20,
+      "handler": "physical_area_v1",
+      "motion": "skill_16",
+      "weapon_class": "sword",
+      "hits_per_life": 1
+    },
+    {
+      "id": "skill.warrior.bash",
+      "vnum": 17,
+      "class_id": 0,
+      "minimum_level": 5,
+      "maximum_rank": 20,
+      "handler": "physical_area_v1",
+      "motion": "skill_17",
+      "weapon_class": "sword",
+      "hits_per_life": 1
+    },
+    {
+      "id": "skill.warrior.strong-body",
+      "vnum": 19,
+      "class_id": 0,
+      "minimum_level": 5,
+      "maximum_rank": 20,
+      "handler": "self_buff_v1",
+      "motion": "skill_19",
+      "weapon_class": "any"
+    }
+  ]
+}

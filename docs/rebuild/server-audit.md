@@ -7,6 +7,10 @@ using the repository's authoritative SpacetimeDB model, typed contracts,
 transactions, subscriptions, secure account boundary, repeatable content builds,
 and audited administration.
 
+Security-relevant oddities found during implementation are tracked separately in
+the [original server security notes](original-security-notes.md). They record
+exploit classes and the modern invariant that replaces the unsafe behavior.
+
 ## Evidence boundary
 
 The canonical source inspected is

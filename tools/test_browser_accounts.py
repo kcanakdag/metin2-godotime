@@ -236,6 +236,9 @@ def main() -> None:
         help="Exercise the authored dummy with real browser pointer and Space input",
     )
     args = parser.parse_args()
+    for candidate in (args.mob_catalog, args.mob_route, args.world_npcs):
+        if candidate is not None and not candidate.is_file():
+            parser.error(f"Missing scenario input: {candidate}")
     if args.ordinary_reload and not args.field_only:
         parser.error("--ordinary-reload requires --field-only")
     if args.ground_items and not args.field_combat:

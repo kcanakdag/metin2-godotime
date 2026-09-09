@@ -34,6 +34,7 @@ pub fn generate(id: u64, value: &Value) -> Result<String, String> {
             Some("attack_speed") => "AttackSpeed",
             Some("movement_speed") => "MovementSpeed",
             Some("attack_grade") => "AttackGrade",
+            Some("defense_grade") => "DefenseGrade",
             Some("normal_damage_taken_percent") => "NormalDamageTakenPercent",
             _ => return Err("Unsupported self-buff point".into()),
         };

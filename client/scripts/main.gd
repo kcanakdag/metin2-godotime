@@ -85,8 +85,7 @@ func _ready() -> void:
 	connection.players_changed.connect(_on_players)
 	connection.appearances_changed.connect(_on_appearances)
 	connection.server_clock_changed.connect(_on_server_clock)
-	connection.progression_changed.connect(_on_progression)
-	connection.skills_changed.connect(_on_progression)
+	preload("res://scripts/ui/skill_hud_binding.gd").attach(connection, hud)
 	connection.combat_target_changed.connect(_on_combat_target)
 	connection.command_feedback_changed.connect(hud.set_command_feedback)
 	connection.obstacles_changed.connect(world.set_obstacles)
@@ -437,12 +436,6 @@ func _on_players(rows: Array) -> void:
 func _on_appearances(rows: Array) -> void:
 	_appearance_rows = rows.duplicate(true)
 	_queue_player_sync()
-
-
-func _on_progression(_rows: Array) -> void:
-	hud.set_progression(
-		connection.selected_progression(), connection.selected_skills(), connection.server_time_us
-	)
 
 
 func _on_combat_target(_target: Dictionary) -> void:

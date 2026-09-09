@@ -5,7 +5,215 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Protocol-31 self-buff lifecycle qualified — 2026-09-09
+
+The corrected protocol-31 candidate is published locally from
+`.local/p6-self-buffs-r1/module-r3.wasm` (SHA
+`6dc6856b7d4a6c9963610ad060f5f8cfded7c2c5564c40b215add94bf64731d2`) with
+catalog `.local/p6-self-buffs-r1/catalog.v1.json` (SHA
+`76ab6525b3b89a79e32377a0df702c1d89179c269c3f641dedeb44292dfd9b85`).
+The earlier protocol-31 publication rejected client connections because the
+compiled module did not match the retained QA accounts' issuer/bootstrap
+configuration. Rebuilding with the exact local issuer
+`http://127.0.0.1:8186/auth`, guests disabled and the first QA identity
+bootstrapped fixed the connection path. This artifact remains local-only and
+must not be published publicly.
+
+Fresh disposable databases now pass the full two-account lifecycle for all three
+selected Warrior self-buffs:
+
+- Berserk (3): `.local/p6-self-buffs-r1/live-berserk-r3.json`, **41 checks** on
+  `mt2-p2-self-buffs-v31-r3-20260909-6dc6856b`; expiry at 66,364 ms.
+- Aura of the Sword (4): `.local/p6-self-buffs-r1/live-aura-r3.json`, **41
+  checks** on `mt2-p2-self-buffs-v31-aura-r1-20260909-6dc6856b`; expiry at
+  34,411 ms.
+- Strong Body (19): `.local/p6-self-buffs-r1/live-strong-body-r3.json`, **41
+  checks** on `mt2-p2-self-buffs-v31-strong-body-r1-20260909-6dc6856b`.
+- Aura actual-HUD binding: `.local/p6-self-buffs-r1/live-hud-after-r3.json`,
+  **45 checks** on `mt2-p2-self-buffs-v31-hud-r1-20260909-6dc6856b`.
+- Strong Body death/respawn: prepare the same disposable database with a normal
+  `buff` pass (`.local/p6-self-buffs-r1/live-death-prep-r3.json`, **39 checks**),
+  then reuse its prepared rank-one character in
+  `.local/p6-self-buffs-r1/live-death-after-r3.json`, **17 checks**.
+- Aura outgoing combat: `.local/p6-self-buffs-r1/live-combat-aura-r3.json`,
+  **29 checks** on `mt2-p2-self-buffs-v31-aura-combat-r1-20260909-6dc6856b`.
+  Ordinary sword hits against the passive training dummy changed from baseline
+  `[67, 66, 66, 64, 64, 64, 64, 66]` to buffed
+  `[123, 123, 122, 122, 120, 120, 120, 122]`.
+- Strong Body incoming combat:
+  `.local/p6-self-buffs-r1/live-combat-strong-body-r2.json`, **26 checks** on
+  `mt2-p2-self-buffs-v31-strong-body-combat-r1-20260909-6dc6856b`. Ordinary
+  Wild Dog hits changed from baseline `[11, 11, 11, 13, 11, 14, 11, 14]` to
+  `[2, 5, 2, 2, 1, 5, 1, 5]`.
+- Berserk incoming combat:
+  `.local/p6-self-buffs-r1/live-combat-berserk-r1.json`, **26 checks** on
+  `mt2-p2-self-buffs-v31-berserk-combat-r1-20260909-6dc6856b`. Ordinary Wild
+  Dog hits changed from baseline `[13, 14, 16, 13, 14, 16, 10, 10]` to
+  `[15, 15, 17, 14, 12, 15, 12, 15]`, entirely inside the exact expected
+  `[11, 12, 14, 15, 17]` domain.
+- Berserk movement: `.local/p6-self-buffs-r1/live-movement-berserk-r3.json`,
+  **24 checks** on `mt2-p2-self-buffs-v31-berserk-movement-r1-20260909-6dc6856b`;
+  measured ratio `1.11231460105718` against expected `1.11111111111111`.
+- Strong Body movement:
+  `.local/p6-self-buffs-r1/live-movement-strong-body-r1.json`, **29 checks** on
+  `mt2-p2-self-buffs-v31-strong-body-movement-r1-20260909-6dc6856b`; measured
+  ratio `0.95045390353843` against expected `0.95238095238095`.
+
+The lifecycle replays cover cast/payment, owner-only status, peer isolation,
+shared action visibility, cooldown and stale-revision rejection, reconnect
+persistence, offline pause, expiry, no cast replay and rank/cooldown
+preservation. The HUD replay additionally observes live icon creation, duration
+updates and removal through the production binding. The death replay uses
+ordinary monster combat, verifies death before expiry, removes the projection and
+checks that respawn does not restore the buff. No health, damage or permission
+shortcut is used.
+
+This accepts persisted lifecycle, status projection, presentation binding and
+rank-20 quantitative combat/movement behavior for the three selected buffs. The
+combat replay uses ordinary equipped attacks against the passive training dummy
+or real Wild Dog retaliation; the movement replay measures held-input travel on
+the subscribed authoritative row. Neither mutates health, stats, damage,
+permissions or buff state. The movement fixture is map-aware and requires the
+positive-coordinate Yongan build used by this candidate. Exported native/browser
+two-client casting, rendered world effects and final public deployment remain
+outstanding; do not infer them from these headless replays.
+
+## Six-skill Yongan candidate exported — 2026-09-09
+
+The aligned protocol-31 module is published to fresh local database
+`mt2-p2-berserk-world-v31-20260909-b3601ba1` at port 13223. Its actual schema
+matches the generated bindings exactly. It uses the six-skill catalog with
+Berserk buff-icon metadata and the selected original Yongan population.
+Existing databases and served local/public routing remain intact.
+
+The actual-HUD two-account replay passes **44 checks** at
+`.local/p6-berserk-world-r1/hud-r1.json`: cast/payment/rejection, owner-only status,
+reconnect and expiry at 66,541 ms including the offline pause. At expiry the owner
+was online, connected, alive at 917 HP and in the original life 0. The prior
+training HUD timing discrepancy remains unproven, but did not recur here.
+
+Matching Linux and streamed Web test exports are at `p6-berserk-world-r1/linux`
+and `p6-berserk-world-r1/web`. Both actual-PCK audits pass with seven selected
+skill/buff icons and 245 decoded UI images. Web section-pack checks also pass.
+`integration-receipt.json` binds source, module, schema, input catalogs and both
+build manifests. These are package audits plus separate live HUD evidence;
+quantitative buff combat/movement was not part of this export and now has
+separate local evidence in the newest entry; rendered exported gameplay and
+browser casting remain required before acceptance or public deployment.
+
+`export_playable.py --skill-catalog ... --ui-package ...` now stages candidate
+content without replacing installed content. Its package audit checks the staged
+catalog identity and loads all declared skill/buff icons. Both source hashes are
+recorded under `content_inputs` in the export manifest. Scoped Python lint,
+format and diff checks pass. Next: route the local candidate and run exported
+multiplayer gameplay QA, preserving the current public build until qualified.
+
+## Actual HUD buff subscription replay — 2026-09-09
+
+`tools/test_progression_admin.py buff_hud` now stages the actual `DevHud` and
+production `skill_hud_binding.gd` with candidate catalog/UI inputs. The two real
+accounts receive owner-only status updates through the ordinary server connection.
+The replay checks icon creation, repeated updates and removal alongside the
+existing activation/payment/reconnect/expiry assertions.
+
+`.local/p6-buff-status-r1/hud-r2.json` passes **41 checks**. Expiry occurred at
+66,401 ms including the two-second offline pause; the owner was connected,
+online, alive at 211 HP and still in life 1. The harness now explicitly rejects
+expiry acceptance if the owner is dead, disconnected or in another life.
+Source/module/report hashes are in `hud-r2-receipt.json`. Scoped GDScript lint
+passes. This is actual HUD subscription wiring in an isolated headless project,
+not rendered main-world or browser qualification.
+
+The earlier `hud-r1` failed its wall-duration check at 45,047 ms. Its owner state
+was not recorded, so the cause remains unproven; the passing replay does not
+establish a fix. Preserve both reports and investigate a recurrence before
+accepting exported buff gameplay. No authentication or server rules were relaxed.
+The existing training module uses the earlier catalog without buff-icon metadata.
+The aligned six-skill/full-Yongan module is built at
+`.local/p6-berserk-world-r1/module.wasm` (SHA
+`b3601ba1fc7a17c94e113a2588343bbb8d0eb92fa1bf898348af89a547eb3e73`),
+but is not published or qualified. Installed content and local/public routing
+remain unchanged. Next: aligned world integration and exported two-client QA,
+including buff duration diagnostics and quantitative combat/movement behavior.
+
+## Original buff icon strip implemented — 2026-09-09
+
+The boxed-tooltip mismatch below is corrected. The selected skill-affect path now
+uses immediate outlined skill-name text 40 pixels below the icon, matching the
+pinned `AffectImage` behavior; remaining duration still controls status lifetime
+but is not added to this classic skill-name label. The strip reuses one label and
+removes it when the hovered affect disappears. Native hover, click-through,
+keyboard-focus and expiry checks pass **18 assertions** at
+`.local/p6-buff-ui-classic-r1/report.json`. The rendered hovered text was visually
+reviewed. This qualifies the isolated presentation behavior, not exact original
+font rasterization, live-world HUD wiring or exported browser rendering.
+
+The native hover/input extension passes **17 checks** at
+`.local/p6-buff-ui-input-r2/report.json`. Real mouse motion reaches the icon and
+opens a tooltip containing the subscribed duration. Clicks propagate to gameplay
+input, W still arrives, keyboard focus stays empty, and row-removal checks remain
+green. The hovered capture was visually inspected. This also identifies a visual
+gap: the current Godot tooltip is a boxed two-line panel; pinned `AffectImage`
+uses outlined text below the icon (its skill-affect path supplies the skill name).
+Do not call the current tooltip original-client parity. Replace that presentation
+while preserving these tested input and lifecycle behaviors before final UI acceptance.
+
+The HUD now has a reusable owner-buff strip using generated `buff_icon` metadata,
+source origin `(10,10)`, 25-pixel spacing, 0.7 icon scale and 32-entry limit.
+It reuses icons for duration updates, removes paused/expired/other-character rows
+and provides a subscribed-duration tooltip without keyboard focus. Progression
+and buff subscriptions are connected through `skill_hud_binding.gd`; duration
+updates do not rebuild the skills panel.
+
+The six-skill candidate at `.local/p6-buff-icons-r1/catalog.v1.json` adds original
+`jeongwi_03` active-affect art (SHA
+`14fc325aadb9cdf22c6f31ed22891606edea0a523c18feab71f196cd66abf18f`).
+`import_metin_ui.py --skill-catalog CANDIDATE --output DIR` converts its icons
+without installing content. Offline discovery identified the uncached selected
+SUB; the pinned online import produced 244 images with source/atlas/crop hashes.
+The candidate UI and catalog remain uninstalled; the frozen QA module still uses
+its earlier catalog identity, so normal export qualification must align those inputs.
+
+The isolated native strip passes **12 Godot checks** at
+`.local/p6-buff-ui-r2/report.json`; the final small top-left icon capture was
+visually inspected. R1 exposed the missing 0.7 scale, now corrected. Six Python
+compiler tests and scoped lint pass. This is component rendering/state and actual
+project parsing, not hovered-tooltip/real-world click behavior or browser QA.
+The test runner accepts isolated `--skill-catalog` and `--ui-package` candidates.
+
+## Owner-only buff status integrated — 2026-09-09
+
+Protocol 31 adds the account-filtered `buff_status` projection, synchronized with
+private modifiers through activation, tick, pause/resume and removal. The client
+subscribes to status in-world and clears it on exit. The fresh training database
+is `mt2-p2-buff-status-v31-r1-20260909-f4b5d45a` at local port 13223; its frozen
+module `.local/p6-buff-status-r1/module.wasm` has SHA
+`f4b5d45a5d67d34d8873667d57950b8cdf767852d1abb3186b32bf4fdfe86b7d`.
+The module remains local-issuer/QA-bootstrap only, with guests disabled.
+
+Actual-schema binding generation produces 107 scripts and schema SHA
+`ebca85c16aa73f5c40231458d906667b85c73783b9e2cfa2081b85195c37c011`;
+generated-client instantiation passes. The expanded authenticated replay passes
+**39 checks** in `p6-buff-status-r1/multiplayer.json`: the owner receives status,
+the independently subscribed peer sees none, modifier/tick-clock fields are absent,
+owner/life match, reconnect restores private status and expiry removes it.
+Module/harness/server/client hashes are in `receipt.json`. Strict library Clippy
+and scoped GDScript lint pass. This proves owner filtering through ordinary
+subscriptions, not every possible adversarial SQL query. Buff icons and their
+rendered input behavior remain the next presentation work. Earlier protocol-30
+death and native actor evidence remains separately bound; no exports changed.
+
 ## Protocol-30 buff database and bindings staged — 2026-09-09
+
+Live death cleanup now passes **17 authenticated two-client checks** at
+`.local/p6-buffs-server-r1/death-r1.json`. The new `buff_death` replay approaches
+the training dog and provokes retaliation with one normal attack, waits for low
+health, then casts Berserk. Both clients observe death before buff expiry, the
+owner's attack speed returns to 100, and respawn increments life without restoring
+the buff. Health, damage and permissions are not overridden. Harness/bindings and
+frozen-module receipt hashes are bound in `death-r1-input.json`. Scoped lint and
+diff checks pass. This proves ordinary-combat lifecycle cleanup; it does not yet
+quantify Berserk's percentage damage penalty or qualify rendered/exported play.
 
 Integration review: strict `cargo clippy --lib -- -D warnings` passes after marking
 the unused legacy single-effect travel adapter test-only. Fourteen movement tests

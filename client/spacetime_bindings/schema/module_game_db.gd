@@ -2,7 +2,7 @@
 # FILE WILL NOT BE SAVED. MODIFY TABLES IN YOUR MODULE SOURCE CODE INSTEAD.
 class_name GameModuleDb extends RefCounted
 
-const table_names : Array[String] = ["world_info", "combat_target_view", "inventory_item", "account_state", "item_drop", "npc_spawn", "character_progression", "inventory_access", "account_character", "obstacle", "monster_stun", "player", "monster", "loot", "charge_status", "character_skill", "chat_message", "npc_interaction", "command_feedback", "player_appearance", "simulation_clock"]
+const table_names : Array[String] = ["world_info", "combat_target_view", "inventory_item", "account_state", "item_drop", "npc_spawn", "character_progression", "inventory_access", "account_character", "obstacle", "monster_stun", "player", "monster", "loot", "charge_status", "buff_status", "character_skill", "chat_message", "npc_interaction", "command_feedback", "player_appearance", "simulation_clock"]
 
 var world_info: GameWorldInfoTable
 var combat_target_view: GameCombatTargetViewTable
@@ -19,6 +19,7 @@ var player: GamePlayerTable
 var monster: GameMonsterTable
 var loot: GameLootTable
 var charge_status: GameChargeStatusTable
+var buff_status: GameBuffStatusTable
 var character_skill: GameCharacterSkillTable
 var chat_message: GameChatMessageTable
 var npc_interaction: GameNpcInteractionTable
@@ -42,6 +43,7 @@ func _init(p_local_db: LocalDatabase) -> void:
 	monster = preload('res://spacetime_bindings/schema/tables/game_monster_table.gd').create(p_local_db)
 	loot = preload('res://spacetime_bindings/schema/tables/game_loot_table.gd').create(p_local_db)
 	charge_status = preload('res://spacetime_bindings/schema/tables/game_charge_status_table.gd').create(p_local_db)
+	buff_status = preload('res://spacetime_bindings/schema/tables/game_buff_status_table.gd').create(p_local_db)
 	character_skill = preload('res://spacetime_bindings/schema/tables/game_character_skill_table.gd').create(p_local_db)
 	chat_message = preload('res://spacetime_bindings/schema/tables/game_chat_message_table.gd').create(p_local_db)
 	npc_interaction = preload('res://spacetime_bindings/schema/tables/game_npc_interaction_table.gd').create(p_local_db)

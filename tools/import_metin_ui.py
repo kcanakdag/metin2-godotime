@@ -346,11 +346,14 @@ def main():
         help="Include the explicitly discovered classic class skill icons",
     )
     parser.add_argument("--output", type=Path, default=OUTPUT)
+    parser.add_argument(
+        "--skill-catalog", type=Path, default=ROOT / "client/assets/imported/skills/catalog.v1.json"
+    )
     args = parser.parse_args()
     archive = Archive(offline=args.offline)
     archive.inventory()
     icons = []
-    skill_catalog = ROOT / "client/assets/imported/skills/catalog.v1.json"
+    skill_catalog = args.skill_catalog
     if skill_catalog.is_file():
         catalog = json.loads(skill_catalog.read_text())
         if (
@@ -360,6 +363,7 @@ def main():
         ):
             raise ValueError("Expected pinned installed skill catalog")
         icons.extend(skill["icon"] for skill in catalog["skills"])
+        icons.extend(skill["buff_icon"] for skill in catalog["skills"] if "buff_icon" in skill)
     if args.skill_inventory:
         inventory = json.loads(args.skill_inventory.read_text())
         if (

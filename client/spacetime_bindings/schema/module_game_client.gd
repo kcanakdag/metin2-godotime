@@ -8,6 +8,7 @@ const Types = preload('res://spacetime_bindings/schema/module_game_types.gd')
 const AccountCharacter = Types.AccountCharacter
 const AccountState = Types.AccountState
 const AdminLevelRoll = Types.AdminLevelRoll
+const BuffStatus = Types.BuffStatus
 const SavedBuffModifier = Types.SavedBuffModifier
 const CharacterProgression = Types.CharacterProgression
 const CharacterSkill = Types.CharacterSkill

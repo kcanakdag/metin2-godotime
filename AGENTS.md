@@ -249,12 +249,24 @@ for routine implementation choices.
 
 ## Current continuation snapshot — 2026-09-09
 
-The active slice is Berserk (`self_buff_v1`) and reusable persisted timed buffs.
+The active slice is the protocol-31 reusable self-buff lifecycle for Berserk (3),
+Aura of the Sword (4) and Strong Body (19). The corrected local-only candidate is
+`.local/p6-self-buffs-r1/module-r3.wasm` (SHA
+`6dc6856b7d4a6c9963610ad060f5f8cfded7c2c5564c40b215add94bf64731d2`) with
+catalog `.local/p6-self-buffs-r1/catalog.v1.json`. Berserk, Aura and Strong Body
+each pass 41 authenticated lifecycle checks; Aura passes 45 with the actual HUD;
+Strong Body passes 17 death/respawn checks after a 39-check preparation pass.
+Rank-20 ordinary-combat replays pass 29 Aura outgoing checks, 26 Strong Body and
+26 Berserk incoming checks; movement passes 24 Berserk and 29 Strong Body checks.
+Next run exported/browser two-client casting and rendered world-effect QA. The
+candidate uses the local issuer/bootstrap identity and must not be published
+publicly. See the newest ledger entry for databases, reports and remaining
+limits.
 Read the newest entries in `docs/rebuild/implementation-status.md`; the older
-snapshot below is historical. Source and generated bindings now use protocol 30.
-The six-skill candidate is `.local/p6-buffs-live-r1/catalog.v1.json`; installed
-content still selects the five accepted Warrior skills. Do not call all 44
-prepared definitions/motions playable.
+snapshot below is historical. Source and generated bindings now use protocol 31.
+The selected candidate is `.local/p6-self-buffs-r1/catalog.v1.json`; installed
+content still selects the accepted Warrior skills. Do not call all 44 prepared
+definitions/motions playable.
 
 The frozen training QA module `.local/p6-buffs-server-r1/module.wasm` is published
 to `mt2-p2-buffs-v30-r1-20260909-e81e5a1c` on local port 13223. Its receipt binds
@@ -281,12 +293,12 @@ blend transitions, unarmed rendering or browser parity. Original source does not
 automatically suppress root movement for standing skills; female Berserk's MSA
 endpoint still needs comparison with actual GR2 trajectory before changing it.
 
-Next: live death/damage/movement qualification, remaining effect/UI presentation,
-then exported two-client acceptance and an authorized public update. Only buffs'
-stored state, stats, action/payment, reconnect and expiry have the scoped evidence
-above. Continue the full world/class/content objective afterward. Latest cleanup
-makes the legacy single-effect movement wrapper test-only; strict library Clippy
-and 14 movement checks pass. The frozen QA module predates that non-gameplay cleanup.
+Next: exported/browser two-client casting, rendered world effect/UI presentation,
+then an authorized public update. The scoped local evidence now includes stored
+state, stats, action/payment, reconnect, expiry, quantitative combat and movement.
+Continue the full world/class/content objective afterward. Latest cleanup makes
+the legacy single-effect movement wrapper test-only; strict library Clippy and 14
+movement checks pass. The frozen QA module predates that non-gameplay cleanup.
 Preserve pre-existing untracked actor/content/test UID files when staging commits.
 
 ## Handoff snapshot — 2026-09-08

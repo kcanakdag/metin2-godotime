@@ -703,18 +703,21 @@ def validate_pack_paths(paths, *, allow_test_probe=False):
     return {"files_checked": len(paths), "test_probe_present": bool(probes)}
 
 
-def audit_pack(godot, pck, output, env, *, allow_test_probe=False, p1_requirements=None):
+def audit_pack(
+    godot, pck, output, env, *, allow_test_probe=False, p1_requirements=None, content_root=None
+):
     # Load the actual exported PCK, checking remapped meshes and animations too.
     pck = Path(pck).resolve()
     if not pck.is_file():
         raise RuntimeError(f"Exported PCK is missing: {pck}")
-    npc_path = ROOT / "client/assets/imported/npcs" / NPC_CATALOG
+    content_root = Path(content_root) if content_root is not None else ROOT / "client"
+    npc_path = content_root / "assets/imported/npcs" / NPC_CATALOG
     npc_hash = digest(npc_path) if npc_path.is_file() else ""
-    character_path = ROOT / "client/assets/imported/characters/catalog.v1.json"
+    character_path = content_root / "assets/imported/characters/catalog.v1.json"
     character_hash = digest(character_path) if character_path.is_file() else ""
-    skill_path = ROOT / "client/assets/imported/skills/catalog.v1.json"
+    skill_path = content_root / "assets/imported/skills/catalog.v1.json"
     skill_hash = digest(skill_path) if skill_path.is_file() else ""
-    authored_path = ROOT / "client/assets/imported/authored/training-dummy/manifest.v1.json"
+    authored_path = content_root / "assets/imported/authored/training-dummy/manifest.v1.json"
     authored_hash = digest(authored_path) if authored_path.is_file() else ""
     probe = output / "audit_pack.gd"
     probe.write_text("""extends SceneTree
@@ -800,7 +803,7 @@ func _initialize() -> void:
         var skill_path := "res://assets/imported/skills/catalog.v1.json"
         var skill_hash := OS.get_cmdline_user_args()[6]
         if skill_hash.is_empty() or FileAccess.get_sha256(skill_path) != skill_hash:
-            push_error("Packaged skill catalog differs from the installed catalog")
+            push_error("Packaged skill catalog differs from the expected catalog")
             quit(1)
             return
         var skill_catalog = load("res://scripts/content/skill_catalog.gd").new()
@@ -808,6 +811,23 @@ func _initialize() -> void:
             push_error("Packaged skill catalog cannot load")
             quit(1)
             return
+        var skill_icons_checked := 0
+        for skill: Dictionary in skill_catalog.document.skills:
+            for field: String in ["icon", "buff_icon"]:
+                if not skill.has(field):
+                    continue
+                var icon_path := "res://assets/imported/ui/" + str(skill[field]) + ".png"
+                if not ResourceLoader.exists(icon_path):
+                    push_error("Packaged skill icon is missing: " + icon_path)
+                    quit(1)
+                    return
+                var icon: Variant = load(icon_path)
+                if not icon is Texture2D or icon.get_width() <= 0 or icon.get_height() <= 0:
+                    push_error("Packaged skill icon cannot load: " + icon_path)
+                    quit(1)
+                    return
+                skill_icons_checked += 1
+        p1_audit["skill_icons_checked"] = skill_icons_checked
         p1_audit["skill_catalog_sha256"] = skill_hash
         var authored = audit_authored(OS.get_cmdline_user_args()[7])
         if authored == null:
@@ -1233,7 +1253,7 @@ func verify_actor_metadata(actor: Dictionary, summary: Dictionary, resource: Str
 func audit_characters(expected_hash: String) -> Variant:
     var path := "res://assets/imported/characters/catalog.v1.json"
     if expected_hash.is_empty() or not FileAccess.file_exists(path) or FileAccess.get_sha256(path) != expected_hash:
-        push_error("Packaged character catalog differs from the installed catalog")
+        push_error("Packaged character catalog differs from the expected catalog")
         return null
     var document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
     if document.classes.size() != 4 or document.actors.size() != 8:
@@ -1267,7 +1287,7 @@ func audit_characters(expected_hash: String) -> Variant:
 func audit_authored(expected_hash: String) -> Variant:
     var path := "res://assets/imported/authored/training-dummy/manifest.v1.json"
     if expected_hash.is_empty() or not FileAccess.file_exists(path) or FileAccess.get_sha256(path) != expected_hash:
-        push_error("Packaged training target differs from the installed catalog")
+        push_error("Packaged training target differs from the expected catalog")
         return null
     var document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
     var result := []
@@ -1294,7 +1314,7 @@ func audit_npcs(expected_hash: String) -> Variant:
             return null
         return []
     if not FileAccess.file_exists(path) or FileAccess.get_sha256(path) != expected_hash:
-        push_error("Packaged NPC catalog differs from the installed catalog")
+        push_error("Packaged NPC catalog differs from the expected catalog")
         return null
     var document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
     var result := []

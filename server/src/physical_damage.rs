@@ -271,13 +271,14 @@ pub fn validate_selected_policy(
 ) -> Result<(), PhysicalDamageError> {
     validate_level_and_stats(attacker.level, attacker.strength, attacker.dexterity)?;
     server_defense_grade(victim)?;
+    validate_bonus(attacker.attack_grade_bonus)?;
     validate_multiplier(attacker.npc_damage_multiplier)?;
     let direction_matches = matches!(
         (attacker.kind, victim.kind),
         (CombatantKind::Player, CombatantKind::Npc) | (CombatantKind::Npc, CombatantKind::Player)
     );
     if !direction_matches
-        || attacker.attack_grade_bonus != 0
+        || (attacker.attack_grade_bonus != 0 && attacker.kind != CombatantKind::Player)
         || attacker.party_attack_bonus != 0
         || attacker.attack_percent != 0
         || attacker.melee_magic_attack_percent != 0
@@ -285,7 +286,7 @@ pub fn validate_selected_policy(
         || (attacker.kind == CombatantKind::Player
             && attacker.npc_damage_multiplier.to_bits() != 1.0_f32.to_bits())
         || attacker.final_multiplier.to_bits() != 1.0_f32.to_bits()
-        || victim.defense_grade_bonus != 0
+        || (victim.defense_grade_bonus != 0 && victim.kind != CombatantKind::Player)
         || victim.party_defender_bonus != 0
         || victim.defense_percent != 0
         || victim.npc_attacker_marriage_defense_bonus != 0
@@ -765,6 +766,32 @@ fn player_attacker(captured: CapturedPlayerAttacker) -> Result<PhysicalAttackerS
     ))
 }
 
+fn buff_bonus(
+    ctx: &ReducerContext,
+    character: Identity,
+    point: crate::buff_lifecycle::Point,
+) -> Result<i16, String> {
+    i16::try_from(crate::player_buffs::bonus(ctx, character, point)?)
+        .map_err(|_| "Buff contribution exceeds the physical-damage bounds".into())
+}
+
+fn player_attacker_with_buffs(
+    ctx: &ReducerContext,
+    character: Identity,
+    captured: CapturedPlayerAttacker,
+) -> Result<PhysicalAttackerSnapshot, String> {
+    let mut snapshot = player_attacker(captured)?;
+    snapshot.attack_grade_bonus = snapshot
+        .attack_grade_bonus
+        .checked_add(buff_bonus(
+            ctx,
+            character,
+            crate::buff_lifecycle::Point::AttackGrade,
+        )?)
+        .ok_or("Attack-grade contribution overflow")?;
+    Ok(snapshot)
+}
+
 fn player_attacker_with_power(
     captured: CapturedPlayerAttacker,
     power: PhysicalPowerSource,
@@ -877,7 +904,7 @@ fn player_victim(
         .character_id()
         .find(character)
         .ok_or("Character progression is missing.")?;
-    Ok(policy_victim(
+    let mut victim = policy_victim(
         CombatantKind::Player,
         row.level,
         row.vitality,
@@ -885,7 +912,16 @@ fn player_victim(
         0,
         0,
         0,
-    ))
+    );
+    victim.defense_grade_bonus = victim
+        .defense_grade_bonus
+        .checked_add(buff_bonus(
+            ctx,
+            character,
+            crate::buff_lifecycle::Point::DefenseGrade,
+        )?)
+        .ok_or("Defense-grade contribution overflow")?;
+    Ok(victim)
 }
 
 pub fn capture_player(
@@ -973,21 +1009,27 @@ pub fn capture_ordinary_damage<T>(
 
 pub fn roll_player_hit(
     ctx: &ReducerContext,
+    character: Identity,
     captured: CapturedPlayerAttacker,
     monster: &Monster,
 ) -> Result<u16, String> {
-    roll_damage(ctx, player_attacker(captured)?, mob_victim(ctx, monster)?)
+    roll_damage(
+        ctx,
+        player_attacker_with_buffs(ctx, character, captured)?,
+        mob_victim(ctx, monster)?,
+    )
 }
 
 pub fn roll_skill_hit(
     ctx: &ReducerContext,
+    character: Identity,
     definition: &definitions::SkillDefinition,
     rank: u8,
     captured: CapturedPlayerAttacker,
     vitality: u8,
     monster: &Monster,
 ) -> Result<u16, String> {
-    let attacker = player_attacker(captured)?;
+    let attacker = player_attacker_with_buffs(ctx, character, captured)?;
     let victim = mob_victim(ctx, monster)?;
     let power = ctx
         .rng()
@@ -1062,7 +1104,14 @@ pub fn display_values(
             dexterity: row.dexterity,
             power,
             armor_defense: 0,
-            defense_grade_bonus: definitions::SELECTED_PHYSICAL_POLICY.defense_grade_bonus,
+            defense_grade_bonus: definitions::SELECTED_PHYSICAL_POLICY
+                .defense_grade_bonus
+                .checked_add(buff_bonus(
+                    ctx,
+                    character,
+                    crate::buff_lifecycle::Point::DefenseGrade,
+                )?)
+                .ok_or("Defense-grade display overflow")?,
             party_defender_bonus: definitions::SELECTED_PHYSICAL_POLICY.party_defender_bonus,
         },
         crate::characters::stat_attack(
@@ -1489,6 +1538,47 @@ mod tests {
     }
 
     #[test]
+    fn persisted_grade_bonuses_affect_damage_and_display_projection() {
+        let base_attacker = initial_warrior(SWORD_10_POWER);
+        let mut buffed_attacker = base_attacker;
+        buffed_attacker.attack_grade_bonus = 10;
+        assert_eq!(attack_grade(base_attacker).unwrap(), 14);
+        assert_eq!(attack_grade(buffed_attacker).unwrap(), 24);
+        let base_damage = damage_domain(base_attacker, wild_dog_victim());
+        let buffed_damage = damage_domain(buffed_attacker, wild_dog_victim());
+        assert!(
+            buffed_damage
+                .iter()
+                .zip(&base_damage)
+                .all(|(buffed, base)| buffed >= base)
+        );
+        assert!(buffed_damage.iter().max() > base_damage.iter().max());
+
+        let base_victim = warrior_victim(1, 4, 3);
+        let mut buffed_victim = base_victim;
+        buffed_victim.defense_grade_bonus = 10;
+        assert_eq!(server_defense_grade(base_victim).unwrap(), 4);
+        assert_eq!(server_defense_grade(buffed_victim).unwrap(), 14);
+        let undefended = damage_domain(wild_dog_attacker(), base_victim);
+        let defended = damage_domain(wild_dog_attacker(), buffed_victim);
+        assert!(
+            defended
+                .iter()
+                .zip(&undefended)
+                .all(|(defended, base)| defended <= base)
+        );
+        assert!(defended.iter().max() < undefended.iter().max());
+
+        let base_display = display_snapshot(6, 4, 3, SWORD_10_POWER);
+        assert_eq!(warrior_display_values(base_display).unwrap().defense, 5);
+        let buffed_display = WarriorDisplaySnapshot {
+            defense_grade_bonus: 10,
+            ..base_display
+        };
+        assert_eq!(warrior_display_values(buffed_display).unwrap().defense, 15);
+    }
+
+    #[test]
     fn authored_resistances_flow_through_runtime_validation_and_damage() {
         let attacker = initial_warrior(SWORD_10_POWER);
         let mut victim = wild_dog_victim();
@@ -1628,5 +1718,56 @@ mod tests {
             calculate_pre_floor(initial_warrior(SWORD_10_POWER), invalid_victim, 13),
             Err(PhysicalDamageError::InvalidResistance)
         );
+    }
+
+    #[test]
+    fn level_twenty_self_buff_grade_domains_are_exact() {
+        fn full_domain(
+            attacker: PhysicalAttackerSnapshot,
+            victim: PhysicalVictimSnapshot,
+        ) -> Vec<u16> {
+            let mut values = Vec::new();
+            for roll in attacker.power.power_min..=attacker.power.power_max {
+                let calculation = calculate_pre_floor(attacker, victim, roll).unwrap();
+                match calculation.outcome {
+                    DamageBeforeFloor::Retained(value) => values.push(value),
+                    DamageBeforeFloor::NeedsLowFloor => {
+                        for floor in 1..=5 {
+                            values.push(finish_damage(calculation, Some(floor)).unwrap().damage);
+                        }
+                    }
+                }
+            }
+            values.sort_unstable();
+            values.dedup();
+            values
+        }
+        let dummy = policy_victim(CombatantKind::Npc, 1, 0, 0, 0, 0, 0);
+        let mut aura = warrior(20, 6, 3, SWORD_10_POWER);
+        assert_eq!(damage_domain(aura, dummy), [64, 66, 67]);
+        aura.attack_grade_bonus = 83;
+        assert_eq!(damage_domain(aura, dummy), [120, 122, 123]);
+
+        let incoming = full_domain(wild_dog_attacker(), warrior_victim(20, 4, 3));
+        assert_eq!(incoming, [10, 11, 13, 14, 16]);
+        let mut victim = warrior_victim(20, 4, 3);
+        victim.defense_grade_bonus = 101;
+        assert_eq!(full_domain(wild_dog_attacker(), victim), [1, 2, 3, 4, 5]);
+        let berserk_domain: Vec<u16> = incoming
+            .iter()
+            .map(|damage| {
+                crate::mob_damage::finish_with_affects(
+                    crate::mob_damage::Kind::Normal,
+                    *damage,
+                    0,
+                    0,
+                    crate::mob_damage::Penetration::default(),
+                    12,
+                    |_, _| panic!("no draw expected"),
+                )
+                .unwrap()
+            })
+            .collect();
+        assert_eq!(berserk_domain, [11, 12, 14, 15, 17]);
     }
 }
