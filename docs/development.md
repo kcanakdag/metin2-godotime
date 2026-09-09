@@ -81,6 +81,13 @@ deadline, then checks shared motion cancellation, no queued restart and AI
 recovery. Use the updated module containing the motion-queue fix; the older
 CRUSH/death frozen modules predate it.
 
+The `charge_input` phase uses the current installed five-skill catalog and a fresh
+protocol-29 training database. It stages owned client scripts to run the real
+`ChargeSkillInput` adapter against two authenticated accounts, checking automatic
+approach/completion, repeated-request suppression and cancellation. The shared
+runner's ordinary phases continue staging only their existing network fixtures.
+This phase requires the same first-account-only setup authorization as `charge`.
+
 Opening an installed actor package in Godot may create a PNG alias that removes
 an embedded image's `.dds` suffix (for example, `actor_face.dds.png` becomes
 `actor_face.png`). The shared character/NPC package validator permits this exact

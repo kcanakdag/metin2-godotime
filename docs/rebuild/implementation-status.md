@@ -5,6 +5,23 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Live automatic charge-input acceptance — 2026-09-09
+
+The `charge_input` phase stages the real owned client scripts and installed skill
+catalog, then instantiates `ChargeSkillInput` on one of two authenticated clients.
+All **33 checks pass**: automatic approach is visible to the observer, damage
+matches both subscriptions, SP is paid once, charge is consumed, repeated request
+calls produce exactly one successful begin and finish, and cancellation of a
+later approach produces no strike/damage and clears the reservation.
+
+Evidence: `.local/p6-charge-input-r1/input.json`; fresh database
+`mt2-p2-charge-input-v29-20260909-485d10ac`, using the frozen module from
+`.local/p6-charge-begin-r1/module.wasm` (hash recorded below). Native Godot runtime
+and touched Python/GDScript lint pass. No test-specific movement/damage logic
+replaces the normal adapter. This is live headless input-adapter acceptance,
+not a rendered Main/hotbar keypress or moving-target test. Original Dash effect
+installation and exported gameplay remain next; public deployment is unchanged.
+
 ## Installed Dash catalog and original icon — 2026-09-09
 
 The tracked `classic-skills.json` profile now selects Dash alongside the previous

@@ -53,7 +53,10 @@ def sign_in(origin: str, saved: dict[str, object]) -> tuple[AuthSession, str]:
     return auth, auth.sign_in(username, password)
 
 
-def stage_project(stage: Path) -> None:
+def stage_project(stage: Path, *, client_input: bool = False) -> None:
+    if client_input:
+        shutil.copytree(ROOT / "client/scripts", stage / "scripts")
+        shutil.copytree(ROOT / "client/assets/imported/skills", stage / "assets/imported/skills")
     for directory in ("addons/SpacetimeDB", "spacetime_bindings"):
         shutil.copytree(ROOT / "client" / directory, stage / directory)
     for source, destination in (
@@ -66,6 +69,7 @@ def stage_project(stage: Path) -> None:
         (ROOT / "tools/crush_smoke.gd", stage / "tests/crush_smoke.gd"),
         (ROOT / "tools/crush_death_smoke.gd", stage / "tests/crush_death_smoke.gd"),
         (ROOT / "tools/crush_overlap_smoke.gd", stage / "tests/crush_overlap_smoke.gd"),
+        (ROOT / "tools/charge_input_smoke.gd", stage / "tests/charge_input_smoke.gd"),
     ):
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
@@ -109,6 +113,7 @@ def run_godot(
         "crush": "crush_smoke.gd",
         "crush_death": "crush_death_smoke.gd",
         "crush_overlap": "crush_overlap_smoke.gd",
+        "charge_input": "charge_input_smoke.gd",
     }.get(str(config["mode"]), "progression_admin_smoke.gd")
     command = [
         godot,
@@ -194,6 +199,7 @@ def arguments() -> argparse.Namespace:
             "crush",
             "crush_death",
             "crush_overlap",
+            "charge_input",
         ),
     )
     parser.add_argument("--server", default="http://127.0.0.1:8186")
@@ -255,7 +261,7 @@ def main() -> None:
         (ROOT / ".local").mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="progression-admin-", dir=ROOT / ".local") as raw:
             stage = Path(raw)
-            stage_project(stage)
+            stage_project(stage, client_input=mode == "charge_input")
             result = run_godot(
                 options.godot,
                 stage,

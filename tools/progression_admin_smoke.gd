@@ -73,7 +73,8 @@ func _run() -> void:
 			"charge_strike",
 			"crush",
 			"crush_death",
-			"crush_overlap"
+			"crush_overlap",
+			"charge_input"
 		]
 	):
 		await _verify_skill_reactions(first, second)
