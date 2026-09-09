@@ -64,10 +64,10 @@ func _ready() -> void:
 	add_child(_npcs)
 	_npcs.failed.connect(_on_npc_failure)
 	connection.npc_spawns_changed.connect(_npcs.set_spawn_rows)
-	_npc_approach = NpcApproach.new()
-	add_child(_npc_approach)
-	_npc_approach.configure(connection)
-	_charge_input = ChargeSkillInput.attach(self, connection, hud, _npc_approach, _attack_input)
+	_npc_approach = NpcApproach.attach(self, connection)
+	_charge_input = ChargeSkillInput.attach(
+		self, connection, hud, _npc_approach, _attack_input, _stream.ready_at
+	)
 	connection.npc_interaction_changed.connect(hud.npc_panel.set_interaction)
 	hud.npc_close_requested.connect(connection.close_npc_interaction)
 	_stream.progress.connect(

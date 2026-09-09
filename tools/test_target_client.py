@@ -25,6 +25,7 @@ window/size/viewport_height=800
 renderer/rendering_method="gl_compatibility"
 """
 SMOKES = {
+    "charge_input_stream": ("charge_input_stream_smoke.gd", "CHARGE_INPUT_STREAM_SMOKE"),
     "charge_approach": ("charge_approach_smoke.gd", "CHARGE_APPROACH_SMOKE"),
     "skill_charge_catalog": ("skill_charge_catalog_smoke.gd", "SKILL_CHARGE_CATALOG_SMOKE"),
     "skills_ui": ("skills_ui_smoke.gd", "SKILLS_UI_SMOKE"),

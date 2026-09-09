@@ -5,6 +5,31 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Charge terrain-readiness guard — 2026-09-09
+
+Inspection found that automatic Dash movement bypassed Main's loaded-terrain
+check used for keyboard movement. Main now supplies the stream readiness callback
+to `ChargeSkillInput`. Before activation and during approach, the adapter checks
+owner position, target position and a two-metre lookahead. Unavailable terrain
+prevents activation, or stops an existing chase and clears its reservation. A
+later retry may reuse the remaining server-owned charge. Invalid coordinates
+continue through the approach's existing rejection path, never the stream indexer.
+This does not provide pathfinding or guarantee every intervening section is loaded.
+
+The new captured-intent adapter fixture passes 13 checks at
+`.local/p6-charge-stream-r3/report.json`, including destination updates for a
+moving row, stream cancellation without a delayed strike, paid-charge retry,
+unloaded lookahead and invalid coordinates. Existing approach (15) and Main
+content-gate (42) checks pass in `.local/p6-charge-stream-r2/report.json`.
+Touched GDScript formatting/lint and Python lint pass. The first isolated import
+was stopped by sandbox socket restrictions; the permitted isolated rerun passed.
+NPC approach setup was moved unchanged to its own `attach` helper to keep Main's
+composition concise. No protocol or server change was needed.
+
+These are real Godot component checks using controlled rows, not live moving-mob
+or exported-map acceptance. Godot MCP is unavailable. Local served and public
+exports still predate this guard; full-map/browser qualification remains next.
+
 ## Exported Dash hotbar and effects — 2026-09-09
 
 The matching protocol-29 Web training-map export passes its package audit:

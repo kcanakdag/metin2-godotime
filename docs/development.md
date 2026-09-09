@@ -88,6 +88,16 @@ approach/completion, repeated-request suppression and cancellation. The shared
 runner's ordinary phases continue staging only their existing network fixtures.
 This phase requires the same first-account-only setup authorization as `charge`.
 
+`tools/test_target_client.py --suite charge_input_stream --godot GODOT --output NEW_DIR`
+exercises the real Dash input adapter with captured reducer intents and controlled
+subscription rows. Main supplies `WorldStream.ready_at`: activation and chase
+updates require loaded owner/target positions and the same two-metre lookahead
+used by keyboard movement. Losing readiness stops and cancels the reservation;
+retrying can reuse a server charge that remains active. This is a presentation
+guard, not pathfinding or authority. Server collision and charge validation still
+apply. The fixture covers changing target positions, stream cancellation, paid
+retry and invalid coordinates; it does not qualify a live moving mob or map export.
+
 Opening an installed actor package in Godot may create a PNG alias that removes
 an embedded image's `.dds` suffix (for example, `actor_face.dds.png` becomes
 `actor_face.png`). The shared character/NPC package validator permits this exact

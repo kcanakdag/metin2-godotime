@@ -10,6 +10,13 @@ var _deadline := 0
 var _moving := false
 
 
+static func attach(parent: Node, connection: GameConnection) -> NpcApproach:
+	var driver := NpcApproach.new()
+	parent.add_child(driver)
+	driver.configure(connection)
+	return driver
+
+
 func configure(connection: GameConnection) -> void:
 	_connection = connection
 	connection.connection_state_changed.connect(func(_state: String, _message: String): cancel())

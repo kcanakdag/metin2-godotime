@@ -2,6 +2,7 @@ class_name ChargeSkillInput
 extends Node
 ## Normal skill-input adapter; all movement and damage remain validated reducers.
 signal notice(message: String)
+var movement_ready: Callable
 var _connection: GameConnection
 var _catalog := SkillCatalog.new()
 var _approach := ChargeApproach.new()
@@ -13,11 +14,13 @@ static func attach(
 	connection: GameConnection,
 	hud: DevHud,
 	npc_approach: NpcApproach,
-	attack_input: RefCounted
+	attack_input: RefCounted,
+	ready_at: Callable = Callable()
 ) -> ChargeSkillInput:
 	var driver := ChargeSkillInput.new()
 	parent.add_child(driver)
 	driver.configure(connection)
+	driver.movement_ready = ready_at
 	driver.notice.connect(hud.show_notice)
 	hud.attack_requested.connect(driver.cancel.bind(true))
 	hud.disconnect_requested.connect(driver.cancel.bind(true))
@@ -47,6 +50,9 @@ func request(vnum: int) -> bool:
 	if _approach.phase != "idle":
 		return true
 	if _connection.state != "connected":
+		return true
+	if not _terrain_ready():
+		notice.emit("Wait for the nearby terrain to load.")
 		return true
 	var intent := _approach.start(definition, _owner(), _target(), Time.get_ticks_msec())
 	if intent.is_empty():
@@ -90,6 +96,10 @@ func _process(delta: float) -> void:
 	if _connection.state != "connected":
 		cancel()
 		return
+	if not _terrain_ready():
+		cancel(true)
+		notice.emit("Wait for the nearby terrain to load.")
+		return
 	_send(
 		_approach.advance(
 			_owner(),
@@ -121,6 +131,25 @@ func _owner() -> Dictionary:
 		if str(row.identity) == _connection.local_identity:
 			return row
 	return {}
+
+
+func _terrain_ready() -> bool:
+	if not movement_ready.is_valid():
+		return true
+	var owner := _owner()
+	var target := _target()
+	if owner.is_empty() or target.is_empty():
+		return true  # The approach validates missing/dead rows and their lives.
+	var origin := Vector3(float(owner.x), 0, float(owner.z))
+	var destination := Vector3(float(target.x), 0, float(target.z))
+	if not origin.is_finite() or not destination.is_finite():
+		return true  # Leave invalid coordinate rejection to the approach validator.
+	var ahead := origin.move_toward(destination, 2.0)
+	return (
+		movement_ready.call(origin)
+		and movement_ready.call(ahead)
+		and movement_ready.call(destination)
+	)
 
 
 func _target() -> Dictionary:
