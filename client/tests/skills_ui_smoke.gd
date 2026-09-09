@@ -21,15 +21,15 @@ func _run() -> void:
 	panel.set_state({"character_class": 0, "level": 5}, [])
 	panel.show()
 	_check(panel.snapshot().points == "Skill points: 1", "level five shows one point")
-	var slot: Control = panel._list.get_child(1)
+	var slot: Control = panel._skill_controls[1].slot
 	_check(slot._icon.texture != null, "original Three-Way Cut icon loads")
-	var spin_slot: Control = panel._list.get_child(6)
+	var spin_slot: Control = panel._skill_controls[2].slot
 	_check(
 		spin_slot.row.skill_vnum == 2 and spin_slot._icon.texture != null,
 		"Sword Spin remains available with original icon"
 	)
 	_check(slot._get_drag_data(Vector2.ZERO) == null, "unlearned skill cannot drag")
-	var plus: TextureButton = panel._list.get_child(4)
+	var plus: TextureButton = panel._skill_controls[1].learn
 	_check(not plus.disabled, "level five permits learning")
 	var requested: Array = []
 	panel.learn_requested.connect(func(vnum): requested.append(vnum))
@@ -39,7 +39,7 @@ func _run() -> void:
 	var learned := [{"skill_vnum": 1, "rank": 1, "points_spent": 1, "ready_at_us": 15000000}]
 	panel.set_state({"character_class": 0, "level": 5}, learned)
 	_check(panel.snapshot().points == "Skill points: 0", "subscription spends displayed point")
-	plus = panel._list.get_child(4)
+	plus = panel._skill_controls[1].learn
 	_check(plus.disabled, "spent points disable upgrade")
 	bar.set_skills(learned, 1000000)
 	bar.bind_skill(0, 1)
@@ -50,16 +50,16 @@ func _run() -> void:
 	bar.set_skills([], 16000000)
 	_check(bar.item_at(0).rank == 0, "removed skill becomes inactive")
 	panel.set_state({"character_class": 0, "level": 4}, [])
-	plus = panel._list.get_child(4)
+	plus = panel._skill_controls[1].learn
 	_check(plus.disabled, "level four cannot learn")
 	panel.set_state({"character_class": 0, "level": 5}, learned)
 	bar.set_skills(learned, 1000000)
 	await process_frame
-	for index in [2, 3]:
-		var added_slot: Control = panel._list.get_child(index * 5 + 1)
+	for vnum in [5, 16, 17]:
+		var added_slot: Control = panel._skill_controls[vnum].slot
 		_check(added_slot._icon.texture != null, "batch skill original icon loads")
 	var scroll: ScrollContainer = panel._list.get_parent()
-	for _step in 3:
+	for _step in 10:
 		var wheel := InputEventMouseButton.new()
 		wheel.position = scroll.get_global_rect().get_center()
 		wheel.global_position = wheel.position
@@ -71,23 +71,26 @@ func _run() -> void:
 		root.push_input(release, true)
 		await process_frame
 	_check(scroll.scroll_vertical > 0, "wheel input scrolls expanded skill list")
-	var final_slot: Control = panel._list.get_child(16)
+	var final_slot: Control = panel._skill_controls[17].slot
 	_check(
 		scroll.get_global_rect().encloses(final_slot.get_global_rect()),
 		"last skill is accessible inside viewport"
 	)
 	var controls: Array = panel.snapshot().controls
-	_check(controls.size() == 4, "inspection enumerates every selected skill")
+	_check(
+		controls.size() == panel.catalog.available(0).size(),
+		"inspection enumerates every selected skill"
+	)
 	_check(not controls[0].fully_visible, "inspection identifies clipped skill")
-	_check(controls[3].fully_visible, "inspection identifies accessible final skill")
+	_check(_control(panel, 17).fully_visible, "inspection identifies accessible final skill")
 	var casts: Array = []
 	panel.cast_requested.connect(func(vnum): casts.append(vnum))
-	var final_center: Array = controls[3].slot_center
+	var final_center: Array = _control(panel, 17).slot_center
 	await _click(Vector2(final_center[0], final_center[1]), MOUSE_BUTTON_RIGHT)
 	_check(casts == [17], "right-click on scrolled Bash emits its cast intent: %s" % str(casts))
 	panel.set_state({"character_class": 0, "level": 8}, learned)
 	await process_frame
-	var learn_center: Array = panel.snapshot().controls[3].learn_center
+	var learn_center: Array = _control(panel, 17).learn_center
 	await _click(Vector2(learn_center[0], learn_center[1]), MOUSE_BUTTON_LEFT)
 	_check(requested == [1, 17], "scrolled learn button targets Bash")
 	learned.append({"skill_vnum": 17, "rank": 1, "points_spent": 1, "ready_at_us": 0})
@@ -95,7 +98,7 @@ func _run() -> void:
 	bar.set_skills(learned, 1000000)
 	bar.slot_dropped.connect(func(target, row): bar.bind_skill(target.cell, int(row.skill_vnum)))
 	await process_frame
-	final_center = panel.snapshot().controls[3].slot_center
+	final_center = _control(panel, 17).slot_center
 	var destination: Array = bar.snapshot().slot_centers[1]
 	await _drag(Vector2(final_center[0], final_center[1]), Vector2(destination[0], destination[1]))
 	_check(bar.item_at(1).get("skill_vnum") == 17, "real drag from scrolled Bash reaches quickslot")
@@ -148,3 +151,10 @@ func _check(passed: bool, label: String) -> void:
 	else:
 		_failed = true
 		push_error("SKILLS_UI_SMOKE FAIL " + label)
+
+
+func _control(panel: Control, vnum: int) -> Dictionary:
+	for row: Dictionary in panel.snapshot().controls:
+		if int(row.vnum) == vnum:
+			return row
+	return {}

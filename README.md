@@ -33,6 +33,10 @@ Earlier activation/reconnect and account/movement checks remain documented in
 the implementation ledger. Two-handed weapons, overlapping reaction qualification
 and normal UI/export integration remain pending; the public release above remains
 on protocol 26.
+
+The local selected catalog now includes Dash and its original icon for both
+converted Warrior appearances. Its automatic approach and original effect package
+still require normal-client acceptance; this does not update the public export.
 The server supports selectable mob packages and a shared mob
 content hash. Its selected-registry training replay passed 74 checks, including
 leader replacement, surviving followers and reconnect. The original Yongan population now runs locally: 2,835 mobs across 44 species,

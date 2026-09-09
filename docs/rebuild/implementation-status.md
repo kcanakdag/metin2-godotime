@@ -5,6 +5,28 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Installed Dash catalog and original icon — 2026-09-09
+
+The tracked `classic-skills.json` profile now selects Dash alongside the previous
+four Warrior skills. `build_skill_catalog.py --offline` regenerates the installed
+five-skill catalog at the already server-tested SHA-256
+`68011294d772fdbf1722c2162f59141c58c5d88915f29f614d67647643e5ed2a`.
+Both installed Warrior actors already contain their converted `skill_5` motions.
+The original UI importer rebuilt selected UI assets including `tanhwan_01`.
+
+The native rendered skills-panel suite passes 25 checks at
+`.local/p6-dash-installed-r1/ui-r2/report.json`. The reviewed capture shows Dash's
+original icon and the scrolled Spirit Strike/Bash rows. Learning, right-click and
+real drag-to-hotbar checks pass. The first run exposed positional fixture
+assumptions (fourth row was assumed to be Bash); the fixture now locates controls
+by vnum and checks all selected rows. Strict Rust lint and touched GDScript lint
+pass. Godot MCP was unavailable; this was an isolated rendered fixture.
+
+This installs local capability/icon content, not a public release. The original
+Dash effect package and live automatic approach still need installation/acceptance.
+Use matching protocol-29/five-skill servers for this client; public protocol-26
+exports remain unchanged.
+
 ## Main charge-input adapter — 2026-09-09
 
 `ChargeSkillInput` now connects normal HUD skill requests to `ChargeApproach`.

@@ -23,6 +23,17 @@
       "weapon_class": "sword"
     },
     {
+      "id": "skill.warrior.dash",
+      "vnum": 5,
+      "class_id": 0,
+      "minimum_level": 5,
+      "maximum_rank": 20,
+      "handler": "physical_charge_v1",
+      "motion": "skill_5",
+      "weapon_class": "sword_or_two_handed",
+      "hits_per_life": 1
+    },
+    {
       "id": "skill.warrior.spirit-strike",
       "vnum": 16,
       "class_id": 0,

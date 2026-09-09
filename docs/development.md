@@ -34,8 +34,8 @@ exact-life `monster_stun` state; the two-client Brown Bear replay verifies push,
 stun and expiry. Death-during-stun and reaction-arrival-during-stun/expiry replays
 also pass; reverse ordering and rendered playback remain unqualified.
 Two-handed weapon runtime support remains pending.
-The normal four-skill profile remains the installed and public selection; the
-public release is still protocol 26. Use matching regenerated bindings and a
+The local profile now selects five skills including Dash; the public export
+still selects four skills and protocol 26. Use matching regenerated bindings and a
 fresh disposable database for protocol-29 QA.
 
 `tools/test_progression_admin.py charge --fixture PRIVATE --report REPORT` uses
@@ -2124,7 +2124,7 @@ these four selected skills; extend its expectations when changing the batch.
 `tools/test_actors.py --scenario equipped_skills --native` automatically samples
 all selected Warrior skills on both appearances. Run
 `tools/test_target_client.py --suite skills_ui --native` for icon, quickslot and
-scroll-panel input coverage. The current UI fixture expects the four-skill profile.
+scroll-panel input coverage. The current UI fixture locates controls by skill vnum and includes the five-skill Dash profile.
 Browser and ordinary-mob reaction acceptance remain separate checks.
 
 ## Select the ordinary-mob skill reaction replay
