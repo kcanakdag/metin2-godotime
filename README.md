@@ -30,14 +30,17 @@ The worktree now uses protocol 29 with private charge ownership, public charge
 status and exact-life monster stun state. The isolated five-skill candidate passes
 43 two-client charge-begin/strike checks and 27 live Brown Bear push/stun/expiry checks.
 Earlier activation/reconnect and account/movement checks remain documented in
-the implementation ledger. Two-handed weapons, overlapping reaction qualification
-and normal UI/export integration remain pending; the public release above remains
+the implementation ledger. Two-handed weapons and full-map charge qualification
+remain pending; the public release above remains
 on protocol 26.
 
 The local selected catalog now includes Dash and its original icon for both
 converted Warrior appearances. Its automatic approach adapter passes 33 live
 two-client checks. Original Dash effects are installed and pass native equipped
-actor checks; rendered-world and browser acceptance remain pending.
+actor checks. The exported training-map replay passes 22 two-browser checks for
+learning, hotbar key casting, replicated damage and effects; reviewed recordings
+show the original Dash burst in both views. Moving-target and full-map acceptance
+remain pending.
 This does not update the public export.
 The server supports selectable mob packages and a shared mob
 content hash. Its selected-registry training replay passed 74 checks, including

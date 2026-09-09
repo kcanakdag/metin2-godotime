@@ -2312,6 +2312,21 @@ active instances, bindings and renderer error. It does not expose effect-spawnin
 commands or confer gameplay authority. Existing visible skill controls are reused
 without resetting scroll before a drag.
 
+The installed Dash export was exercised with the same runner (22 checks):
+
+```sh
+python3 tools/test_browser_skills.py --url http://127.0.0.1:8186 \
+  --database DISPOSABLE_MT2_P2_DATABASE --fixture PRIVATE_ACCOUNT_FIXTURE \
+  --skills 5 --output NEW_PRIVATE_EVIDENCE_DIR
+```
+
+Use an export and server built from the same skill/effect catalogs. The fixture
+needs two existing character rosters, and only its authorized QA operator receives
+level commands. This replay spends skill points; it does not reset accounts or
+databases. Current evidence is `.local/p6-dash-web-r1/browser/report.json`, with
+recorded bursts reviewed in both views. The training-map replay does not establish
+moving-target or streamed-map behavior.
+
 
 ## Batch class-skill effect discovery
 

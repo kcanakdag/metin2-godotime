@@ -5,6 +5,39 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Exported Dash hotbar and effects — 2026-09-09
+
+The matching protocol-29 Web training-map export passes its package audit:
+1,555 files checked, 243 UI images with verified pixels, and the installed
+five-skill catalog hash recorded below. The matching frozen server module is
+`.local/p6-dash-web-r1/module.wasm`, SHA-256
+`12a680f5932cd349aa4798efb8c51ec7ea5529a61658660e5d71421fce2247b2`.
+It uses the selected 44-mob registry and a single retained QA account's privileged
+bootstrap identity; **this is not a public-deployment module**.
+
+The live input-adapter replay passes 33 checks on fresh database
+`mt2-p2-dash-web-v29-20260909-50f6055c`. The actual Web export then passes
+**22 two-browser checks**: existing-account entry, peer rendering, authorized
+level setup, learning Dash, dragging its icon to the quickslot, pointer target
+selection, hotbar number-key casting, replicated action/damage and new effect
+instances on both clients. The learned rank-2 strike reduced the same dummy life
+from 29,921 to 29,831 HP in both subscriptions. Both browsers loaded effect hash
+`79ae990543872fcb698781883a62bdd12069e090a0d3a3129938c312793c0111`
+and reported no engine errors.
+
+Evidence is under `.local/p6-dash-web-r1`: `export.log`, `input.json`, and
+`browser/report.json`. Reviewed video contact sheets `browser/contact-0.png` and
+`contact-1.png` show the blue/white Dash floor burst appearing and disappearing
+in both views. The post-damage still misses that short burst, so spawn counters
+alone were not used as visual evidence. This qualifies the male Warrior on the
+training map; exact original visual parity, female browser playback, moving
+targets and full-map charge behavior remain unqualified. Godot MCP was unavailable;
+no connected-editor inspection is claimed.
+
+Local proxy port 8186 now serves this export/database; its previous configuration
+is retained in `previous-proxy.json`. Port 8187 and the public endpoint were not
+changed. Public protocol 26 remains separate from this local protocol-29 build.
+
 ## Installed five-skill original motion effects — 2026-09-09
 
 The effect packager assembled all ten selected skill/appearance links from the
