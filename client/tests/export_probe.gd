@@ -542,6 +542,7 @@ func _on_reducer_failed(message: String) -> void:
 func _on_monsters_changed(rows: Array) -> void:
 	var present: Dictionary = {}
 	var changed := false
+	var actions_changed := false
 	for value: Variant in rows:
 		if not value is Dictionary:
 			continue
@@ -550,7 +551,7 @@ func _on_monsters_changed(rows: Array) -> void:
 		if row_id <= 0:
 			continue
 		present[row_id] = true
-		_capture_monster_action(monster)
+		actions_changed = _capture_monster_action(monster) or actions_changed
 		var fingerprint := JSON.stringify([monster.get("life_sequence"), monster.get("health")])
 		if str(_last_monster_health.get(row_id, "")) == fingerprint:
 			continue
@@ -575,9 +576,11 @@ func _on_monsters_changed(rows: Array) -> void:
 			_last_monster_actions.erase(row_id)
 	if changed:
 		_publish_monster_health_view()
+	if actions_changed:
+		_publish_monster_action_view()
 
 
-func _capture_monster_action(monster: Dictionary) -> void:
+func _capture_monster_action(monster: Dictionary) -> bool:
 	var row_id := int(monster.get("id", 0))
 	var fingerprint := (
 		JSON
@@ -597,7 +600,7 @@ func _capture_monster_action(monster: Dictionary) -> void:
 		)
 	)
 	if str(_last_monster_actions.get(row_id, "")) == fingerprint:
-		return
+		return false
 	_last_monster_actions[row_id] = fingerprint
 	(
 		_monster_action_history
@@ -620,6 +623,10 @@ func _capture_monster_action(monster: Dictionary) -> void:
 	)
 	while _monster_action_history.size() > 256:
 		_monster_action_history.pop_front()
+	return true
+
+
+func _publish_monster_action_view() -> void:
 	if OS.has_feature("web"):
 		JavaScriptBridge.get_interface("window").mt2MonsterActionHistory = JSON.stringify(
 			_monster_action_history

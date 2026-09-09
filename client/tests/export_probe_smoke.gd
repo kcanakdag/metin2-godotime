@@ -7,6 +7,15 @@ var _checks := 0
 var _failed := false
 
 
+class CountingProbe:
+	extends ExportProbe
+	var publications := 0
+
+	func _publish_monster_action_view() -> void:
+		publications += 1
+		super._publish_monster_action_view()
+
+
 class ProbeCameraRig:
 	extends Node3D
 
@@ -97,6 +106,31 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	var batch_probe := CountingProbe.new()
+	var population: Array = []
+	for index: int in range(2800):
+		population.append({"id": index + 1, "life_sequence": 0, "health": 100})
+	batch_probe._on_monsters_changed(population)
+	_check(
+		batch_probe.publications == 1 and batch_probe._monster_action_history.size() == 256,
+		"full population publishes one bounded action history per update"
+	)
+	_check(
+		(
+			batch_probe._monster_action_history[0].id == 2545
+			and batch_probe._monster_action_history[-1].id == 2800
+		),
+		"batched history preserves newest-record order"
+	)
+	batch_probe._on_monsters_changed(population)
+	_check(batch_probe.publications == 1, "unchanged population does not republish history")
+	population[0].health = 99
+	batch_probe._on_monsters_changed(population)
+	_check(
+		batch_probe.publications == 2 and batch_probe._monster_action_history[-1].id == 1,
+		"single changed monster publishes its latest action record"
+	)
+	batch_probe.free()
 	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 29, "client accepts only protocol 29")
 	# Use the real scene without entering the tree, so this verifies the probe's
 	# node lookup without starting account flow or a game connection.

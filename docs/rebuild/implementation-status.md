@@ -5,6 +5,32 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## First-cast stall traced to monster dispatch; probe batching fix prepared — 2026-09-09
+
+Profiled export `.local/p6-profile-web-r1/web` has served manifest hash
+`643662dca3eef9b2b7420b6396cd0089622394f67b51ce0e079d00101f448356`.
+All **25 populated two-browser checks pass** in its `browser/report.json`.
+The caster's cast acknowledgement takes 4,419 ms. The immediately preceding
+monster flush spends only **4,100 us converting rows but 4,385,700 us in
+synchronous dispatch**. The peer records 3,300 us conversion / 4,148,200 us
+dispatch for the corresponding update. This rules out row conversion as the
+dominant cost in that run. The existing QA database/module and public release
+were preserved; local proxy 8186 serves this profiling export.
+
+Inspection then found an export-probe inefficiency: `_capture_monster_action`
+serialized and published its entire bounded history once for every changed row.
+The connection-state callback clears comparison caches, so the first subsequent
+monster update can repeat this thousands of times. The probe now captures each
+record but publishes once after the complete monster update. Ordering and the
+256-record bound are preserved; unchanged updates do not republish. No gameplay
+or SDK callback ordering changes were made.
+
+The fixed probe passes **45 actual Godot checks** at
+`.local/p6-probe-batch-r1/report.json`, including a 2,800-row publication-count,
+retention/order and unchanged/single-change regression. Scoped checks pass.
+An exported before/after replay is still required to establish that this removes
+the first-cast stall; the native fixture alone does not prove browser latency.
+
 ## Per-table snapshot profiler prepared — 2026-09-09
 
 `GameConnection` now optionally measures conversion and synchronous dispatch
