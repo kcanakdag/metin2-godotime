@@ -2346,6 +2346,13 @@ databases. Current evidence is `.local/p6-dash-web-r1/browser/report.json`, with
 recorded bursts reviewed in both views. The training-map replay does not establish
 moving-target or streamed-map behavior.
 
+Add `--original-world` for a full-population export. Before skill inputs, the
+runner requires loaded map sections on both clients, no map content error, over
+2,000 monster instances, unique instance IDs, and matching ID/definition maps in
+both subscriptions. It records the observed count, definition vnums and loaded
+sections; this is a census, not all-species combat or every-section traversal.
+Failed runs retain focused timing, actor-presentation and effect diagnostics.
+
 
 ## Batch class-skill effect discovery
 

@@ -23,6 +23,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--chrome", default="/usr/bin/google-chrome")
     parser.add_argument("--skills", type=int, nargs="+", default=[16, 17])
+    parser.add_argument("--original-world", action="store_true")
     args = parser.parse_args()
     if not args.database.startswith("mt2-p2-"):
         parser.error(
@@ -148,6 +149,25 @@ def main() -> None:
             owner = snapshot()["identity"]
             peer = snapshot(1)["identity"]
             assert owner != peer
+            if args.original_world:
+                worlds = [snapshot(i) for i in [0, 1]]
+                populations = [
+                    {r["id"]: r["definition_vnum"] for r in world["monsters"]} for world in worlds
+                ]
+                assert all(world.get("map_chunks") for world in worlds), "Map sections not loaded"
+                assert all(not world.get("content_error") for world in worlds)
+                assert len(populations[0]) > 2000, "Original population missing"
+                assert populations[0] == populations[1], "Population subscriptions differ"
+                assert all(
+                    len(population) == len(world["monsters"])
+                    for population, world in zip(populations, worlds, strict=True)
+                ), "Duplicate monster instance IDs"
+                checks.append("original_world_loaded_with_shared_population")
+                samples["world"] = {
+                    "map_chunks": [world["map_chunks"] for world in worlds],
+                    "monster_count": len(populations[0]),
+                    "definition_vnums": sorted(set(populations[0].values())),
+                }
             wait(
                 "independent_rendered_peers",
                 lambda: all(
@@ -286,6 +306,25 @@ def main() -> None:
             passed = True
         except Exception as error:
             failure = redact(str(error)) or type(error).__name__
+            samples["failure_clients"] = []
+            for index in range(len(pages)):
+                try:
+                    state = snapshot(index)
+                    samples["failure_clients"].append(
+                        {
+                            key: state.get(key)
+                            for key in (
+                                "connection_state",
+                                "fps",
+                                "snapshot_age_ms",
+                                "last_reducer_rtt_ms",
+                                "motion_effects",
+                                "actor_presentations",
+                            )
+                        }
+                    )
+                except Exception as diagnostic_error:
+                    samples["failure_clients"].append({"error": redact(str(diagnostic_error))})
             if pages:
                 pages[0].screenshot(path=str(args.output / "failure.png"))
         finally:

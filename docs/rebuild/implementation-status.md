@@ -5,6 +5,42 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Full-population Dash export: effect failure reproduced — 2026-09-09
+
+Current source `3060fca` was exported for Web with all 20 Yongan map sections;
+isolated map dependency audits pass, as do the core 1,555-file/243-UI-image audit.
+The matching protocol-29 module is `.local/p6-dash-world-r1/module.wasm`, SHA-256
+`0948e5a1be599f41586f97e2cad3ccd57c96c0223c2d4c819b9138ed12063ce2`.
+It uses the selected 44-mob registry, original runtime-policy-r2 regeneration
+inventory, and first-account-only QA bootstrap authorization. Do not deploy this
+local-issuer privileged QA artifact publicly. Database:
+`mt2-p2-dash-world-v29-20260909-26d05e87`. The live input-adapter replay passes 33
+checks on this world (`input.json`).
+
+The first browser process was interrupted without a report. After verifying the
+runner and local service listeners were absent, the preserved `.local/p1/server`
+and `.local/p1/auth` services were restored on 13223/13224, with proxy 8186 serving
+the new Web export/database. No databases or credentials were reset. Service
+handles/logs are recorded in this evidence directory; revalidate liveness before
+further operations. Public endpoint was not changed.
+
+Both completed browser attempts (`browser-r2` and `browser-r3`) pass 21 checks
+through replicated Dash damage, then **fail effect creation on both clients**.
+The new `--original-world` check verifies matching ID/definition subscriptions for
+2,837 instances (44 ordinary definitions plus dummy), unique IDs and nine loaded
+nearby sections per browser. Reviewed town capture shows terrain textures, the
+skill panel, players and dummy. No browser engine errors are reported.
+
+The diagnostic replay reports zero effect spawns on both clients despite matching
+package hash `79ae990543872fcb698781883a62bdd12069e090a0d3a3129938c312793c0111`
+and two actor bindings each. Failure-time FPS is 35/43, snapshot age 11/19 ms, and
+last reducer RTT 4,322/228 ms. These are post-failure samples, not per-cast timing
+histories. The actor playback currently suppresses effects before the initial
+server-synchronized pose; Dash's source event starts at 48,662 us. That is a
+plausible loss path, not yet a proven root cause. Investigate server/update delay
+and capture action-arrival timing before changing resync/reconnect semantics.
+Full-map effect acceptance and public rollout remain incomplete.
+
 ## Live moving-target Dash acceptance — 2026-09-09
 
 The reusable `charge_moving` phase passes **28 live two-account checks** at
