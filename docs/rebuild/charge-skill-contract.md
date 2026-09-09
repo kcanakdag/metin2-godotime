@@ -120,6 +120,40 @@ original CRUSH policy without verification.
 
 ## Acceptance required before enabling Dash
 
+### CRUSH policy findings
+
+The pinned server's `char_skill.cpp` CRUSH block (around lines 1363–1405) uses
+the **attacker's** type for push distance: PC 200 cm, NPC 400 cm; CRUSH_LONG
+doubles either. `AIFLAG_NOMOVE` skips the entire block, including its stun.
+Only a PC attacker's selected main target receives the four-second stun attempt.
+`battle.h::SkillAttackAffect` first skips an already-active affect, so this path
+does not refresh an existing stun. `char_resist.cpp::CHARACTER::IsImmune` blocks
+90 of the 100 possible rolls when the immunity bit is present, not all attempts.
+Immunity does not suppress the preceding push.
+
+`server/src/crush.rs` now captures these eligibility/distance rules independently
+of database mutation. Four focused tests cover source distances, NOMOVE, secondary
+targets, no refresh and all 100 immunity rolls. The policy is **not yet connected**
+to damage, monster AI or replicated affect state; passing it does not establish
+visible push/stun behavior. The eventual adapter must generate random rolls on
+the server and preserve exact monster lives, collision and expiry.
+
+The displacement helper uses the current map collision sweep with a radial
+centimetre-truncated endpoint. Its training-world tests include a thin wall that
+must stop an eight-metre push. Zero-distance actors currently remain in place;
+this is an explicit geometry policy, not verified original angle-function parity.
+The helper is not yet called by live combat, and Yongan terrain and visual motion
+still need qualification.
+
+Mob normalization already preserves `flags.ai_flag` and `flags.immune_flag` in
+source definitions. The current Rust registry compiler accepts only empty/AGGR
+AI flags. It now emits the seven original immunity bits into the typed species
+definition and rejects missing/invalid immunity metadata. Runtime affect handling
+is still pending. Extend movement support before enabling NOMOVE; do not infer
+species exemptions in the damage handler or silently treat missing flags as none.
+
+### Gameplay and lifecycle gates
+
 - Two subscribed clients observe one payment and cooldown start on approach,
   boosted movement, one in-range strike and one charge removal.
 - Immediate in-range use pays once and strikes once; ordinary approach does not

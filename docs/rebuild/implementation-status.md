@@ -5,6 +5,37 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## CRUSH eligibility policy — 2026-09-09
+
+`crush::displace` now computes a radial endpoint truncated to centimetres and
+passes the displacement through the existing authoritative map collision sweep.
+Six focused CRUSH tests pass, including a thin-wall obstruction at maximum push
+distance, diagonal rounding and invalid coordinates/distances. Strict Rust lint
+passes. This is not yet dispatched by live damage. The tested collision fixture
+is the training world, not Yongan terrain. Coincident actors currently omit push
+because no radial direction is defined; original zero-distance angle behavior
+and exact floating-point parity remain unqualified.
+
+The mob registry compiler now emits `MobSpeciesDefinition.immunity_flags` using
+the seven-bit original ProtoReader order: STUN, SLOW, FALL, CURSE, POISON, TERROR,
+REFLECT. Missing, duplicate or unknown immunity metadata rejects compilation;
+no absent-field fallback invents a nonimmune species. Four registry tests cover
+individual/combined bits and malformed metadata as well as existing combat
+generation. Normal Rust lint passes with the typed field and runtime reserved-bit
+validation. Previously generated selected mob registries need regeneration for
+this Rust definition change; no selected package or public module was replaced.
+The field is not yet an active stun handler. NOMOVE still rejects in the compiler
+until ordinary AI movement and displacement both honor it.
+
+Added `crush.rs` with source-backed attacker-dependent push distances, CRUSH_LONG,
+NOMOVE exclusion, main-target-only stun, no refresh of an existing stun and the
+original 90% stun-immunity roll. Four focused Rust tests and strict Rust lint
+pass. This is a pure policy checkpoint, not installed monster displacement or
+stun. Source findings and metadata integration gaps are recorded in
+`charge-skill-contract.md`. Next: emit mob control flags from imported definitions
+and connect exact-life affect state, collision-limited push and AI gating. Public
+deployment and database schema are unchanged.
+
 ## Charge strike implementation checkpoint — 2026-09-09
 
 The working server now routes a targeted charge cast through exact-life and

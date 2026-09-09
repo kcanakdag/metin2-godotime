@@ -1467,6 +1467,7 @@ pub struct WeightedMobAttack { pub attack: AttackDefinition, pub weight: u8 }
 #[derive(Clone, Copy, Debug)]
 pub struct MobSpeciesDefinition {
     pub aggressive: bool,
+    pub immunity_flags: u8,
     pub vnum: u32,
     pub actor_id: &'static str,
     pub name: &'static str,
@@ -1501,6 +1502,7 @@ impl std::ops::Deref for MobDefinition {
 pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
     species: MobSpeciesDefinition {
         aggressive: MOB_PROXIMITY_AGGRESSION,
+        immunity_flags: 0,
         vnum: MOB_VNUM, actor_id: MOB_ACTOR_ID, name: MOB_NAME,
         model_key: MOB_MODEL_KEY, motion_set: MOB_MOTION_SET,
         level: MOB_LEVEL, health: MOB_MAX_HEALTH,

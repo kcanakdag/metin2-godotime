@@ -10,10 +10,16 @@ def catalog():
     result = compile_catalog(fixture())
     source = result["mobs"][0]["source_definition"]
     source["battle_type"] = "MELEE"
-    source["flags"] = {"ai_flag": []}
+    source["flags"] = {"ai_flag": [], "immune_flag": []}
     source["rewards"].update(exp=15, gold_min=18, gold_max=27)
     source["stats"].update(
-        st=3, ht=5, dx=6, aggressive_sight=2000, damage_min=20, damage_max=24, **{"def": 4, "damage_multiplier": 1.4}
+        st=3,
+        ht=5,
+        dx=6,
+        aggressive_sight=2000,
+        damage_min=20,
+        damage_max=24,
+        **{"def": 4, "damage_multiplier": 1.4},
     )
     source["combat_modifiers"] = dict(
         resist_sword=0, resist_fan=0, enchant_critical=1, enchant_penetrate=1
@@ -22,6 +28,19 @@ def catalog():
 
 
 class MobServerRegistryTests(unittest.TestCase):
+    def test_immunity_bits_preserve_source_order_and_reject_missing_metadata(self):
+        names = ["STUN", "SLOW", "FALL", "CURSE", "POISON", "TERROR", "REFLECT"]
+        for index, name in enumerate(names):
+            data = catalog()
+            data["mobs"][0]["source_definition"]["flags"]["immune_flag"] = [name]
+            self.assertIn(f"immunity_flags: {1 << index}", compile_registry(data))
+        data["mobs"][0]["source_definition"]["flags"]["immune_flag"] = names
+        self.assertIn("immunity_flags: 127", compile_registry(data))
+        for invalid in (None, "STUN", ["STUN", "STUN"], ["UNKNOWN"], [1]):
+            data["mobs"][0]["source_definition"]["flags"]["immune_flag"] = invalid
+            with self.assertRaises(ValueError):
+                compile_registry(data)
+
     def test_deterministic_typed_tables_preserve_damage_and_motion_values(self):
         data = catalog()
         before = copy.deepcopy(data)

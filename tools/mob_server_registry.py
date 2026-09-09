@@ -6,6 +6,19 @@ import struct
 from mob_gameplay import integer, number
 
 
+def immunity_flags(source):
+    """Pinned ProtoReader flag order; preserve all bits for future affect handlers."""
+    names = ("STUN", "SLOW", "FALL", "CURSE", "POISON", "TERROR", "REFLECT")
+    flags = source["flags"].get("immune_flag")
+    if (
+        not isinstance(flags, list)
+        or any(not isinstance(flag, str) or flag not in names for flag in flags)
+        or len(set(flags)) != len(flags)
+    ):
+        raise ValueError("Missing or invalid species immunity flags")
+    return sum(1 << names.index(flag) for flag in flags)
+
+
 def rust_text(value):
     if (
         not isinstance(value, str)
@@ -147,6 +160,7 @@ def species_record(mob):
         raise ValueError("Unsupported species AI flags")
     fields = {
         "aggressive": "true" if "AGGR" in flags else "false",
+        "immunity_flags": str(immunity_flags(source)),
         "vnum": str(integer(mob["vnum"], 1, 2**32 - 1, "species vnum")),
         "actor_id": rust_text(mob["id"]),
         "name": rust_text(mob["name"]),

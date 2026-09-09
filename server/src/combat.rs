@@ -216,6 +216,7 @@ fn validate_monster_at(monster: &Monster, spawn: MonsterSpawnDefinition) -> Resu
     let supported = authored.is_some()
         || mob_definition(monster.definition_vnum).is_some_and(|d| {
             monster.actor_id == d.actor_id
+                && d.immunity_flags & !0x7f == 0
                 && monster.level == d.level
                 && monster.max_health == d.health
                 && monster.model_key == d.model_key

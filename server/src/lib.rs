@@ -12,6 +12,7 @@ mod combat;
 mod combat_geometry;
 mod combo;
 mod content;
+pub mod crush;
 mod inventory;
 mod item_catalog;
 mod item_effects;
