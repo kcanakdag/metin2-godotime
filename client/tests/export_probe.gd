@@ -12,6 +12,7 @@ var _commands := ""
 var _sequence := -1
 var _request_timing_sequence := 0
 var _request_timings: Array[Dictionary] = []
+var _snapshot_timings: Array[Dictionary] = []
 var _errors: Array[String] = []
 var _attack_ack_sequence := 0
 var _perform_attack_acks: Array[Dictionary] = []
@@ -47,6 +48,7 @@ func _ready() -> void:
 			return
 	get_parent().connection.reducer_failed.connect(_on_reducer_failed)
 	get_parent().connection.reducer_completed.connect(_on_reducer_completed)
+	get_parent().connection.snapshot_profiled.connect(_on_snapshot_profiled)
 	get_parent().connection.players_changed.connect(_on_players_changed)
 	get_parent().connection.monsters_changed.connect(_on_monsters_changed)
 	get_parent().connection.connection_state_changed.connect(_on_connection_state_changed)
@@ -109,6 +111,7 @@ func _process(delta: float) -> void:
 	)
 	snapshot["performance_profile"] = _performance_profile
 	snapshot["request_timings"] = _request_timings.duplicate(true)
+	snapshot["snapshot_timings"] = _snapshot_timings.duplicate(true)
 	snapshot["errors"] = _errors
 	snapshot["perform_attack_acks"] = _perform_attack_acks.duplicate(true)
 	snapshot["select_combat_target_acks"] = _select_combat_target_acks.duplicate(true)
@@ -441,6 +444,25 @@ func _on_reducer_completed(
 		while _select_combat_target_acks.size() > 32:
 			_select_combat_target_acks.pop_front()
 	_publish_ack_views()
+
+
+func _on_snapshot_profiled(table: String, count: int, conversion_us: int, dispatch_us: int) -> void:
+	if conversion_us + dispatch_us < 50_000:
+		return
+	(
+		_snapshot_timings
+		. append(
+			{
+				"table": table,
+				"row_count": count,
+				"conversion_us": conversion_us,
+				"dispatch_us": dispatch_us,
+				"observed_at_ticks_ms": Time.get_ticks_msec(),
+			}
+		)
+	)
+	while _snapshot_timings.size() > 64:
+		_snapshot_timings.pop_front()
 
 
 func _capture_request_timing(name: String, succeeded: bool, timestamp_us: int) -> void:

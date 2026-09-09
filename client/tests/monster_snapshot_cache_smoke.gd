@@ -32,11 +32,41 @@ func _initialize() -> void:
 	_check(client._monster_snapshot_cache.is_empty(), "world exit drops all cached rows")
 	var other := client._snapshot_rows("other", [first])
 	_check(not other[0].is_read_only(), "other table behavior unchanged")
+	_profile_flush(client, first)
 	_benchmark(client)
 	client.free()
 	if not _failed:
 		print("MONSTER_SNAPSHOT_CACHE_SMOKE PASS ", _checks, " checks")
 	quit(1 if _failed else 0)
+
+
+func _profile_flush(client: GameConnection, monster: GameMonster) -> void:
+	var sdk := SpacetimeDBClient.new()
+	var database := LocalDatabase.new(SpacetimeDBSchema.new("game"), sdk)
+	sdk.add_child(database)
+	sdk._local_db = database
+	database._tables["monster"] = {monster.id: monster}
+	client._client = sdk
+	var results: Array = []
+	var observe := func(table: String, count: int, conversion: int, dispatch: int):
+		results.append([table, count, conversion, dispatch, client.monsters.size()])
+	client.snapshot_profiled.connect(observe)
+	client._dirty_tables["monster"] = true
+	client._flush_snapshots()
+	_check(
+		results.size() == 1 and results[0][0] == "monster" and results[0][1] == 1,
+		"profile identifies the actual flushed table and row count"
+	)
+	_check(
+		results[0][2] >= 0 and results[0][3] >= 0 and results[0][4] == 1,
+		"profile records separate nonnegative phases after publication"
+	)
+	client.snapshot_profiled.disconnect(observe)
+	client._dirty_tables["monster"] = true
+	client._flush_snapshots()
+	_check(results.size() == 1 and client.monsters.size() == 1, "unobserved flush still publishes")
+	client._client = null
+	sdk.free()
 
 
 func _benchmark(client: GameConnection) -> void:

@@ -5,6 +5,20 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Per-table snapshot profiler prepared — 2026-09-09
+
+`GameConnection` now optionally measures conversion and synchronous dispatch
+separately for each flushed table. Ordinary clients have no profile listener and
+do not sample clocks. The activated export probe retains at most 64 records of
+50 ms or longer, containing only table/count/timings, and the browser skill runner
+saves both clients' traces. Decode, deferred rendering and server time are not
+included in these phases. This is diagnostic work, not a claimed latency fix.
+
+The actual-engine run `.local/p6-snapshot-profile-r2/report.json` passes **12
+snapshot/cache checks and 41 probe checks**. The first fixture attempt used the
+wrong SDK schema constructor; its preserved failure is corrected in r2. Scoped
+Python/GDScript checks pass. Browser export/measurement is the next qualification.
+
 ## Same-session repeat points to first-use cast cost — 2026-09-09
 
 The browser runner now supports one to three same-rank Dash casts without

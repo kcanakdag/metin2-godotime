@@ -365,6 +365,9 @@ def main() -> None:
                         "observation_timing": [
                             page.evaluate("() => window.mt2SkillTiming") for page in pages
                         ],
+                        "slow_snapshot_timings": [
+                            snapshot(index).get("snapshot_timings", []) for index in [0, 1]
+                        ],
                         "rank": int(skill_row(vnum)["rank"]),
                         "effects": [snapshot(i).get("motion_effects", {}) for i in [0, 1]],
                         "attack_sequences_before": sequences,

@@ -12,6 +12,7 @@ signal chat_changed(rows: Array)
 signal world_info_changed(info: Dictionary)
 signal reducer_failed(message: String)
 signal reducer_completed(name: String, succeeded: bool, server_timestamp_us: int)
+signal snapshot_profiled(table: String, row_count: int, conversion_us: int, dispatch_us: int)
 signal monsters_changed(rows: Array)
 signal loot_changed(rows: Array)
 signal inventory_changed(rows: Array)
@@ -629,7 +630,10 @@ func _flush_snapshots() -> void:
 	for table_name: String in _dirty_tables:
 		if table_name not in TABLES:
 			continue
+		var profiling := snapshot_profiled.has_connections()
+		var started_us := Time.get_ticks_usec() if profiling else 0
 		var rows := _snapshot_rows(table_name, local_db.get_all_rows(table_name))
+		var converted_us := Time.get_ticks_usec() if profiling else 0
 		match table_name:
 			"account_character":
 				rows.sort_custom(
@@ -728,6 +732,13 @@ func _flush_snapshots() -> void:
 					return
 				world_info = next_info
 				world_info_changed.emit(world_info)
+		if profiling:
+			snapshot_profiled.emit(
+				table_name,
+				rows.size(),
+				converted_us - started_us,
+				Time.get_ticks_usec() - converted_us
+			)
 	if not _dirty_tables.is_empty():
 		last_snapshot_msec = Time.get_ticks_msec()
 	_dirty_tables.clear()

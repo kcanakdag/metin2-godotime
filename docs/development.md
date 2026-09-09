@@ -2417,6 +2417,15 @@ work. A disappearing dummy/loading transition fails the measurement rather than
 being treated as damage evidence. Longer runs can overlap session refresh; retain
 their failed-run diagnostics and do not claim the whole replay passed.
 
+Activated export probes also retain `snapshot_timings`: up to 64 table flushes
+taking at least 50 ms. `conversion_us` includes fetching and converting SDK rows;
+`dispatch_us` includes table processing and synchronous signal listeners. The
+profile signal has no listener on ordinary clients and does not sample clocks
+there. Deferred rendering, packet decode and server time are outside these phases.
+The skill runner saves both clients' slow histories with each cast. Use local
+`observed_at_ticks_ms` to correlate them with request acknowledgements; histories
+can include initial loading, so do not attribute every slow record to the cast.
+
 
 ## Batch class-skill effect discovery
 

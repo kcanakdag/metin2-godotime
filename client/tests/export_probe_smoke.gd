@@ -354,6 +354,20 @@ func _run() -> void:
 		"public action history retains only the newest 256 projections"
 	)
 	world.connection.last_reducer_rtt_ms = 123
+	world.connection.snapshot_profiled.emit("monster", 2800, 1000, 2000)
+	_check(probe._snapshot_timings.is_empty(), "fast snapshots do not fill the slow trace")
+	for index: int in range(65):
+		world.connection.snapshot_profiled.emit("monster", index, 1000, 49_000)
+	_check(
+		(
+			probe._snapshot_timings.size() == 64
+			and probe._snapshot_timings[-1].row_count == 64
+			and probe._snapshot_timings[-1].conversion_us == 1000
+			and probe._snapshot_timings[-1].dispatch_us == 49_000
+			and probe._snapshot_timings[-1].size() == 5
+		),
+		"slow trace bounds records and preserves both phases without row contents"
+	)
 	world.connection.reducer_completed.emit("move_to", true, 1_301_000)
 	_check(
 		probe._request_timings[-1].response_elapsed_ms == 123,
