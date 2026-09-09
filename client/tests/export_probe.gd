@@ -10,6 +10,8 @@ var _callback: JavaScriptObject
 var _report := ""
 var _commands := ""
 var _sequence := -1
+var _request_timing_sequence := 0
+var _request_timings: Array[Dictionary] = []
 var _errors: Array[String] = []
 var _attack_ack_sequence := 0
 var _perform_attack_acks: Array[Dictionary] = []
@@ -106,6 +108,7 @@ func _process(delta: float) -> void:
 		["id", "request_id", "severity", "message", "created_at"]
 	)
 	snapshot["performance_profile"] = _performance_profile
+	snapshot["request_timings"] = _request_timings.duplicate(true)
 	snapshot["errors"] = _errors
 	snapshot["perform_attack_acks"] = _perform_attack_acks.duplicate(true)
 	snapshot["select_combat_target_acks"] = _select_combat_target_acks.duplicate(true)
@@ -412,6 +415,7 @@ func _inject_key(keycode: Key) -> void:
 func _on_reducer_completed(
 	reducer_name: String, succeeded: bool, reducer_timestamp_us: int
 ) -> void:
+	_capture_request_timing(reducer_name, succeeded, reducer_timestamp_us)
 	if reducer_name not in ["perform_attack", "select_combat_target"]:
 		return
 	var world := get_parent()
@@ -437,6 +441,29 @@ func _on_reducer_completed(
 		while _select_combat_target_acks.size() > 32:
 			_select_combat_target_acks.pop_front()
 	_publish_ack_views()
+
+
+func _capture_request_timing(name: String, succeeded: bool, timestamp_us: int) -> void:
+	if name not in ["begin_charge", "move_to", "stop_moving", "cast_skill"]:
+		return
+	var connection: GameConnection = get_parent().connection
+	_request_timing_sequence += 1
+	(
+		_request_timings
+		. append(
+			{
+				"sequence": _request_timing_sequence,
+				"name": name,
+				"succeeded": succeeded,
+				"observed_at_ticks_ms": Time.get_ticks_msec(),
+				"reducer_timestamp_us": timestamp_us,
+				# A local send failure has no response and must not reuse the previous RTT.
+				"response_elapsed_ms": connection.last_reducer_rtt_ms if timestamp_us > 0 else null,
+			}
+		)
+	)
+	while _request_timings.size() > 64:
+		_request_timings.pop_front()
 
 
 func _on_players_changed(rows: Array) -> void:

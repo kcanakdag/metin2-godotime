@@ -97,7 +97,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 15, "client accepts only protocol 15")
+	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 29, "client accepts only protocol 29")
 	# Use the real scene without entering the tree, so this verifies the probe's
 	# node lookup without starting account flow or a game connection.
 	var scene := load("res://scenes/main.tscn") as PackedScene
@@ -136,6 +136,7 @@ func _run() -> void:
 	var world := ProbeWorld.new()
 	root.add_child(world)
 	var probe := ExportProbe.new()
+	probe._report = ProjectSettings.globalize_path("user://active-probe.json")
 	world.add_child(probe)
 	await process_frame
 	probe._capture_screen_wave()
@@ -352,7 +353,29 @@ func _run() -> void:
 		),
 		"public action history retains only the newest 256 projections"
 	)
+	world.connection.last_reducer_rtt_ms = 123
 	world.connection.reducer_completed.emit("move_to", true, 1_301_000)
+	_check(
+		probe._request_timings[-1].response_elapsed_ms == 123,
+		"timing captures the completing request's elapsed time"
+	)
+	world.connection.reducer_completed.emit("begin_charge", false, 0)
+	_check(
+		probe._request_timings[-1].response_elapsed_ms == null,
+		"local send failure does not reuse the previous response duration"
+	)
+	world.connection.reducer_completed.emit("send_chat", true, 1_301_001)
+	_check(probe._request_timings.size() == 2, "timing excludes unrelated requests")
+	for index: int in range(65):
+		world.connection.reducer_completed.emit("stop_moving", true, 1_301_002 + index)
+	_check(
+		(
+			probe._request_timings.size() == 64
+			and probe._request_timings[-1].sequence == 67
+			and probe._request_timings[-1].size() == 6
+		),
+		"timing retains only 64 typed records without request arguments"
+	)
 	world.connection.combat_target = {
 		"account": world.connection.account_identity,
 		"character_id": world.connection.local_identity,

@@ -25,6 +25,7 @@ def main() -> None:
     parser.add_argument("--chrome", default="/usr/bin/google-chrome")
     parser.add_argument("--skills", type=int, nargs="+", default=[16, 17])
     parser.add_argument("--original-world", action="store_true")
+    parser.add_argument("--request-timing", action="store_true")
     args = parser.parse_args()
     if not args.database.startswith("mt2-p2-"):
         parser.error(
@@ -234,7 +235,31 @@ def main() -> None:
                             < 0.1
                         ),
                     )
+                timing_baseline = 0
+                stop_timing = None
+                if args.request_timing:
+                    state = snapshot()
+                    assert "request_timings" in state, "Export lacks request timing probe"
+                    timing_baseline = max(
+                        (row["sequence"] for row in state["request_timings"]), default=0
+                    )
                 command(0, "stop")
+                if args.request_timing:
+                    wait(
+                        "ordinary_stop_acknowledged",
+                        lambda timing_baseline=timing_baseline: any(
+                            row["sequence"] > timing_baseline
+                            and row["name"] == "stop_moving"
+                            and row["succeeded"]
+                            for row in snapshot()["request_timings"]
+                        ),
+                    )
+                    stop_timing = next(
+                        row
+                        for row in snapshot()["request_timings"]
+                        if row["sequence"] > timing_baseline and row["name"] == "stop_moving"
+                    )
+                    timing_baseline = stop_timing["sequence"]
                 wait(
                     "dummy_has_pointer_projection",
                     lambda target=target: (
@@ -300,7 +325,23 @@ def main() -> None:
                         for i in [0, 1]
                     ),
                 )
+                if args.request_timing:
+                    wait(
+                        f"skill_{vnum}_cast_acknowledged",
+                        lambda timing_baseline=timing_baseline: any(
+                            row["sequence"] > timing_baseline
+                            and row["name"] == "cast_skill"
+                            and row["succeeded"]
+                            for row in snapshot()["request_timings"]
+                        ),
+                    )
                 samples[str(vnum)] = {
+                    "ordinary_stop_timing": stop_timing,
+                    "cast_request_timings": [
+                        row
+                        for row in snapshot().get("request_timings", [])
+                        if args.request_timing and row["sequence"] > timing_baseline
+                    ],
                     "observation_timing": [
                         page.evaluate("() => window.mt2SkillTiming") for page in pages
                     ],

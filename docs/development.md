@@ -2393,6 +2393,20 @@ cross-machine clock synchronization. The helper preserves ordinary snapshot
 access and is not installed in the game export. Its Node-backed unit test checks
 matching, first-observation retention, key repeats and empty loading snapshots.
 
+Add `--request-timing` when replaying a newly exported test probe to retain the
+last 64 `begin_charge`, `move_to`, `stop_moving` and `cast_skill` acknowledgements.
+The runner requires a successful ordinary stop acknowledgement before casting,
+then a successful cast acknowledgement, and saves both the stop baseline and
+subsequent request records. Older exports remain usable without this option.
+`response_elapsed_ms` measures client send-to-response-callback time, including
+transport and client/server processing; it is not network-only RTT. A local send
+failure records null instead of copying a previous response's duration.
+`observed_at_ticks_ms` is local Godot monotonic time: compare intervals within
+one client, never subtract it from browser epoch or server timestamps. Records
+contain no arguments or credentials and exist only in explicitly activated test
+probes. The focused `test_target_client.py --suite probe` regression checks the
+bounded history, allowlist and local-failure distinction.
+
 
 ## Batch class-skill effect discovery
 

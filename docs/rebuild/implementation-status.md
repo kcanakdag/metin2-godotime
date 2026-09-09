@@ -5,6 +5,25 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Per-request charge timing prepared — 2026-09-09
+
+The explicitly activated export probe now retains 64 typed acknowledgements for
+charge begin, move, stop and cast, with local receipt time and that request's
+send-to-callback duration. Local send failures record null rather than a stale
+previous duration. No gameplay, server, protocol or permission changes are made.
+`test_browser_skills.py --request-timing` requires an ordinary stop baseline and
+the final cast acknowledgement, and saves the intervening request records.
+
+The actual Godot probe regression passes **39 checks** at
+`.local/p6-request-timing-r2/report.json`; touched GDScript/Python lint and format
+checks pass. The first run exposed stale protocol-15 and implicit-activation
+assumptions in the fixture; both are corrected and its failure log is preserved
+under `p6-request-timing-r1`. The probe still requires explicit activation in
+ordinary launches. These are component checks; the new timing fields have not
+yet been exported or measured in the populated browser replay. Local/public
+served packages are unchanged. Next export this probe and replay with
+`--skills 5 --original-world --request-timing` against the existing QA database.
+
 ## Browser snapshot-cache comparison: delay not resolved — 2026-09-09
 
 The optimized source `94dc6c2` was exported to `.local/p6-snapshot-web-r1/web`;
