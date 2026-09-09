@@ -22,6 +22,7 @@ var _damage_sequence := 0
 var _damage_until_ticks_us := 0
 var _life_sequence := -1
 var _last_server_time_us := 0
+var _last_attack_sequence := -1
 
 
 func configure(value: RefCounted) -> void:
@@ -73,6 +74,13 @@ func apply_state(
 	var started_at_us := int(row.get("action_started_at_us", 0))
 	var ends_at_us := int(row.get("action_ends_at_us", 0))
 	var clock_became_ready := _last_server_time_us <= 0 and server_time_us > 0
+	var live_attack := (
+		_life_sequence == life_sequence
+		and _last_attack_sequence >= 0
+		and attack_sequence > _last_attack_sequence
+		and not clock_became_ready
+	)
+	_last_attack_sequence = attack_sequence
 	_last_server_time_us = server_time_us
 	if _life_sequence >= 0 and life_sequence != _life_sequence:
 		_damage_until_ticks_us = 0
@@ -99,7 +107,8 @@ func apply_state(
 			started_at_us,
 			server_time_us,
 			clock_became_ready,
-			int(row.get("attack_speed_percent", 100))
+			int(row.get("attack_speed_percent", 100)),
+			live_attack
 		)
 	elif Time.get_ticks_usec() < _damage_until_ticks_us:
 		pass

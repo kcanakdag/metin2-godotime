@@ -1,8 +1,11 @@
 # Charge skill implementation contract
 
-Full Dash gameplay is not yet enabled. Untargeted activation is available in an
-isolated protocol-27 candidate; target strikes remain disabled. This records source behavior needed to implement it,
-separately from its already qualified model, animation and effect conversion.
+Local protocol 29 enables Dash activation, automatic approach, targeted strikes,
+push and stun with the selected five-skill catalog. Live moving-target checks pass;
+full-population browser effect acceptance remains incomplete. Public protocol 26
+still has four skills. The historical implementation notes below describe the
+successive boundaries; see the implementation ledger for current acceptance.
+This contract records source behavior separately from asset conversion.
 It also identifies the shared mechanics needed by later charge/buff abilities.
 
 ## Verified source behavior

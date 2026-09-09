@@ -5,6 +5,33 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Delayed live-effect handling: component pass, world failure persists — 2026-09-09
+
+`PlayerActor` now identifies an increasing attack sequence on an already observed
+life. While that server action is still active, it requests one-time catch-up of
+elapsed visual events from `ActorPresentation`. Initial subscriptions, replaced
+lives, clock initialization and forced resyncs retain historical-event suppression.
+Projectile launch scheduling is unchanged. The focused real-Godot fixture passes
+30 checks in `.local/p6-live-effect-r1/report.json`; touched GDScript lint and
+formatting pass. This fixes the isolated early-event suppression path.
+
+The actual updated full-map Web export is `.local/p6-dash-world-r2/web`, manifest
+SHA-256 `366ba0906c4b5e62cff07de230ceac065f25b5a85bb12374037501f1615e09da`.
+It uses the unchanged QA database/module recorded below. The local proxy now
+serves this export; previous proxy configuration and current PID are recorded in
+the new evidence directory. Its core/map export audits pass.
+
+The browser replay **still fails** effect spawning after passing 21 checks through
+replicated damage. Evidence: `browser/report.json`, `browser.log` and captures.
+Both clients report zero effect spawns, no renderer error, correct effect hash,
+and failure-time 41/43 FPS. The caster's last reducer RTT is 4,686 ms. This does
+not qualify the fix in the live world or establish the remaining root cause.
+Next capture attack rows at arrival and at PlayerActor reconciliation: Main defers
+and coalesces player synchronization, and PlayerActor only starts motions whose
+server action end is still in the future. A transition may therefore be lost
+before the new catch-up path is reached. Preserve reconnect/life semantics while
+investigating that path and the observed delay. Public deployment is unchanged.
+
 ## Full-population Dash export: effect failure reproduced — 2026-09-09
 
 Current source `3060fca` was exported for Web with all 20 Yongan map sections;

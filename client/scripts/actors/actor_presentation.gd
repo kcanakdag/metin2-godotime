@@ -49,7 +49,8 @@ func play_action(
 	started_at_us: int = 0,
 	server_time_us: int = 0,
 	force := false,
-	attack_speed_percent: int = 100
+	attack_speed_percent: int = 100,
+	catch_up_effects := false
 ) -> bool:
 	if attack_speed_percent < 100 or attack_speed_percent > 170:
 		return _fail("Actor attack speed is outside the supported range.")
@@ -70,7 +71,8 @@ func play_action(
 		started_at_us,
 		server_time_us,
 		force,
-		float(attack_speed_percent) / 100.0
+		float(attack_speed_percent) / 100.0,
+		catch_up_effects
 	)
 
 
@@ -103,7 +105,8 @@ func _play_motion(
 	started_at_us: int,
 	server_time_us: int,
 	force: bool,
-	playback_rate: float
+	playback_rate: float,
+	catch_up_effects := false
 ) -> bool:
 	var resolved_mode := str(motion.get("mode_id", mode_id))
 	var same := (
@@ -145,7 +148,12 @@ func _play_motion(
 			_consumed_launches[str(launch.source_event)] = true
 	for effect: Dictionary in current_motion.get("effects", []):
 		if int(effect.start_us) < int(round(offset_seconds * 1_000_000)):
-			_consumed_effects[str(effect.source_event)] = true
+			if not catch_up_effects or same or force:
+				_consumed_effects[str(effect.source_event)] = true
+	# A newly observed live attack must not lose its visual burst to transport delay.
+	# Initial subscriptions and forced resyncs retain the historical-event suppression.
+	if catch_up_effects and not same and not force:
+		_emit_motion_effects(int(round(offset_seconds * 1_000_000)))
 	return true
 
 

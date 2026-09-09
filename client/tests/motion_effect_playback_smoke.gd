@@ -112,11 +112,33 @@ func _run() -> void:
 	actor._process(0.5)
 	_check("legacy projectile dispatch preserved", _projectiles == [Vector3(1, 3, -2)])
 	_check("no effects required for legacy motion", _events.is_empty())
+	_live_effect_checks(actor, motion)
 	_attachment_checks(actor)
 	actor.queue_free()
 	await process_frame
 	print(JSON.stringify({"checks": _checks, "failures": _failures}))
 	quit(0 if _failures.is_empty() else 1)
+
+
+func _live_effect_checks(actor: Node3D, motion: Dictionary) -> void:
+	actor.reset_action()
+	_events.clear()
+	_check(
+		"live attack catches elapsed events",
+		actor._play_motion(motion, "general", 10, 1000000, 1600000, false, 1.0, true)
+	)
+	_check("elapsed visual events emit once", _events == ["a", "b"])
+	actor._process(0)
+	_check("poll does not duplicate catch-up", _events == ["a", "b"])
+	actor._play_motion(motion, "general", 10, 1000000, 1700000, true, 1.0, true)
+	_check("forced resync never repeats catch-up", _events == ["a", "b"])
+	actor.animation_player.advance(0.4)
+	_check("remaining future event still fires", _events == ["a", "b", "end"])
+	actor.reset_action()
+	_events.clear()
+	actor._play_motion(motion, "general", 11, 1000000, 1600000, true, 1.0, true)
+	actor._process(0)
+	_check("forced initial pose suppresses elapsed events", _events.is_empty())
 
 
 func _record(event: Dictionary) -> void:

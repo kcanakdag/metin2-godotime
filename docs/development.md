@@ -2331,6 +2331,14 @@ active instances, bindings and renderer error. It does not expose effect-spawnin
 commands or confer gameplay authority. Existing visible skill controls are reused
 without resetting scroll before a drag.
 
+Player presentation distinguishes a new attack sequence on an already observed
+life from an initial subscription or forced clock resync. While that attack is
+still active, its elapsed visual effect events may fire once at the synchronized
+pose; normal event polling then handles future events. This prevents transport
+delay from silently dropping early bursts. Initial subscriptions, new lives and
+forced resyncs keep past-event suppression, and projectile launch policy is
+unchanged. This presentation rule never applies damage or extends server actions.
+
 The installed Dash export was exercised with the same runner (22 checks):
 
 ```sh
