@@ -9,6 +9,34 @@ from build_skill_catalog import motion_hits  # noqa: E402
 
 
 class MotionHitTests(unittest.TestCase):
+    def test_charge_preserves_source_geometry_without_scheduling_damage(self):
+        event = {
+            "kind": "attack_window",
+            "start_us": 10,
+            "end_us": 30,
+            "samples": [[1, 2, 3]],
+            "sample_count": 1,
+            "bone": "Bip01",
+        }
+        fields = motion_hits({"duration_us": 100, "events": [event]}, "physical_charge_v1")
+        self.assertEqual(
+            fields,
+            {
+                "source_hit_events": [
+                    {
+                        "kind": "attack_window",
+                        "start_us": 10,
+                        "end_us": 30,
+                        "bone": "Bip01",
+                    }
+                ]
+            },
+        )
+        self.assertIn("samples", event)
+        self.assertEqual(
+            motion_hits({"events": []}, "physical_charge_v1"), {"source_hit_events": []}
+        )
+
     def test_areas_retain_geometry_and_order(self):
         events = [
             {

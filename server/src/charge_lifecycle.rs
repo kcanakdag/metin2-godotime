@@ -4,6 +4,26 @@
 
 use spacetimedb::{ConnectionId, Identity};
 
+/// Imported charge mechanics; rank cost and cooldown come from the skill row.
+#[derive(Clone, Copy, Debug)]
+pub struct Definition {
+    pub duration_us: i64,
+    pub speed_bonus: i32,
+    pub push_distance_m: f32,
+    pub main_target_stun_us: i64,
+}
+
+impl Definition {
+    pub fn activation_policy(self, cooldown_us: i64, sp_cost: u32) -> Policy {
+        Policy {
+            duration_us: self.duration_us,
+            cooldown_us,
+            speed_bonus: self.speed_bonus,
+            sp_cost,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Owner {
     pub character: Identity,

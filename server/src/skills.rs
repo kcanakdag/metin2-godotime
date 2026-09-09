@@ -226,6 +226,9 @@ pub fn cast_skill(
     let (character, mut p) = progression::selected_supported_progression(ctx)?;
     let d = definition(skill_vnum)?;
     let mut state = owned_state(ctx, character, skill_vnum)?;
+    if d.charge.is_some() {
+        return Err("Charge gameplay is not enabled in this build.".into());
+    }
     check_learning(d, p.character_class, p.level, state.rank)?;
     if state.rank == 0 {
         return Err("Learn this skill first.".into());

@@ -180,3 +180,5 @@ fn generated_physical_definitions_match_the_selected_source_rows() {
         "combat.rng.accepted-action-area-per-victim.v1"
     );
 }
+#[path = "../src/charge_lifecycle.rs"]
+pub mod charge_lifecycle;

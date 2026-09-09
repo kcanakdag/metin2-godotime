@@ -5,6 +5,32 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Selected Dash catalog and typed charge policy — 2026-09-09
+
+The selected-skill importer supports `physical_charge_v1`, preserving original
+Dash speed/duration, cost, coefficients, both source weapon types, target range,
+push and main-target stun policy. Original motion collision events are retained
+as inspection data rather than scheduled damage. Rust generation emits a typed
+`charge_lifecycle::Definition` and animation with no damage windows; it rejects
+ordinary window metadata on charge dispatch, unbounded policies and multi-hit
+charge configuration. The current reducer explicitly rejects charge gameplay
+until its persistence/immediate strike adapter exists.
+
+An offline five-skill candidate is at `.local/p6-charge-r1/live-candidate/`, hash
+`68011294d772fdbf1722c2162f59141c58c5d88915f29f614d67647643e5ed2a`.
+Both Dash appearances retain two authored collision events. Rust code generation
+passes; this is not a server module build using the candidate. Rebuilding the
+normal four-skill profile is byte-identical to the installed catalog. Seven Python
+tests, eleven live-catalog compiler tests, seventeen generated-definition tests
+(including six charge lifecycle tests), strict Rust lint and touched Python checks
+pass. The initial charge test fixture inherited Three-Way Cut's repeat count and
+correctly rejected; explicitly selecting one hit per life fixes the fixture.
+
+`tools/build_skill_catalog.py --output` now stages candidates without installing
+them. See `docs/development.md` for the selected charge profile contract. No
+schema, client assets, database or public release changed. Next is the persisted
+charge adapter, authoritative movement interval and target-centered strike.
+
 ## Charge lifecycle component — 2026-09-09
 
 `server/src/charge_lifecycle.rs` implements pure bounded activation, consumption

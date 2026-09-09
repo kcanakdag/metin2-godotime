@@ -54,6 +54,16 @@ def polynomial(text: str) -> dict[tuple[str, ...], float]:
 
 def motion_hits(motion: dict, handler: str) -> dict:
     """Link ordered source collision events without inventing a radial replacement."""
+    if handler == "physical_charge_v1":
+        # UseSkill computes a charge strike immediately on the selected target.
+        # Keep authored collision data for inspection, never turn it into a timer.
+        return {
+            "source_hit_events": [
+                {k: v for k, v in event.items() if k not in {"samples", "sample_count"}}
+                for event in motion["events"]
+                if event["kind"] in {"attack_area", "attack_window"}
+            ]
+        }
     kind = "attack_area" if handler == "physical_area_v1" else "attack_window"
     hits = [event for event in motion["events"] if event["kind"] == kind]
     if not hits or len(hits) > 32 or (kind == "attack_window" and len(hits) != 1):
@@ -71,6 +81,42 @@ def motion_hits(motion: dict, handler: str) -> dict:
         result["hit_windows_us"] = [[hit["start_us"], hit["end_us"]] for hit in hits]
         result["hit_geometry"] = hits
     return result
+
+
+def charge_metadata(row: list[str], desc: list[str]) -> dict:
+    """Selected original Dash policy; unsupported secondary formulas reject."""
+    if (
+        len(row) != 27
+        or len(desc) < 13
+        or row[0] != "5"
+        or row[2] != "1"
+        or set(row[14].split(",")) != {"ATTACK", "USE_MELEE_DAMAGE", "SPLASH", "CRUSH"}
+        or row[16] != "MOV_SPEED"
+        or "CHARGE_ATTACK" not in desc[10].split("|")
+        or "NEED_TARGET" not in desc[10].split("|")
+        or set(desc[11].split("|")) != {"SWORD", "TWO_HANDED"}
+    ):
+        raise ValueError("Unsupported charge source mechanic")
+    bonus, duration = polynomial(row[17]), polynomial(row[18])
+    if (
+        set(bonus) != {()}
+        or set(duration) != {()}
+        or not 0 <= bonus[()] <= 1000
+        or bonus[()] != int(bonus[()])
+        or not 1 <= round(duration[()] * 1_000_000) <= 600_000_000
+    ):
+        raise ValueError("Unsupported charge speed/duration formula")
+    return {
+        "requires_target": True,
+        "target_range_m": 1.7,
+        "charge": {
+            "duration_us": round(duration[()] * 1_000_000),
+            "speed_bonus": int(bonus[()]),
+            # Pinned char_skill.cpp::FuncSplashDamage CRUSH branch for a PC.
+            "push_distance_m": 2.0,
+            "main_target_stun_us": 4_000_000,
+        },
+    }
 
 
 def compile_catalog(profile: dict, *, offline: bool) -> dict:
@@ -116,13 +162,17 @@ def compile_catalog(profile: dict, *, offline: bool) -> dict:
         }
         if (
             set(selected) - {"hits_per_life"} != fields
-            or selected["handler"] not in {"physical_splash_v1", "physical_area_v1"}
-            or selected["weapon_class"] != "sword"
+            or selected["handler"]
+            not in {"physical_splash_v1", "physical_area_v1", "physical_charge_v1"}
+            or selected["weapon_class"]
+            != ("sword_or_two_handed" if selected["handler"] == "physical_charge_v1" else "sword")
         ):
             raise ValueError("Unsupported skill selection or handler")
         limit = selected.get("hits_per_life", 1)
         if type(limit) is not int or not 1 <= limit <= 32:
             raise ValueError("Invalid per-life skill hit limit")
+        if selected["handler"] == "physical_charge_v1" and limit != 1:
+            raise ValueError("A charge strike may hit each target life only once")
         for key, lo, hi in [
             ("vnum", 1, 255),
             ("class_id", 0, 3),
@@ -155,10 +205,13 @@ def compile_catalog(profile: dict, *, offline: bool) -> dict:
             len(row) != 27
             or int(row[2]) != selected["class_id"] + 1
             or row[6] != "HP"
-            or row[14] != "ATTACK,USE_MELEE_DAMAGE"
+            or (
+                selected["handler"] != "physical_charge_v1" and row[14] != "ATTACK,USE_MELEE_DAMAGE"
+            )
             or row[22] != "MELEE"
         ):
             raise ValueError("Unsupported source skill mechanic")
+        charge = charge_metadata(row, desc) if selected["handler"] == "physical_charge_v1" else {}
         damage = {term: -value for term, value in polynomial(row[7]).items()}
         if set(damage) - set(TERMS) or any(not 0 <= value <= 1000 for value in damage.values()):
             raise ValueError("Unsupported damage coefficients")
@@ -218,6 +271,7 @@ def compile_catalog(profile: dict, *, offline: bool) -> dict:
             {
                 **selected,
                 **targeting,
+                **charge,
                 "name": desc[2],
                 "description": desc[5],
                 "icon": "skill/warrior/" + desc[12] + "_01",
@@ -243,16 +297,17 @@ def compile_catalog(profile: dict, *, offline: bool) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile", type=Path, default=PROFILE)
+    parser.add_argument("--output", type=Path, default=OUTPUT)
     parser.add_argument("--offline", action="store_true")
     args = parser.parse_args()
     catalog = compile_catalog(json.loads(args.profile.read_text()), offline=args.offline)
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_bytes(canonical_bytes(catalog) + b"\n")
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_bytes(canonical_bytes(catalog) + b"\n")
     print(
         json.dumps(
             {
                 "skills": len(catalog["skills"]),
-                "sha256": hashlib.sha256(OUTPUT.read_bytes()).hexdigest(),
+                "sha256": hashlib.sha256(args.output.read_bytes()).hexdigest(),
             }
         )
     )

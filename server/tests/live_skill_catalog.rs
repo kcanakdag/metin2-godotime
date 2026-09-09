@@ -1,6 +1,100 @@
 #[path = "../build_skills.rs"]
 mod compiler;
 
+fn charge_candidate() -> serde_json::Value {
+    use serde_json::{Value, json};
+    let mut catalog: Value = serde_json::from_slice(include_bytes!(
+        "../../client/assets/imported/skills/catalog.v1.json"
+    ))
+    .unwrap();
+    catalog["skills"].as_array_mut().unwrap().truncate(1);
+    let row = &mut catalog["skills"][0];
+    row["vnum"] = json!(5);
+    row["handler"] = json!("physical_charge_v1");
+    row["weapon_class"] = json!("sword_or_two_handed");
+    row["requires_target"] = json!(true);
+    row["target_range_m"] = json!(1.7);
+    row["hits_per_life"] = json!(1);
+    row["charge"] = json!({"duration_us":3_000_000,"speed_bonus":150,
+                          "push_distance_m":2.0,"main_target_stun_us":4_000_000});
+    for variant in row["variants"].as_array_mut().unwrap() {
+        variant["action_id"] = json!(format!(
+            "{}.general.skill_5",
+            variant["actor_id"].as_str().unwrap()
+        ));
+        for field in [
+            "hit_start_us",
+            "hit_end_us",
+            "hit_windows_us",
+            "hit_geometry",
+        ] {
+            variant.as_object_mut().unwrap().remove(field);
+        }
+        variant["source_hit_events"] = json!([]);
+    }
+    catalog
+}
+
+#[test]
+fn charge_compiles_policy_and_animation_without_damage_windows() {
+    let generated = compiler::generate(charge_candidate().to_string().as_bytes()).unwrap();
+    assert!(generated.contains(
+        "duration_us:3000000,speed_bonus:150,push_distance_m:2.0,main_target_stun_us:4000000"
+    ));
+    assert!(generated.contains("hit_start_us:0,hit_end_us:0"));
+    assert!(generated.contains("(5,\"actor.player.warrior-male\",&[])"));
+    assert!(generated.contains("(5,\"actor.player.warrior-female\",&[])"));
+}
+
+#[test]
+fn charge_rejects_unsafe_policy_or_an_animation_damage_schedule() {
+    use serde_json::json;
+    let candidate = charge_candidate();
+    for (field, value) in [
+        ("duration_us", json!(0)),
+        ("duration_us", json!(600_000_001)),
+        ("speed_bonus", json!(-1)),
+        ("speed_bonus", json!(1001)),
+        ("push_distance_m", json!(-1)),
+        ("push_distance_m", json!(21)),
+        ("main_target_stun_us", json!(-1)),
+        ("main_target_stun_us", json!(600_000_001)),
+    ] {
+        let mut bad = candidate.clone();
+        bad["skills"][0]["charge"][field] = value;
+        assert!(
+            compiler::generate(bad.to_string().as_bytes()).is_err(),
+            "{field}"
+        );
+    }
+    for (field, value) in [
+        ("requires_target", json!(false)),
+        ("target_range_m", json!(0)),
+        ("hits_per_life", json!(2)),
+        ("weapon_class", json!("sword")),
+    ] {
+        let mut bad = candidate.clone();
+        bad["skills"][0][field] = value;
+        assert!(
+            compiler::generate(bad.to_string().as_bytes()).is_err(),
+            "{field}"
+        );
+    }
+    for field in [
+        "hit_start_us",
+        "hit_end_us",
+        "hit_windows_us",
+        "hit_geometry",
+    ] {
+        let mut bad = candidate.clone();
+        bad["skills"][0]["variants"][0][field] = json!(0);
+        assert!(
+            compiler::generate(bad.to_string().as_bytes()).is_err(),
+            "{field}"
+        );
+    }
+}
+
 #[test]
 fn installed_catalog_compiles_without_changing_its_event_contract() {
     let bytes = include_bytes!("../../client/assets/imported/skills/catalog.v1.json");

@@ -98,7 +98,7 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
         .filter(|r| !r.is_empty() && r.len() <= 64)
         .ok_or("Invalid skills")?;
     let mut out = String::from(
-        "#[derive(Clone,Copy,Debug)]\npub struct SkillDefinition {pub vnum:u16,pub class_id:u8,pub minimum_level:u8,pub maximum_rank:u8,pub cooldown_us:i64,pub radius_m:f32,pub max_targets:u8,pub hits_per_life:u8,pub requires_target:bool,pub target_range_m:f32,pub sp_base:u16,pub sp_per_power:u16,pub damage_milli:[i64;6]}\n",
+        "#[derive(Clone,Copy,Debug)]\npub struct SkillDefinition {pub vnum:u16,pub class_id:u8,pub minimum_level:u8,pub maximum_rank:u8,pub cooldown_us:i64,pub radius_m:f32,pub max_targets:u8,pub hits_per_life:u8,pub requires_target:bool,pub target_range_m:f32,pub sp_base:u16,pub sp_per_power:u16,pub damage_milli:[i64;6],pub charge:Option<crate::charge_lifecycle::Definition>}\n",
     );
     writeln!(
         out,
@@ -123,8 +123,13 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
     for row in rows {
         if !matches!(
             row["handler"].as_str(),
-            Some("physical_splash_v1" | "physical_area_v1")
-        ) || row["weapon_class"] != "sword"
+            Some("physical_splash_v1" | "physical_area_v1" | "physical_charge_v1")
+        ) || row["weapon_class"]
+            != if row["handler"] == "physical_charge_v1" {
+                "sword_or_two_handed"
+            } else {
+                "sword"
+            }
         {
             return Err("Unsupported skill handler".into());
         }
@@ -158,6 +163,30 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
         if target_range < 0.0 || (!requires_target && target_range != 0.0) {
             return Err("Invalid skill target range policy".into());
         }
+        let charge = if row["handler"] == "physical_charge_v1" {
+            if !requires_target || target_range <= 0.0 || hits_per_life != 1 {
+                return Err("Charge requires a bounded target and one hit per life".into());
+            }
+            let value = &row["charge"];
+            if value.as_object().is_none_or(|v| v.len() != 4) {
+                return Err("Invalid charge definition fields".into());
+            }
+            let duration = n(value, "duration_us", 1, 600_000_000)?;
+            let speed = n(value, "speed_bonus", 0, 1000)?;
+            let push = f(value, "push_distance_m", 20.0)?;
+            let stun = n(value, "main_target_stun_us", 0, 600_000_000)?;
+            if push < 0.0 {
+                return Err("Invalid charge push distance".into());
+            }
+            format!(
+                "Some(crate::charge_lifecycle::Definition{{duration_us:{duration},speed_bonus:{speed},push_distance_m:{push:?},main_target_stun_us:{stun}}})"
+            )
+        } else {
+            if row.get("charge").is_some() {
+                return Err("Charge metadata requires charge dispatch".into());
+            }
+            "None".to_owned()
+        };
         let sp = n(row, "sp_base", 0, 1000)?;
         let per = n(row, "sp_per_power", 0, 1000)?;
         let coefficients = row["damage_milli"]
@@ -171,7 +200,7 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
                     .ok_or("Invalid skill coefficient")
             })
             .collect::<Result<Vec<_>, _>>()?;
-        definitions.push(format!("SkillDefinition{{vnum:{id},class_id:{class},minimum_level:{level},maximum_rank:{rank},cooldown_us:{cooldown},radius_m:{radius:?},max_targets:{targets},hits_per_life:{hits_per_life},requires_target:{requires_target},target_range_m:{target_range:?},sp_base:{sp},sp_per_power:{per},damage_milli:{coefficients:?}}}"));
+        definitions.push(format!("SkillDefinition{{vnum:{id},class_id:{class},minimum_level:{level},maximum_rank:{rank},cooldown_us:{cooldown},radius_m:{radius:?},max_targets:{targets},hits_per_life:{hits_per_life},requires_target:{requires_target},target_range_m:{target_range:?},sp_base:{sp},sp_per_power:{per},damage_milli:{coefficients:?},charge:{charge}}}"));
         let variants = row["variants"]
             .as_array()
             .filter(|r| r.len() == 2)
@@ -190,9 +219,35 @@ pub fn generate(bytes: &[u8]) -> Result<String, String> {
                 return Err("Duplicate skill appearance".into());
             }
             let duration = n(v, "duration_us", 1, 3_200_000)?;
-            let start = n(v, "hit_start_us", 1, duration)?;
-            let end = n(v, "hit_end_us", start + 1, duration)?;
-            let events = windows(v, duration, start, end)?;
+            let (start, end, events) = if row["handler"] == "physical_charge_v1" {
+                for field in [
+                    "hit_start_us",
+                    "hit_end_us",
+                    "hit_windows_us",
+                    "hit_geometry",
+                ] {
+                    if v.get(field).is_some() {
+                        return Err("Charge cannot schedule animation-window damage".into());
+                    }
+                }
+                let source = v["source_hit_events"]
+                    .as_array()
+                    .filter(|v| v.len() <= 32)
+                    .ok_or("Missing charge source event metadata")?;
+                for hit in source {
+                    let start = n(hit, "start_us", 0, duration)?;
+                    n(hit, "end_us", start, duration + 10_000_000)?;
+                    geometry::generate(hit)?;
+                }
+                (0, 0, Vec::new())
+            } else {
+                if v.get("source_hit_events").is_some() {
+                    return Err("Unconsumed charge source events on ordinary skill".into());
+                }
+                let start = n(v, "hit_start_us", 1, duration)?;
+                let end = n(v, "hit_end_us", start + 1, duration)?;
+                (start, end, windows(v, duration, start, end)?)
+            };
             let dispatch = if row["handler"] == "physical_area_v1" {
                 area_dispatch(&events)?
             } else {

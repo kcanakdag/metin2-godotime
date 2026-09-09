@@ -36,6 +36,15 @@ their authored ranges. This is a candidate compiler change, not a live rollout.
 
 ## Implementation boundaries
 
+The selected catalog now supports `physical_charge_v1` and compiles a typed
+`charge_lifecycle::Definition` with duration, speed bonus, push distance and stun.
+Rank cost and cooldown remain part of the skill row; `activation_policy` combines
+them with that definition for the lifecycle transition. Original collision events
+are retained under `source_hit_events` and do not populate charge damage windows.
+The live reducer currently rejects a charge definition explicitly. The candidate
+is not installed, and persistence, immediate damage and client approach remain
+required before removing that gate.
+
 `server/src/charge_lifecycle.rs` now provides pure activation, consumption and
 invalidation transitions. Activation returns the remaining SP and next skill
 state; consumption returns the captured rank and next state without a second

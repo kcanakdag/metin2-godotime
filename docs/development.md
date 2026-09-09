@@ -1,5 +1,29 @@
 # Development workflow
 
+## Staging selected charge skill content
+
+`tools/build_skill_catalog.py --profile PROFILE --output CANDIDATE --offline`
+builds a candidate without replacing the installed catalog. Omitting `--output`
+retains the existing install destination. `physical_charge_v1` profile entries
+use `weapon_class: "sword_or_two_handed"` and `hits_per_life: 1`; the currently
+supported source charge is Warrior Dash, vnum 5, motion `skill_5`, minimum level
+5 and maximum rank 20. Both appearances must already be imported.
+
+The compiler preserves charge motion collision events as `source_hit_events` for
+inspection. They are not damage deadlines. A typed `charge` policy carries speed,
+duration, push distance and main-target stun; ordinary skill event windows are
+rejected on charge entries. Validate Rust generation with:
+
+```sh
+cargo run --manifest-path server/Cargo.toml --locked --offline \
+  --example compile_live_skills -- CANDIDATE DEFINITIONS_RS
+```
+
+This produces Rust source; it does not build or publish a module using that
+candidate. Charge gameplay currently rejects in the reducer until its adapter is
+implemented. Do not install/export the five-skill candidate as a playable build.
+The normal four-skill profile remains the installed and public selection.
+
 Opening an installed actor package in Godot may create a PNG alias that removes
 an embedded image's `.dds` suffix (for example, `actor_face.dds.png` becomes
 `actor_face.png`). The shared character/NPC package validator permits this exact
