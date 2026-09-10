@@ -42,13 +42,14 @@ STORAGE_FLAGS ?=
 STORAGE_PYTHON ?= .local/venv-dev/bin/python
 STORAGE_CLEAN_DIR := .local/maintenance/storage-clean-$(shell date -u +%Y%m%dT%H%M%SZ)
 STORAGE_MANIFEST ?= $(STORAGE_CLEAN_DIR)/detached.json
+STORAGE_ORPHAN_MANIFEST ?= .local/maintenance/storage-sweep-orphans.json
 
 .PHONY: assets import-assets import-map import-ui content-build content-validate content-probe test-ui test-actors test-inventory bake-map map-preview test-map test-world-packs editor client preview check server-build server-test server-start server-publish mcp-build mcp-check dev-setup lint format bindings test-tools test-multiplayer test-combat export-windows export-web export-linux browser-setup test-browser deploy share-setup share-start share-status share-stop export-shared
 .PHONY: auth-setup auth-start test-auth test-accounts test-physical
 .PHONY: check-plan
 .PHONY: world-validate world-preview npc-install test-npcs
 .PHONY: characters-build test-classes skills-build dummy-build
-.PHONY: storage-report storage-entries storage-files storage-clean
+.PHONY: storage-report storage-entries storage-files storage-clean storage-sweep
 
 dummy-build:
 	python3 tools/build_training_dummy.py --blender "$(BLENDER)" --install
@@ -238,3 +239,17 @@ storage-files:
 
 storage-clean: storage-entries
 	$(STORAGE_PYTHON) tools/storage_cleanup.py files --manifest "$(STORAGE_CLEAN_DIR)/detached.json" --apply --restart-server --data-dir "$(STORAGE_DATA_DIR)" --server "$(STORAGE_SERVER)" --config-path "$(STORAGE_CONFIG)"
+
+# Unattended sweeps (the weekly cron entry) remove only directories whose
+# database entry is already gone, so they can never drop a live database.
+# Obsolete named QA databases stay behind the reviewed `storage-clean`.
+storage-sweep:
+	@mkdir -p .local/maintenance
+	@rm -f "$(STORAGE_ORPHAN_MANIFEST)"
+	$(STORAGE_PYTHON) tools/storage_cleanup.py report --data-dir "$(STORAGE_DATA_DIR)" --server "$(STORAGE_SERVER)" --config-path "$(STORAGE_CONFIG)" --keep-days "$(STORAGE_KEEP_DAYS)" --budget-gb "$(STORAGE_BUDGET_GB)" --orphan-manifest "$(STORAGE_ORPHAN_MANIFEST)" $(STORAGE_FLAGS)
+	@if [ -s "$(STORAGE_ORPHAN_MANIFEST)" ]; then \
+		$(STORAGE_PYTHON) tools/storage_cleanup.py files --manifest "$(STORAGE_ORPHAN_MANIFEST)" --apply --restart-server --data-dir "$(STORAGE_DATA_DIR)" --server "$(STORAGE_SERVER)" --config-path "$(STORAGE_CONFIG)"; \
+		rm -f "$(STORAGE_ORPHAN_MANIFEST)"; \
+	else \
+		echo "storage-sweep: no orphan replica directories"; \
+	fi

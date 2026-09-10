@@ -5,6 +5,24 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Recurring replica sweep scheduled — 2026-09-10
+
+The replica maintenance tooling reclaimed 20.6 GB once; this entry makes the
+safe half of that routine recurring. `make storage-sweep` runs the read-only
+report with `--orphan-manifest` and, only when that manifest names directories
+whose database entry is already gone, removes them with
+`files --apply --restart-server`. It never deletes a live database row, so a
+scheduled run cannot drop a database the ledger still cites. Validated the same
+day: the report found 59 directories / 6.05 GB under `.local/p1/server/replicas`,
+0 obsolete named databases and 0 orphans, and the sweep stopped after the report
+without writing a manifest. A user cron entry (`17 4 * * 1`, `MAILTO=""`) now
+runs it weekly and appends the output to
+`.local/maintenance/storage-sweep.log`; the schedule is documented in
+`docs/development.md#local-replica-storage-maintenance` and `AGENTS.md`. The
+reviewed `make storage-clean` pass — obsolete named QA databases plus their
+replica directories — stays manual. When the schedule was installed the root
+filesystem had 50 GB free (92% used) and `.local` held 49 GB.
+
 ## Local replica storage reclaimed with a repeatable maintenance tool — 2026-09-10
 
 Sixty-seven published P1 QA databases from the 2026-09-06..08 runs kept their

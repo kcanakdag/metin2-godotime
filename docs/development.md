@@ -713,6 +713,7 @@ a running server owns its files, so they cannot be removed underneath it:
 ```sh
 make storage-report   # read-only: sizes, ages, recorded owners, orphans
 make storage-clean    # entries --apply, then files --apply --restart-server
+make storage-sweep    # recurring: report, then remove only confirmed orphans
 ```
 
 `storage-report` classifies by identity rather than by file name. `spacetime list`
@@ -741,6 +742,18 @@ Run this when `df -h /` drops below roughly 10 GB free or when
 Cleanup evidence is ignored local state, so record what was reclaimed in
 `docs/rebuild/implementation-status.md` whenever the removed databases appeared
 in a ledger entry.
+
+`make storage-sweep` is the unattended variant. It runs the report with
+`--orphan-manifest` and, only when that manifest lists directories whose
+database entry is already gone, removes them and restarts the standalone
+server; every other case stops after printing the report. Because it never
+drops a live database row, it is safe to schedule: this workstation carries a
+user cron entry (`17 4 * * 1`) that runs the sweep weekly and appends its output
+to `.local/maintenance/storage-sweep.log`. Inspect the schedule with
+`crontab -l` and the history with `tail .local/maintenance/storage-sweep.log`.
+`make storage-clean`, which also deletes obsolete named QA databases, stays a
+reviewed manual step because deciding which databases the ledger still cites is
+a judgement call.
 
 The repository keeps two local CLI identities: `.local/p1/cli.toml` for the
 standalone server (`.local/p2/cli.toml` is a copy with the same identity) and

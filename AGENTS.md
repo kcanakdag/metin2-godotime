@@ -160,7 +160,7 @@ be rebuilt from pinned inputs; do not fabricate fixtures or disable their checks
 | Authenticated multiplayer | `tools/test_accounts.py`, `tools/test_targets.py`, `tools/test_combos.py` |
 | Authenticated exported QA | `tools/test_browser_accounts.py` with the relevant feature flags and an actual native export |
 | Playable exports | `tools/export_playable.py` or `make export-web` / `make export-linux` |
-| Local replica storage | `make storage-report`, `make storage-clean`; see `docs/development.md#local-replica-storage-maintenance` |
+| Local replica storage | `make storage-report`, `make storage-sweep`, `make storage-clean`; see `docs/development.md#local-replica-storage-maintenance` |
 
 Read each tool's `--help` and the development guide for required arguments.
 Legacy guest smoke commands are not substitutes for authenticated multiplayer.
@@ -175,6 +175,13 @@ owned by another CLI identity. Never delete directories under
 `<data-dir>/replicas/` by hand or wipe a data directory to free space — that
 destroys another identity's live database and the `db.lock` mapping the tool
 relies on.
+
+This workstation also carries a weekly user cron entry (Mondays 04:17) that runs
+`make storage-sweep`: it reports, then removes only directories whose database
+entry is already gone, so a scheduled run can never drop a live database. Its
+output appends to `.local/maintenance/storage-sweep.log`; check it when starting
+a handoff. `storage-clean` remains a reviewed manual step because deleting
+obsolete named QA databases requires knowing which ones the ledger still cites.
 
 Before starting or restarting services, inspect existing listeners, process
 ownership, data directories and proxy routing. Reuse verified services or choose
