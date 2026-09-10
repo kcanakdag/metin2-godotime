@@ -54,11 +54,16 @@ func _run() -> void:
 		"duration updates reuse icon and deduplicate"
 	)
 	_check(strip._names[row.id] == "Berserk", "duration update preserves classic skill name")
+	var state := strip.snapshot()
+	_check(state["count"] == 1, "probe snapshot reports one active affect")
+	_check(state["rows"][0]["id"] == row.id, "probe snapshot binds affect identity")
+	_check(state["rows"][0]["name"] == "Berserk", "probe snapshot carries classic skill name")
 	strip.set_state([row], "peer")
 	_check(strip._icons.is_empty(), "character switch clears former icon")
 	row.paused = true
 	strip.set_state([row], "owner")
 	_check(strip._icons.is_empty(), "paused status is not shown as active")
+	_check(strip.snapshot()["count"] == 0, "probe snapshot clears inactive affects")
 	row.paused = false
 	strip.set_state([row], "owner")
 	await process_frame

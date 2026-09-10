@@ -69,3 +69,22 @@ func _hide_description(id: String) -> void:
 	if _hovered == id:
 		_hovered = ""
 		_description.hide()
+
+
+func snapshot() -> Dictionary:
+	var rows: Array[Dictionary] = []
+	for id: String in _icons.keys():
+		var icon: TextureRect = _icons[id]
+		(
+			rows
+			. append(
+				{
+					"id": id,
+					"name": str(_names.get(id, "")),
+					"position": [icon.position.x, icon.position.y],
+					"visible": icon.visible,
+					"size": [icon.size.x * icon.scale.x, icon.size.y * icon.scale.y],
+				}
+			)
+		)
+	return {"visible": visible, "count": rows.size(), "rows": rows}

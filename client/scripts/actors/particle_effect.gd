@@ -27,7 +27,7 @@ func configure(effect: Dictionary, textures: Dictionary, random_seed: int) -> bo
 			int(style.SrcBlendType) != 5
 			or int(style.DestBlendType) not in [2, 6]
 			or int(style.ColorOperationType) not in [4, 5]
-			or int(style.BillboardType) not in [0, 1, 3]
+			or int(style.BillboardType) not in [0, 1, 2, 3, 4, 5]
 			or style.curves.ScaleX.is_empty()
 			or style.curves.ScaleY.is_empty()
 			or style.packed_color_keys.is_empty()
@@ -93,16 +93,25 @@ func _draw(layer: Dictionary, camera: Camera3D) -> void:
 			if not started:
 				mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES, layer.materials[frame])
 				started = true
-			var corners := _corners(particle, layer.recipe, camera)
-			for index: int in TRIANGLES:
-				mesh.surface_set_color(particle.color)
-				mesh.surface_set_uv(UVS[index])
-				mesh.surface_add_vertex(corners[index])
+			var billboard := int(layer.recipe.particle.BillboardType)
+			var face_rotations: Array[float] = [0.0]
+			if billboard == 4:
+				face_rotations = [-PI / 6.0, PI / 6.0]
+			elif billboard == 5:
+				face_rotations = [0.0, -PI / 3.0, PI / 3.0]
+			for face_rotation: float in face_rotations:
+				var corners := _corners(particle, layer.recipe, camera, face_rotation)
+				for index: int in TRIANGLES:
+					mesh.surface_set_color(particle.color)
+					mesh.surface_set_uv(UVS[index])
+					mesh.surface_add_vertex(corners[index])
 		if started:
 			mesh.surface_end()
 
 
-func _corners(particle: Dictionary, recipe: Dictionary, camera: Camera3D) -> Array[Vector3]:
+func _corners(
+	particle: Dictionary, recipe: Dictionary, camera: Camera3D, face_rotation: float = 0.0
+) -> Array[Vector3]:
 	var view := -camera.global_basis.z
 	var up := -camera.global_basis.x
 	var cross_axis := camera.global_basis.y
@@ -115,12 +124,31 @@ func _corners(particle: Dictionary, recipe: Dictionary, camera: Camera3D) -> Arr
 		cross_axis = up.cross(view).normalized()
 	else:
 		var angle := deg_to_rad(float(particle.rotation))
-		if int(recipe.particle.BillboardType) == 3:
+		var billboard := int(recipe.particle.BillboardType)
+		if billboard == 3:
 			up = Vector3(cos(angle), 0, sin(angle))
 			cross_axis = Vector3(sin(angle), 0, -cos(angle))
+		elif billboard in [2, 4, 5]:
+			up = Vector3.UP
+			var view_ground := Vector3(view.x, 0, view.z)
+			cross_axis = up.cross(view_ground)
+			cross_axis = (
+				cross_axis.normalized()
+				if cross_axis.length_squared() > 0.000001
+				else camera.global_basis.x
+			)
+			if angle:
+				var face_cos := -sin(angle)
+				var face_sin := cos(angle)
+				var rotated_up := up * face_cos - cross_axis * face_sin
+				cross_axis = cross_axis * face_cos + up * face_sin
+				up = rotated_up
 		else:
 			up = up.rotated(view, -angle)
 			cross_axis = cross_axis.rotated(view, -angle)
+		if face_rotation:
+			up = up.rotated(Vector3.UP, face_rotation)
+			cross_axis = cross_axis.rotated(Vector3.UP, face_rotation)
 	cross_axis *= -float(particle.half_size.x) * float(particle.scale.x)
 	up *= float(particle.half_size.y) * float(particle.scale.y)
 	var center := Motion.world_position(particle, global_transform)

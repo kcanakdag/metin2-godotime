@@ -65,10 +65,12 @@ func _fetch_manifest(expected_hash: String) -> bool:
 	var origin := str(JavaScriptBridge.eval("window.location.origin"))
 	if request.request(origin + "/world/manifest.json") != OK:
 		request.queue_free()
+		last_error = "Could not request the map manifest."
 		return false
 	var result: Array = await request.request_completed
 	request.queue_free()
 	if result[0] != HTTPRequest.RESULT_SUCCESS or result[1] != 200:
+		last_error = ("Map manifest download failed: result=%d HTTP=%d" % [result[0], result[1]])
 		return false
 	var parsed: Variant = JSON.parse_string(result[3].get_string_from_utf8())
 	if (
@@ -77,6 +79,7 @@ func _fetch_manifest(expected_hash: String) -> bool:
 		or not parsed.get("shared") is Dictionary
 		or not parsed.get("chunks") is Dictionary
 	):
+		last_error = "Map manifest is malformed."
 		return false
 	var asset_version := JSON.stringify(parsed).sha256_text()
 	if not _mounted.is_empty() and _asset_version != asset_version:
@@ -145,11 +148,11 @@ func _stream_neighbors() -> void:
 func _load_chunk(id: String) -> bool:
 	if loaded.has(id):
 		return true
-	if OS.has_feature("web"):
-		if not _manifest.chunks.has(id) or not await _mount(_manifest.chunks[id]):
-			return false
+	if OS.has_feature("web") and not await _mount_web_chunk(id):
+		return false
 	var path := DIRECTORY + id + ".tscn"
 	if not ResourceLoader.exists(path):
+		last_error = "Map chunk %s is missing from the client package." % id
 		progress.emit("Map data is missing. Rebuild the map assets.")
 		return false
 	if OS.has_feature("web") and not _resource_uids.register_dependencies(path):
@@ -157,6 +160,7 @@ func _load_chunk(id: String) -> bool:
 		return false
 	var packed := load(path) as PackedScene
 	if packed == null:
+		last_error = "Map chunk %s could not be loaded." % id
 		return false
 	var chunk := packed.instantiate()
 	add_child(chunk)
@@ -165,14 +169,23 @@ func _load_chunk(id: String) -> bool:
 	return true
 
 
+func _mount_web_chunk(id: String) -> bool:
+	if not _manifest.chunks.has(id):
+		last_error = "Map manifest is missing chunk %s." % id
+		return false
+	return await _mount(_manifest.chunks[id])
+
+
 func _mount(pack: Dictionary) -> bool:
 	var hash_value := str(pack.get("sha256", ""))
 	if _mounted.has(hash_value):
 		return true
 	if not RegEx.create_from_string("^[a-f0-9]{64}$").search(hash_value):
+		last_error = "Map pack has an invalid content hash."
 		return false
 	var expected_bytes := int(pack.get("bytes", 0))
 	if expected_bytes <= 0 or expected_bytes > 32 * 1024 * 1024:
+		last_error = "Map pack has an invalid size."
 		return false
 	var directory := "user://world-cache"
 	DirAccess.make_dir_recursive_absolute(directory)

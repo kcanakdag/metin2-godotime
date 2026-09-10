@@ -2,6 +2,25 @@ extends Node
 ## Export-test instrumentation. The release staging tool excludes this file by default.
 ## Exposes snapshots and a fixed list of ordinary validated client actions, never eval/tokens.
 
+const NAMED_KEYS := {
+	"1": KEY_1,
+	"2": KEY_2,
+	"3": KEY_3,
+	"4": KEY_4,
+	"5": KEY_5,
+	"6": KEY_6,
+	"7": KEY_7,
+	"8": KEY_8,
+	"9": KEY_9,
+	"e": KEY_E,
+	"enter": KEY_ENTER,
+	"escape": KEY_ESCAPE,
+	"i": KEY_I,
+	"k": KEY_K,
+	"space": KEY_SPACE,
+	"z": KEY_Z,
+}
+
 var _elapsed := 0.0
 var _profile_started_us := 0
 var _profile_frames := 0
@@ -27,6 +46,8 @@ var _monster_action_history: Array[Dictionary] = []
 var _last_monster_actions: Dictionary = {}
 var _screen_wave_history: Array[Dictionary] = []
 var _last_screen_wave_fingerprint := ""
+var _admin_request_sequence := 0
+var _admin_request_prefix := ""
 
 
 func _ready() -> void:
@@ -346,6 +367,14 @@ func _dispatch(command: Dictionary) -> void:
 			_inject_pointer(command, true)
 		"pointer_right_click":
 			_inject_pointer(command, true, MOUSE_BUTTON_RIGHT)
+		"key":
+			_inject_named_key(str(command.get("name", "")))
+		"drag":
+			_inject_drag(command)
+		"wheel":
+			_inject_wheel(command)
+		"admin_command":
+			_dispatch_admin_command(command)
 		"inventory":
 			_inject_inventory()
 		"space":
@@ -406,6 +435,13 @@ func _inject_inventory() -> void:
 	_inject_key(KEY_I)
 
 
+func _inject_named_key(name: String) -> void:
+	if not NAMED_KEYS.has(name):
+		_errors.append("Test key input is not allowlisted: " + name)
+		return
+	_inject_key(NAMED_KEYS[name])
+
+
 func _inject_key(keycode: Key) -> void:
 	for pressed: bool in [true, false]:
 		var event := InputEventKey.new()
@@ -413,6 +449,142 @@ func _inject_key(keycode: Key) -> void:
 		event.physical_keycode = keycode
 		event.pressed = pressed
 		get_viewport().push_input(event, true)
+
+
+func _inject_drag(command: Dictionary) -> void:
+	var start_value: Variant = _finite_point(command.get("from"))
+	var finish_value: Variant = _finite_point(command.get("to"))
+	if not start_value is Vector2 or not finish_value is Vector2:
+		_errors.append("Test drag input requires finite in-viewport start and end points.")
+		return
+	var start: Vector2 = start_value
+	var finish: Vector2 = finish_value
+	var button := MOUSE_BUTTON_LEFT
+	if str(command.get("button", "left")) == "right":
+		button = MOUSE_BUTTON_RIGHT
+	elif str(command.get("button", "left")) != "left":
+		_errors.append("Test drag input button is not allowlisted.")
+		return
+	# A pushed motion reaches input handlers but does not move the native OS cursor.
+	# Keep the fixed native probe route aligned with production's periodic pointer poll.
+	if not OS.has_feature("web"):
+		get_viewport().warp_mouse(start)
+	var mask := MOUSE_BUTTON_MASK_LEFT if button == MOUSE_BUTTON_LEFT else MOUSE_BUTTON_MASK_RIGHT
+	var motion := InputEventMouseMotion.new()
+	motion.position = start
+	motion.global_position = start
+	motion.button_mask = mask
+	get_viewport().push_input(motion, true)
+	var down := InputEventMouseButton.new()
+	down.button_index = button
+	down.pressed = true
+	down.position = start
+	down.global_position = start
+	get_viewport().push_input(down, true)
+	for index: int in range(1, 9):
+		var point: Vector2 = start.lerp(finish, float(index) / 8.0)
+		motion = InputEventMouseMotion.new()
+		motion.position = point
+		motion.global_position = point
+		motion.relative = point - start if index == 1 else Vector2.ZERO
+		motion.button_mask = mask
+		get_viewport().push_input(motion, true)
+	var up := InputEventMouseButton.new()
+	up.button_index = button
+	up.pressed = false
+	up.position = finish
+	up.global_position = finish
+	get_viewport().push_input(up, true)
+
+
+func _inject_wheel(command: Dictionary) -> void:
+	var point_value: Variant = _finite_point([command.get("x"), command.get("y")])
+	if not point_value is Vector2:
+		_errors.append("Test wheel input requires a finite in-viewport point.")
+		return
+	var delta_value: Variant = command.get("delta")
+	if not delta_value is float and not delta_value is int:
+		_errors.append("Test wheel input requires a finite nonzero delta.")
+		return
+	var delta := float(delta_value)
+	if not is_finite(delta) or delta == 0.0 or absf(delta) > 2_000.0:
+		_errors.append("Test wheel input requires a finite nonzero delta.")
+		return
+	var point: Vector2 = point_value
+	if not OS.has_feature("web"):
+		get_viewport().warp_mouse(point)
+	var motion := InputEventMouseMotion.new()
+	motion.position = point
+	motion.global_position = point
+	get_viewport().push_input(motion, true)
+	var button := MOUSE_BUTTON_WHEEL_DOWN if delta > 0.0 else MOUSE_BUTTON_WHEEL_UP
+	for pressed: bool in [true, false]:
+		var wheel := InputEventMouseButton.new()
+		wheel.button_index = button
+		wheel.pressed = pressed
+		wheel.factor = absf(delta) / 120.0
+		wheel.position = point
+		wheel.global_position = point
+		get_viewport().push_input(wheel, true)
+
+
+func _finite_point(value: Variant) -> Variant:
+	if not value is Array or value.size() != 2:
+		return null
+	var x_value: Variant = value[0]
+	var y_value: Variant = value[1]
+	if not x_value is float and not x_value is int:
+		return null
+	if not y_value is float and not y_value is int:
+		return null
+	var point := Vector2(float(x_value), float(y_value))
+	if not point.is_finite() or not get_viewport().get_visible_rect().has_point(point):
+		return null
+	return point
+
+
+func _dispatch_admin_command(command: Dictionary) -> void:
+	var name := str(command.get("command", ""))
+	var argument := str(command.get("argument", "")).strip_edges()
+	if not _admin_argument_allowed(name, argument):
+		_errors.append("Test admin command is not allowlisted.")
+		return
+	if _admin_request_prefix.is_empty():
+		_admin_request_prefix = Crypto.new().generate_random_bytes(8).hex_encode()
+	_admin_request_sequence += 1
+	# The server deduplicates request ids across all accounts. Two probe clients
+	# that each start a bare sequence at one would collide, so mix in a
+	# process-unique prefix while retaining bounded per-process ordering.
+	var request_id := _admin_request_prefix + ("%016x" % _admin_request_sequence)
+	get_parent()._on_command_requested(name, request_id, argument)
+
+
+func _admin_argument_allowed(name: String, argument: String) -> bool:
+	match name:
+		"help":
+			return argument.is_empty()
+		"xp":
+			return _bounded_unsigned(argument, 1, 4_294_967_295)
+		"level":
+			return _bounded_unsigned(argument, 2, 99)
+		"skill":
+			var fields := argument.split(" ", false)
+			return (
+				fields.size() == 2
+				and _bounded_unsigned(fields[0], 1, 65_535)
+				and _bounded_unsigned(fields[1], 0, 20)
+			)
+		_:
+			return false
+
+
+func _bounded_unsigned(value: String, minimum: int, maximum: int) -> bool:
+	if value.is_empty() or value.length() > 10 or not value.is_valid_int():
+		return false
+	if value.length() > 1 and value.begins_with("0"):
+		return false
+	var parsed := int(value)
+	return parsed >= minimum and parsed <= maximum
 
 
 func _on_reducer_completed(

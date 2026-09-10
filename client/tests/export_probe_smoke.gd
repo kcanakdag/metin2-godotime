@@ -67,6 +67,7 @@ class ProbeWorld:
 
 	var connection := GameConnection.new()
 	var events: Array[InputEvent] = []
+	var commands: Array[Dictionary] = []
 	var hud := ProbeHud.new()
 	var _pve := {}
 	var _hovered_npc: NpcActor
@@ -83,6 +84,9 @@ class ProbeWorld:
 
 	func _unhandled_input(event: InputEvent) -> void:
 		events.append(event)
+
+	func _on_command_requested(command: String, request_id: String, argument: String) -> void:
+		commands.append({"command": command, "request_id": request_id, "argument": argument})
 
 
 class ProbeActor:
@@ -234,6 +238,91 @@ func _run() -> void:
 	_check(
 		probe._errors.size() == 1 and "finite in-viewport" in probe._errors[0],
 		"invalid right-click point reports the bounded probe error"
+	)
+	world.events.clear()
+	probe._dispatch({"action": "key", "name": "k"})
+	await process_frame
+	_check(_key_events(world.events, KEY_K) == [true, false], "named key command injects K")
+	var probe_errors_before := probe._errors.size()
+	world.events.clear()
+	probe._dispatch({"action": "key", "name": "q"})
+	await process_frame
+	_check(world.events.is_empty(), "unlisted named key injects no input")
+	_check(
+		probe._errors.size() == probe_errors_before + 1 and "not allowlisted" in probe._errors[-1],
+		"unlisted named key reports the bounded probe error"
+	)
+	world.events.clear()
+	probe._dispatch({"action": "drag", "from": [100.0, 120.0], "to": [420.0, 260.0]})
+	await process_frame
+	_check(
+		_mouse_buttons(world.events, MOUSE_BUTTON_LEFT) == [true, false],
+		"drag command injects one complete left-button gesture"
+	)
+	_check(_motion_count(world.events) >= 3, "drag command injects intermediate pointer motion")
+	probe_errors_before = probe._errors.size()
+	world.events.clear()
+	probe._dispatch({"action": "drag", "from": [100.0, 120.0], "to": [INF, 260.0]})
+	await process_frame
+	_check(world.events.is_empty(), "nonfinite drag point injects no input")
+	_check(
+		(
+			probe._errors.size() == probe_errors_before + 1
+			and "finite in-viewport" in probe._errors[-1]
+		),
+		"invalid drag point reports the bounded probe error"
+	)
+	world.events.clear()
+	probe._dispatch({"action": "wheel", "x": 320.0, "y": 240.0, "delta": 120.0})
+	await process_frame
+	_check(
+		_mouse_buttons(world.events, MOUSE_BUTTON_WHEEL_DOWN) == [true, false],
+		"wheel command injects one fixed downward scroll"
+	)
+	probe_errors_before = probe._errors.size()
+	world.events.clear()
+	probe._dispatch({"action": "wheel", "x": 320.0, "y": 240.0, "delta": 0.0})
+	await process_frame
+	_check(world.events.is_empty(), "zero wheel delta injects no input")
+	_check(
+		probe._errors.size() == probe_errors_before + 1 and "nonzero delta" in probe._errors[-1],
+		"invalid wheel delta reports the bounded probe error"
+	)
+	probe_errors_before = probe._errors.size()
+	probe._dispatch({"action": "admin_command", "command": "level", "argument": "12"})
+	_check(
+		(
+			world.commands.size() == 1
+			and world.commands[0].command == "level"
+			and world.commands[0].argument == "12"
+			and world.commands[0].request_id.length() == 32
+			and world.commands[0].request_id.is_valid_hex_number()
+		),
+		"allowlisted admin command routes through the real client command handler"
+	)
+	var second_world := ProbeWorld.new()
+	root.add_child(second_world)
+	var second_probe := ExportProbe.new()
+	second_probe._report = ProjectSettings.globalize_path("user://second-probe.json")
+	second_world.add_child(second_probe)
+	await process_frame
+	second_probe._dispatch({"action": "admin_command", "command": "level", "argument": "12"})
+	_check(
+		(
+			second_world.commands.size() == 1
+			and second_world.commands[0].request_id.length() == 32
+			and second_world.commands[0].request_id != world.commands[0].request_id
+		),
+		"separate probe clients derive distinct admin request identifiers"
+	)
+	second_world.free()
+	probe._dispatch({"action": "admin_command", "command": "level", "argument": "1"})
+	probe._dispatch({"action": "admin_command", "command": "skill", "argument": "3"})
+	probe._dispatch({"action": "admin_command", "command": "unknown", "argument": "12"})
+	_check(world.commands.size() == 1, "invalid or unlisted admin commands are not routed")
+	_check(
+		probe._errors.size() == probe_errors_before + 3 and "admin command" in probe._errors[-1],
+		"invalid admin commands report bounded probe errors"
 	)
 
 	world.connection.local_identity = "01".repeat(32)

@@ -42,6 +42,12 @@ SMOKES = {
     "item_intent": ("item_intent_smoke.gd", "ITEM_INTENT_SMOKE"),
 }
 TEST_SUPPORT = ("export_probe.gd",)
+EDITOR_SOCKET_PORT_ERROR = (
+    'ERROR: Condition "_sock == -1" is true. Returning: FAILED\n'
+    "   at: _inet_open (drivers/unix/net_socket_unix.cpp:288)\n"
+    'ERROR: Condition "err != OK" is true. Returning: ERR_CANT_CREATE\n'
+    "   at: listen (core/io/tcp_server.cpp:56)"
+)
 
 
 def sha256(path: Path) -> str:
@@ -59,7 +65,11 @@ def run(command: list[str], environment: dict[str, str], log: Path) -> str:
         check=False,
     )
     log.write_text(result.stdout)
-    if result.returncode or "SCRIPT ERROR:" in result.stdout or "\nERROR:" in result.stdout:
+    # A second editor instance cannot bind Godot's editor IPC ports while the
+    # user's editor is open. Godot logs this exact harmless startup pair even
+    # for an empty project, so exclude only that signature from the gate.
+    checked_output = result.stdout.replace(EDITOR_SOCKET_PORT_ERROR, "")
+    if result.returncode or "SCRIPT ERROR:" in checked_output or "\nERROR:" in checked_output:
         raise SystemExit(f"Godot target-client check failed; see {log}\n{result.stdout[-5000:]}")
     return result.stdout
 

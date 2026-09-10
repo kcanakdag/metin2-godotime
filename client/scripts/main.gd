@@ -9,6 +9,7 @@ const ActorCatalogScript := preload("res://scripts/content/actor_catalog.gd")
 const TargetEffectCatalogScript := preload("res://scripts/content/target_effect_catalog.gd")
 const WorldPickerScript := preload("res://scripts/world/world_picker.gd")
 const WorldNpcsScript := preload("res://scripts/world/world_npcs.gd")
+const ClientConfig := preload("res://scripts/client_config.gd")
 const PROJECTILE_CATALOG_PATH := "res://assets/imported/projectiles/catalog.v1.json"
 const PveVisibility := preload("res://scripts/world/pve_visibility.gd")
 const PVE_REFRESH_SECONDS := 0.25
@@ -31,6 +32,7 @@ var _pve: Dictionary = {}
 var _pve_refresh_elapsed := 0.0
 var _original_map := false
 var _content_generation := 0
+var _world_entry_error := ""
 var _account_flow: AccountScreens
 var _actor_catalog := ActorCatalogScript.new()
 var _target_effect_catalog := TargetEffectCatalogScript.new()
@@ -302,6 +304,7 @@ func dev_snapshot() -> Dictionary:
 	)
 	return {
 		"connection_state": connection.state,
+		"connection_message": connection.state_message,
 		"fps": Engine.get_frames_per_second(),
 		"server_url":
 		connection.endpoint if not connection.endpoint.is_empty() else _settings.server_url,
@@ -314,6 +317,7 @@ func dev_snapshot() -> Dictionary:
 		"player_rows": connection.players.duplicate(true),
 		"appearances": connection.appearances.duplicate(true),
 		"progression": connection.progression.duplicate(true),
+		"buffs": connection.buffs.duplicate(true),
 		"command_feedback": connection.command_feedback.duplicate(true),
 		"actor_presentations": _actor_snapshots(),
 		"rx_messages": connection.rx_messages,
@@ -345,7 +349,11 @@ func dev_snapshot() -> Dictionary:
 		"ui": hud.inventory_snapshot(),
 		"map_chunks": _stream.loaded.keys(),
 		"content_error": _stream.last_error,
+		"world_entry_error": _world_entry_error,
 		"target_effect_error": _target_effect_catalog.error_message,
+		"projectile_error": _projectiles.error_message,
+		"skill_effect_error": _skill_effects.error_message,
+		"npc_error": _npcs.error_message,
 		"account": _account_flow.snapshot() if is_instance_valid(_account_flow) else {},
 		"connected_at_msec": connection.connected_at_msec,
 		"definition_profile": str(connection.world_info.get("definition_profile", "")),
@@ -563,12 +571,15 @@ func _on_world_info(info: Dictionary) -> void:
 
 func _prepare_world(info: Dictionary) -> void:
 	var generation := _content_generation
+	_world_entry_error = ""
 	if _actor_catalog.manifest.is_empty():
 		if not _actor_catalog.load_required(ActorCatalog.MANIFEST_PATH, true):
+			_world_entry_error = _actor_catalog.error_message
 			connection.disconnect_game()
 			hud.show_notice(_actor_catalog.error_message)
 			return
 	if not _target_effect_catalog.loaded and not _target_effect_catalog.load_required():
+		_world_entry_error = _target_effect_catalog.error_message
 		connection.disconnect_game()
 		hud.show_notice(_target_effect_catalog.error_message)
 		return
@@ -583,6 +594,7 @@ func _prepare_world(info: Dictionary) -> void:
 		valid_content = _skill_effects.prepare_catalog(_actor_catalog)
 		content_error = _skill_effects.error_message
 	if not valid_content:
+		_world_entry_error = content_error
 		connection.disconnect_game()
 		hud.show_notice(content_error)
 		return
@@ -591,6 +603,7 @@ func _prepare_world(info: Dictionary) -> void:
 		if generation != _content_generation or connection.state != "loading":
 			return
 		if not ready:
+			_world_entry_error = _stream.failure_message
 			connection.disconnect_game()
 			hud.show_notice(_stream.failure_message)
 			return
@@ -600,6 +613,7 @@ func _prepare_world(info: Dictionary) -> void:
 		_stream.ready_at,
 		func(): return _local_actor.server_position if is_instance_valid(_local_actor) else null
 	):
+		_world_entry_error = _npcs.error_message
 		_on_npc_failure(_npcs.error_message)
 		return
 	_npcs.set_spawn_rows(connection.npc_spawns)
@@ -618,6 +632,7 @@ func _on_actor_projectile(actor: Node3D, event: Dictionary, origin: Vector3) -> 
 
 
 func _on_npc_failure(message: String) -> void:
+	_world_entry_error = message
 	connection.disconnect_game()
 	hud.show_notice(message)
 
@@ -964,30 +979,14 @@ func _load_settings() -> void:
 	if OS.has_feature("template") and not OS.has_feature("web"):
 		config_path = OS.get_executable_path().get_base_dir().path_join("client_config.json")
 	if FileAccess.file_exists(config_path):
-		_merge_config(config_path)
+		ClientConfig.merge(config_path, _settings)
 	var packaged_database := str(_settings.database)
 	if FileAccess.file_exists(_settings_path):
-		_merge_config(_settings_path)
+		ClientConfig.merge(_settings_path, _settings)
 	elif _profile == "default" and FileAccess.file_exists(LEGACY_SETTINGS_PATH):
-		_merge_config(LEGACY_SETTINGS_PATH)
+		ClientConfig.merge(LEGACY_SETTINGS_PATH, _settings)
 	_settings.merge(overrides, true)
 	if OS.has_feature("web"):
 		# Browser and game API share an origin; avoid stale saved deployment addresses.
 		_settings.server_url = str(JavaScriptBridge.eval("window.location.origin"))
 		_settings.database = packaged_database
-
-
-func _merge_config(path: String) -> void:
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if not parsed is Dictionary:
-		return
-	for key: String in ["server_url", "database", "player_name"]:
-		if parsed.get(key) is String and not str(parsed[key]).is_empty():
-			_settings[key] = parsed[key]
-	if parsed.get("screen_wave_enabled") is bool:
-		_settings.screen_wave_enabled = parsed.screen_wave_enabled
-	if (
-		parsed.get("default_player_name") is String
-		and not str(parsed.default_player_name).is_empty()
-	):
-		_settings.player_name = parsed.default_player_name

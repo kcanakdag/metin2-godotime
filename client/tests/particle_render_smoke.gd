@@ -147,10 +147,34 @@ func _geometry_checks(world: Node3D, camera: Camera3D, source: Dictionary) -> vo
 	particle.rotation = 90.0
 	corners = effect._corners(particle, recipe, camera)
 	_check("ground quarter turn", corners[0].is_equal_approx(Vector3(1, 3, 2)))
+	var flat_camera := Camera3D.new()
+	world.add_child(flat_camera)
+	particle.rotation = 0.0
+	recipe.particle.BillboardType = 2
+	corners = effect._corners(particle, recipe, flat_camera)
+	_check("Y billboard vertical edge", corners[0].is_equal_approx(Vector3(3, 1, 4)))
+	_check("Y billboard opposite edge", corners[3].is_equal_approx(Vector3(1, 5, 4)))
+	particle.rotation = 90.0
+	corners = effect._corners(particle, recipe, flat_camera)
+	_check("Y billboard local rotation", corners[0].is_equal_approx(Vector3(1, 5, 4)))
+	particle.rotation = 0.0
+	recipe.particle.BillboardType = 4
+	corners = effect._corners(particle, recipe, flat_camera, -PI / 6.0)
+	_check("two-face billboard rotated edge", corners[0].is_equal_approx(Vector3(2.866025, 1, 4.5)))
+	recipe.particle.BillboardType = 5
+	corners = effect._corners(particle, recipe, flat_camera)
+	_check("three-face billboard center edge", corners[0].is_equal_approx(Vector3(3, 1, 4)))
+	corners = effect._corners(particle, recipe, flat_camera, PI / 3.0)
+	_check(
+		"three-face billboard rotated edge", corners[0].is_equal_approx(Vector3(2.5, 1, 3.133975))
+	)
+	recipe.particle.BillboardType = 3
+	particle.rotation = 90.0
 	effect.position = Vector3(10, 0, 0)
 	particle.attached = true
 	corners = effect._corners(particle, recipe, camera)
 	_check("attached ground center follows emitter", corners[0].is_equal_approx(Vector3(11, 3, 2)))
+	flat_camera.queue_free()
 	effect.queue_free()
 
 

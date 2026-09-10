@@ -16,6 +16,13 @@ from test_browser_target import _player
 from test_progression_admin import buff_expectation
 
 
+def database_scope_error(database: str, *, allowed_public_qa: str | None = None) -> str | None:
+    """Reject broad databases; one explicitly named public QA database is allowed."""
+    if database.startswith("mt2-p2-") or database == (allowed_public_qa or ""):
+        return None
+    return "Use a disposable mt2-p2- database; this replay spends skill points"
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", required=True)
@@ -26,9 +33,16 @@ def main() -> None:
     parser.add_argument("--chrome", default="/usr/bin/google-chrome")
     parser.add_argument("--skill-vnum", type=int, default=3)
     parser.add_argument("--expiry-timeout", type=float, default=180.0)
+    parser.add_argument(
+        "--allow-public-qa-database",
+        metavar="NAME",
+        help="Also accept this exact public QA database; the replay spends skill points",
+    )
     args = parser.parse_args()
-    if not args.database.startswith("mt2-p2-"):
-        parser.error("Use a disposable mt2-p2- database; this replay spends skill points")
+    if error := database_scope_error(
+        args.database, allowed_public_qa=args.allow_public_qa_database
+    ):
+        parser.error(error)
     catalog = json.loads(args.catalog.read_text())
     skill = next((row for row in catalog["skills"] if int(row["vnum"]) == args.skill_vnum), None)
     if skill is None or skill.get("handler") != "self_buff_v1":

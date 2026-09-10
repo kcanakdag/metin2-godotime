@@ -713,6 +713,8 @@ func inventory_snapshot() -> Dictionary:
 	result["chat"] = _chat_panel.snapshot()
 	result["status"] = _status.snapshot()
 	result["skills"] = _skills_panel.snapshot()
+	result["buffs"] = buff_strip.snapshot()
+	result["notice"] = _notice.text if _notice.visible else ""
 	result["quickslot_skill_bindings"] = _hotbar.skill_bindings.duplicate()
 	result["target"] = target_panel.snapshot()
 	result["taskbar"] = quick
