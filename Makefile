@@ -33,12 +33,22 @@ NPC_CONTENT ?= .local/npcs/city-guard
 CHARACTER_OUTPUT ?= .local/characters/build-$(shell date -u +%Y%m%dT%H%M%SZ)
 CHARACTER_FLAGS ?=
 GAME_SERVER_URL ?= $(SERVER_URL)
+STORAGE_DATA_DIR ?= .local/p1/server
+STORAGE_SERVER ?= http://127.0.0.1:13223
+STORAGE_CONFIG ?= .local/p1/cli.toml
+STORAGE_KEEP_DAYS ?= 2
+STORAGE_BUDGET_GB ?= 8
+STORAGE_FLAGS ?=
+STORAGE_PYTHON ?= .local/venv-dev/bin/python
+STORAGE_CLEAN_DIR := .local/maintenance/storage-clean-$(shell date -u +%Y%m%dT%H%M%SZ)
+STORAGE_MANIFEST ?= $(STORAGE_CLEAN_DIR)/detached.json
 
 .PHONY: assets import-assets import-map import-ui content-build content-validate content-probe test-ui test-actors test-inventory bake-map map-preview test-map test-world-packs editor client preview check server-build server-test server-start server-publish mcp-build mcp-check dev-setup lint format bindings test-tools test-multiplayer test-combat export-windows export-web export-linux browser-setup test-browser deploy share-setup share-start share-status share-stop export-shared
 .PHONY: auth-setup auth-start test-auth test-accounts test-physical
 .PHONY: check-plan
 .PHONY: world-validate world-preview npc-install test-npcs
 .PHONY: characters-build test-classes skills-build dummy-build
+.PHONY: storage-report storage-entries storage-files storage-clean
 
 dummy-build:
 	python3 tools/build_training_dummy.py --blender "$(BLENDER)" --install
@@ -212,3 +222,19 @@ mcp-build:
 
 mcp-check:
 	python3 tools/godot_mcp_check.py --smoke
+
+# Local SpacetimeDB replica maintenance. `storage-report` is read-only;
+# `storage-clean` deletes obsolete QA database rows, then stops the standalone
+# server, removes only the replica directories those rows used, and starts it
+# again. Add `STORAGE_FLAGS=--offline` to review sizes without the CLI.
+storage-report:
+	$(STORAGE_PYTHON) tools/storage_cleanup.py report --data-dir "$(STORAGE_DATA_DIR)" --server "$(STORAGE_SERVER)" --config-path "$(STORAGE_CONFIG)" --keep-days "$(STORAGE_KEEP_DAYS)" --budget-gb "$(STORAGE_BUDGET_GB)" $(STORAGE_FLAGS)
+
+storage-entries:
+	$(STORAGE_PYTHON) tools/storage_cleanup.py entries --apply --manifest-out "$(STORAGE_CLEAN_DIR)/detached.json" --data-dir "$(STORAGE_DATA_DIR)" --server "$(STORAGE_SERVER)" --config-path "$(STORAGE_CONFIG)" --keep-days "$(STORAGE_KEEP_DAYS)" $(STORAGE_FLAGS)
+
+storage-files:
+	$(STORAGE_PYTHON) tools/storage_cleanup.py files --manifest "$(STORAGE_MANIFEST)" --apply --restart-server --data-dir "$(STORAGE_DATA_DIR)" --server "$(STORAGE_SERVER)" --config-path "$(STORAGE_CONFIG)"
+
+storage-clean: storage-entries
+	$(STORAGE_PYTHON) tools/storage_cleanup.py files --manifest "$(STORAGE_CLEAN_DIR)/detached.json" --apply --restart-server --data-dir "$(STORAGE_DATA_DIR)" --server "$(STORAGE_SERVER)" --config-path "$(STORAGE_CONFIG)"

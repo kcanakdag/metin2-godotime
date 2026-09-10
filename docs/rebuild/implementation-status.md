@@ -5,6 +5,50 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Local replica storage reclaimed with a repeatable maintenance tool — 2026-09-10
+
+Sixty-seven published P1 QA databases from the 2026-09-06..08 runs kept their
+full replica storage after those tests ended; `.local/p1/server/replicas` had
+grown to 127 directories / 26.5 GB and the development disk to 92% full. Each
+name was confirmed against `spacetime list` for the CLI identity in
+`.local/p1/cli.toml`, the control database was backed up to
+`.local/maintenance/p1-cleanup-20260910/control-db-backup.tgz`, then the 67
+obsolete entries were deleted through the CLI (0 failures) and, with the
+standalone server stopped, their 67 replica directories removed: 26.5 GB to
+5.9 GB, 20.6 GB freed, and the root filesystem went from 29 GB to 49 GB free.
+The deleted and retained names are recorded in `manifest.json` and
+`delete-names.txt` beside that backup. Nine CLI-owned databases were retained
+and verified resolvable: `mt2-p1`, `mt2-p1-final`, the combo, three regeneration,
+`server-package`, `original-linked` and `changed-writes` QA databases. Quest and
+self-buff databases belong to the identity in `.local/spacetime-cli.toml` and
+were never touched; that identity still lists its six owned databases.
+
+`tools/storage_cleanup.py` now performs this safely instead of by hand. It maps
+identities to replica directories from the standalone log (including the
+`replica=0` launch that is resolved by the following `db.lock` line, and
+latest-wins directory reuse), classifies every directory as retained,
+obsolete-named, other-identity or orphan, and separates the work into two phases
+because a running server owns its files. `entries --apply` deletes only names
+this CLI identity owns and writes a manifest of (name, identity, directory)
+records; `files --manifest MANIFEST --apply [--restart-server]` removes only
+directories named by that manifest, after re-checking the log-recorded owner and
+the live database list. A directory whose entry is gone is probed with
+`spacetime describe --json`, and only a 404/`No such database` answer marks it an
+orphan. Every action defaults to a dry run. `make storage-report` and
+`make storage-clean` wrap the tool; the routine is documented in
+`docs/development.md#local-replica-storage-maintenance`, and the identity,
+mapping, retention and removal guards have 29 offline cases in
+`tests/test_storage_cleanup.py`.
+
+The final detached directory (`replicas/2000007`, identity `c20060e7…dc7c66`,
+485 MB) was reclaimed through the new tool: it stopped standalone pid 1166002,
+removed exactly that directory and started the server again as pid 1200039 on
+`127.0.0.1:13223`. The auth service on `:8186` and the unrelated Docker
+SpacetimeDB on `:3000` were not involved. Post-cleanup storage is 59 directories
+/ 5.4 GB with 0 obsolete entries and 0 orphans. Superseded quest iterations and
+earlier self-buff databases remain owned by the second CLI identity and need
+that identity to reclaim; the P1 identity cannot and does not touch them.
+
 ## Exported-browser self-buff casting accepted — 2026-09-10
 
 The protocol-31 candidate now has a reproducible Web export that binds the

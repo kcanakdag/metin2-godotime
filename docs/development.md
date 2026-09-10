@@ -702,6 +702,61 @@ animation, quest, map, admin and test automation. Its future CLI names are not
 implemented commands. Continue using the tested commands elsewhere on this page
 until a vertical slice implements and documents their replacements.
 
+## Local replica storage maintenance
+
+The standalone development server keeps one directory per database under
+`<data-dir>/replicas/`, and every QA database published for a single test keeps
+its full storage afterwards. Left alone this filled the development disk, so
+`tools/storage_cleanup.py` reports and reclaims that storage in two phases —
+a running server owns its files, so they cannot be removed underneath it:
+
+```sh
+make storage-report   # read-only: sizes, ages, recorded owners, orphans
+make storage-clean    # entries --apply, then files --apply --restart-server
+```
+
+`storage-report` classifies by identity rather than by file name. `spacetime list`
+supplies the name and identity of every database this CLI identity owns, and the
+standalone log supplies the identity-to-directory map (`launching module db=…
+replica=…`, where a fresh replica logs `replica=0` and the directory appears on
+the `db.lock` line that follows). `storage-clean` deletes the obsolete QA
+database rows, writes a manifest of the exact name/identity/directory records to
+`.local/maintenance/storage-clean-<UTC>/detached.json`, stops the standalone
+server, removes only directories named by that manifest, and starts the recorded
+command line again with the same log.
+
+Retention keeps any database touched within `STORAGE_KEEP_DAYS` (default 2) and
+anything matching `STORAGE_KEEP`, whose defaults pin `mt2-p1` and `mt2-p1-final`.
+Databases owned by another CLI identity are reported but never deleted: the
+`entries` phase drops only names this identity owns, and `files` re-checks the
+log-recorded owner and the live `spacetime list` before removing a directory. A
+directory whose entry is already gone is probed with `spacetime describe`; only a
+confirmed `404`/`No such database` answer is treated as an orphan. Every action
+defaults to a dry run, and `STORAGE_FLAGS=--offline` reviews sizes without
+contacting the CLI. `--force` is only for removing files while a different
+server holds the port.
+
+Run this when `df -h /` drops below roughly 10 GB free or when
+`make storage-report` warns that replica storage exceeds `STORAGE_BUDGET_GB`.
+Cleanup evidence is ignored local state, so record what was reclaimed in
+`docs/rebuild/implementation-status.md` whenever the removed databases appeared
+in a ledger entry.
+
+The repository keeps two local CLI identities: `.local/p1/cli.toml` for the
+standalone server (`.local/p2/cli.toml` is a copy with the same identity) and
+`.local/spacetime-cli.toml`, which owns the quest databases. Running cleanup with
+the wrong `STORAGE_CONFIG` will not delete anything it does not own, but it also
+reclaims nothing; check the `obsolete` and `detached` lines of the report to see
+which identity the run actually used.
+
+The routine deliberately stops at owned replica directories. Other local storage
+is a judgement call per artifact: `.local/deploy` keeps one staging tarball per
+published release (100–220 MB each), and older standalone data directories
+(`.local/yongan-server`, `.local/accounts/server`,
+`.local/server-audit-20260906`) belong to the harnesses that started them. Review
+them with `du -sh .local/* | sort -rh | head -20` and delete only what the ledger
+does not cite as evidence.
+
 ## Protocol 6 target locking
 
 Target Slice A uses the same trusted action definitions and argument-free
