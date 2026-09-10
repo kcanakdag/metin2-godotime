@@ -44,6 +44,7 @@ var _world_picker := WorldPickerScript.new()
 var _hovered_actor: PveActor
 var _hovered_npc: NpcActor
 var _npc_approach: NpcApproach
+var _move_destination: MoveDestination
 var _charge_input: ChargeSkillInput
 var _hover_elapsed := 0.0
 
@@ -66,12 +67,17 @@ func _ready() -> void:
 	add_child(_npcs)
 	_npcs.failed.connect(_on_npc_failure)
 	connection.npc_spawns_changed.connect(_npcs.set_spawn_rows)
-	_npc_approach = NpcApproach.attach(self, connection)
+	# Keyed by spawn id so a click survives actors being rebuilt on reconnect.
+	_npc_approach = NpcApproach.attach(self, connection, _npcs.find_actor)
+	_move_destination = MoveDestination.attach(self, connection)
 	_charge_input = ChargeSkillInput.attach(
 		self, connection, hud, _npc_approach, _attack_input, _stream.ready_at
 	)
+	# A cast owns its own approach intent; the ground reservation must not fight it.
+	hud.cast_skill_requested.connect(func(_vnum: int): _move_destination.cancel(false))
 	connection.npc_interaction_changed.connect(hud.npc_panel.set_interaction)
 	hud.npc_close_requested.connect(connection.close_npc_interaction)
+	hud.npc_choice_requested.connect(connection.npc_choose)
 	_stream.progress.connect(
 		func(message: String):
 			if not message.is_empty():
@@ -228,6 +234,7 @@ func _physics_process(delta: float) -> void:
 	if input.length_squared() > 0:
 		_charge_input.cancel()
 		_npc_approach.cancel()
+		_move_destination.cancel(true)
 		var direction := camera_rig.move_direction(input.normalized())
 		if (
 			is_instance_valid(_local_actor)
@@ -259,6 +266,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		if event.keycode in [KEY_ESCAPE, KEY_SPACE]:
 			_npc_approach.cancel(true)
+			_move_destination.cancel(true)
 		if hud.handle_key(event):
 			get_viewport().set_input_as_handled()
 			return
@@ -319,6 +327,9 @@ func dev_snapshot() -> Dictionary:
 		"progression": connection.progression.duplicate(true),
 		"buffs": connection.buffs.duplicate(true),
 		"command_feedback": connection.command_feedback.duplicate(true),
+		"quest_states": connection.quests.states.duplicate(true),
+		"quest_objectives": connection.quests.objectives.duplicate(true),
+		"quest_selection": connection.quests.selection.duplicate(true),
 		"actor_presentations": _actor_snapshots(),
 		"rx_messages": connection.rx_messages,
 		"tx_messages": connection.tx_messages,
@@ -358,6 +369,8 @@ func dev_snapshot() -> Dictionary:
 		"connected_at_msec": connection.connected_at_msec,
 		"definition_profile": str(connection.world_info.get("definition_profile", "")),
 		"definition_hash": str(connection.world_info.get("definition_hash", "")),
+		"hovered_control": UiPointerProbe.hovered_control_path(self),
+		"mouse_position": UiPointerProbe.mouse_position(self),
 	}
 
 
@@ -420,7 +433,7 @@ func _on_connection_state(state: String, message: String) -> void:
 			)
 		)
 	hud.set_connection_state(state, message)
-	if state in ["connecting", "disconnected", "error", "lobby", "leaving"]:
+	if state in ["connecting", "refreshing", "disconnected", "error", "lobby", "leaving"]:
 		_content_generation += 1
 		_stream.set_active(false)
 		_npcs.clear()
@@ -517,45 +530,16 @@ func _reconcile_players() -> void:
 
 
 func _observe_screen_waves(server_time_us: int) -> void:
-	if server_time_us <= 0 or connection.state != "connected":
+	if connection.state != "connected":
 		return
-	var viewer_position: Variant
-	for row: Dictionary in _player_rows:
-		if (
-			bool(row.get("online", false))
-			and str(row.get("identity", "")) == connection.local_identity
-		):
-			viewer_position = PveVisibility.position_for(row)
-			break
-	if not viewer_position is Vector3:
-		camera_rig.reset_screen_waves()
-		return
-	for row: Dictionary in _player_rows:
-		if not bool(row.get("online", false)) or int(row.get("activity", -1)) != 2:
-			continue
-		var action_id := str(row.get("attack_action_id", ""))
-		if action_id.is_empty():
-			continue
-		var actor_id := _actor_catalog.player_actor_id(
-			connection.appearance_for(str(row.get("identity", "")))
-		)
-		var motion := _actor_catalog.motion(actor_id, "", action_id)
-		var event: Variant = motion.get("screen_wave", {})
-		var actor_position: Variant = PveVisibility.position_for(row)
-		if not event is Dictionary or event.is_empty() or not actor_position is Vector3:
-			continue
-		event = event.duplicate()
-		event["activation_offset_us"] = preload("res://scripts/actors/attack_timing.gd").scaled_us(
-			int(event.get("activation_offset_us", 0)), int(row.get("attack_speed_percent", 100))
-		)
-		camera_rig.observe_screen_wave(
-			str(row.get("identity", "")),
-			row,
-			event,
-			actor_position,
-			viewer_position,
-			server_time_us
-		)
+	ScreenWaveSource.feed(
+		camera_rig,
+		_actor_catalog,
+		_player_rows,
+		connection.local_identity,
+		connection.appearance_for,
+		server_time_us
+	)
 
 
 func _on_world_info(info: Dictionary) -> void:
@@ -731,6 +715,8 @@ func _click_world(screen_position: Vector2) -> void:
 		camera_rig.camera, get_world_3d().direct_space_state, screen_position
 	)
 	_npc_approach.cancel(true)
+	_move_destination.cancel(true)
+	_held_movement = false
 	if pick.get("kind") == "npc":
 		var npc: Variant = pick.get("actor")
 		if npc is NpcActor and _npcs.actors.values().has(npc):
@@ -762,9 +748,30 @@ func _click_world(screen_position: Vector2) -> void:
 		point.z = clampf(point.z, -world.half_size + 0.45, world.half_size - 0.45)
 	if not _stream.ready_at(point):
 		return
-	connection.move_to(point.x, point.z)
+	request_move_destination(point)
+
+
+## Ground-click destination shared by pointer input and the exported probe.
+##
+## Clearing `_held_movement` is load-bearing: `_physics_process` answers a stale
+## WASD hold with `stop_moving`, cancelling the reservation on the next tick
+## (browser QA saw a 6 ms `move_to`/`stop_moving` pair freeze the walk).
+func request_move_destination(point: Vector3) -> void:
+	_charge_input.cancel()
+	_npc_approach.cancel()
+	_held_movement = false
+	_move_destination.start(point)
 	_marker.position = point + Vector3.UP * 0.1
 	_marker_time = 1.5
+
+
+## Explicit stop used by the exported probe's `stop` command.
+func request_stop_moving() -> void:
+	_charge_input.cancel()
+	_npc_approach.cancel()
+	_move_destination.cancel()
+	_held_movement = false
+	connection.stop_moving()
 
 
 func _update_hover(screen_position: Vector2) -> void:

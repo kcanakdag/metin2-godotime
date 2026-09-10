@@ -4,6 +4,8 @@ extends RefCounted
 
 const MANIFEST_PATH := "res://assets/imported/content/p0-warrior-dog/manifest.v1.json"
 const HANDLER := "item.recovery.pool.v1"
+const SCHEMA_VERSION := 3
+const WEAR_SLOTS := ["body", "wrist", "neck", "ear", "head", "foot", "hand", "shield"]
 
 static var _shared: ItemCatalog
 
@@ -31,7 +33,7 @@ func load_required(path := MANIFEST_PATH) -> bool:
 func load_document(document: Dictionary) -> bool:
 	_items = {}
 	error_message = ""
-	if document.size() != 2 or document.get("schema_version") != 2:
+	if document.size() != 2 or document.get("schema_version") != SCHEMA_VERSION:
 		return _fail("Unsupported item catalog schema.")
 	var rows: Variant = document.get("items")
 	if not rows is Array or rows.is_empty() or rows.size() > 65535:
@@ -75,7 +77,8 @@ func _valid_item(row: Dictionary) -> bool:
 		"attack_speed_bonus",
 		"kind",
 		"weapon",
-		"recovery"
+		"recovery",
+		"armor"
 	]
 	if row.size() != fields.size():
 		return false
@@ -98,6 +101,8 @@ func _valid_item(row: Dictionary) -> bool:
 	return (
 		(row.kind == "weapon" and _valid_weapon(row))
 		or (row.kind == "recovery" and _valid_recovery(row))
+		or (row.kind == "armor" and _valid_armor(row))
+		or (row.kind == "narrative" and _valid_narrative(row))
 	)
 
 
@@ -119,7 +124,7 @@ func _valid_identity(row: Dictionary) -> bool:
 
 func _valid_weapon(row: Dictionary) -> bool:
 	var weapon: Variant = row.weapon
-	if not weapon is Dictionary or weapon.size() != 4 or row.recovery != null:
+	if not weapon is Dictionary or weapon.size() != 4 or row.recovery != null or row.armor != null:
 		return false
 	if weapon.get("class") not in ["sword", "fan"] or row.stack_limit != 1:
 		return false
@@ -135,11 +140,23 @@ func _valid_recovery(row: Dictionary) -> bool:
 		effect is Dictionary
 		and effect.size() == 3
 		and row.weapon == null
+		and row.armor == null
 		and effect.get("handler") == HANDLER
 		and _integer(effect.get("hp"), 0, 65535)
 		and _integer(effect.get("sp"), 0, 65535)
 		and effect.hp + effect.sp > 0
 	)
+
+
+func _valid_armor(row: Dictionary) -> bool:
+	var armor: Variant = row.armor
+	if not armor is Dictionary or armor.size() != 2 or row.weapon != null or row.recovery != null:
+		return false
+	return armor.get("category") in WEAR_SLOTS and armor.get("position") in WEAR_SLOTS
+
+
+func _valid_narrative(row: Dictionary) -> bool:
+	return row.weapon == null and row.recovery == null and row.armor == null
 
 
 func _integer(value: Variant, minimum: int, maximum: int) -> bool:

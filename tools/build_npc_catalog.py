@@ -249,7 +249,8 @@ def validate_extracted_textures(directory: Path, relative: str) -> set[str]:
                     with Image.open(source) as expected, Image.open(destination) as actual:
                         if (
                             expected.size != actual.size
-                            or expected.convert("RGBA").tobytes() != actual.convert("RGBA").tobytes()
+                            or expected.convert("RGBA").tobytes()
+                            != actual.convert("RGBA").tobytes()
                         ):
                             raise ValueError("NPC extracted texture differs from its converted GLB")
                 allowed.update((candidate, candidate + ".import"))

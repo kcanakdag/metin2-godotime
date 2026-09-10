@@ -264,7 +264,48 @@ accepted and deployed; never claim full-game or original-client parity from one
 bounded fixture. Continue authorized work without repeatedly asking permission
 for routine implementation choices.
 
-## Current continuation snapshot — 2026-09-10
+## Current continuation snapshot — protocol 32 quests (2026-09-10)
+
+The active slice is the protocol-32 server-authoritative quest runtime. It is
+deployed publicly as release `20260910T132257494611Z`, database
+`mt2-public-quests-v32-20260910`, module SHA-256
+`3f96b25aea5563059b1c6cc80966ae234ace7a1dd99effa49c2f088c47f26f9d`. The served
+web pack is `web-r4` and the native pack is `linux-r6`; both live under
+`.local/public-quests-v32-r1/`, and `.local/.../web-r5` differs and is **not**
+deployed. Confirm the live release from
+`/opt/metin2-godotime/deployment-status.json` plus `sha256sum
+/opt/metin2-godotime/mt2_server.wasm`; the SpacetimeDB CLI "program hash" is over a
+normalized module and does not equal the file hash.
+
+Quest sources of truth: `server/src/quest.rs` (runtime), `tools/build_quest_catalog.py`
+(compiler), `tools/metin_quests.py` (pinned corpus reader), profile
+`content/profiles/classic-quests-opening.json`, and `server/build_quests.rs`, which
+embeds the compiled catalog through `MT2_QUEST_CATALOG`. The profile compiles
+`main_quest_lv1`, `main_quest_lv2`, `main_quest_lv3` and `find_squareguard` from
+git.old-metin2.com revision `7ee9c84`; text stays as original Gameforge
+localization keys resolved from the pinned `translate_en.lua` at build time. An
+empty catalog fails closed, oversized state chains are bounded, unanswered
+questions expire, and rewards roll back with the reducer transaction. The
+published module demonstrably contains the catalog — verify a deployment with
+`grep -c find_squareguard mt2_server.wasm` rather than trusting a release name.
+`quest_state`, `quest_objective` and `quest_selection` are account-filtered with
+`:sender` visibility filters; branch bodies never leave the server.
+
+The same worktree carries an unpublished deployment-safety change: the
+regeneration-registry receipt. `server/build.rs` embeds
+`mt2spacetime.regeneration-registry.v1 count=<n>` and `tools/deploy.py` refuses to
+hot-swap a module whose registry is empty unless `--allow-empty-regeneration` or
+`--reset-database` is passed. The public module predates the receipt and prints
+`None`, which is never blocked. Read
+`docs/development.md#regeneration-registry-hot-swap-hazard` before publishing a
+new module over an existing database; the current covering candidate is
+`.local/mobs/yongan-runtime-policy-r2/population.v1.json` with 945 entries, while
+`content/worlds/yongan.population.json` still has no `regeneration` key.
+
+## Superseded continuation snapshot — protocol-31 self-buffs (2026-09-09)
+
+Protocol 32 keeps this schema, so the details below remain accurate history; use
+the newest ledger entries for its evidence paths and limits.
 
 The active slice is the protocol-31 reusable self-buff lifecycle for Berserk (3),
 Aura of the Sword (4) and Strong Body (19). The corrected local-only candidate is

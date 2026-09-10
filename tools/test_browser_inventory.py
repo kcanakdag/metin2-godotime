@@ -3,11 +3,26 @@
 import time
 
 
+def _hover_sword(page, ui, cell_point, cell):
+    window = ui()["window_rect"]
+    target = cell_point(cell)
+    page.mouse.move(window[0] - 8, target[1])
+    page.mouse.move(*target, steps=6)
+
+
 def exercise_inventory(page, snapshot, wait, output):
     """Read coordinates/state from the probe; perform every item action through visible UI."""
 
     def item(vnum):
-        return next(row for row in snapshot()["inventory"] if row["vnum"] == vnum)
+        rows = snapshot()["inventory"]
+        for row in rows:
+            if row["vnum"] == vnum:
+                return row
+        raise AssertionError(
+            "Starter item vnum {} is missing from the browser inventory; rows={}".format(
+                vnum, [(row["vnum"], row["cell"], row["equipped"]) for row in rows]
+            )
+        )
 
     def ui():
         return snapshot()["ui"]
@@ -30,15 +45,46 @@ def exercise_inventory(page, snapshot, wait, output):
     sword, potion = item(10), item(27001)
     page.keyboard.press("i")
     wait("inventory_keyboard_opens_original_window", lambda: ui()["visible"])
-    sword_point = cell_point(sword["cell"])
-    window = ui()["window_rect"]
     # ClassicSlot exposes its tooltip on the real mouse-enter edge. Enter from
     # outside the newly shown inventory and retain intermediate motion events so
     # opening the window under a previously stationary pointer cannot lose it.
-    page.mouse.move(window[0] - 8, sword_point[1])
-    page.mouse.move(*sword_point, steps=6)
-    wait("original_item_tooltip_appears", lambda: ui()["tooltip_visible"])
+    #
+    # The four-minute session refresh deliberately drops and restores the world
+    # connection. A build that closes the bag on that disconnect leaves the
+    # pointer over a hidden window, so re-open and re-enter instead of failing a
+    # hover the player never abandoned. The tooltip itself stays mandatory.
+    recoveries = []
+
+    def ensure_visible() -> bool:
+        """Re-open the bag only when it closed without the harness closing it."""
+        if ui()["visible"]:
+            return True
+        if len(recoveries) >= 3:
+            return False
+        state = snapshot().get("connection_state")
+        print("RECOVER inventory closed without input (state=%s)" % state, flush=True)
+        recoveries.append({"connection_state": state})
+        page.keyboard.press("i")
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline and not ui()["visible"]:
+            time.sleep(0.1)
+        return ui()["visible"]
+
+    def tooltip_shown() -> bool:
+        if ui()["tooltip_visible"]:
+            return True
+        if ensure_visible():
+            _hover_sword(page, ui, cell_point, sword["cell"])
+        return False
+
+    _hover_sword(page, ui, cell_point, sword["cell"])
+    wait("original_item_tooltip_appears", tooltip_shown, timeout=45)
     page.screenshot(path=str(output / "inventory-tooltip.png"))
+    wait(
+        "inventory_holds_confirmed_rows_for_actions",
+        lambda: ensure_visible() and len(snapshot().get("inventory", [])) == 2,
+        timeout=45,
+    )
     click(cell_point(sword["cell"]), button="right")
     wait("inventory_right_click_equips_server_item", lambda: item(10)["equipped"])
     weapon = ui()["equipment_origin"]
@@ -75,4 +121,4 @@ def exercise_inventory(page, snapshot, wait, output):
     assert ui()["window_rect"][:2] == moved[:2]
     page.screenshot(path=str(output / "inventory-moved-window.png"))
     page.keyboard.press("Escape")
-    return {"sword": item(10), "potion": item(27001), "ui": ui()}
+    return {"sword": item(10), "potion": item(27001), "ui": ui(), "recoveries": recoveries}

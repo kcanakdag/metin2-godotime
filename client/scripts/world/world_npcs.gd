@@ -179,6 +179,12 @@ func _remove_actors() -> void:
 	actors.clear()
 
 
+## The live actor for a spawn row, or null while the presentation is rebuilding.
+func find_actor(spawn_id: String) -> NpcActor:
+	var actor: Variant = actors.get(spawn_id)
+	return actor if actor is NpcActor else null
+
+
 func _dispose(actor: Node) -> void:
 	remove_child(actor)
 	actor.queue_free()

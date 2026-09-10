@@ -22,6 +22,7 @@ signal unequip_item_requested(item_id: int, cell: int)
 signal use_item_requested(item_id: int)
 signal stat_allocation_requested(character_id: String, stat_code: String)
 signal npc_close_requested(session_id: int)
+signal npc_choice_requested(session_id: int, option: int)
 signal combat_target_clear_requested
 
 const Art = preload("res://scripts/ui/classic_art.gd")
@@ -107,6 +108,11 @@ var _skill_progression: Dictionary = {}
 var _connected := false
 var _state := "disconnected"
 var _account_entry := false
+## The connection reports "refreshing" when a scheduled token refresh drops the
+## world connection on purpose. Keep the windows the player opened visible across
+## it instead of closing them for input the player never made. Cleared by the
+## reconnected, failed or abandoned session that ends the refresh.
+var _session_refresh := false
 
 
 func _ready() -> void:
@@ -124,6 +130,9 @@ func _ready() -> void:
 	npc_panel = preload("res://scripts/ui/classic_npc_dialogue.gd").new()
 	_root.add_child(npc_panel)
 	npc_panel.close_requested.connect(func(id: int): npc_close_requested.emit(id))
+	npc_panel.choose_requested.connect(
+		func(id: int, option: int): npc_choice_requested.emit(id, option)
+	)
 	_build_status()
 	_skills_panel = preload("res://scripts/ui/classic_skills.gd").new()
 	_root.add_child(_skills_panel)
@@ -160,22 +169,25 @@ func set_connection_defaults(
 func set_connection_state(state: String, message: String) -> void:
 	_state = state
 	_connected = state == "connected"
+	if state == "refreshing":
+		_session_refresh = true
+	elif _session_refresh and state in ["connected", "error", "disconnected"]:
+		_session_refresh = false
 	var busy := state in ["connecting", "subscribing", "joining"]
-	_connection.visible = not _connected and not _account_entry
+	var world_layer_visible := _connected or _session_refresh
+	## A planned refresh hides both the account intro and this panel, so the player
+	## never sees the connection form flash over the world it is holding open.
+	_connection.visible = not world_layer_visible and not _account_entry
 	_chat_panel.set_connected(_connected)
-	_minimap.visible = _connected
-	buff_strip.visible = _connected
+	_minimap.visible = world_layer_visible
+	buff_strip.visible = world_layer_visible
 	if not _connected:
-		_inventory.hide()
 		target_panel.clear_view()
 		npc_panel.set_interaction({})
-		_status.set_connected(false)
-		_skills_panel.hide()
-		_minimap.close_top()
-		_system.hide()
-		_system_options.hide()
 		_cancel_carry()
-	_hotbar.visible = _connected
+		if not _session_refresh:
+			_hide_world_windows()
+	_hotbar.visible = world_layer_visible
 	_connection_state.text = state.to_upper()
 	_connection_state.add_theme_color_override(
 		"font_color", GREEN if _connected else (RED if state == "error" else GOLD)
@@ -287,9 +299,28 @@ func release_chat_focus() -> void:
 
 func set_account_entry(enabled: bool) -> void:
 	_account_entry = enabled
+	if enabled:
+		_session_refresh = false
+		_hide_world_windows()
+		_hide_world_layer()
 	_connection.visible = not _connected and not enabled
 	if enabled:
 		get_viewport().gui_release_focus()
+
+
+func _hide_world_layer() -> void:
+	_minimap.visible = false
+	buff_strip.visible = false
+	_hotbar.visible = false
+
+
+func _hide_world_windows() -> void:
+	_inventory.hide()
+	_status.set_connected(false)
+	_skills_panel.hide()
+	_minimap.close_top()
+	_system.hide()
+	_system_options.hide()
 
 
 func _make_theme() -> Theme:

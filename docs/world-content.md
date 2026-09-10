@@ -163,7 +163,12 @@ Interactions are authored in `content/worlds/yongan.interactions.json`, keyed by
 stable spawn ID. The server joins these records to the installed catalog at
 build time; `kind: "dialogue"` selects the shared handler. Use plain `body` text;
 unknown fields/handlers, duplicate IDs, unresolved spawns and map mismatch fail
-compilation. Only linked NPCs can open a server conversation.
+compilation. Only linked NPCs can open a server conversation. The profile covers
+every rendered NPC: the 41 fixed Yongan placements and the six wandering area
+NPCs, whose dialogue lives in the area catalog (`content/profiles/yongan-npc-dialogue.json`)
+because their position arrives in the live `npc_spawn` row rather than in the
+compiled placement table. Both sources share one `interact_npc` path, so an area
+NPC click no longer fails with "That NPC is not here right now."
 The current guard greeting is authored development text; quests and shops remain
 deferred. See the [interaction contract](architecture.md#authored-population-boundary)
 and [network checks](development.md#npc-interaction-authoring-and-qa).
@@ -392,10 +397,39 @@ columns and records the snapshot hash. It checks row removal/restoration, origin
 names, positions, headings, idle playback and picking-only collision proxies.
 
 
-The accepted local area build is `.local/npcs/exports/area-web-r1` plus
-`area-linux-r1`, on `mt2-p2-npc-areas-qa-r1-20260908`. Use
+The accepted local area build is `.local/quests-v32-local/web-r7` plus `linux-r6`,
+on protocol-32 database `mt2-p2-area-npc-v32-r1-20260910`. Use
 `tests/fixtures/yongan-areas-route.json` with the browser runner to verify all six
 area presentations against original bounds and one another. The route also checks
-23 fixed entry NPCs and the guard interaction. `area-browser-r2` passes 115 checks,
-including dummy and account lifecycle; the actual exports audit all 38 NPC models.
-Run the browser tool with `.local/venv-dev/bin/python`, which includes Playwright.
+the 23 placements of the pinned 55 m entry view and the guard interaction.
+`browser-npcs-r11` passes 136 checks — guard quest dialogue, the wandering area
+NPC conversation, town population, dummy and account lifecycle — with zero
+browser engine errors, and the actual exports audit all 38 NPC models. Run the
+browser tool with `.local/venv-dev/bin/python`, which includes Playwright.
+
+The route's `dialogue_targets` block extends that pass from rendering to
+conversation. Each entry names an area `spawn_id` and walks both exported clients
+through authored waypoints to a standable approach anchor, then hovers, clicks and
+asserts the private panel carries the compiled title/body while the idle account
+never joins. Route coordinates must be replanned with `tools/yongan_nav.py`
+(`World.load()`, `clear_path`) before editing: the door frame near `(604, 668)` is
+not a valid waypoint, and an anchor that is not standable makes `move_to` reject
+the destination rather than fail loudly. A discrete `clear_path` verdict is not
+enough on its own — the server walks in 0.25 m ticks with bounded vertical steps,
+so a plan that clips a wall can still stall. The runner also waits for arrival
+before sending the next waypoint, so a mid-route session lapse used to freeze the
+character for good: a planned refresh retires the client together with its
+controller. The exported client now remembers the accepted destination and
+re-issues it after reconnecting (`client/scripts/world/move_destination.gd`).
+
+Conversation text is content, not client copy.
+`content/profiles/yongan-npc-dialogue.json` holds 47 rows keyed by the placement
+vnum the runtime publishes; `tools/build_npc_interactions.py` resolves each row's
+pinned quest handler and `gameforge.*` localization key into
+`content/worlds/yongan.interactions.json`, which `server/build_npcs.rs` requires to
+cover every static placement and every area NPC exactly once. Adding a
+conversation therefore means adding one profile row and rebuilding; a fabricated,
+stale or missing attribution fails the build. `--discover` prints the chat
+handlers and localization keys the corpus knows for a vnum, so a new row can be
+generated instead of guessed. Branches the original gates on quest state are not
+modelled yet.

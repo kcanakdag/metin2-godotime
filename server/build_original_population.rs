@@ -6,7 +6,23 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 use std::fmt::Write;
 
+/// Compile the inventory without the entry count.
+///
+/// `server/build.rs` uses [`compile_with_count`] and is the only consumer that
+/// needs the count; this wrapper stays for the harnesses that include this file
+/// directly (`examples/regeneration_compile.rs`, `tests/build_original_population.rs`).
+#[allow(dead_code)]
 pub fn compile(bytes: &[u8], registered: Option<&BTreeSet<u32>>) -> Result<String, String> {
+    compile_with_count(bytes, registered).map(|(source, _entries)| source)
+}
+
+/// Compile the inventory and report how many regeneration entries it installs.
+/// The count is published in the module's registry receipt so a deployment can
+/// refuse to hot-swap a non-covering registry onto a live database.
+pub fn compile_with_count(
+    bytes: &[u8],
+    registered: Option<&BTreeSet<u32>>,
+) -> Result<(String, usize), String> {
     if bytes.len() > 16 * 1024 * 1024 {
         return Err("Population exceeds 16 MiB".into());
     }
@@ -57,5 +73,5 @@ pub fn compile(bytes: &[u8], registered: Option<&BTreeSet<u32>>) -> Result<Strin
             entry.source_line,entry.interval_us,entry.capacity,entry.forced_aggressive,entry.bounds_cm,groups).map_err(|e|e.to_string())?;
     }
     output.push_str("];\n");
-    Ok(output)
+    Ok((output, catalog.entries.len()))
 }

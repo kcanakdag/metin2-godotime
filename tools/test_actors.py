@@ -15,6 +15,7 @@ import tempfile
 from pathlib import Path
 
 from actor_texture_import import configure_actor_texture_imports
+from godot_editor_log import strip_editor_socket_port_error
 
 ROOT = Path(__file__).resolve().parents[1]
 ACTOR_PROFILE = ROOT / "client/assets/imported/content/p0-warrior-dog"
@@ -45,7 +46,10 @@ def run(command: list[str], environment: dict[str, str], log: Path) -> str:
         check=False,
     )
     log.write_text(result.stdout)
-    if result.returncode or "SCRIPT ERROR:" in result.stdout or "\nERROR:" in result.stdout:
+    # The user's open editor owns Godot's editor-IPC socket, so an isolated
+    # import prints that one harmless bind failure; every other error still fails.
+    checked_output = strip_editor_socket_port_error(result.stdout)
+    if result.returncode or "SCRIPT ERROR:" in checked_output or "\nERROR:" in checked_output:
         raise SystemExit(f"Godot actor check failed; see {log}\n{result.stdout[-5000:]}")
     return result.stdout
 

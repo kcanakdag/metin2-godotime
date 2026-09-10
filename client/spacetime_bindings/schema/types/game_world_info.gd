@@ -13,6 +13,7 @@ const table_names: Array[String] = ['world_info']
 @export var character_catalog_hash: String
 @export var skill_catalog_hash: String
 @export var training_target_hash: String
+@export var quest_catalog_hash: String
 @export var map_name: String
 @export var map_id: String
 @export var content_hash: String
@@ -31,6 +32,7 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"character_catalog_hash": "String",
 	"skill_catalog_hash": "String",
 	"training_target_hash": "String",
+	"quest_catalog_hash": "String",
 	"map_name": "String",
 	"map_id": "String",
 	"content_hash": "String",
@@ -47,14 +49,15 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 ## 5. character_catalog_hash: String[br]
 ## 6. skill_catalog_hash: String[br]
 ## 7. training_target_hash: String[br]
-## 8. map_name: String[br]
-## 9. map_id: String[br]
-## 10. content_hash: String[br]
-## 11. definition_profile: String[br]
-## 12. definition_hash: String[br]
-## 13. tick_ms: int[br]
-## 14. half_size: float[br]
-static func create(p_id: int, p_protocol_version: int, p_npc_catalog_hash: String, p_mob_catalog_hash: String, p_character_catalog_hash: String, p_skill_catalog_hash: String, p_training_target_hash: String, p_map_name: String, p_map_id: String, p_content_hash: String, p_definition_profile: String, p_definition_hash: String, p_tick_ms: int, p_half_size: float) -> GameWorldInfo:
+## 8. quest_catalog_hash: String[br]
+## 9. map_name: String[br]
+## 10. map_id: String[br]
+## 11. content_hash: String[br]
+## 12. definition_profile: String[br]
+## 13. definition_hash: String[br]
+## 14. tick_ms: int[br]
+## 15. half_size: float[br]
+static func create(p_id: int, p_protocol_version: int, p_npc_catalog_hash: String, p_mob_catalog_hash: String, p_character_catalog_hash: String, p_skill_catalog_hash: String, p_training_target_hash: String, p_quest_catalog_hash: String, p_map_name: String, p_map_id: String, p_content_hash: String, p_definition_profile: String, p_definition_hash: String, p_tick_ms: int, p_half_size: float) -> GameWorldInfo:
 	var result: GameWorldInfo = GameWorldInfo.new()
 	result.id = p_id
 	result.protocol_version = p_protocol_version
@@ -63,6 +66,7 @@ static func create(p_id: int, p_protocol_version: int, p_npc_catalog_hash: Strin
 	result.character_catalog_hash = p_character_catalog_hash
 	result.skill_catalog_hash = p_skill_catalog_hash
 	result.training_target_hash = p_training_target_hash
+	result.quest_catalog_hash = p_quest_catalog_hash
 	result.map_name = p_map_name
 	result.map_id = p_map_id
 	result.content_hash = p_content_hash

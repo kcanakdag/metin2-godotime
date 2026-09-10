@@ -1908,13 +1908,20 @@ run as functionally exercised with a failed clean-engine-log gate.
 
 ## Deploying an update
 
-The current public release is `20260908T121524155504Z`, database
-`mt2-public-progress-v19-20260908` (protocol 19). Its matching Web/Linux test-probe
-exports passed 114 actual public checks; see [distribution](distribution.md).
-Build with `MT2_AUTH_ISSUER=https://kcanakdag.com:8443/auth MT2_ALLOW_GUESTS=0`
-and `--features yongan`, export for that same database and origin, then deploy
-with the matching `DB`/`WEB_DIR`. Use a new database for incompatible schema
-changes; preserve existing databases. This changes only
+The current public release is `20260910T132257494611Z`, database
+`mt2-public-quests-v32-20260910` (protocol 32), frozen module sha256
+`3f96b25aea5563059b1c6cc80966ae234ace7a1dd99effa49c2f088c47f26f9d`. Read the live
+identity from the host rather than trusting this paragraph:
+`/opt/metin2-godotime/deployment-status.json` records the release, phase, database
+and `delete_data` policy, and `sha256sum /opt/metin2-godotime/mt2_server.wasm` binds
+the published bytes. A publish-time "program hash" in the CLI log is computed over
+the normalized module and does not equal the artifact sha256; quote the sha256 when
+binding evidence to an artifact.
+Build with `MT2_AUTH_ISSUER=https://kcanakdag.com:8443/auth MT2_ALLOW_GUESTS=0`,
+`MT2_MOB_CONTENT`, `MT2_ORIGINAL_POPULATION` (when the target database holds
+regeneration rows), `MT2_SKILL_CATALOG` and `--features yongan`; export for that same
+database and origin, then deploy with the matching `DB`/`WEB_DIR`. Use a new database
+for incompatible schema changes; preserve existing databases. This changes only
 `/opt/metin2-godotime` and Compose project
 `metin2-godotime`. HTTPS/WSS uses 8443; database administration stays on remote
 loopback 13210. Auth has a private container and separate persistent `accounts`
@@ -2654,3 +2661,61 @@ each vnum must have unique installed motions for both appearances of one class.
 Screenshots follow clip duration (25/50/75 percent), with the existing dedicated
 Bash burst capture retained. The current fixture still equips sword 10; other
 weapon-specific skills require the corresponding equipped fixture extension.
+
+
+## Regeneration registry hot-swap hazard
+
+`monster_regeneration` rows belong to the database, not to the module that inserted
+them. Every publish replaces `REGENERATION_DEFINITIONS`, so a module can be installed
+over rows that its registry no longer covers. Publishing an empty or partial registry
+used to be worse than a silent gameplay regression: the tick failed on the first
+unresolvable id and aborted the whole `simulate` transaction, which froze movement,
+combat and the simulation clock for every player.
+
+The runtime now treats an uncovered entry as inert: `tick()` skips it, corpse removal
+still completes, and the row stays in place so a later build with a covering registry
+resumes it from its saved deadline. Corpse cleanup also survives a group that points at
+a regeneration id the module no longer defines. The remaining hazard is quieter —
+while the registry does not cover those rows, destroyed mobs are never respawned and
+the world population thins out without an error.
+
+Build a covering registry with the verified inventory:
+
+```sh
+cargo build --manifest-path server/Cargo.toml --no-default-features \
+  --features yongan --target wasm32-unknown-unknown --release \
+  MT2_MOB_CONTENT=<compiled-mob-package> \
+  MT2_ORIGINAL_POPULATION=<population.v1.json>
+```
+
+The compiled registry replaces authored ordinary mob placements, so the client and
+the module must be published together. `.local/mobs/yongan-runtime-policy-r2/population.v1.json`
+is the current covering candidate with 945 entries; `server/examples/regeneration_compile.rs`
+inspects a candidate offline without installing it.
+
+Because that mistake is invisible until players notice missing respawns,
+`server/build.rs` now embeds a receipt in the module data section and live server code
+references it, so it survives linking:
+
+```
+mt2spacetime.regeneration-registry.v1 count=945
+```
+
+`tools/deploy.py` reads that receipt from the frozen WASM before opening an SSH
+connection, prints the installed entry count, and refuses to publish `count=0` unless
+`--allow-empty-regeneration` (or `--reset-database`, which deletes the rows) is passed
+explicitly. Modules built before the receipt print `unrecognized` and are not blocked.
+Check an existing artifact with:
+
+```sh
+python3 - <<'PY'
+from pathlib import Path
+from tools.deploy import regeneration_registry_receipt
+print(regeneration_registry_receipt(Path(".local/public-quests-v32-r5/mt2_server.wasm")))
+PY
+```
+
+That example prints `None`: `.local/public-quests-v32-r5/mt2_server.wasm` is the
+protocol-32 module that was actually published, and it predates the receipt, so an
+unrecognized module is never blocked. A module built after the receipt prints its
+installed entry count (for example `945`).

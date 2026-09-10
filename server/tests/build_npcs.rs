@@ -1,27 +1,44 @@
 #[allow(dead_code)]
 #[path = "../build_npcs.rs"]
 mod build_npcs;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 fn fixtures() -> (Value, Value) {
     (
-        json!({"schema":"mt2spacetime.static-npcs","version":1,"actors":[{"id":"actor.npc.guard","name":"Guard"}],"maps":[{"id":"metin2_map_a1","content_hash":"map-hash","placements":[{"id":"spawn.guard","actor_id":"actor.npc.guard","position":[1,2,3]}]}]}),
+        json!({"schema":"mt2spacetime.static-npcs","version":1,"actors":[{"id":"actor.npc.guard","name":"Guard","vnum":9001}],"maps":[{"id":"metin2_map_a1","content_hash":"map-hash","placements":[{"id":"spawn.guard","actor_id":"actor.npc.guard","position":[1,2,3]}]}]}),
         json!({"schema_version":1,"map_id":"metin2_map_a1","interactions":[{"spawn_id":"spawn.guard","kind":"dialogue","body":"Hello"}]}),
     )
 }
 fn generate(c: &Value, a: &Value) -> Result<String, String> {
     build_npcs::generate(&serde_json::to_vec(c).unwrap(), a, "map-hash")
 }
-#[test]
-fn compiles_original_area_bounds_without_fabricating_a_point() {
-    let (mut catalog, actions) = fixtures();
+/// Schema-3 catalog with one wandering placement and the dialogue row that
+/// keeps it clickable.
+fn area_fixtures() -> (Value, Value) {
+    let (mut catalog, mut actions) = fixtures();
     catalog["version"] = json!(3);
     catalog["maps"][0]["areas"] = json!([{
         "id":"spawn.area", "actor_id":"actor.npc.guard",
         "bounds_cm":[100,200,300,400], "respawn_interval_us":60000000
     }]);
+    actions["interactions"].as_array_mut().unwrap().push(
+        json!({"spawn_id":"spawn.area","kind":"dialogue","body":"You again?","title":"Wanderer:"}),
+    );
+    (catalog, actions)
+}
+#[test]
+fn compiles_original_area_bounds_without_fabricating_a_point() {
+    let (catalog, actions) = area_fixtures();
     let output = generate(&catalog, &actions).unwrap();
     assert!(output.contains("bounds_cm: [100, 200, 300, 400]"));
     assert!(output.contains("respawn_interval_us: 60000000"));
+    // The wandering placement resolves to dialogue only; it must not fabricate
+    // a static point from the rectangle.
+    assert!(output.contains("pub const NPC_AREA_DIALOGUES: &[NpcAreaDialogue] = &["));
+    assert!(output.contains(
+        r#"NpcAreaDialogue { id: "spawn.area", vnum: 9001, name: "Guard", title: "Wanderer:", body: "You again?" },"#
+    ));
+    // Only the authored placement becomes an immutable static definition.
+    assert_eq!(output.matches("NpcDefinition { id:").count(), 1);
     for (key, value) in [
         ("id", json!("spawn.guard")),
         ("actor_id", json!("unknown")),
@@ -38,6 +55,49 @@ fn compiles_original_area_bounds_without_fabricating_a_point() {
     }
 }
 #[test]
+fn rejects_area_rows_without_dialogue_and_orphan_area_dialogue() {
+    let (catalog, actions) = area_fixtures();
+    let mut missing = actions.clone();
+    missing["interactions"].as_array_mut().unwrap().pop();
+    assert_eq!(
+        generate(&catalog, &missing).unwrap_err(),
+        "Area NPC spawn.area has no dialogue row"
+    );
+    let mut orphan = actions.clone();
+    orphan["interactions"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"spawn_id":"spawn.ghost","kind":"dialogue","body":"Nowhere"}));
+    assert_eq!(
+        generate(&catalog, &orphan).unwrap_err(),
+        "Interaction must resolve exactly one NPC placement or area"
+    );
+    let mut duplicate = actions.clone();
+    duplicate["interactions"]
+        .as_array_mut()
+        .unwrap()
+        .push(actions["interactions"][1].clone());
+    assert_eq!(
+        generate(&catalog, &duplicate).unwrap_err(),
+        "Invalid or duplicate NPC interaction"
+    );
+}
+#[test]
+fn area_dialogue_shares_the_placement_field_budget() {
+    let (catalog, actions) = area_fixtures();
+    let mut long_body = actions.clone();
+    long_body["interactions"][1]["body"] = json!("b".repeat(1025));
+    assert!(generate(&catalog, &long_body).is_err());
+    let mut long_title = actions.clone();
+    long_title["interactions"][1]["title"] = json!("t".repeat(161));
+    assert!(generate(&catalog, &long_title).is_err());
+    // A schema-1/2 catalog has no areas, so its output declares an empty list.
+    let (plain, plain_actions) = fixtures();
+    let output = generate(&plain, &plain_actions).unwrap();
+    assert!(output.contains("pub const NPC_AREAS: &[NpcAreaDefinition] = &[\n];"));
+    assert!(output.contains("pub const NPC_AREA_DIALOGUES: &[NpcAreaDialogue] = &[\n];"));
+}
+#[test]
 fn links_another_npc_without_gameplay_code() {
     let (mut catalog, mut actions) = fixtures();
     catalog["maps"][0]["placements"]
@@ -51,6 +111,26 @@ fn links_another_npc_without_gameplay_code() {
     let output = generate(&catalog, &actions).unwrap();
     assert!(output.contains("Different text"));
     assert!(output.contains("NPC_CATALOG_HASH"));
+}
+#[test]
+fn carries_the_authored_board_title_and_defaults_it_to_the_actor_name() {
+    let (catalog, actions) = fixtures();
+    let plain = generate(&catalog, &actions).unwrap();
+    assert!(plain.contains(r#"title: """#));
+    let mut titled = actions.clone();
+    titled["interactions"][0]["title"] = json!("Guard:");
+    let output = generate(&catalog, &titled).unwrap();
+    assert!(output.contains(r#"title: "Guard:""#));
+    assert!(output.contains("pub title: &'static str"));
+    let longest = "t".repeat(160);
+    titled["interactions"][0]["title"] = json!(longest);
+    assert!(generate(&catalog, &titled).unwrap().contains(&longest));
+    for bad in ["", "\n", "a\nb", "\u{7}", &"t".repeat(161)] {
+        titled["interactions"][0]["title"] = json!(bad);
+        assert!(generate(&catalog, &titled).is_err(), "{bad:?}");
+    }
+    titled["interactions"][0]["title"] = json!(7);
+    assert!(generate(&catalog, &titled).is_err());
 }
 #[test]
 fn rejects_unknown_handlers_stale_maps_duplicate_and_missing_links() {
@@ -79,4 +159,21 @@ fn rejects_unknown_handlers_stale_maps_duplicate_and_missing_links() {
     stale = catalog.clone();
     stale["maps"][0]["placements"][0]["position"][0] = json!("NaN");
     assert!(generate(&stale, &actions).is_err());
+    for bad_vnum in [
+        json!(0),
+        json!(-1),
+        json!(4294967296_u64),
+        json!("9001"),
+        json!(1.5),
+    ] {
+        let mut invalid = catalog.clone();
+        invalid["actors"][0]["vnum"] = bad_vnum.clone();
+        assert!(
+            generate(&invalid, &actions).is_err(),
+            "actor vnum {bad_vnum}"
+        );
+    }
+    let mut invalid = catalog.clone();
+    invalid["actors"][0].as_object_mut().unwrap().remove("vnum");
+    assert!(generate(&invalid, &actions).is_err());
 }

@@ -1,0 +1,656 @@
+{
+  "schema": "mt2spacetime.quest-profile",
+  "version": 1,
+  "map_id": "metin2_map_a1",
+  "source": {
+    "repository": "https://git.old-metin2.com/",
+    "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+    "quests": [
+      "gamefiles/data/quest/main_quest_lv1.quest",
+      "gamefiles/data/quest/main_quest_lv2.quest",
+      "gamefiles/data/quest/main_quest_lv3.quest",
+      "gamefiles/data/quest/find_squareguard.quest"
+    ]
+  },
+  "notes": [
+    "Text is referenced by its original gameforge localization key and resolved",
+    "from the pinned translate_en.lua at build time, so the catalog ships the",
+    "same wording the original client displayed.",
+    "main_quest_lv2._220_sayReward and main_quest_lv3._200_sayReward overstate",
+    "their rewards compared with the give_exp2/change_money calls in the same",
+    "state. The compiled catalog follows the operations, not the prose, and the",
+    "divergence is recorded in docs/rebuild/original-security-notes.md.",
+    "main_quest_lv2's give-up branch is a GM shortcut in the original script.",
+    "It is compiled as an operator-only trigger instead of a public player path."
+  ],
+  "quests": [
+    {
+      "id": "main_quest_lv1",
+      "title": "gameforge.main_quest_lv1._10_sendLetter",
+      "states": {
+        "start": {
+          "enter": [],
+          "triggers": [
+            {
+              "event": "login",
+              "level_min": 1,
+              "level_max": 1,
+              "ops": [{ "op": "set_state", "state": "gotoinfomation" }]
+            }
+          ]
+        },
+        "gotoinfomation": {
+          "enter": [
+            { "op": "letter", "title": "gameforge.main_quest_lv1._10_sendLetter" },
+            {
+              "op": "say",
+              "title": "gameforge.main_quest_lv1._10_sendLetter",
+              "body": "gameforge.main_quest_lv1._20_say"
+            },
+            { "op": "set_state", "state": "gototeacher" }
+          ],
+          "triggers": []
+        },
+        "gototeacher": {
+          "enter": [
+            {
+              "op": "target",
+              "npc_vnum": 20354,
+              "label": "gameforge.main_quest_lv1._30_targetVid"
+            },
+            {
+              "op": "say",
+              "title": "gameforge.main_quest_lv1._40_sayTitle",
+              "body": "gameforge.main_quest_lv1._50_sayReward"
+            }
+          ],
+          "triggers": [
+            {
+              "event": "npc_click",
+              "npc_vnum": 20354,
+              "ops": [
+                {
+                  "op": "say",
+                  "title": "gameforge.main_quest_lv1._60_sayTitle",
+                  "body": "gameforge.main_quest_lv1._70_say"
+                },
+                { "op": "wait" },
+                {
+                  "op": "say",
+                  "title": "gameforge.main_quest_lv1._60_sayTitle",
+                  "body": "gameforge.main_quest_lv1._80_say"
+                },
+                { "op": "clear_letter" },
+                { "op": "set_state", "state": "__COMPLETE__" },
+                { "op": "set_quest_state", "quest": "find_squareguard", "state": "find" },
+                { "op": "set_quest_state", "quest": "main_quest_lv2", "state": "run" }
+              ]
+            }
+          ]
+        },
+        "__COMPLETE__": { "enter": [], "triggers": [] }
+      }
+    },
+    {
+      "id": "main_quest_lv2",
+      "title": "gameforge.main_quest_lv2._30_sendLetter",
+      "states": {
+        "start": { "enter": [], "triggers": [] },
+        "run": {
+          "enter": [],
+          "triggers": [
+            {
+              "event": "login",
+              "level_min": 2,
+              "ops": [{ "op": "set_state", "state": "gototeacher" }]
+            },
+            {
+              "event": "levelup",
+              "level_min": 2,
+              "ops": [{ "op": "set_state", "state": "gototeacher" }]
+            },
+            {
+              "event": "npc_chat",
+              "npc_vnum": 20354,
+              "level_max": 1,
+              "ops": [
+                {
+                  "op": "say",
+                  "title": "gameforge.main_quest_lv1._60_sayTitle",
+                  "body": "gameforge.main_quest_lv2._20_say"
+                }
+              ]
+            }
+          ]
+        },
+        "gototeacher": {
+          "enter": [
+            { "op": "letter", "title": "gameforge.main_quest_lv2._30_sendLetter" },
+            {
+              "op": "target",
+              "npc_vnum": 20354,
+              "label": "gameforge.main_quest_lv2._40_targetVid"
+            },
+            {
+              "op": "say",
+              "title": "gameforge.main_quest_lv2._30_sendLetter",
+              "body": "gameforge.main_quest_lv2._50_sayReward"
+            }
+          ],
+          "triggers": [
+            {
+              "event": "npc_click",
+              "npc_vnum": 20354,
+              "ops": [
+                {
+                  "op": "say",
+                  "title": "gameforge.main_quest_lv1._60_sayTitle",
+                  "body": "gameforge.main_quest_lv2._60_say"
+                },
+                { "op": "wait" },
+                {
+                  "op": "say",
+                  "title": "gameforge.main_quest_lv1._60_sayTitle",
+                  "body": "gameforge.main_quest_lv2._70_say"
+                },
+                { "op": "wait" },
+                {
+                  "op": "say",
+                  "title": "gameforge.buy_fishrod._210_sayTitle",
+                  "body": "gameforge.main_quest_lv2._80_sayReward"
+                },
+                { "op": "say_reward", "text": "gameforge.main_quest_lv2._90_sayReward" },
+                {
+                  "op": "say_reward_item",
+                  "text": "gameforge.main_quest_lv2._90_sayReward",
+                  "vnum": 27001,
+                  "count": 15
+                },
+                { "op": "say_item", "text": "gameforge.main_quest_lv2._90_sayReward", "vnum": 27001 },
+                { "op": "set_state", "state": "killdog" }
+              ]
+            }
+          ]
+        },
+        "killdog": {
+          "enter": [
+            { "op": "letter", "title": "gameforge.main_quest_lv2._100_sendLetter" },
+            {
+              "op": "objective",
+              "label": "gameforge.main_quest_lv2._135_counter",
+              "total": 9,
+              "display": "remaining"
+            },
+            {
+              "op": "say",
+              "title": "gameforge.main_quest_lv2._110_sayTitle",
+              "body": "gameforge.main_quest_lv2._120_sayReward"
+            },
+            {
+              "op": "say_reward_counter",
+              "text": "gameforge.main_quest_lv2._130_sayReward",
+              "source": "objective"
+            }
+          ],
+          "triggers": [
+            {
+              "event": "kill",
+              "vnum": 101,
+              "ops": [
+                {
+                  "op": "count",
+                  "total": 9,
+                  "on_reached": [
+                    {
+                      "op": "say",
+                      "title": "gameforge.main_quest_lv2._140_sayTitle",
+                      "body": "gameforge.main_quest_lv2._150_sayReward"
+                    },
+                    { "op": "set_state", "state": "gototeacher2" }
+                  ]
+                }
+              ]
+            },
+            {
+              "event": "npc_chat",
+              "npc_vnum": 20354,
+              "objective_max": 8,
+              "ops": [
+                {
+                  "op": "say",
+                  "title": "gameforge.main_quest_lv1._60_sayTitle",
+                  "body": "gameforge.main_quest_lv2._170_say"
+                }
+              ]
+            },
+            {
+              "event": "npc_chat",
+              "npc_vnum": 20354,
+              "objective_max": 8,
+              "operator_only": true,
+              "ops": [
+                { "op": "wait" },
+                {
+                  "op": "say",
+                  "title": "gameforge.main_quest_lv2._180_sayTitle",
+                  "body": "gameforge.main_quest_lv2._182_say"
+                },
+                {
+                  "op": "select",
+                  "options": ["gameforge.locale.guild.yes", "gameforge.locale.guild.no"],
+                  "branches": [
+                    [{ "op": "set_state", "state": "gototeacher2" }],
+                    []
+                  ]
+                }
+              ]
+            },
+            {
+              "event": "npc_chat",
+              "npc_vnum": 20354,
+              "objective_min": 9,
+              "ops": [
+                {
+                  "op": "say",
+                  "title": "gameforge.main_quest_lv1._60_sayTitle",
+                  "body": "gameforge.main_quest_lv2._190_say"
+                },
+                { "op": "set_state", "state": "gototeacher2" }
+              ]
+            }
+          ]
+        },
+        "gototeacher2": {
+          "enter": [
+            { "op": "letter", "title": "gameforge.main_quest_lv2._200_sendLetter" },
+            {
+              "op": "target",
+              "npc_vnum": 20354,
+              "label": "gameforge.main_quest_lv2._40_targetVid"
+            },
+            {
+              "op": "say",
+              "title": "gameforge.main_quest_lv2._200_sendLetter",
+              "body": "gameforge.main_quest_lv2._150_sayReward"
+            }
+          ],
+          "triggers": [
+            {
+              "event": "npc_click",
+              "npc_vnum": 20354,
+              "ops": [
+                {
+                  "op": "say",
+                  "title": "gameforge.main_quest_lv1._60_sayTitle",
+                  "body": "gameforge.main_quest_lv2._210_say"
+                },
+                { "op": "wait" },
+                {
+                  "op": "say",
+                  "title": "gameforge.collect_herb_lv4._130_sayTitle",
+                  "body": "gameforge.main_quest_lv2._220_sayReward"
+                },
+                {
+                  "op": "say_reward_item",
+                  "text": "gameforge.main_quest_lv2._230_sayReward",
+                  "vnum": 27001,
+                  "count": 15
+                },
+                { "op": "say_item", "text": "gameforge.main_quest_lv2._230_sayReward", "vnum": 27001 },
+                { "op": "give_exp", "amount": 250 },
+                { "op": "give_money", "amount": 1000 },
+                { "op": "give_item", "vnum": 27001, "count": 15 },
+                { "op": "clear_letter" },
+                { "op": "set_state", "state": "__COMPLETE__" },
+                { "op": "set_quest_state", "quest": "main_quest_lv3", "state": "run" }
+              ]
+            }
+          ]
+        },
+        "__COMPLETE__": { "enter": [], "triggers": [] }
+      }
+    },
+    {
+      "id": "main_quest_lv3",
+      "title": "gameforge.main_quest_lv3._30_sendLetter",
+      "states": {
+        "start": { "enter": [], "triggers": [] },
+        "run": {
+          "enter": [],
+          "triggers": [
+            {
+              "event": "login",
+              "level_min": 3,
+              "ops": [{ "op": "set_state", "state": "gototeacher" }]
+            },
+            {
+              "event": "levelup",
+              "level_min": 3,
+              "ops": [{ "op": "set_state", "state": "gototeacher" }]
+            },
+            {
+              "event": "npc_chat",
+              "npc_vnum": 20354,
+              "ops": [
+                {
+                  "op": "say",
+                  "title": "gameforge.main_quest_lv1._60_sayTitle",
+                  "body": "gameforge.main_quest_lv3._20_say"
+                }
+              ]
+            }
+          ]
+        },
+        "gototeacher": {
+          "enter": [
+            { "op": "letter", "title": "gameforge.main_quest_lv3._30_sendLetter" },
+            {
+              "op": "target",
+              "npc_vnum": 20354,
+              "label": "gameforge.main_quest_lv2._40_targetVid"
+            },
+            {
+              "op": "say",
+              "title": "gameforge.main_quest_lv3._30_sendLetter",
+              "body": "gameforge.main_quest_lv3._40_sayReward"
+            }
+          ],
+          "triggers": [
+            {
+              "event": "npc_click",
+              "npc_vnum": 20354,
+              "ops": [
+                {
+                  "op": "say",
+                  "title": "gameforge.main_quest_lv1._60_sayTitle",
+                  "body": "gameforge.main_quest_lv3._50_say"
+                },
+                { "op": "wait" },
+                {
+                  "op": "say",
+                  "title": "gameforge.main_quest_lv1._60_sayTitle",
+                  "body": "gameforge.main_quest_lv3._60_say"
+                },
+                { "op": "set_state", "state": "gotogood" }
+              ]
+            }
+          ]
+        },
+        "gotogood": {
+          "enter": [
+            { "op": "letter", "title": "gameforge.main_quest_lv3._80_sendLetter" },
+            {
+              "op": "target",
+              "npc_vnum": 9003,
+              "label": "gameforge.main_quest_lv3._70_targetVid"
+            },
+            {
+              "op": "say",
+              "title": "gameforge.main_quest_lv3._80_sendLetter",
+              "body": "gameforge.main_quest_lv3._90_sayReward"
+            }
+          ],
+          "triggers": [
+            {
+              "event": "npc_click",
+              "npc_vnum": 9003,
+              "ops": [
+                {
+                  "op": "say",
+                  "title": "gameforge.find_squareguard._130_sayTitle",
+                  "body": "gameforge.main_quest_lv3._100_say"
+                },
+                { "op": "wait" },
+                {
+                  "op": "say",
+                  "title": "gameforge.find_squareguard._130_sayTitle",
+                  "body": "gameforge.main_quest_lv3._110_say"
+                },
+                {
+                  "op": "say_item",
+                  "text": "gameforge.main_quest_lv3._120_sayItem",
+                  "vnum": 69000
+                },
+                { "op": "set_state", "state": "gotodefend" }
+              ]
+            }
+          ]
+        },
+        "gotodefend": {
+          "enter": [
+            { "op": "letter", "title": "gameforge.main_quest_lv3._140_sendLetter" },
+            {
+              "op": "target",
+              "npc_vnum": 9002,
+              "label": "gameforge.main_quest_lv3._130_targetVid"
+            },
+            {
+              "op": "say",
+              "title": "gameforge.main_quest_lv3._140_sendLetter",
+              "body": "gameforge.main_quest_lv3._150_sayReward"
+            },
+            {
+              "op": "say_item",
+              "text": "gameforge.main_quest_lv3._120_sayItem",
+              "vnum": 69000
+            }
+          ],
+          "triggers": [
+            {
+              "event": "npc_click",
+              "npc_vnum": 9002,
+              "ops": [
+                {
+                  "op": "say",
+                  "title": "gameforge.main_quest_lv3._160_sayTitle",
+                  "body": "gameforge.main_quest_lv3._170_say"
+                },
+                {
+                  "op": "say_item",
+                  "text": "gameforge.main_quest_lv3._120_sayItem",
+                  "vnum": 69000
+                },
+                { "op": "wait" },
+                {
+                  "op": "say",
+                  "title": "gameforge.main_quest_lv3._160_sayTitle",
+                  "body": "gameforge.main_quest_lv3._190_say"
+                },
+                { "op": "wait" },
+                {
+                  "op": "say",
+                  "title": "gameforge.collect_herb_lv4._130_sayTitle",
+                  "body": "gameforge.main_quest_lv3._200_sayReward"
+                },
+                { "op": "give_exp", "amount": 450 },
+                { "op": "give_money", "amount": 5000 },
+                { "op": "give_item", "vnum": 27004, "count": 20 },
+                { "op": "clear_letter" },
+                { "op": "set_state", "state": "__COMPLETE__" },
+                { "op": "set_quest_state", "quest": "main_quest_lv6", "state": "run" }
+              ]
+            }
+          ]
+        },
+        "__COMPLETE__": { "enter": [], "triggers": [] }
+      }
+    },
+    {
+      "id": "find_squareguard",
+      "title": "gameforge.find_squareguard._10_targetVid",
+      "states": {
+        "start": { "enter": [], "triggers": [] },
+        "run": {
+          "enter": [],
+          "triggers": [
+            {
+              "event": "login",
+              "level_max": 5,
+              "ops": [{ "op": "set_state", "state": "find" }]
+            }
+          ]
+        },
+        "find": {
+          "enter": [
+            { "op": "letter", "title": "gameforge.find_squareguard._10_targetVid" },
+            {
+              "op": "target",
+              "npc_vnum": 11000,
+              "label": "gameforge.find_squareguard._10_targetVid"
+            },
+            {
+              "op": "say",
+              "title": "gameforge.buy_fishrod._210_sayTitle",
+              "body": "gameforge.find_squareguard._20_sayReward"
+            }
+          ],
+          "triggers": [
+            {
+              "event": "npc_click",
+              "npc_vnum": 11000,
+              "ops": [
+                {
+                  "op": "say",
+                  "title": "gameforge.find_squareguard._30_sayTitle",
+                  "body": "gameforge.find_squareguard._40_say"
+                },
+                {
+                  "op": "select",
+                  "options": ["gameforge.find_squareguard._50_select"],
+                  "branches": [
+                    [
+                      {
+                        "op": "say",
+                        "title": "gameforge.buy_fishrod._210_sayTitle",
+                        "body": "gameforge.find_squareguard._60_sayReward"
+                      },
+                      { "op": "give_money", "amount": 200 },
+                      { "op": "set_state", "state": "buy" }
+                    ]
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "buy": {
+          "enter": [
+            { "op": "letter", "title": "gameforge.find_squareguard._80_sendLetter" },
+            {
+              "op": "target",
+              "npc_vnum": 9003,
+              "label": "gameforge.find_squareguard._131_targetVid"
+            },
+            {
+              "op": "say",
+              "title": "gameforge.buy_fishrod._210_sayTitle",
+              "body": "gameforge.find_squareguard._90_sayReward"
+            }
+          ],
+          "triggers": [
+            {
+              "event": "npc_chat",
+              "npc_vnum": 11000,
+              "ops": [
+                {
+                  "op": "say",
+                  "title": "gameforge.find_squareguard._110_sayTitle",
+                  "body": "gameforge.find_squareguard._120_say"
+                }
+              ]
+            },
+            {
+              "event": "npc_click",
+              "npc_vnum": 9003,
+              "ops": [
+                {
+                  "op": "say",
+                  "title": "gameforge.find_squareguard._130_sayTitle",
+                  "body": "gameforge.find_squareguard._140_say"
+                },
+                { "op": "wait" },
+                {
+                  "op": "say",
+                  "title": "gameforge.find_squareguard._130_sayTitle",
+                  "body": "gameforge.find_squareguard._150_say"
+                },
+                { "op": "wait" },
+                {
+                  "op": "say",
+                  "title": "gameforge.buy_fishrod._210_sayTitle",
+                  "body": "gameforge.find_squareguard._160_sayReward"
+                },
+                {
+                  "op": "say_reward",
+                  "text": "gameforge.find_squareguard._170_sayReward"
+                },
+                { "op": "give_item", "vnum": 27001, "count": 5 },
+                { "op": "set_state", "state": "deliver" }
+              ]
+            }
+          ]
+        },
+        "deliver": {
+          "enter": [
+            { "op": "letter", "title": "gameforge.find_squareguard._180_sendLetter" },
+            {
+              "op": "target",
+              "npc_vnum": 11000,
+              "label": "gameforge.find_squareguard._10_targetVid"
+            },
+            {
+              "op": "say",
+              "title": "gameforge.buy_fishrod._210_sayTitle",
+              "body": "gameforge.find_squareguard._190_sayReward"
+            }
+          ],
+          "triggers": [
+            {
+              "event": "npc_click",
+              "npc_vnum": 11000,
+              "item_vnum": 27001,
+              "item_max": 0,
+              "ops": [
+                {
+                  "op": "say",
+                  "title": "gameforge.find_squareguard._30_sayTitle",
+                  "body": "gameforge.find_squareguard._200_say"
+                },
+                { "op": "clear_letter" },
+                { "op": "set_state", "state": "__COMPLETE__" }
+              ]
+            },
+            {
+              "event": "npc_click",
+              "npc_vnum": 11000,
+              "item_vnum": 27001,
+              "item_min": 1,
+              "ops": [
+                {
+                  "op": "say",
+                  "title": "gameforge.find_squareguard._30_sayTitle",
+                  "body": "gameforge.find_squareguard._210_say"
+                },
+                { "op": "wait" },
+                {
+                  "op": "say",
+                  "title": "gameforge.find_squareguard._30_sayTitle",
+                  "body": "gameforge.find_squareguard._220_say"
+                },
+                { "op": "remove_item", "vnum": 27001, "count": 1 },
+                {
+                  "op": "random_item",
+                  "choices": [14000, 16000, 17000],
+                  "count": 1
+                },
+                { "op": "clear_letter" },
+                { "op": "set_state", "state": "__COMPLETE__" }
+              ]
+            }
+          ]
+        },
+        "__COMPLETE__": { "enter": [], "triggers": [] }
+      }
+    }
+  ]
+}

@@ -1,11 +1,282 @@
 {
-  "schema_version": 1,
-  "map_id": "metin2_map_a1",
-  "interactions": [
-    {
-      "spawn_id": "spawn.yongan.city-guard-20354",
-      "kind": "dialogue",
-      "body": "Welcome to Yongan. Stay alert when you leave the village."
-    }
-  ]
+ "interactions": [
+  {
+   "body": "Hello! You have already received the Power of the\nDragon Eye today. The process weakens me so much\nthat I can only help you once a day. Come again\ntomorrow!",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.alchemist-20001-0"
+  },
+  {
+   "body": "What? Rice Cake? Is that a new weapon?! Yes, well\nthen you can...\nOh, you mean edible Rice Cakes. Why didn't you\njust say that in the first place? You'd better go\nto Octavio. He knows all there is to know about\nfood.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.arms-9001-0",
+   "title": "Weapon Shop Dealer:"
+  },
+  {
+   "body": "My so-called husband is married to his books. He\nbarely even looks at me any more. And I'm not an\nugly woman.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.auntie-20002-0",
+   "title": "Aranyo:"
+  },
+  {
+   "body": "Nakajima... he's alive? My darling husband is\nalive? I can't thank you enough for telling me!\nIt was the Valley of Yonjang that he was talking\nabout. I'm going to head there immediately and\nmeet him.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.baby-and-mom-20003-0",
+   "title": "Ah-Yu:"
+  },
+  {
+   "body": "My friend, the world is full of unanswered\nquestions. And I, am a seeker of answers and a\nseeker of knowledge. Have you ever heard of epic\nweapons and Spirit Stones?",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.backchon-20091-0",
+   "title": "Seon-Pyeong:"
+  },
+  {
+   "body": "Greetings!\nI am responsible for upgrading items. If you want\nto upgrade an item, just bring it to me.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.blacksmith-20016-0",
+   "title": "Blacksmith"
+  },
+  {
+   "body": "Oh, adventurer! The world is full of problems.\nYou can only survive with a certain amount of\nknowledge. So honour you books. In bad times -\nand nowadays the times are always bad - they will\nhelp you. Believe me!",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.bookworm-20023-0",
+   "title": "Soon, the bookworm:"
+  },
+  {
+   "body": "My beloved Celadon Porcelain! It's been in my\nfamily for three generations and now three of the\nprecious vases are broken. I saw that\nne'er-do-well Taurean hanging around the\nwarehouse earlier. I'm sure he's to blame!",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.ceramist-20005-0",
+   "title": "Yonah:"
+  },
+  {
+   "body": "Heaven, please help me...\nI study all kind of plants in this kingdom. There\nis tons of work that needs to be done. I do not\nhave the time to go hunt plants on my own. Will\nyou please help me?",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.chagirap-20084-0",
+   "title": "Biologist Chaegirab:"
+  },
+  {
+   "body": "Be quiet and maintain your discipline! Behave and\ndon't start any trouble. You should respect your\nfellow men. Is that understood?",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.city-guard-20354"
+  },
+  {
+   "body": "All this talk about food is making me hungry.\nI'm really craving a Hotpot with venison, bear,\ncabbage and two eggs.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.defence-9002-0",
+   "title": "Armour Shop Dealer:"
+  },
+  {
+   "body": "Hello! How are you, what can I do for you?",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.doctor-20018-0",
+   "title": "Baek-Go:"
+  },
+  {
+   "body": "Buy betting slips for your kingdom.\n\n1. For every guild war, there is a pre-announced\nprojection of the possible outcome announcing the\npotential winners.\n2. You can buy a betting slip. On the betting\nslip you can write whether you think that the\nguild you believe in will achieve the results\nforecast.\n3. The choices are determined by the betting\nbooth. After the guild war, you will be informed\nwhether you have won or lost.\n\n* 10% of the winnings will be paid out to the\nkingdom.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.gangyo-patrol-bow-11001-0",
+   "title": "The guild bet"
+  },
+  {
+   "body": "You can get the red potion from the General Store\nSaleswoman. She's over there. If you can't see\nher, go towards the flashing circle on the big\nmap or the flashing red dot on the mini map!",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.gangyo-patrol-spear-11000-0",
+   "title": "Guardian:"
+  },
+  {
+   "body": "I used to collect Peach Blossoms with my brother.\nBut I have to do it alone today. They don't look\nvery pretty, but they have a special effect.\nIf you take a Peach Blossom to Baek-Go, he'll\nbrew a potion from it that makes you very\nnimble-footed!",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.girl-lost-elder-brother-20006-0"
+  },
+  {
+   "body": "Excuse me, if you aren't busy at the moment,\ncould you do me a favour? I need an Empty Bottle\nfor my Red Potion.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.goods-9003-0",
+   "title": "General Store Saleswoman:"
+  },
+  {
+   "body": "It's hard to get our troops motivated at the\nmoment, especially as it's so hard to get fresh\nsupplies. The General Store Saleswoman, an\nimportant supplier of ours, has only been sending\nus a small amount of the potions that we need.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.guard-leader-20355-0",
+   "title": "Captain"
+  },
+  {
+   "body": "My uncle Chaegirab has dedicated his life to\nscience and has invested all his Yang into his\nresearch. He's always been good to me, so I would\nlike to surprise him with a gift. Would you go to\nUriel and ask him whether he has an idea of what\nI could give him? He's my uncle's old teacher and\nhe knows him very well.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.handaup-20087-0",
+   "title": "Wonda-Rim:"
+  },
+  {
+   "body": "Do you want to use the Storeroom?\nYou will however, have to pay Yang to use the\nStoreroom. I'm in a good mood today so you can\nuse it for just 500 Yang. So - come on, that's\ncheap, isn't it?",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.hotel-grandfa-9005-0",
+   "title": "Storekeeper:"
+  },
+  {
+   "body": "The look in your eyes tells me that you are very\nyoung. Why do you want to know your fate so early\non in your life? Is there a particular reason for\nit? Fate still has a lot in store for you. Come\nback again later.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.hotel-grandma-9006-0",
+   "title": "Old Lady"
+  },
+  {
+   "body": "To start a horse mission, you need a Horse Medal.\nYou can get one in the monkey dungeon.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.jinno-patrol-spear-20349-0",
+   "title": "Stable Boy:"
+  },
+  {
+   "body": "That's the memorial. Ah, there it is! I have the\npage!",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.moonstone-20357-0"
+  },
+  {
+   "body": "Welcome! Our traditional restaurant is so\nsuccessful that we could open restaurants\nworldwide. If you want to have something yummy to\neat, then come around and give our food a try.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.mr-restaurant-20008-0",
+   "title": "Octavio, the restaurant owner:"
+  },
+  {
+   "body": "These Flowers look like the ones Ariyoung\ndescribed. I'm going to take some.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.nnflower-20358-0"
+  },
+  {
+   "body": "Hello! I know how you can get to other regions\nfrom here. If you give me some Yang, I can\nteleport you there.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.oldster-20009-0",
+   "title": "Old Man:"
+  },
+  {
+   "body": "This is a fascinating place. But does anything\nout of the ordinary ever happen here? Probably\nnot. In other parts of the country, everything\nlooks a little different! I'm sure there's\nsomewhere interesting that I could teleport you\nto. As the powers of evil have got stronger\nagain, time and space has been thrown into chaos.\nYour return might not always work. Do you want to\nbe teleported anyway?",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.oldster-9012-0",
+   "title": "Teleporter:"
+  },
+  {
+   "body": "Greetings.\nYour work the last time was very helpful. With\nyour help, I was able to make some real progress.\nBut now I have a problem. While investigating\nsome information about the meteors, I found an\nold book. As far as I can understand, there are\nimportant speculations about the cause of the\nchanges in there, that are affecting our country.\nIt is really important.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.plant-researcher-20011-0",
+   "title": "Uriel:"
+  },
+  {
+   "body": "So you're interested in the secrets of improving\nyour Fishing Pole? To be honest, it's not really\na big secret. The more time you spend fishing,\nthe more points your Fishing Pole will collect.\nWhen your Fishing Pole has reached its maximum\nlevel, bring it to me. Then I'll try to upgrade\nit for you.\nOK. Now choose the Fishing Pole that you would\nlike to upgrade and give it to me.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sailor-9009-0",
+   "title": "Fisherman:"
+  },
+  {
+   "body": "So you're interested in the secrets of improving\nyour Fishing Pole? To be honest, it's not really\na big secret. The more time you spend fishing,\nthe more points your Fishing Pole will collect.\nWhen your Fishing Pole has reached its maximum\nlevel, bring it to me. Then I'll try to upgrade\nit for you.\nOK. Now choose the Fishing Pole that you would\nlike to upgrade and give it to me.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sailor-9009-1",
+   "title": "Fisherman:"
+  },
+  {
+   "body": "So you're interested in the secrets of improving\nyour Fishing Pole? To be honest, it's not really\na big secret. The more time you spend fishing,\nthe more points your Fishing Pole will collect.\nWhen your Fishing Pole has reached its maximum\nlevel, bring it to me. Then I'll try to upgrade\nit for you.\nOK. Now choose the Fishing Pole that you would\nlike to upgrade and give it to me.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sailor-9009-2",
+   "title": "Fisherman:"
+  },
+  {
+   "body": "So you're interested in the secrets of improving\nyour Fishing Pole? To be honest, it's not really\na big secret. The more time you spend fishing,\nthe more points your Fishing Pole will collect.\nWhen your Fishing Pole has reached its maximum\nlevel, bring it to me. Then I'll try to upgrade\nit for you.\nOK. Now choose the Fishing Pole that you would\nlike to upgrade and give it to me.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sailor-9009-3",
+   "title": "Fisherman:"
+  },
+  {
+   "body": "So you're interested in the secrets of improving\nyour Fishing Pole? To be honest, it's not really\na big secret. The more time you spend fishing,\nthe more points your Fishing Pole will collect.\nWhen your Fishing Pole has reached its maximum\nlevel, bring it to me. Then I'll try to upgrade\nit for you.\nOK. Now choose the Fishing Pole that you would\nlike to upgrade and give it to me.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sailor-9009-4",
+   "title": "Fisherman:"
+  },
+  {
+   "body": "So you're interested in the secrets of improving\nyour Fishing Pole? To be honest, it's not really\na big secret. The more time you spend fishing,\nthe more points your Fishing Pole will collect.\nWhen your Fishing Pole has reached its maximum\nlevel, bring it to me. Then I'll try to upgrade\nit for you.\nOK. Now choose the Fishing Pole that you would\nlike to upgrade and give it to me.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sailor-9009-5",
+   "title": "Fisherman:"
+  },
+  {
+   "body": "So you're interested in the secrets of improving\nyour Fishing Pole? To be honest, it's not really\na big secret. The more time you spend fishing,\nthe more points your Fishing Pole will collect.\nWhen your Fishing Pole has reached its maximum\nlevel, bring it to me. Then I'll try to upgrade\nit for you.\nOK. Now choose the Fishing Pole that you would\nlike to upgrade and give it to me.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sailor-9009-6",
+   "title": "Fisherman:"
+  },
+  {
+   "body": "So you're interested in the secrets of improving\nyour Fishing Pole? To be honest, it's not really\na big secret. The more time you spend fishing,\nthe more points your Fishing Pole will collect.\nWhen your Fishing Pole has reached its maximum\nlevel, bring it to me. Then I'll try to upgrade\nit for you.\nOK. Now choose the Fishing Pole that you would\nlike to upgrade and give it to me.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sailor-9009-7",
+   "title": "Fisherman:"
+  },
+  {
+   "body": "So you're interested in the secrets of improving\nyour Fishing Pole? To be honest, it's not really\na big secret. The more time you spend fishing,\nthe more points your Fishing Pole will collect.\nWhen your Fishing Pole has reached its maximum\nlevel, bring it to me. Then I'll try to upgrade\nit for you.\nOK. Now choose the Fishing Pole that you would\nlike to upgrade and give it to me.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sailor-9009-8",
+   "title": "Fisherman:"
+  },
+  {
+   "body": "So you're interested in the secrets of improving\nyour Fishing Pole? To be honest, it's not really\na big secret. The more time you spend fishing,\nthe more points your Fishing Pole will collect.\nWhen your Fishing Pole has reached its maximum\nlevel, bring it to me. Then I'll try to upgrade\nit for you.\nOK. Now choose the Fishing Pole that you would\nlike to upgrade and give it to me.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sailor-9009-9",
+   "title": "Fisherman:"
+  },
+  {
+   "body": "The writing looks really archaic... it's also\nvery shaky and uneven, as if the author didn't\nhave much strength left...",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.samahi-20090-0"
+  },
+  {
+   "body": "A student of Body-Force training trains his body\nstrength and learns how to use it in the best\nway. His attacks inflict deep wounds, so that his\nopponents are easily and quickly defeated.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sinsu-patrol-spear-20300-0",
+   "title": "Body-Force training"
+  },
+  {
+   "body": "Mental-Fight training teaches to attack the enemy\nwith strong chi attacks and how to defend\nyourself from his attacks.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sinsu-patrol-spear-20301-0",
+   "title": "Mental-Fight training"
+  },
+  {
+   "body": "In Blade-Fight training a Ninja learns how to\nquickly and lethally hit his opponent's weak\npoints.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sinsu-patrol-spear-20302-0",
+   "title": "Blade-Fight training"
+  },
+  {
+   "body": "In Archery training a Ninja learns how to handle\nhis bow and to fight the enemy with precision\nfrom a distance.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sinsu-patrol-spear-20303-0",
+   "title": "Archery training"
+  },
+  {
+   "body": "In Weaponry training you practice the art of\nusing powerful blows against weakened enemies,\nwith the help of cursed blades.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sinsu-patrol-spear-20304-0",
+   "title": "Weaponry training"
+  },
+  {
+   "body": "In Black Magic training you learn the art of\nweakening your enemies from a distance with black\nmagic.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sinsu-patrol-spear-20305-0",
+   "title": "Black Magic training"
+  },
+  {
+   "body": "The Dragon Force training uses the strong fire\nattacks from the Dragon God as well as support\nmagic which can give the group the protection\nfrom the Dragon God.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sinsu-patrol-spear-20306-0",
+   "title": "Dragon Force training"
+  },
+  {
+   "body": "With the Healing Force training, you learn to\nstun your enemies with electric shocks. You also\nlearn to heal group members and give them\nadditional strength.",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.sinsu-patrol-spear-20307-0",
+   "title": "Healing Force training"
+  },
+  {
+   "body": "It's getting better. While taking a walk\nrecently, I stumbled over a Gango Root and\nsprained my ankle. Luckily I know the doctor\nBaek-Go, so he treated me and gave me some\nadvice: To heal small wounds you can brew a\npotion from these same Gango Roots. So I made the\nculprit roots into a tea and it cured the damage\nthat it had made...",
+   "kind": "dialogue",
+   "spawn_id": "spawn.yongan.wondaim-20086-0",
+   "title": "Handu-Up:"
+  }
+ ],
+ "map_id": "metin2_map_a1",
+ "schema_version": 1
 }

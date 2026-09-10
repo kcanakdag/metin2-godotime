@@ -110,12 +110,108 @@ WEBGL_RENDERER_PROBE = """() => {
 }"""
 
 
+# Runs before any page script. Godot publishes its snapshot from the engine main
+# loop, so a stalled snapshot can come from either a lost WebGL context (browser
+# or driver decides to drop the surface) or a stopped main loop. Recording both
+# the context events and a requestAnimationFrame heartbeat lets a failed check
+# tell those apart instead of guessing from a frozen snapshot alone.
+BROWSER_HEALTH_INIT_SCRIPT = """(() => {
+    const health = window.mt2BrowserHealth = {
+        started_at_ms: Date.now(),
+        raf_frames: 0,
+        raf_last_ms: 0,
+        raf_max_gap_ms: 0,
+        context_lost: 0,
+        context_restored: 0,
+        context_creation_errors: 0,
+        visibility_events: [],
+        window_blurred: 0,
+        window_hidden: 0,
+        unhandled_events: []
+    };
+    const tick = (now) => {
+        if (health.raf_last_ms) {
+            health.raf_max_gap_ms = Math.max(health.raf_max_gap_ms, now - health.raf_last_ms);
+        }
+        health.raf_last_ms = now;
+        health.raf_frames += 1;
+        requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    document.addEventListener("webglcontextlost", () => { health.context_lost += 1; }, true);
+    document.addEventListener("webglcontextrestored", () => { health.context_restored += 1; }, true);
+    document.addEventListener(
+        "webglcontextcreationerror", () => { health.context_creation_errors += 1; }, true
+    );
+    document.addEventListener(
+        "visibilitychange",
+        () => {
+            health.visibility_events.push({at_ms: Date.now(), state: document.visibilityState});
+        },
+        true
+    );
+    window.addEventListener("blur", () => { health.window_blurred += 1; }, true);
+    window.addEventListener("pagehide", () => { health.window_hidden += 1; }, true);
+    for (const name of ["error", "unhandledrejection"]) {
+        window.addEventListener(name, (event) => {
+            if (health.unhandled_events.length < 20) {
+                health.unhandled_events.push({name: name, detail: String(event.reason || event.message || "")});
+            }
+        }, true);
+    }
+})();"""
+
+
 def private_write(path: Path, text: str) -> None:
     """Create command/log files with owner-only access from their first byte."""
     descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(descriptor, "w") as destination:
         os.chmod(path, 0o600)
         destination.write(text)
+
+
+def settled_lobby_account(snapshot):
+    """The account block, but only from a client parked in the settled lobby.
+
+    Both exports refresh their signed session on a timer; the refresh tears the
+    lobby connection down, re-authenticates and replays the character list.
+    While that runs the probe still answers, but with a transient
+    `connection_state`, an empty account block and an empty roster. Every
+    cross-account comparison therefore has to read both sides out of settled
+    snapshots: a snapshot taken inside the refresh makes a correct server look
+    like a leaked or missing roster.
+    """
+    if snapshot.get("connection_state") != "lobby":
+        return {}
+    return snapshot.get("account", {})
+
+
+SESSION_TRANSIENT_STATES = frozenset(
+    {
+        "connecting",
+        "refreshing",
+        "opening",
+        "subscribing",
+        "loading",
+        "joining",
+        "leaving",
+    }
+)
+
+
+def session_settled(snapshot):
+    """True only for a client that finished connecting, entering or refreshing.
+
+    Both exports refresh their signed session on a timer. The refresh tears the
+    session down, re-authenticates and replays the subscription, and the probe
+    keeps answering the whole time with a transient `connection_state` and
+    drained rows. That window is legitimate behaviour, so a check must never
+    decide its result from a snapshot taken inside it: a drained read can make a
+    correct server look broken, and can also make a missing roster look empty on
+    purpose.
+    """
+    state = snapshot.get("connection_state")
+    return bool(state) and state not in SESSION_TRANSIENT_STATES
 
 
 def seen(snapshot: dict, identity: str):
@@ -330,6 +426,7 @@ def main() -> None:
     passed = False
     failure = ""
     last_web_snapshot: dict = {}
+    web_history: list = []
     native_snapshot_ready = False
     native_snapshot_reads = {
         "recovered_count": 0,
@@ -404,7 +501,30 @@ def main() -> None:
         snapshot = page.evaluate("() => JSON.parse(window.mt2Snapshot || '{}')")
         if isinstance(snapshot, dict):
             last_web_snapshot = snapshot
+            # A frozen publication is otherwise invisible: nothing in the
+            # report says when the browser stopped advancing. Keep a bounded
+            # timeline so a failure shows the last sequence it actually saw.
+            web_history.append(
+                {
+                    "at_ms": int((time.monotonic() - started) * 1000),
+                    "snapshot_seq": snapshot.get("snapshot_seq"),
+                    "snapshot_published_at_ms": snapshot.get("snapshot_published_at_ms"),
+                    "state": snapshot.get("connection_state"),
+                }
+            )
+            del web_history[:-400]
         return snapshot
+
+    def browser_health() -> dict:
+        """Collect the injected page-health counters, or {} when unavailable."""
+        if page is None or page.is_closed():
+            return {}
+        try:
+            return page.evaluate(
+                "() => (window.mt2BrowserHealth ? {...window.mt2BrowserHealth} : {})"
+            )
+        except Exception as error:  # noqa: BLE001 - diagnostics must never mask the failure
+            return {"collection_error": redact(str(error))}
 
     def account(snapshot=None) -> dict:
         return (web() if snapshot is None else snapshot).get("account", {})
@@ -428,7 +548,13 @@ def main() -> None:
             time.sleep(poll_interval)
         if page is not None and not page.is_closed():
             samples["failed_web"] = web()
+            samples["browser_health"] = browser_health()
+            samples["web_snapshot_history"] = web_history[-80:]
             page.screenshot(path=str(output / "failure.png"))
+        try:
+            samples["failed_native"] = desktop()
+        except SnapshotUnavailableError:
+            samples["failed_native"] = {}
         raise AssertionError(name + " timed out")
 
     def stage(name: str, check: str, timeout: float = 30) -> None:
@@ -484,12 +610,79 @@ def main() -> None:
             and not account(snapshot).get("busy")
         )
 
+    def settled_lobby_pair(label: str, timeout: float = 120):
+        """One browser and one native snapshot, both read while settled.
+
+        The returned values come from the same pair of snapshots the wait
+        accepted, so a later re-read can never land inside a session refresh.
+        """
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            browser_snapshot, native_snapshot = web(), desktop()
+            if settled_lobby_account(browser_snapshot) and settled_lobby_account(native_snapshot):
+                checks.append(label)
+                print("PASS " + label, flush=True)
+                return browser_snapshot, native_snapshot
+            if process is not None and process.poll() is not None:
+                raise AssertionError("Exported native client exited during " + label)
+            time.sleep(0.1)
+        raise AssertionError(label + " timed out")
+
+    def settled_read(read, label: str, timeout: float = 120) -> dict:
+        """One snapshot from a session that is not mid refresh.
+
+        A value asserted outside a `wait` still has to survive the scheduled
+        session refresh: the run lasts longer than one refresh window, and a
+        drained snapshot would otherwise fail (or falsely satisfy) the check.
+        """
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            snapshot = read()
+            if session_settled(snapshot):
+                return snapshot
+            if read is desktop and process is not None and process.poll() is not None:
+                raise AssertionError("Exported native client exited during " + label)
+            time.sleep(0.1)
+        raise AssertionError(label + " never reached a settled session")
+
     def system_action(action: str) -> None:
-        page.keyboard.press("Escape")
+        # The original system menu only opens for an in-world, focused canvas.
+        # A key press sent while the exported client is still switching scenes is
+        # swallowed, so confirm world readiness and re-send a bounded number of
+        # times instead of treating a lost key press as a product failure.
         wait(
-            "system_menu_opens_for_" + action,
-            lambda: web().get("ui", {}).get("system", {}).get("visible"),
+            "browser_world_ready_for_" + action,
+            lambda: (
+                web().get("connection_state") == "connected"
+                and bool(web().get("identity"))
+                and bool(web().get("map_chunks"))
+                and not web().get("content_error")
+            ),
+            90,
         )
+        opened = False
+        for _attempt in range(3):
+            page.bring_to_front()
+            page.keyboard.press("Escape")
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                if web().get("ui", {}).get("system", {}).get("visible"):
+                    opened = True
+                    break
+                time.sleep(0.1)
+            if opened:
+                break
+        if not opened:
+            if page is not None and not page.is_closed():
+                samples["failed_web"] = web()
+                page.screenshot(path=str(output / "failure.png"))
+            raise AssertionError(
+                "system_menu_opens_for_"
+                + action
+                + " timed out after 3 Escape attempts on the in-world canvas"
+            )
+        checks.append("system_menu_opens_for_" + action)
+        print("PASS system_menu_opens_for_" + action, flush=True)
         center = web()["ui"]["system"][action + "_center"]
         viewport = page.viewport_size
         assert 0 <= center[0] < viewport["width"] and 0 <= center[1] < viewport["height"], (
@@ -571,6 +764,7 @@ def main() -> None:
             )
             context = browser.new_context(viewport={"width": 1280, "height": 800})
             context.add_init_script("window.mt2ProbeEnabled = true;")
+            context.add_init_script(BROWSER_HEALTH_INIT_SCRIPT)
             page = context.new_page()
             page.on(
                 "console",
@@ -603,9 +797,13 @@ def main() -> None:
                 "Both exports must target the requested database"
             )
             checks.append("both_exports_target_requested_database")
+            # Availability turns online only after the auth service and the game
+            # connection are both ready, which lags engine boot on the large
+            # world export. Keep the boot allowance instead of the default.
             wait(
                 "original_server_is_available",
                 lambda: account().get("available") and account(desktop()).get("available"),
+                180,
             )
             samples["engine_ready_seconds"] = round(time.monotonic() - started, 2)
             page.screenshot(path=str(output / "account-server.png"))
@@ -666,11 +864,19 @@ def main() -> None:
                     == selected(desktop(), names["native"])
                 ),
             )
-            web_id, native_id = selected(web(), names["web"]), selected(desktop(), names["native"])
-            web_account = account()["account_identity"]
-            native_account = account(desktop())["account_identity"]
+            web_snapshot, native_snapshot = settled_lobby_pair(
+                "both_rosters_are_read_from_settled_lobby_sessions"
+            )
+            web_id = selected(web_snapshot, names["web"])
+            native_id = selected(native_snapshot, names["native"])
+            web_account = account(web_snapshot)["account_identity"]
+            native_account = account(native_snapshot)["account_identity"]
             assert web_account != native_account and web_id != native_id
-            assert len(account()["characters"]) == len(account(desktop())["characters"]) == 1
+            assert (
+                len(account(web_snapshot)["characters"])
+                == len(account(native_snapshot)["characters"])
+                == 1
+            )
             checks.append("independent_accounts_receive_only_their_own_rosters")
             page.screenshot(path=str(output / "account-select.png"))
             native_command("enter")
@@ -907,13 +1113,19 @@ def main() -> None:
             error_count = len(desktop().get("errors", []))
             native_command("select", character_id=web_id)
             if npc_route:
-                assert not desktop().get("rendered_npcs"), "NPCs remain after leaving the world"
+                left_snapshot = settled_read(
+                    desktop, "native_lobby_snapshot_after_leaving_the_world"
+                )
+                assert not left_snapshot.get("rendered_npcs"), "NPCs remain after leaving the world"
                 checks.append("native_leave_clears_NPC_layer")
             wait(
                 "foreign_character_selection_is_rejected",
                 lambda: len(desktop().get("errors", [])) > error_count,
             )
-            assert account(desktop())["selected_id"] == native_id
+            rejected_snapshot = settled_read(
+                desktop, "native_lobby_snapshot_after_rejected_selection"
+            )
+            assert account(rejected_snapshot)["selected_id"] == native_id
             checks.append("rejected_selection_preserves_owned_character")
             native_command("enter")
             wait("native_owned_character_returns", lambda: seen(web(), native_id) is not None)
@@ -952,12 +1164,17 @@ def main() -> None:
                 "duplicate_character_name_is_rejected",
                 lambda: len(web().get("errors", [])) > error_count and not account().get("busy"),
             )
-            assert account()["stage"] == "create" and account()["roster_count"] == 1
+            rejected_creation = settled_read(web, "browser_creation_snapshot_after_rejected_name")
+            assert (
+                account(rejected_creation)["stage"] == "create"
+                and account(rejected_creation)["roster_count"] == 1
+            )
             checks.append("creation_rejection_preserves_form_and_roster")
             fill("character_name", names["second"])
             click("create_submit")
             wait("second_character_creation_is_confirmed", lambda: selection_ready(names["second"]))
-            second_id = selected(web(), names["second"])
+            second_snapshot = settled_read(web, "browser_selection_snapshot_after_second_creation")
+            second_id = selected(second_snapshot, names["second"])
             assert second_id not in [web_id, native_id]
             page.screenshot(path=str(output / "account-two-characters.png"))
             click("enter")
@@ -1013,8 +1230,15 @@ def main() -> None:
                 )
             page.reload(wait_until="domcontentloaded")
             stage("select", "browser_reload_restores_account_to_selection", 90)
-            assert account()["account_identity"] == web_account and account()["roster_count"] == 2
-            assert account()["selected_id"] == web_id and web()["connection_state"] == "lobby"
+            restored_session = settled_read(web, "browser_snapshot_after_reload_restore")
+            assert (
+                account(restored_session)["account_identity"] == web_account
+                and account(restored_session)["roster_count"] == 2
+            )
+            assert (
+                account(restored_session)["selected_id"] == web_id
+                and restored_session["connection_state"] == "lobby"
+            )
             checks.append("session_restore_keeps_account_roster_and_selection")
             click("enter")
             wait(
@@ -1078,7 +1302,11 @@ def main() -> None:
             wait("browser_logout_removes_presence", lambda: seen(desktop(), web_id) is None)
             page.reload(wait_until="domcontentloaded")
             stage("server", "logout_refresh_has_no_saved_session", 90)
-            assert not account().get("account_identity") and account()["roster_count"] == 0
+            logged_out = settled_read(web, "browser_snapshot_after_logout_refresh")
+            assert (
+                not account(logged_out).get("account_identity")
+                and account(logged_out)["roster_count"] == 0
+            )
             checks.append("logout_clears_account_and_roster")
             wait("server_available_after_logout", lambda: account().get("available"))
             click("server_confirm")
@@ -1094,13 +1322,16 @@ def main() -> None:
                     and not account().get("busy")
                 ),
             )
-            assert not account().get("account_identity")
+            rejected_login = settled_read(web, "browser_snapshot_after_rejected_login")
+            assert not account(rejected_login).get("account_identity")
             checks.append("failed_login_does_not_authorize_account")
             fill("password", credentials["web"]["password"])
             click("login_submit")
             stage("select", "username_password_login_restores_selection")
+            restored_login = settled_read(web, "browser_snapshot_after_restored_login")
             assert (
-                account()["account_identity"] == web_account and account()["selected_id"] == web_id
+                account(restored_login)["account_identity"] == web_account
+                and account(restored_login)["selected_id"] == web_id
             )
             click("enter")
             wait(
@@ -1321,16 +1552,21 @@ def main() -> None:
                 page.screenshot(path=str(output / "account-session-refresh.png"))
             assert not browser_errors, "Browser engine errors: " + "; ".join(browser_errors[:3])
             checks.append("browser_has_no_engine_errors")
+            samples["browser_health"] = browser_health()
             passed = True
             context.close()
             browser.close()
     except Exception as error:
-        failure = redact(str(error))
+        # A bare ``assert`` or an exhausted ``next()`` raises an exception with
+        # no message; keep the class name so an empty failure stays diagnosable.
+        failure = redact(str(error)) or type(error).__name__
         if last_web_snapshot:
             samples["last_successful_web"] = last_web_snapshot
         if page is not None and not page.is_closed():
             with contextlib.suppress(Exception):
                 samples["failed_web"] = web()
+                samples.setdefault("browser_health", browser_health())
+                samples.setdefault("web_snapshot_history", web_history[-80:])
                 page.screenshot(path=str(output / "failure.png"))
     finally:
         if process is not None:

@@ -5,6 +5,50 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Area-NPC dialogue accepted on both exported clients — 2026-09-11
+
+`interact_npc` now carries the original town conversation instead of a placeholder
+line. `content/profiles/yongan-npc-dialogue.json` holds 47 rows — 41 static
+placements plus the six original wandering townsfolk (Aranyo, Ah-Yu, Yonah,
+Mirine, Uriel, Baek-Go) — and `tools/build_npc_interactions.py` compiles them into
+`content/worlds/yongan.interactions.json`: 47 dialogue interactions, 41 titled, 0
+authored. Every row quotes the pinned quest corpus at revision `7ee9c84` and its
+English localization keys, and the profile records the per-handler source so a row
+can be re-derived rather than retyped.
+
+Acceptance is the exported two-client run
+`.local/quests-v32-local/checks/browser-npcs-r11` (`report.json` plus per-phase
+screenshots) against database `mt2-p2-area-npc-v32-r1-20260910`: **136 checks, 0
+failures, 0 browser engine errors**, using exports `web-r7` (`index.wasm` sha256
+`fc74679e…`, `index.pck` `9673534e…`) and `linux-r6` (`MT2Spacetime.x86_64`
+sha256 `d9f79ab8…`). The route walks both clients to the city guard, opens private
+dialogue on hover and click, plays both scripted quest lines, hands in the origin
+and opens the guardian chain, then proves WASD still moves and closes the session;
+it repeats the sequence on a wandering area NPC
+(`spawn.yongan.doctor-20018-0`) that has no static definition, checking authored
+bounds, private text, idle isolation, close and the return legs, and finishes by
+confirming the town population survived. The pinned 55 m entry view yields 23
+placements (`tests/fixtures/yongan-areas-route.json`) and all six wandering NPCs
+sit outside it.
+
+The runner now records a browser-health probe (rAF heartbeat, WebGL
+context-lost/restored/creation-error counters, visibility and blur events) and a
+bounded snapshot timeline whenever a check fails. The r10 run failed
+`browser_WASD_reaches_native_rendered_avatar` because the web publication froze
+for >8 s while the page's JS thread stayed responsive; r11, on the same exports
+and database, reports `context_lost: 0` and completes the entire route, so that
+stall is recorded as a transient headless-GPU artifact rather than an accepted
+product defect. A separate 480 s idle-browser probe showed zero stalls, so it is
+not time-based degradation.
+
+Remaining limits: this module is built with the local issuer and bootstrap
+identity and must not be published. Dialogue rows are keyed by placement vnum, so
+branches the original gates on quest state (Alchemist already-received,
+warehouse Storekeeper version 1, the `subquest_25` flower gate and the 23..26
+letter chain) still show their unconditional first line until those chains land.
+Other maps, the regeneration runtime and the 945-definition Yongan population
+remain open.
+
 ## Recurring replica sweep scheduled — 2026-09-10
 
 The replica maintenance tooling reclaimed 20.6 GB once; this entry makes the

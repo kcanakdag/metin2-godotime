@@ -450,6 +450,7 @@ pub fn stop_character(ctx: &ReducerContext, character: Identity) {
     crate::player_buffs::pause(ctx, character)
         .unwrap_or_else(|error| panic!("cannot pause character buffs: {error}"));
     crate::npcs::clear(ctx, character);
+    crate::quest::suspend(ctx, character);
     crate::item_effects::clear(ctx, character);
     crate::appearance::remove(ctx, character);
     crate::special_area::clear(ctx, character);

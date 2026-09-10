@@ -13,6 +13,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from godot_editor_log import strip_editor_socket_port_error
+
 ROOT = Path(__file__).resolve().parents[1]
 CLIENT = ROOT / "client"
 PROJECT = """config_version=5
@@ -35,6 +37,15 @@ SMOKES = {
     "options": ("classic_system_options_smoke.gd", "CLASSIC_SYSTEM_OPTIONS_SMOKE"),
     "panel": ("classic_target_smoke.gd", "CLASSIC_TARGET_SMOKE"),
     "picker": ("world_picker_smoke.gd", "WORLD_PICKER_SMOKE"),
+    "npc_approach_reconnect": (
+        "npc_approach_reconnect_smoke.gd",
+        "NPC_APPROACH_RECONNECT_SMOKE",
+    ),
+    "move_destination": ("move_destination_smoke.gd", "MOVE_DESTINATION_SMOKE"),
+    "move_reservation_hold": (
+        "move_reservation_hold_smoke.gd",
+        "MOVE_RESERVATION_HOLD_SMOKE",
+    ),
     "probe": ("export_probe_smoke.gd", "EXPORT_PROBE_SMOKE"),
     "screen_wave": ("screen_wave_smoke.gd", "SCREEN_WAVE_SMOKE"),
     "physical_ui": ("physical_ui_smoke.gd", "PHYSICAL_UI_SMOKE"),
@@ -42,12 +53,6 @@ SMOKES = {
     "item_intent": ("item_intent_smoke.gd", "ITEM_INTENT_SMOKE"),
 }
 TEST_SUPPORT = ("export_probe.gd",)
-EDITOR_SOCKET_PORT_ERROR = (
-    'ERROR: Condition "_sock == -1" is true. Returning: FAILED\n'
-    "   at: _inet_open (drivers/unix/net_socket_unix.cpp:288)\n"
-    'ERROR: Condition "err != OK" is true. Returning: ERR_CANT_CREATE\n'
-    "   at: listen (core/io/tcp_server.cpp:56)"
-)
 
 
 def sha256(path: Path) -> str:
@@ -55,20 +60,30 @@ def sha256(path: Path) -> str:
 
 
 def run(command: list[str], environment: dict[str, str], log: Path) -> str:
-    result = subprocess.run(
-        command,
-        env=environment,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        timeout=180,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            command,
+            env=environment,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=180,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as error:
+        partial = error.stdout or ""
+        if isinstance(partial, bytes):
+            partial = partial.decode(errors="replace")
+        log.write_text(partial)
+        raise SystemExit(
+            f"Godot target-client check timed out after 180s; "
+            f"a failing smoke must still quit(). See {log}\n{partial[-5000:]}"
+        ) from error
     log.write_text(result.stdout)
     # A second editor instance cannot bind Godot's editor IPC ports while the
     # user's editor is open. Godot logs this exact harmless startup pair even
     # for an empty project, so exclude only that signature from the gate.
-    checked_output = result.stdout.replace(EDITOR_SOCKET_PORT_ERROR, "")
+    checked_output = strip_editor_socket_port_error(result.stdout)
     if result.returncode or "SCRIPT ERROR:" in checked_output or "\nERROR:" in checked_output:
         raise SystemExit(f"Godot target-client check failed; see {log}\n{result.stdout[-5000:]}")
     return result.stdout

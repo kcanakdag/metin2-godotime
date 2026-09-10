@@ -12,6 +12,11 @@ pub fn is_weapon(vnum: u32) -> bool {
     definition(vnum).is_ok_and(|item| matches!(item.kind, ItemKind::Weapon))
 }
 
+/// Display name of an installed item, used by quest dialogue and tooling.
+pub fn name(vnum: u32) -> Option<&'static str> {
+    definition(vnum).ok().map(|item| item.name)
+}
+
 pub fn check_requirements(
     item: &ItemDefinition,
     level: u8,
@@ -55,6 +60,8 @@ mod tests {
             }
         }
         assert!(!is_weapon(27001));
+        assert_eq!(name(27001), Some("Red Potion (S)"));
+        assert_eq!(name(999999), None);
         assert!(definition(999999).is_err());
         let sword = definition(10).unwrap();
         assert!(check_requirements(sword, 1, 0, 0).is_ok());

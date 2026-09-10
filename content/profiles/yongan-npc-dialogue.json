@@ -1,0 +1,469 @@
+{
+  "schema": "mt2spacetime.npc-dialogue-profile",
+  "version": 1,
+  "map_id": "metin2_map_a1",
+  "source": {
+    "repository": "https://git.old-metin2.com/metin2/server",
+    "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+    "quests": [
+      "gamefiles/data/quest/blacksmith.quest",
+      "gamefiles/data/quest/check_collect_reward.quest",
+      "gamefiles/data/quest/collect_herb_lv10.quest",
+      "gamefiles/data/quest/dragon_soul.quest",
+      "gamefiles/data/quest/find_squareguard.quest",
+      "gamefiles/data/quest/fisher.quest",
+      "gamefiles/data/quest/fortune_telling.quest",
+      "gamefiles/data/quest/guild_war_bet.quest",
+      "gamefiles/data/quest/horse_guard.quest",
+      "gamefiles/data/quest/main_quest_lv32.quest",
+      "gamefiles/data/quest/map_warp.quest",
+      "gamefiles/data/quest/neutral_warp.quest",
+      "gamefiles/data/quest/new_quest_lv17.quest",
+      "gamefiles/data/quest/new_quest_lv26.quest",
+      "gamefiles/data/quest/new_quest_lv29.quest",
+      "gamefiles/data/quest/new_quest_lv54.quest",
+      "gamefiles/data/quest/new_quest_lv75.quest",
+      "gamefiles/data/quest/npc_talk.quest",
+      "gamefiles/data/quest/skill_group.quest",
+      "gamefiles/data/quest/subquest_01.quest",
+      "gamefiles/data/quest/subquest_02.quest",
+      "gamefiles/data/quest/subquest_08.quest",
+      "gamefiles/data/quest/subquest_25.quest",
+      "gamefiles/data/quest/warehouse.quest"
+    ]
+  },
+  "notes": [
+    "Each row is the original when ...chat/click handler for that placement vnum; the text is the pinned English localization, not authored copy. Rows are keyed by vnum, so the model folder named in the original client npclist.txt and the server quest corpus agree by construction.",
+    "The 20086/20087 model folders in the original client npclist.txt are reversed relative to the display names in mob_names_en.txt (model wondaim on Handu-Up, model handaup on Wonda-Rim). Spawn ids follow the model folder so they match the converted asset names.",
+    "spawn.yongan.nnflower-20358-0 uses subquest_25.quest:160 instead of the oxevent.quest handlers, because every oxevent handler for 20358 is gated by pc.get_gm_level()==5 and is an event tool rather than player dialogue.",
+    "Several rows are quest-conditional in the original (for example the Alchemist already-received branch, subquest_25 flower_done==0, warehouse.quest version 1 Storekeeper). The server has no quest-state gating yet, so the quoted branch is shown unconditionally until the matching quest chain lands.",
+    "Titles are the say_title in force when the referenced line runs, which keeps the class-specific teacher titles instead of the wrong-class branch title.",
+    "Six NPCs (Aranyo 20002, Ah-Yu 20003, Yonah 20005, Mirine 20006, Uriel 20011, Baek-Go 20018) are original wandering townsfolk: the client authorises no static point for them, so the server samples a point inside the pinned area and keeps it as an npc_spawn row. They carry dialogue rows exactly like static placements; the server resolves their board text from the area definition and their position from the sampled row.",
+    "spawn.yongan.girl-lost-elder-brother-20006-0 and spawn.yongan.plant-researcher-20011-0 quote npc_talk.quest and main_quest_lv32.quest handlers whose original conditions branch on quest state (level 23..26 and the letter chain). The unconditional first line is quoted until that quest state exists."
+  ],
+  "npcs": [
+    {
+      "spawn_id": "spawn.yongan.alchemist-20001-0",
+      "source": {
+        "quest": "gamefiles/data/quest/dragon_soul.quest",
+        "line": 103,
+        "head": "alchemist.chat.gameforge.dragon_soul._1120_npcChat"
+      },
+      "text": "gameforge.dragon_soul._1130_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.arms-9001-0",
+      "source": {
+        "quest": "gamefiles/data/quest/subquest_08.quest",
+        "line": 67,
+        "head": "__TARGET__.target.click"
+      },
+      "text": "gameforge.subquest_08._130_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.auntie-20002-0",
+      "source": {
+        "quest": "gamefiles/data/quest/npc_talk.quest",
+        "line": 8,
+        "head": "20002.chat.gameforge.npc_talk._620_npcChat"
+      },
+      "text": "gameforge.npc_talk._640_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.baby-and-mom-20003-0",
+      "source": {
+        "quest": "gamefiles/data/quest/new_quest_lv26.quest",
+        "line": 108,
+        "head": "20003.chat.gameforge.new_quest_lv26._020_set_title"
+      },
+      "text": "gameforge.new_quest_lv26._057_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.backchon-20091-0",
+      "source": {
+        "quest": "gamefiles/data/quest/npc_talk.quest",
+        "line": 166,
+        "head": "20091.chat.gameforge.npc_talk._760_npcChat"
+      },
+      "text": "gameforge.npc_talk._780_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.blacksmith-20016-0",
+      "source": {
+        "quest": "gamefiles/data/quest/blacksmith.quest",
+        "line": 3,
+        "head": "blacksmith.chat.gameforge.blacksmith._10_npcChat"
+      },
+      "text": "gameforge.blacksmith._30_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.bookworm-20023-0",
+      "source": {
+        "quest": "gamefiles/data/quest/npc_talk.quest",
+        "line": 136,
+        "head": "20023.chat.gameforge.npc_talk._160_npcChat"
+      },
+      "text": "gameforge.npc_talk._180_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.ceramist-20005-0",
+      "source": {
+        "quest": "gamefiles/data/quest/new_quest_lv29.quest",
+        "line": 25,
+        "head": "20005.chat.gameforge.new_quest_lv29._015_npcChat"
+      },
+      "text": "gameforge.new_quest_lv29._021_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.chagirap-20084-0",
+      "source": {
+        "quest": "gamefiles/data/quest/collect_herb_lv10.quest",
+        "line": 22,
+        "head": "__TARGET__.target.click"
+      },
+      "text": "gameforge.collect_herb_lv10._60_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.city-guard-20354",
+      "source": {
+        "quest": "gamefiles/data/quest/npc_talk.quest",
+        "line": 3,
+        "head": "20354.click"
+      },
+      "text": "gameforge.npc_talk._10_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.defence-9002-0",
+      "source": {
+        "quest": "gamefiles/data/quest/subquest_02.quest",
+        "line": 74,
+        "head": "9002.chat.gameforge.subquest_02._70_targetVid"
+      },
+      "text": "gameforge.subquest_02._110_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.doctor-20018-0",
+      "source": {
+        "quest": "gamefiles/data/quest/check_collect_reward.quest",
+        "line": 3,
+        "head": "20018.chat.gameforge.check_collect_reward._010_npcChat"
+      },
+      "text": "gameforge.check_collect_reward._030_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.gangyo-patrol-bow-11001-0",
+      "source": {
+        "quest": "gamefiles/data/quest/guild_war_bet.quest",
+        "line": 3,
+        "head": "guild_war_observer1.chat.gameforge.guild_war_bet._10_npcChat"
+      },
+      "text": "gameforge.guild_war_bet._30_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.gangyo-patrol-spear-11000-0",
+      "source": {
+        "quest": "gamefiles/data/quest/find_squareguard.quest",
+        "line": 65,
+        "head": "11000.chat.gameforge.find_squareguard._100_npcChat"
+      },
+      "text": "gameforge.find_squareguard._120_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.girl-lost-elder-brother-20006-0",
+      "source": {
+        "quest": "gamefiles/data/quest/npc_talk.quest",
+        "line": 33,
+        "head": "20006.chat.gameforge.npc_talk._440_npcChat"
+      },
+      "text": "gameforge.npc_talk._450_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.goods-9003-0",
+      "source": {
+        "quest": "gamefiles/data/quest/subquest_01.quest",
+        "line": 17,
+        "head": "__TARGET__.target.click"
+      },
+      "text": "gameforge.subquest_01._30_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.guard-leader-20355-0",
+      "source": {
+        "quest": "gamefiles/data/quest/new_quest_lv54.quest",
+        "line": 17,
+        "head": "20355.chat.gameforge.new_quest_lv54._020_say_title"
+      },
+      "text": "gameforge.new_quest_lv54._030_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.handaup-20087-0",
+      "source": {
+        "quest": "gamefiles/data/quest/new_quest_lv17.quest",
+        "line": 11,
+        "head": "20087.chat.gameforge.new_quest_lv17._020_say_title"
+      },
+      "text": "gameforge.new_quest_lv17._021_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.hotel-grandfa-9005-0",
+      "source": {
+        "quest": "gamefiles/data/quest/warehouse.quest",
+        "line": 3,
+        "head": "warehouse_keeper.chat.gameforge.warehouse._10_npcChat"
+      },
+      "text": "gameforge.warehouse._30_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.hotel-grandma-9006-0",
+      "source": {
+        "quest": "gamefiles/data/quest/fortune_telling.quest",
+        "line": 3,
+        "head": "oldwoman.chat.gameforge.fortune_telling._10_npcChat"
+      },
+      "text": "gameforge.fortune_telling._20_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.jinno-patrol-spear-20349-0",
+      "source": {
+        "quest": "gamefiles/data/quest/horse_guard.quest",
+        "line": 3,
+        "head": "20349.chat.gameforge.horse_guard._10_npcChat"
+      },
+      "text": "gameforge.horse_guard._20_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.moonstone-20357-0",
+      "source": {
+        "quest": "gamefiles/data/quest/main_quest_lv32.quest",
+        "line": 124,
+        "head": "__TARGET__.target.click"
+      },
+      "text": "gameforge.main_quest_lv32._290_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.mr-restaurant-20008-0",
+      "source": {
+        "quest": "gamefiles/data/quest/npc_talk.quest",
+        "line": 43,
+        "head": "20008.chat.gameforge.npc_talk._20_npcChat"
+      },
+      "text": "gameforge.npc_talk._40_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.nnflower-20358-0",
+      "source": {
+        "quest": "gamefiles/data/quest/subquest_25.quest",
+        "line": 160,
+        "head": "__TARGET__.target.click"
+      },
+      "text": "gameforge.subquest_25._380_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.oldster-20009-0",
+      "source": {
+        "quest": "gamefiles/data/quest/neutral_warp.quest",
+        "line": 3,
+        "head": "20009.chat.gameforge.neutral_warp._10_npcChat"
+      },
+      "text": "gameforge.neutral_warp._30_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.oldster-9012-0",
+      "source": {
+        "quest": "gamefiles/data/quest/map_warp.quest",
+        "line": 3,
+        "head": "9012.chat.gameforge.map_warp._10_npcChat"
+      },
+      "text": "gameforge.map_warp._30_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.plant-researcher-20011-0",
+      "source": {
+        "quest": "gamefiles/data/quest/main_quest_lv32.quest",
+        "line": 24,
+        "head": "__TARGET__.target.click"
+      },
+      "text": "gameforge.main_quest_lv32._40_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sailor-9009-0",
+      "source": {
+        "quest": "gamefiles/data/quest/fisher.quest",
+        "line": 8,
+        "head": "9009.chat.gameforge.fisher._20_npcChat"
+      },
+      "text": "gameforge.fisher._40_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sailor-9009-1",
+      "source": {
+        "quest": "gamefiles/data/quest/fisher.quest",
+        "line": 8,
+        "head": "9009.chat.gameforge.fisher._20_npcChat"
+      },
+      "text": "gameforge.fisher._40_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sailor-9009-2",
+      "source": {
+        "quest": "gamefiles/data/quest/fisher.quest",
+        "line": 8,
+        "head": "9009.chat.gameforge.fisher._20_npcChat"
+      },
+      "text": "gameforge.fisher._40_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sailor-9009-3",
+      "source": {
+        "quest": "gamefiles/data/quest/fisher.quest",
+        "line": 8,
+        "head": "9009.chat.gameforge.fisher._20_npcChat"
+      },
+      "text": "gameforge.fisher._40_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sailor-9009-4",
+      "source": {
+        "quest": "gamefiles/data/quest/fisher.quest",
+        "line": 8,
+        "head": "9009.chat.gameforge.fisher._20_npcChat"
+      },
+      "text": "gameforge.fisher._40_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sailor-9009-5",
+      "source": {
+        "quest": "gamefiles/data/quest/fisher.quest",
+        "line": 8,
+        "head": "9009.chat.gameforge.fisher._20_npcChat"
+      },
+      "text": "gameforge.fisher._40_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sailor-9009-6",
+      "source": {
+        "quest": "gamefiles/data/quest/fisher.quest",
+        "line": 8,
+        "head": "9009.chat.gameforge.fisher._20_npcChat"
+      },
+      "text": "gameforge.fisher._40_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sailor-9009-7",
+      "source": {
+        "quest": "gamefiles/data/quest/fisher.quest",
+        "line": 8,
+        "head": "9009.chat.gameforge.fisher._20_npcChat"
+      },
+      "text": "gameforge.fisher._40_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sailor-9009-8",
+      "source": {
+        "quest": "gamefiles/data/quest/fisher.quest",
+        "line": 8,
+        "head": "9009.chat.gameforge.fisher._20_npcChat"
+      },
+      "text": "gameforge.fisher._40_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sailor-9009-9",
+      "source": {
+        "quest": "gamefiles/data/quest/fisher.quest",
+        "line": 8,
+        "head": "9009.chat.gameforge.fisher._20_npcChat"
+      },
+      "text": "gameforge.fisher._40_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.samahi-20090-0",
+      "source": {
+        "quest": "gamefiles/data/quest/new_quest_lv75.quest",
+        "line": 230,
+        "head": "20090.chat.gameforge.new_quest_lv75._020_set_title"
+      },
+      "text": "gameforge.new_quest_lv75._170_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sinsu-patrol-spear-20300-0",
+      "source": {
+        "quest": "gamefiles/data/quest/skill_group.quest",
+        "line": 72,
+        "head": "teacher1.target.click"
+      },
+      "text": "gameforge.skill_group._260_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sinsu-patrol-spear-20301-0",
+      "source": {
+        "quest": "gamefiles/data/quest/skill_group.quest",
+        "line": 126,
+        "head": "teacher2.target.click"
+      },
+      "text": "gameforge.skill_group._410_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sinsu-patrol-spear-20302-0",
+      "source": {
+        "quest": "gamefiles/data/quest/skill_group.quest",
+        "line": 181,
+        "head": "teacher3.target.click"
+      },
+      "text": "gameforge.skill_group._460_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sinsu-patrol-spear-20303-0",
+      "source": {
+        "quest": "gamefiles/data/quest/skill_group.quest",
+        "line": 235,
+        "head": "teacher4.target.click"
+      },
+      "text": "gameforge.skill_group._530_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sinsu-patrol-spear-20304-0",
+      "source": {
+        "quest": "gamefiles/data/quest/skill_group.quest",
+        "line": 287,
+        "head": "teacher5.target.click"
+      },
+      "text": "gameforge.skill_group._580_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sinsu-patrol-spear-20305-0",
+      "source": {
+        "quest": "gamefiles/data/quest/skill_group.quest",
+        "line": 341,
+        "head": "teacher6.target.click"
+      },
+      "text": "gameforge.skill_group._640_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sinsu-patrol-spear-20306-0",
+      "source": {
+        "quest": "gamefiles/data/quest/skill_group.quest",
+        "line": 396,
+        "head": "teacher7.target.click"
+      },
+      "text": "gameforge.skill_group._690_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.sinsu-patrol-spear-20307-0",
+      "source": {
+        "quest": "gamefiles/data/quest/skill_group.quest",
+        "line": 451,
+        "head": "teacher8.target.click"
+      },
+      "text": "gameforge.skill_group._750_say"
+    },
+    {
+      "spawn_id": "spawn.yongan.wondaim-20086-0",
+      "source": {
+        "quest": "gamefiles/data/quest/npc_talk.quest",
+        "line": 156,
+        "head": "20086.chat.gameforge.npc_talk._210_npcChat"
+      },
+      "text": "gameforge.npc_talk._230_say"
+    }
+  ]
+}

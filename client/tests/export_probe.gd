@@ -32,6 +32,7 @@ var _sequence := -1
 var _request_timing_sequence := 0
 var _request_timings: Array[Dictionary] = []
 var _snapshot_timings: Array[Dictionary] = []
+var _snapshot_sequence := 0
 var _errors: Array[String] = []
 var _attack_ack_sequence := 0
 var _perform_attack_acks: Array[Dictionary] = []
@@ -130,9 +131,39 @@ func _process(delta: float) -> void:
 		snapshot.get("command_feedback", []),
 		["id", "request_id", "severity", "message", "created_at"]
 	)
+	snapshot["quest_states"] = _project_rows(
+		snapshot.get("quest_states", []), ["quest_index", "quest_id", "title", "state", "sequence"]
+	)
+	snapshot["quest_objectives"] = _project_rows(
+		snapshot.get("quest_objectives", []),
+		[
+			"quest_index",
+			"quest_id",
+			"letter_title",
+			"label",
+			"target_vnum",
+			"amount",
+			"total",
+			"remaining_display",
+		]
+	)
+	var selection: Variant = snapshot.get("quest_selection", {})
+	if selection is Dictionary and not selection.is_empty():
+		snapshot["quest_selection"] = {
+			"npc_vnum": selection.get("npc_vnum"),
+			"quest_index": selection.get("quest_index"),
+			"options": selection.get("options", []),
+		}
+	else:
+		snapshot["quest_selection"] = {}
 	snapshot["performance_profile"] = _performance_profile
 	snapshot["request_timings"] = _request_timings.duplicate(true)
 	snapshot["snapshot_timings"] = _snapshot_timings.duplicate(true)
+	# Publication provenance: a reader can tell a stale snapshot from a fresh one
+	# even when nothing else in the payload changed between two nearby reads.
+	_snapshot_sequence += 1
+	snapshot["snapshot_seq"] = _snapshot_sequence
+	snapshot["snapshot_published_at_ms"] = Time.get_ticks_msec()
 	snapshot["errors"] = _errors
 	snapshot["perform_attack_acks"] = _perform_attack_acks.duplicate(true)
 	snapshot["select_combat_target_acks"] = _select_combat_target_acks.duplicate(true)
@@ -358,9 +389,11 @@ func _dispatch(command: Dictionary) -> void:
 		"move":
 			connection.set_move_input(float(command.get("x", 0)), float(command.get("z", 0)))
 		"target":
-			connection.move_to(float(command.get("x", 0)), float(command.get("z", 0)))
+			world.request_move_destination(
+				Vector3(float(command.get("x", 0)), 0.0, float(command.get("z", 0)))
+			)
 		"stop":
-			connection.stop_moving()
+			world.request_stop_moving()
 		"pointer_move":
 			_inject_pointer(command, false)
 		"pointer_click":
@@ -638,7 +671,18 @@ func _on_snapshot_profiled(table: String, count: int, conversion_us: int, dispat
 
 
 func _capture_request_timing(name: String, succeeded: bool, timestamp_us: int) -> void:
-	if name not in ["begin_charge", "move_to", "stop_moving", "cast_skill"]:
+	if (
+		name
+		not in [
+			"begin_charge",
+			"move_to",
+			"stop_moving",
+			"cast_skill",
+			"interact_npc",
+			"close_npc_interaction",
+			"npc_choose",
+		]
+	):
 		return
 	var connection: GameConnection = get_parent().connection
 	_request_timing_sequence += 1

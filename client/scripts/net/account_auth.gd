@@ -168,9 +168,21 @@ func _save_session() -> void:
 			FileAccess.set_unix_permissions(
 				_session_path, FileAccess.UNIX_READ_OWNER | FileAccess.UNIX_WRITE_OWNER
 			)
+	_flush_web_filesystem()
 
 
 func _forget_session() -> void:
 	_session_token = ""
 	if has_saved_session():
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(_session_path))
+	_flush_web_filesystem()
+
+
+## The browser build mounts `user://` from IndexedDB through Emscripten's IDBFS,
+## which only writes back when the filesystem is synced. Godot's own syncs can
+## trail a file change by seconds, so a reload right after signing out can read
+## the deleted token back. Persist the change before the caller continues.
+func _flush_web_filesystem() -> void:
+	if not OS.has_feature("web"):
+		return
+	JavaScriptBridge.force_fs_sync()

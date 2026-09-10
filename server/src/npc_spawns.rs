@@ -1,6 +1,6 @@
 //! Persistent area NPC placement. No client reducer can move or reroll these rows.
 use crate::{content, definitions, now_us, npc_placement};
-use spacetimedb::{ReducerContext, Table, rand::Rng};
+use spacetimedb::{rand::Rng, ReducerContext, Table};
 
 #[spacetimedb::table(accessor = npc_spawn, public)]
 pub struct NpcSpawn {
@@ -30,6 +30,20 @@ pub fn validate_content() {
             content::valid_npc_position(x as f32 / 100.0, z as f32 / 100.0)
                 .expect("NPC area lies inside its map");
         }
+        // The client renders every live area row with the same picking proxy it
+        // uses for a static placement, so the conversation must exist too.
+        let mut rows = definitions::NPC_AREA_DIALOGUES
+            .iter()
+            .filter(|row| row.id == area.id);
+        let row = rows.next().expect("Area NPC needs a dialogue row");
+        assert!(rows.next().is_none(), "Area NPC dialogue is duplicated");
+        assert!(row.vnum != 0 && !row.name.is_empty());
+    }
+    for row in definitions::NPC_AREA_DIALOGUES {
+        assert!(
+            definitions::NPC_AREAS.iter().any(|area| area.id == row.id),
+            "Area dialogue has no placement area"
+        );
     }
 }
 

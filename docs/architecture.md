@@ -1,16 +1,34 @@
 # Architecture
 
-Protocol 31 adds `buff_status`, an account-filtered UI projection of private
-`character_buff` state. It contains character/skill/life identity, remaining ticks
-and paused state, but no captured modifier values or internal tick clock.
-The server's `:sender` filter enforces ownership. Activation, duration updates,
-pause/resume and removal synchronize the projection; unchanged rows are not
-rewritten. Godot subscribes during world entry and clears buff snapshots on exit.
-The HUD consumes owner-only rows through `skill_hud_binding.gd` and
-`classic_buffs.gd`, including the original active-affect icon strip. The new local
-training QA module and bindings are staged; normal exported builds remain on
-their previous protocols. Rendered world and exported/browser presentation still
-require separate qualification.
+Protocol 32 adds the server-authoritative quest runtime in `server/src/quest.rs`
+with three account-filtered projections: `quest_state`, `quest_objective` and
+`quest_selection`. Each carries a `:sender` visibility filter on its `account`
+column, so a client only ever subscribes to its own rows. Definitions are
+compiled offline by `tools/build_quest_catalog.py` from the pinned original quest
+scripts into a versioned catalog that `server/build_quests.rs` embeds at build
+time through `MT2_QUEST_CATALOG`; the module never reads quest source at runtime,
+and an empty catalog fails closed by starting no quest and firing no trigger.
+Runtime event evaluation (login, level-up, monster death, NPC conversation) maps
+onto compiled triggers and applies state changes and rewards inside the calling
+reducer transaction, so a quest cannot advance without its reward. Scripted
+answers keep their branch bodies server-side; the client renders only the
+options that were actually offered. `quest_objective` exists once per tracked
+quest, which preserves the original behaviour of several quests handing out
+letters at once. The public deployment `20260910T132257494611Z` runs this
+protocol; see the implementation ledger for the accepted scope and limits.
+
+The preceding protocol-31 slice added `buff_status`, an account-filtered UI
+projection of private `character_buff` state. It contains character/skill/life
+identity, remaining ticks and paused state, but no captured modifier values or
+internal tick clock. The server's `:sender` filter enforces ownership.
+Activation, duration updates, pause/resume and removal synchronize the projection;
+unchanged rows are not rewritten. Godot subscribes during world entry and clears
+buff snapshots on exit. The HUD consumes owner-only rows through
+`skill_hud_binding.gd` and `classic_buffs.gd`, including the original
+active-affect icon strip. Protocol 32 keeps those tables, so the public module
+still carries the buff schema; the buff slice was qualified against its own
+training candidate, and its rendered world/exported presentation still requires
+separate qualification on the quest build.
 
 The unfinished protocol-30 worktree adds private remaining-duration character
 buffs and removes precomputed damage from private monster clocks. Ordinary mob
@@ -317,11 +335,21 @@ reservation. There is no new pathfinder: a blocked approach can time out.
 
 The game build joins `content/worlds/yongan.interactions.json` to the installed
 offline NPC catalog. Names and positions come from the same immutable content;
-interaction kinds/text come from the tracked profile. `world_info.npc_catalog_hash`
-binds the client to the exact catalog bytes before entry. The server embeds the
-resolved definitions; it never reads a catalog supplied by a connected client.
-Static spawn IDs identify those compiled instances, so no mutable NPC table is
-needed for this slice. The selected handler is `dialogue`; unknown kinds fail
+interaction kinds/text come from the tracked profile. The live `world_info` row
+carries `npc_catalog_hash`; the client loads the imported `npc_catalog.gd` and
+rejects the world unless the file's SHA-256 matches, so the gate is a real
+byte-comparison against the server payload rather than an assumption. The server
+embeds the resolved definitions; it never reads a catalog supplied by a connected
+client. Test exports publish a reduced probe `world_info` snapshot (`map_id` plus
+`content_hash` only), so probe output cannot be used to verify that gate.
+Fixed spawn IDs identify those compiled instances, so a static placement needs no
+mutable NPC table: the compiled definition already carries vnum, name, text and
+position. The six wandering area NPCs are position-independent, so `interact_npc`
+resolves them from the compiled `NPC_AREA_DIALOGUES` entry plus the caller's live
+`npc_spawn` row, and re-validates that row after acceptance so an NPC that leaves
+range or unloads cancels instead of holding a stale lease. Dialogue text, titles
+and vnums stay compiled in both cases; only the authoritative position is
+subscribed state. The selected handler is `dialogue`; unknown kinds fail
 compilation. Shops and quests are not implemented by this handler.
 
 `interact_npc` validates the active controlling connection, living character,

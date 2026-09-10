@@ -456,6 +456,9 @@ pub fn admin_grant_progression_xp(
         );
     }
     let outcome = progression::apply_exact_experience(ctx, character, u64::from(amount))?;
+    if outcome.after.level > outcome.before.level {
+        crate::quest::on_level_up(ctx, character);
+    }
     finish_progression_success(
         ctx,
         &account,
@@ -584,6 +587,9 @@ pub fn admin_raise_progression_level(
     }
     let amount = progression::experience_to_reach_level(&progression_row, target)?;
     let outcome = progression::apply_exact_experience(ctx, character, amount)?;
+    if outcome.after.level > outcome.before.level {
+        crate::quest::on_level_up(ctx, character);
+    }
     if outcome.after.level != target
         || outcome.after.experience != 0
         || outcome.after.level_step != 0
@@ -1190,6 +1196,12 @@ fn has_progression_capability(ctx: &ReducerContext, account: Identity) -> bool {
             .account()
             .find(account)
             .is_some_and(|row| row.enabled)
+}
+
+/// Whether the account owning `character` has developer/progression powers.
+pub fn is_operator(ctx: &ReducerContext, character: Identity) -> bool {
+    crate::accounts::owner_account(ctx, character)
+        .is_some_and(|account| has_progression_capability(ctx, account))
 }
 
 fn is_bootstrap_identity(identity: Identity) -> bool {

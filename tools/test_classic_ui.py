@@ -51,7 +51,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument("--native", action="store_true", help="Render under Xvfb and save a PNG.")
-    parser.add_argument("--suite", choices=["ui", "map", "chat", "intro", "status"], default="ui")
+    parser.add_argument(
+        "--suite",
+        choices=["ui", "map", "chat", "intro", "status", "refresh"],
+        default="ui",
+    )
     parser.add_argument("--output", type=Path, default=ROOT / ".local/classic-ui")
     options = parser.parse_args()
     script = f"classic_{options.suite}_smoke.gd"
@@ -71,6 +75,13 @@ def main() -> None:
         item_manifest = Path("assets/imported/content/p0-warrior-dog/manifest.v1.json")
         (stage / item_manifest).parent.mkdir(parents=True)
         shutil.copy2(ROOT / "client" / item_manifest, stage / item_manifest)
+        # The HUD always builds the skills panel and the affect strip, which read
+        # the selected skill catalog before any connection exists.
+        skill_catalog = Path("assets/imported/skills/catalog.v1.json")
+        if not (ROOT / "client" / skill_catalog).is_file():
+            raise SystemExit("Missing skill catalog; run the skill content build first.")
+        (stage / skill_catalog).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / "client" / skill_catalog, stage / skill_catalog)
         if options.suite == "intro":
             shutil.copytree(
                 ROOT / "client/assets/imported/characters", stage / "assets/imported/characters"

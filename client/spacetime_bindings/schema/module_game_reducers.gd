@@ -89,6 +89,11 @@ func move_item(id: int, cell: int, expected_revision: int) -> SpacetimeDBReducer
 func move_to(x: float, z: float) -> SpacetimeDBReducerCall:
 	return _client.call_reducer('move_to', [x, z], [&'F32', &'F32'])
 
+## 0. session_id: int [br]
+## 1. option: int [br]
+func npc_choose(session_id: int, option: int) -> SpacetimeDBReducerCall:
+	return _client.call_reducer('npc_choose', [session_id, option], [&'U64', &'U32'])
+
 
 func open_account() -> SpacetimeDBReducerCall:
 	return _client.call_reducer('open_account', [], [])

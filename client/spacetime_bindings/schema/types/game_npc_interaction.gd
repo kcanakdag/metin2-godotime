@@ -10,8 +10,10 @@ const table_names: Array[String] = ['npc_interaction']
 @export var account: PackedByteArray
 @export var session_id: int
 @export var spawn_id: String
+@export var vnum: int
 @export var title: String
 @export var body: String
+@export var options: Array[String]
 @export var expires_at_us: int
 
 #BSATN metadata
@@ -21,8 +23,10 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 	"account": "__identity__",
 	"session_id": "U64",
 	"spawn_id": "String",
+	"vnum": "U32",
 	"title": "String",
 	"body": "String",
+	"options": "vec_String",
 	"expires_at_us": "I64"
 }
 
@@ -30,16 +34,20 @@ const BSATN_TYPES: Dictionary[StringName, StringName] = {
 ## 2. account: PackedByteArray[br]
 ## 3. session_id: int[br]
 ## 4. spawn_id: String[br]
-## 5. title: String[br]
-## 6. body: String[br]
-## 7. expires_at_us: int[br]
-static func create(p_character_id: PackedByteArray, p_account: PackedByteArray, p_session_id: int, p_spawn_id: String, p_title: String, p_body: String, p_expires_at_us: int) -> GameNpcInteraction:
+## 5. vnum: int[br]
+## 6. title: String[br]
+## 7. body: String[br]
+## 8. options: Array[String][br]
+## 9. expires_at_us: int[br]
+static func create(p_character_id: PackedByteArray, p_account: PackedByteArray, p_session_id: int, p_spawn_id: String, p_vnum: int, p_title: String, p_body: String, p_options: Array[String], p_expires_at_us: int) -> GameNpcInteraction:
 	var result: GameNpcInteraction = GameNpcInteraction.new()
 	result.character_id = p_character_id
 	result.account = p_account
 	result.session_id = p_session_id
 	result.spawn_id = p_spawn_id
+	result.vnum = p_vnum
 	result.title = p_title
 	result.body = p_body
+	result.options = p_options
 	result.expires_at_us = p_expires_at_us
 	return result

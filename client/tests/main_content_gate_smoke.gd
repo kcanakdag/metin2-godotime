@@ -2,6 +2,7 @@ extends SceneTree
 ## Isolated Main gate checks with normal catalog failures and narrow UI/network spies.
 
 const MainScript := preload("res://scripts/main.gd")
+const ClientConfig := preload("res://scripts/client_config.gd")
 
 
 class WaveCatalog:
@@ -23,7 +24,7 @@ class ConnectionSpy:
 	var disconnects := 0
 	var world_entries := 0
 
-	func disconnect_game() -> void:
+	func disconnect_game(_planned_refresh := false) -> void:
 		disconnects += 1
 
 	func enter_loaded_world() -> void:
@@ -126,7 +127,7 @@ func _test_screen_wave_setting_round_trip() -> void:
 			}
 		)
 	)
-	reader.call("_merge_config", path)
+	ClientConfig.merge(path, reader.get("_settings"))
 	var restored: Dictionary = reader.get("_settings")
 	_check(
 		(

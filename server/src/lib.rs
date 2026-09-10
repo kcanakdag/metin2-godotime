@@ -36,6 +36,7 @@ mod npcs;
 mod physical_damage;
 mod player_buffs;
 mod progression;
+mod quest;
 pub mod regeneration;
 mod root_motion;
 mod skill_area;
@@ -46,7 +47,7 @@ mod skill_target;
 mod skills;
 mod training_targets;
 
-const PROTOCOL_VERSION: u32 = 31;
+const PROTOCOL_VERSION: u32 = 32;
 mod special_area;
 mod targeting;
 
@@ -111,6 +112,7 @@ pub struct WorldInfo {
     pub character_catalog_hash: String,
     pub skill_catalog_hash: String,
     pub training_target_hash: String,
+    pub quest_catalog_hash: String,
     pub map_name: String,
     pub map_id: String,
     pub content_hash: String,
@@ -214,6 +216,7 @@ fn compiled_world_info() -> WorldInfo {
         character_catalog_hash: definitions::CHARACTER_CATALOG_HASH.into(),
         skill_catalog_hash: definitions::SKILL_CATALOG_HASH.into(),
         training_target_hash: definitions::TRAINING_TARGET_HASH.into(),
+        quest_catalog_hash: quest::catalog_hash().into(),
         map_name: if content::YONGAN {
             "Yongan"
         } else {
@@ -286,6 +289,7 @@ pub fn init(ctx: &ReducerContext) {
     });
     combat::initialize(ctx);
     npcs::validate_content();
+    quest::validate_content();
     npc_spawns::validate_content();
     npc_spawns::maintain(ctx).expect("Initialize area NPC placement");
     admin::initialize();
@@ -383,6 +387,7 @@ fn enter_character(ctx: &ReducerContext, character: Identity) -> Result<(), Stri
     ctx.db.player().identity().update(player);
     player_buffs::resume(ctx, character)?;
     inventory::ensure_starter(ctx, character)?;
+    quest::enter(ctx, character)?;
     appearance::sync(ctx, character);
     if let Some(mut controller) = previous_controller {
         controller.connection_id = connection_id;
@@ -456,6 +461,12 @@ pub fn set_move_input(
 ) -> Result<(), String> {
     let mut controller = active_controller(ctx)?;
     valid_direction(direction_x, direction_z)?;
+    // A released key pair is not a cancel. Only held input owns the movement mode, so a
+    // zero direction must never clear an authoritative click-to-move target; callers that
+    // mean "stop" use stop_moving (or hold a direction and let the input timeout expire).
+    if !move_input_overrides(controller.mode, direction_x, direction_z) {
+        return Ok(());
+    }
     npcs::clear(ctx, controller.identity);
     controller.direction_x = direction_x;
     controller.direction_z = direction_z;
@@ -464,6 +475,12 @@ pub fn set_move_input(
     combo::cancel_queued_link(&mut controller);
     ctx.db.controller().identity().update(controller);
     Ok(())
+}
+
+/// Whether a client movement report may rewrite the live movement mode.
+/// Zero direction only ends held input (mode 1); it never cancels click-to-move (mode 2).
+fn move_input_overrides(mode: u8, direction_x: f32, direction_z: f32) -> bool {
+    direction_x != 0.0 || direction_z != 0.0 || mode == 1
 }
 
 #[spacetimedb::reducer]
@@ -636,6 +653,7 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
     combat::simulate(ctx, elapsed)?;
     item_effects::simulate(ctx, now);
     npcs::maintain(ctx, now);
+    quest::maintain(ctx)?;
     npc_spawns::maintain(ctx)?;
     Ok(())
 }
@@ -836,6 +854,18 @@ mod tests {
         }
         assert!(valid_chat(&"x".repeat(161)).is_err());
         assert!(valid_chat(&"ş".repeat(160)).is_ok());
+    }
+
+    #[test]
+    fn zero_move_input_never_cancels_click_to_move() {
+        // Idle: nothing to override.
+        assert!(!move_input_overrides(0, 0.0, 0.0));
+        // Held input: a released key pair must still end held movement.
+        assert!(move_input_overrides(1, 0.0, 0.0));
+        assert!(move_input_overrides(1, -1.0, 0.0));
+        // Click-to-move: only a real direction replaces the authoritative target.
+        assert!(!move_input_overrides(2, 0.0, -0.0));
+        assert!(move_input_overrides(2, 0.0, 0.5));
     }
 
     #[test]

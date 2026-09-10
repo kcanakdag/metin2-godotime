@@ -217,7 +217,7 @@ fn owned_item(
 }
 
 // Reducer transactions roll back all stack changes if a later allocation has no room.
-fn grant(
+pub fn grant(
     ctx: &ReducerContext,
     owner: Identity,
     vnum: u32,
@@ -428,6 +428,56 @@ pub fn use_item(ctx: &ReducerContext, id: u64, expected_revision: u32) -> Result
 
 pub fn equipped_weapon(ctx: &ReducerContext, owner: Identity) -> u32 {
     equipped_weapon_item(ctx, owner).map_or(0, |(_, vnum)| vnum)
+}
+
+/// Total owned count of one vnum, including equipped and stacked instances.
+pub fn owned_count(ctx: &ReducerContext, owner: Identity, vnum: u32) -> u32 {
+    ctx.db
+        .inventory_item()
+        .owner()
+        .filter(owner)
+        .filter(|item| item.vnum == vnum)
+        .map(|item| u32::from(item.count))
+        .sum()
+}
+
+/// Consume up to ``count`` of one vnum, failing when the character holds less.
+pub fn consume_owned(
+    ctx: &ReducerContext,
+    owner: Identity,
+    vnum: u32,
+    count: u32,
+) -> Result<(), String> {
+    if owned_count(ctx, owner, vnum) < count {
+        return Err("You do not hold the required item.".into());
+    }
+    let mut remaining = count;
+    let mut items: Vec<_> = ctx.db.inventory_item().owner().filter(owner).collect();
+    items.sort_by_key(|item| (item.cell, item.id));
+    for item in items {
+        if remaining == 0 {
+            break;
+        }
+        if item.vnum != vnum {
+            continue;
+        }
+        let taken = remaining.min(u32::from(item.count));
+        let mut updated = item.clone();
+        updated.revision = item_security::next_revision(item.revision, item.revision)?;
+        updated.count = item.count - taken as u16;
+        if updated.count == 0 {
+            item_security::inventory(ctx, &item, item.count, Cause::Quest);
+            ctx.db.inventory_item().id().delete(item.id);
+        } else {
+            ctx.db.inventory_item().id().update(updated.clone());
+            item_security::inventory(ctx, &updated, item.count, Cause::Quest);
+        }
+        remaining -= taken;
+    }
+    if remaining != 0 {
+        return Err("The held item quantity changed during the exchange.".into());
+    }
+    Ok(())
 }
 
 pub fn equipped_weapon_item(ctx: &ReducerContext, owner: Identity) -> Option<(u64, u32)> {

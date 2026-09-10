@@ -18,6 +18,10 @@ var _refresh_at := 0
 var _health_at := 0
 var _health_pending := false
 var _restoring := false
+## True while a scheduled token refresh deliberately drops the world connection.
+## The lobby overlay and the HUD windows stay as the player left them until the
+## refreshed session either reconnects or fails.
+var _refreshing := false
 
 
 func _process(_delta: float) -> void:
@@ -32,7 +36,8 @@ func _process(_delta: float) -> void:
 		_refresh_at = 0
 		_return_to_world = _connection.state == "connected"
 		_restoring = true
-		_connection.disconnect_game()
+		_refreshing = true
+		_connection.disconnect_game(true)
 		_auth.resume()
 
 
@@ -83,12 +88,14 @@ func configure(
 
 
 func use_legacy_entry() -> void:
+	_end_refresh()
 	_active = false
 	_intro.hide()
 	_hud.set_account_entry(false)
 
 
 func logout() -> void:
+	_end_refresh()
 	if not _active:
 		_connection.disconnect_game()
 		return
@@ -123,6 +130,7 @@ func snapshot() -> Dictionary:
 
 
 func _login(username: String, password: String) -> void:
+	_end_refresh()
 	_active = true
 	_restoring = false
 	_return_to_world = false
@@ -131,6 +139,7 @@ func _login(username: String, password: String) -> void:
 
 
 func _register(username: String, email: String, password: String) -> void:
+	_end_refresh()
 	_active = true
 	_restoring = false
 	_return_to_world = false
@@ -146,12 +155,18 @@ func _on_token(token: String) -> void:
 
 
 func _on_auth_failed(message: String) -> void:
+	var was_refreshing := _refreshing
+	_end_refresh()
 	if not _active:
 		return
 	_intro.show()
 	if _restoring:
 		_restoring = false
 		_intro.clear_session()
+	if was_refreshing:
+		# The refreshed session never reconnected. Return to the account lobby and
+		# let the world layer drop the planned-reconnect state.
+		_hud.set_account_entry(true)
 	_intro.set_status("error", message)
 
 
@@ -163,14 +178,24 @@ func _on_action_failed(message: String) -> void:
 func _on_state(state: String, message: String) -> void:
 	if not _active:
 		return
-	_intro.visible = state != "connected"
+	if state == "error":
+		# A failed refresh must fall back to the ordinary login screen.
+		_end_refresh()
+	_intro.visible = state != "connected" and not (_refreshing and _return_to_world)
 	if state == "connected":
 		_return_to_world = true
+		_end_refresh()
 		get_viewport().gui_release_focus()
 	else:
 		if state == "error":
 			_intro.set_stage("login")
 		_intro.set_status(state, message)
+
+
+func _end_refresh() -> void:
+	## The HUD follows the connection state itself: "refreshing" keeps the world
+	## layer, while a reconnected, failed or abandoned session resolves it.
+	_refreshing = false
 
 
 func _on_lobby_ready() -> void:

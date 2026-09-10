@@ -25,6 +25,7 @@ pub struct ItemAudit {
 pub enum Cause {
     Starter,
     Progression,
+    Quest,
     Monster,
     Pickup(u64),
     Consume,
@@ -36,6 +37,7 @@ impl Cause {
         match self {
             Self::Starter => "starter",
             Self::Progression => "progression",
+            Self::Quest => "quest",
             Self::Monster => "monster",
             Self::Pickup(_) => "pickup",
             Self::Consume => "consume",

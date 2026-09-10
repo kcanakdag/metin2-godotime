@@ -31,6 +31,9 @@ const SkillAreaVictim = Types.SkillAreaVictim
 const CapturedPlayerAttacker = Types.CapturedPlayerAttacker
 const Player = Types.Player
 const PlayerAppearance = Types.PlayerAppearance
+const QuestObjective = Types.QuestObjective
+const QuestSelection = Types.QuestSelection
+const QuestState = Types.QuestState
 const SimulationClock = Types.SimulationClock
 const WorldInfo = Types.WorldInfo
 

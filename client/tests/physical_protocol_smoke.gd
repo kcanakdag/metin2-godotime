@@ -1,5 +1,5 @@
 extends SceneTree
-## Isolated protocol-31 gate check; no generated schema or server is required.
+## Isolated protocol-32 gate check; no generated schema or server is required.
 
 var _checks := 0
 var _failed := false
@@ -10,23 +10,23 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 31, "client expects protocol 31")
+	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 32, "client expects protocol 32")
 	var legacy := GameConnection.new()
 	legacy._session = 1
-	legacy.world_info = {"protocol_version": 30}
+	legacy.world_info = {"protocol_version": 31}
 	legacy._on_subscription_applied(1)
-	_check(legacy.state == "error", "protocol 30 is rejected before joining")
+	_check(legacy.state == "error", "protocol 31 is rejected before joining")
 	_check(
 		legacy.state_message.contains("protocol mismatch"),
-		"protocol-30 rejection explains the incompatible client/server contract"
+		"protocol-31 rejection explains the incompatible client/server contract"
 	)
 	legacy.queue_free()
 
 	var current := GameConnection.new()
 	current._session = 1
-	current.world_info = {"protocol_version": 31}
+	current.world_info = {"protocol_version": 32}
 	current._on_subscription_applied(1)
-	_check(current.state != "error", "protocol 31 clears the protocol gate")
+	_check(current.state != "error", "protocol 32 clears the protocol gate")
 	current.monsters = [
 		{"id": 1, "definition_vnum": 101}, {"id": 900001, "definition_vnum": 900001}
 	]

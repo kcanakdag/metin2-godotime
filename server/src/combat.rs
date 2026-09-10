@@ -872,6 +872,10 @@ pub(crate) fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, characte
     }
     let definition = ordinary_definition(ctx, monster).expect("rewarded mob must be trusted");
     award_monster_experience(ctx, monster);
+    // Quest progress is part of the kill: the same transaction that pays the
+    // experience also records the objective, so a reconnect cannot lose it and
+    // a rejected reward cannot leave a half-advanced quest.
+    crate::quest::on_kill(ctx, character, definition.vnum);
     inventory::drop_potion(ctx, character, monster.x, monster.y, monster.z);
     ctx.db.loot().insert(Loot {
         id: 0,
@@ -1087,8 +1091,11 @@ fn award_monster_experience(ctx: &ReducerContext, monster: &Monster) {
     let shares = distribute_raw_experience(definition.experience, &eligible)
         .unwrap_or_else(|error| panic!("cannot distribute monster experience: {error}"));
     for (recipient, share) in shares {
-        progression::apply_combat_experience(ctx, recipient, definition.level, share)
+        let outcome = progression::apply_combat_experience(ctx, recipient, definition.level, share)
             .unwrap_or_else(|error| panic!("cannot apply monster experience: {error}"));
+        if outcome.is_some_and(|outcome| outcome.after.level > outcome.before.level) {
+            crate::quest::on_level_up(ctx, recipient);
+        }
     }
     clear_monster_damage(ctx, monster.id, monster.life_sequence);
 }
@@ -1532,7 +1539,13 @@ pub(crate) fn cancel_monster_hit(clock: &mut MonsterClock) {
 mod tests {
     #[test]
     fn original_chase_uses_current_target_distance_instead_of_authored_home() {
-        let authored = super::definitions::MOB_DEFINITIONS[0];
+        // The authored home policy, independent of whichever mob package is
+        // selected: package definitions chase by source target distance.
+        let authored = super::definitions::MobDefinition {
+            target_chase_limit_cm: None,
+            chase_home_range_m: super::definitions::MOB_CHASE_HOME_RANGE_M,
+            ..super::definitions::MOB_DEFINITIONS[0]
+        };
         let original = super::definitions::MobDefinition {
             target_chase_limit_cm: Some(4000),
             ..authored

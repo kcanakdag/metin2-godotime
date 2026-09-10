@@ -4,6 +4,7 @@ extends SceneTree
 const ScreenWave = preload("res://scripts/camera/screen_wave.gd")
 const OrbitCameraScript = preload("res://scripts/camera/orbit_camera.gd")
 const ActorCatalogScript = preload("res://scripts/content/actor_catalog.gd")
+const Source = preload("res://scripts/world/screen_wave_source.gd")
 const ACTION_ID := "actor.player.warrior-male.onehand.combo_4"
 const START_US := 1_000_000
 const ACTIVATION_OFFSET_US := 633_334
@@ -197,6 +198,7 @@ func _run() -> void:
 		),
 		"a reset followed by a late observation does not replay the elapsed event"
 	)
+	await _check_source_feed()
 
 	var rig := OrbitCameraScript.new()
 	var camera := Camera3D.new()
@@ -230,6 +232,109 @@ func _run() -> void:
 	if not _failed:
 		print("SCREEN_WAVE_SMOKE PASS ", _checks, " checks")
 	quit(1 if _failed else 0)
+
+
+func _check_source_feed() -> void:
+	# The scene controller only forwards subscribed rows; confirm the adapter
+	# resolves the local viewer row, the actor motion event and the speed scaling.
+	var catalog := ActorCatalogScript.new()
+	_check(catalog.load_required(), "the wave source resolves the generated catalog")
+	var rig := OrbitCameraScript.new()
+	var camera := Camera3D.new()
+	camera.name = "Camera3D"
+	rig.add_child(camera)
+	root.add_child(rig)
+	await process_frame
+	var appearance := func(_character_id: String) -> Dictionary:
+		return {"character_class": 0, "sex": 0}
+	var viewer := _wave_row("local-player", 0.0, 0.0)
+	var attacker := _wave_row("peer-player", 1.0, 0.0, 4, START_US)
+	Source.feed(
+		rig,
+		catalog,
+		[viewer, attacker],
+		"local-player",
+		appearance,
+		START_US + ACTIVATION_OFFSET_US
+	)
+	var triggered := rig.screen_wave_snapshot()
+	_check(
+		(
+			bool(triggered.active)
+			and int(triggered.trigger_count) == 1
+			and str(triggered.action_id) == ACTION_ID
+		),
+		"an eligible subscribed row feeds the catalogued presentation wave"
+	)
+	rig.reset_screen_waves()
+	var distant := _wave_row("peer-player", 2.0001, 0.0, 5, START_US)
+	Source.feed(
+		rig, catalog, [viewer, distant], "local-player", appearance, START_US + ACTIVATION_OFFSET_US
+	)
+	_check(
+		(
+			not bool(rig.screen_wave_snapshot().active)
+			and str(rig.screen_wave_snapshot().last_outcome) == "out_of_range"
+		),
+		"the local row supplies the viewer position that gates the range"
+	)
+	rig.reset_screen_waves()
+	var idle := _wave_row("peer-player", 1.0, 0.0)
+	Source.feed(
+		rig, catalog, [viewer, idle], "local-player", appearance, START_US + ACTIVATION_OFFSET_US
+	)
+	_check(
+		int(rig.screen_wave_snapshot().observed_actions) == 0,
+		"a non-action row is never armed as a presentation wave"
+	)
+	rig.reset_screen_waves()
+	var boosted := _wave_row("peer-player", 1.0, 0.0, 6, START_US)
+	boosted["attack_speed_percent"] = 170
+	# The row must be seen before the activation for the crossing to arm, so the
+	# adapter is observed once at action start and again inside the scaled window.
+	Source.feed(rig, catalog, [viewer, boosted], "local-player", appearance, START_US)
+	Source.feed(rig, catalog, [viewer, boosted], "local-player", appearance, START_US + 400_000)
+	_check(
+		(
+			bool(rig.screen_wave_snapshot().active)
+			and str(rig.screen_wave_snapshot().last_outcome) != "out_of_range"
+		),
+		"the row attack speed scales the catalogued activation offset"
+	)
+	rig.reset_screen_waves()
+	var unsupported := _wave_row("peer-player", 1.0, 0.0, 7, START_US)
+	unsupported["attack_speed_percent"] = 250
+	Source.feed(rig, catalog, [viewer, unsupported], "local-player", appearance, START_US + 400_000)
+	_check(
+		int(rig.screen_wave_snapshot().observed_actions) == 0,
+		"an unsupported live attack speed fails closed instead of inventing a wave"
+	)
+	rig.reset_screen_waves()
+	Source.feed(rig, catalog, [viewer, attacker], "local-player", appearance, 0)
+	_check(
+		int(rig.screen_wave_snapshot().observed_actions) == 0,
+		"an unknown server clock arms nothing"
+	)
+	rig.reset_screen_waves()
+	Source.feed(
+		rig, catalog, [attacker], "local-player", appearance, START_US + ACTIVATION_OFFSET_US
+	)
+	_check(
+		(
+			not bool(rig.screen_wave_snapshot().active)
+			and int(rig.screen_wave_snapshot().observed_actions) == 0
+		),
+		"a missing local row clears the wave layer instead of guessing a viewer"
+	)
+	rig.queue_free()
+	await process_frame
+
+
+func _wave_row(identity: String, x: float, z: float, sequence := -1, start_us := 0) -> Dictionary:
+	var row := {"identity": identity, "online": true, "x": x, "y": 0.0, "z": z, "activity": 0}
+	if sequence >= 0:
+		row.merge(_action(sequence, start_us), true)
+	return row
 
 
 func _check_catalog_event() -> void:

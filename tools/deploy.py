@@ -17,6 +17,7 @@ from pathlib import Path, PurePosixPath
 ROOT = Path(__file__).resolve().parents[1]
 REMOTE = "/opt/metin2-godotime"
 MANIFEST = "build-manifest.json"
+REGENERATION_RECEIPT_MARKER = b"mt2spacetime.regeneration-registry.v1 count="
 AUTH_FILES = (
     "Dockerfile",
     ".dockerignore",
@@ -38,6 +39,22 @@ def run(command, **kwargs):
 def digest(path):
     with path.open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def regeneration_registry_receipt(wasm):
+    """Read the regeneration-registry receipt carried by a frozen module.
+
+    `server/build.rs` emits the receipt and live server code references it, so the
+    literal survives linking. `None` means the module predates the receipt.
+    """
+    blob = wasm.read_bytes()
+    index = blob.find(REGENERATION_RECEIPT_MARKER)
+    if index < 0:
+        return None
+    match = re.match(rb"[0-9]{1,9}", blob[index + len(REGENERATION_RECEIPT_MARKER) :])
+    if match is None:
+        return None
+    return int(match.group())
 
 
 def stage_auth(source, destination):
@@ -185,6 +202,14 @@ def main():
     )
     parser.add_argument("--allow-test-build", action="store_true")
     parser.add_argument(
+        "--allow-empty-regeneration",
+        action="store_true",
+        help=(
+            "Publish a module that installs no regeneration entries. Only correct for a "
+            "database without monster_regeneration rows; mobs never respawn otherwise"
+        ),
+    )
+    parser.add_argument(
         "--reset-database",
         action="store_true",
         help="Reset only --database during publication; preserves auth accounts and issuer keys",
@@ -213,6 +238,22 @@ def main():
     if not wasm.is_file():
         parser.error(f"Server module does not exist: {wasm}; build or select a frozen module")
     print(f"Selected server module: {wasm} (sha256 {digest(wasm)})")
+    registry_entries = regeneration_registry_receipt(wasm)
+    if registry_entries is None:
+        print("Regeneration registry: unrecognized (module predates the deployment receipt)")
+    elif registry_entries == 0:
+        if not (args.allow_empty_regeneration or args.reset_database):
+            parser.error(
+                "The selected module installs an empty regeneration registry. Persisted "
+                "monster_regeneration rows from another build stay unmanaged, so destroyed mobs "
+                "never respawn. Rebuild with MT2_ORIGINAL_POPULATION for the covering inventory, "
+                "or pass --allow-empty-regeneration (or --reset-database) to acknowledge that the "
+                "target database holds no regeneration state. See "
+                "docs/development.md#regeneration-registry-hot-swap-hazard"
+            )
+        print("Regeneration registry: empty (explicitly acknowledged)")
+    else:
+        print(f"Regeneration registry: {registry_entries} entries")
     ssh = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", args.host]
     release = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
     candidate = f"{REMOTE}/incoming/{release}"

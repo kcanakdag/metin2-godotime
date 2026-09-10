@@ -4,6 +4,18 @@ mod combat_geometry;
 #[path = "../src/mob_damage.rs"]
 mod mob_damage;
 
+// The generated trusted definitions name these modules, exactly as the library
+// does; declare them here so the same file compiles in a test crate.
+#[allow(dead_code)]
+#[path = "../src/buff_lifecycle.rs"]
+mod buff_lifecycle;
+
+#[path = "../src/skill_formula.rs"]
+mod skill_formula;
+
+#[path = "../src/buff_capture.rs"]
+mod buff_capture;
+
 #[allow(dead_code)]
 mod definitions {
     include!(concat!(env!("OUT_DIR"), "/trusted_definitions.rs"));

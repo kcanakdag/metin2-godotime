@@ -71,6 +71,8 @@ func show_item(row: Dictionary) -> void:
 		if int(effect.get("sp", 0)) > 0:
 			lines.append("Restores %d SP gradually" % int(effect.sp))
 		lines.append("Right-click to use")
+	elif definition.get("kind") == "armor":
+		lines.append(_wear_slot_text(str(definition.get("armor", {}).get("position", ""))))
 	else:
 		lines.append("Cannot be used.")
 	var width := 190.0
@@ -97,3 +99,17 @@ func show_item(row: Dictionary) -> void:
 
 func _attack_value_text(minimum: int, maximum: int) -> String:
 	return str(minimum) if minimum == maximum else "%d-%d" % [minimum, maximum]
+
+
+func _wear_slot_text(position: String) -> String:
+	var labels := {
+		"body": "Armor",
+		"wrist": "Bracelet",
+		"neck": "Necklace",
+		"ear": "Earrings",
+		"head": "Helmet",
+		"foot": "Shoes",
+		"hand": "Gloves",
+		"shield": "Shield",
+	}
+	return labels.get(position, "Equipment")

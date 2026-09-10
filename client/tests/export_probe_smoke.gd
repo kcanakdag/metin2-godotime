@@ -71,6 +71,8 @@ class ProbeWorld:
 	var hud := ProbeHud.new()
 	var _pve := {}
 	var _hovered_npc: NpcActor
+	var destinations: Array[Vector3] = []
+	var stops := 0
 
 	func _init() -> void:
 		add_child(connection)
@@ -87,6 +89,12 @@ class ProbeWorld:
 
 	func _on_command_requested(command: String, request_id: String, argument: String) -> void:
 		commands.append({"command": command, "request_id": request_id, "argument": argument})
+
+	func request_move_destination(point: Vector3) -> void:
+		destinations.append(point)
+
+	func request_stop_moving() -> void:
+		stops += 1
 
 
 class ProbeActor:
@@ -135,7 +143,7 @@ func _run() -> void:
 		"single changed monster publishes its latest action record"
 	)
 	batch_probe.free()
-	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 31, "client accepts only protocol 31")
+	_check(GameConnection.EXPECTED_PROTOCOL_VERSION == 32, "client accepts only protocol 32")
 	# Use the real scene without entering the tree, so this verifies the probe's
 	# node lookup without starting account flow or a game connection.
 	var scene := load("res://scenes/main.tscn") as PackedScene
@@ -208,6 +216,17 @@ func _run() -> void:
 		"inventory command injects one fixed I-key tap"
 	)
 	world.events.clear()
+	# Walk commands have to share the click entry point: it clears a stale WASD
+	# hold that `_physics_process` would otherwise answer with `stop_moving`.
+	probe._dispatch({"action": "target", "x": 606.0, "z": 671.0})
+	probe._dispatch({"action": "stop"})
+	_check(
+		(
+			world.destinations == [Vector3(606.0, 0.0, 671.0)]
+			and world.stops == 1
+		),
+		"probe walk commands route through the shared click reservation"
+	)
 	var command_path := ProjectSettings.globalize_path("user://probe-command.json")
 	var command_file := FileAccess.open(command_path, FileAccess.WRITE)
 	command_file.store_string(JSON.stringify({"sequence": 7, "action": "inventory"}))

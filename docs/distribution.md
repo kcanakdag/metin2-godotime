@@ -5,8 +5,21 @@ Players do not install Blender, Rust, Python, Node or the SDK. The current
 development endpoint is [https://kcanakdag.com:8443](https://kcanakdag.com:8443/),
 on `159.195.213.9`. It may restart during updates.
 
-The current release is `20260908T233819834672Z`, adding converted original Warrior
-skill effects to world playback. It preserves protocol 26, database
+The current release is `20260910T132257494611Z` (protocol 32), database
+`mt2-public-quests-v32-20260910`. It adds the server-authoritative quest runtime,
+the client quest window and the opening quest slice compiled from the original
+quest scripts, on top of the original Yongan population and the four selected
+Warrior skills. The server module SHA-256 is
+`3f96b25aea5563059b1c6cc80966ae234ace7a1dd99effa49c2f088c47f26f9d`, which also
+identifies the published bytes in `.local/public-quests-v32-r5/mt2_server.wasm`.
+The served Web pack is `web-r4` and the native pack is `linux-r6`. It preserves the
+existing auth accounts and issuer keys and was applied with `delete_data=never`.
+Artifacts, module hash and the qualification reports are in
+`.local/public-quests-v32-r1/`; see the implementation ledger for the accepted
+scope and what the runs do not cover.
+
+The preceding release is `20260908T233819834672Z`, adding converted original
+Warrior skill effects to world playback. It preserves protocol 26, database
 `mt2-public-skills-v26-20260908`, current characters, auth accounts and issuer keys.
 The server module is unchanged, SHA-256
 `750f0c44bb4784dcc6d53eb35387ff07b8efe0932fc0907bc5bd12676f00279e`.
@@ -19,7 +32,7 @@ The focused local two-Chrome skill replay passed 34 checks for casts, damage and
 effect creation on both clients; a recorded Bash replay passed 22 checks with its
 burst visible in both views. These are separate from public casting qualification.
 
-The preceding release is `20260908T212416762304Z`, using protocol 26 and database
+The release before that is `20260908T212416762304Z`, using protocol 26 and database
 `mt2-public-skills-v26-20260908`. It includes the four selected Warrior skills and
 original Yongan population. Both public Web/Linux exports pass package audits;
 local matching exports passed 76 hardware-rendered Chrome/Linux account/world
@@ -32,8 +45,8 @@ errors are empty. The public skill-panel capture was reviewed. Frozen artifacts,
 `.local/public-skills-v26-r1/`. The module uses the public issuer, guests disabled
 and no QA bootstrap privileges. New-skill browser casting remains unqualified.
 
-The preceding release is `20260908T181619790682Z`, source `e0e2b22`. It adds
-streamed-map UID restoration and preserves the protocol-24 database, accounts,
+Earlier, release `20260908T181619790682Z` (source `e0e2b22`) added
+streamed-map UID restoration and preserved the protocol-24 database, accounts,
 characters and server module. Its web export and all 20 isolated map-section audits
 passed with no UID warnings. Evidence is in `.local/public-world-uids-r1/`;
 the targeted public browser/native field replay passed 43 checks. Ordinary browser
@@ -43,9 +56,9 @@ measured 38.5 frames/sec with diagnostics and 60.1 without; this is not engine F
 or evidence of a performance gain from UID restoration. The unchanged native
 peer used the previous export. Full combat/lifecycle QA was not repeated.
 
-The preceding diagnostics release is `20260908T180128789164Z`, source `4102a94`, on the same
-protocol-24 database `mt2-public-population-v24-20260908`. The opt-in diagnostics
-update preserved the module, accounts and characters. Frozen exports, deployment
+Release `20260908T180128789164Z` (source `4102a94`) was the opt-in diagnostics
+update on the same protocol-24 database `mt2-public-population-v24-20260908`.
+It preserved the module, accounts and characters. Frozen exports, deployment
 log, served manifest and hashed acceptance are in `.local/public-probe-opt-in-r1/`.
 Public activation QA passed both startup modes and reloads with no console errors.
 The focused `field-qa/report.json` passed 52 checks, including all eight previews,

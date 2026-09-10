@@ -84,7 +84,7 @@ pub fn by_id(definition: &MobDefinition, id: &str) -> Result<AttackDefinition, S
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::definitions;
+    use crate::definitions::{self, MobSpeciesDefinition};
 
     const FIRST: AttackDefinition = definitions::MOB_ATTACK;
     const SECOND: AttackDefinition = AttackDefinition {
@@ -105,13 +105,32 @@ mod tests {
         },
     ];
 
+    /// The authored Wild Dog attack fixture, detached from the selected mob
+    /// package. Package definitions may carry another attack range, so a
+    /// registry built from the authored constant must state its own range.
+    fn fixture(attacks: &'static [WeightedMobAttack]) -> MobDefinition {
+        MobDefinition {
+            species: MobSpeciesDefinition {
+                actor_id: definitions::MOB_ACTOR_ID,
+                attack_range_m: FIRST.range_m,
+                ..definitions::MOB_DEFINITIONS[0].species
+            },
+            damage_kind: crate::mob_damage::Kind::Normal,
+            attacks,
+            ..definitions::MOB_DEFINITIONS[0]
+        }
+    }
+
     #[test]
     fn projectile_dispatch_requires_immediate_damage_without_melee_windows() {
         for kind in [
             crate::mob_damage::Kind::NormalRange,
             crate::mob_damage::Kind::Magic,
         ] {
-            let mut mob = definitions::MOB_DEFINITIONS[0];
+            let mut mob = fixture(&[WeightedMobAttack {
+                attack: definitions::MOB_ATTACK,
+                weight: 100,
+            }]);
             mob.damage_kind = kind;
             assert!(select(&mob, 1).is_err());
             const ATTACK: AttackDefinition = AttackDefinition {
@@ -134,10 +153,7 @@ mod tests {
 
     #[test]
     fn every_weighted_roll_keeps_its_own_identity_and_hit_window() {
-        let mob = MobDefinition {
-            attacks: VARIANTS,
-            ..definitions::MOB_DEFINITIONS[0]
-        };
+        let mob = fixture(VARIANTS);
         for roll in 1..=100 {
             let selected = select(&mob, roll).unwrap();
             let expected = if roll <= 50 { FIRST } else { SECOND };
@@ -190,10 +206,7 @@ mod tests {
             }],
         ];
         for rows in BAD {
-            let mob = MobDefinition {
-                attacks: rows,
-                ..definitions::MOB_DEFINITIONS[0]
-            };
+            let mob = fixture(rows);
             assert!(select(&mob, 1).is_err());
             assert!(by_id(&mob, FIRST.id).is_err());
         }

@@ -14,11 +14,29 @@ pub struct MonsterRegeneration {
     pub last_owner: u64,
 }
 
-fn definition(id: u32) -> Result<&'static crate::definitions::RegenerationDefinition, String> {
+fn registry_definition(id: u32) -> Option<&'static crate::definitions::RegenerationDefinition> {
     crate::definitions::REGENERATION_DEFINITIONS
         .iter()
         .find(|d| d.id == id)
-        .ok_or("Regeneration entry is outside the installed registry".into())
+}
+
+fn definition(id: u32) -> Result<&'static crate::definitions::RegenerationDefinition, String> {
+    registry_definition(id).ok_or_else(|| {
+        format!(
+            "Regeneration entry is outside the installed registry ({})",
+            crate::definitions::REGENERATION_REGISTRY_RECEIPT
+        )
+    })
+}
+
+/// `monster_regeneration` rows outlive the module that inserted them. Publishing a
+/// build whose `REGENERATION_DEFINITIONS` no longer covers a persisted id used to
+/// abort the whole `simulate` transaction, which froze movement, combat and the
+/// simulation clock for every player in the world. Unresolvable entries are now
+/// skipped instead of failing, and the row is left in place so a later build with a
+/// covering registry can resume it. See `docs/development.md` on the hot-swap hazard.
+fn is_resolvable(id: u32) -> bool {
+    registry_definition(id).is_some()
 }
 
 fn restore(row: &MonsterRegeneration) -> Result<EntryState, String> {
@@ -59,6 +77,9 @@ pub fn initialize(ctx: &ReducerContext) -> Result<(), String> {
 
 pub fn tick(ctx: &ReducerContext) -> Result<(), String> {
     for saved in ctx.db.monster_regeneration().iter() {
+        if !is_resolvable(saved.id) {
+            continue;
+        }
         let mut state = restore(&saved)?;
         if saved.initial {
             let d = definition(saved.id)?;
@@ -144,13 +165,22 @@ pub fn destroy(ctx: &ReducerContext, monster_id: u32) -> Result<bool, String> {
     if group.regeneration_entry == 0 {
         return Ok(false);
     }
-    let saved = ctx
+    // A group can reference a regeneration entry this module no longer defines.
+    // Keep the corpse removal working; there is simply no capacity to release.
+    let Some(saved) = ctx
         .db
         .monster_regeneration()
         .id()
         .find(group.regeneration_entry)
-        .ok_or("Destroyed monster has no regeneration entry")?;
+    else {
+        ctx.db.monster_origin().monster_id().delete(monster_id);
+        return Ok(false);
+    };
     if u64::from(monster_id) == group.owner {
+        if !is_resolvable(saved.id) {
+            ctx.db.monster_origin().monster_id().delete(monster_id);
+            return Ok(false);
+        }
         let mut state = restore(&saved)?;
         if !state.owner_destroyed(group.owner) {
             return Err("Leader has no regeneration capacity to release".into());
@@ -189,5 +219,7 @@ pub fn forces_aggression(ctx: &ReducerContext, monster_id: u32) -> Result<bool, 
     if group.regeneration_entry == 0 {
         return Ok(false);
     }
-    Ok(definition(group.regeneration_entry)?.force_aggressive)
+    // An allocated group can outlive the registry entry that created it, so this
+    // reports "no forced aggression" instead of failing the combat tick.
+    Ok(registry_definition(group.regeneration_entry).is_some_and(|d| d.force_aggressive))
 }

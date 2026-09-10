@@ -4,6 +4,7 @@ import copy
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -15,6 +16,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 import export_client  # noqa: E402
+import godot_editor_log  # noqa: E402
 import target_effect_export  # noqa: E402
 from PIL import Image  # noqa: E402
 
@@ -172,6 +174,137 @@ class WebArtifactTests(unittest.TestCase):
             deploy.main()
         self.assertEqual(result.exception.code, 2)
         remote_command.assert_not_called()
+
+
+class GodotLogGateTests(unittest.TestCase):
+    """Only Godot's harmless editor-IPC bind failure is excluded from the gate."""
+
+    def run_logged(self, body: str, returncode: int = 0):
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / "godot.log"
+            source = f"import sys; sys.stdout.write({body!r}); sys.exit({returncode})"
+            return export_client.run([sys.executable, "-c", source], log, dict(os.environ))
+
+    def test_editor_socket_bind_failure_does_not_fail_the_run(self):
+        output = self.run_logged(godot_editor_log.EDITOR_SOCKET_PORT_ERROR)
+        self.assertIn("_inet_open (drivers/unix/net_socket_unix.cpp:288)", output)
+
+    def test_editor_socket_bind_failure_mixed_into_real_output_passes(self):
+        body = f"import complete\n{godot_editor_log.EDITOR_SOCKET_PORT_ERROR}\nexport complete\n"
+        self.run_logged(body)
+
+    def test_editor_socket_bind_failure_with_nonzero_exit_still_fails(self):
+        with self.assertRaisesRegex(RuntimeError, "Command failed"):
+            self.run_logged(godot_editor_log.EDITOR_SOCKET_PORT_ERROR, returncode=1)
+
+    def test_other_godot_errors_and_script_errors_still_fail(self):
+        for body in (
+            'ERROR: Condition "err != OK" is true. Returning: ERR_CANT_CREATE\n',
+            "SCRIPT ERROR: Parse Error: unexpected token\n",
+        ):
+            with self.subTest(body=body), self.assertRaisesRegex(RuntimeError, "Command failed"):
+                self.run_logged(body)
+
+
+class RegenerationRegistryReceiptTests(unittest.TestCase):
+    """The gate that stops an uncovered regeneration registry from being published."""
+
+    MARKER = b"mt2spacetime.regeneration-registry.v1 count="
+
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        for name in ["index.html", "index.js", "index.wasm", "index.pck", "world/section.pck"]:
+            path = self.root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"export fixture")
+        manifest = {
+            "target": "web",
+            "test_probe": False,
+            "pack_audit": {"files_checked": 42, "test_probe_present": False},
+            "files": {
+                p.relative_to(self.root).as_posix(): {
+                    "bytes": p.stat().st_size,
+                    "sha256": deploy.digest(p),
+                }
+                for p in self.root.rglob("*")
+                if p.is_file()
+            },
+        }
+        (self.root / deploy.MANIFEST).write_text(json.dumps(manifest))
+
+    def module(self, payload):
+        # The frozen module is selected from outside the published web build; keeping
+        # it out of `root` preserves the manifest-covers-every-file check.
+        path = Path(tempfile.mkdtemp()) / "mt2_server.wasm"
+        self.addCleanup(shutil.rmtree, path.parent, ignore_errors=True)
+        path.write_bytes(b"\x00asm\x01\x00\x00\x00" + payload)
+        return path
+
+    def deploy_module(self, module, extra_arguments=()):
+        arguments = [
+            "deploy.py",
+            "--web-dir",
+            str(self.root),
+            "--module",
+            str(module),
+            *extra_arguments,
+        ]
+        config = {"database": "mt2-yongan-v2", "server_url": "https://example.invalid:8443"}
+        with (
+            patch.object(sys, "argv", arguments),
+            patch.object(deploy, "read_pack_config", return_value=config),
+            patch.object(deploy, "stage_auth"),
+            patch.object(deploy, "run") as remote_command,
+            redirect_stderr(io.StringIO()) as errors,
+        ):
+            try:
+                deploy.main()
+            except SystemExit as exit_code:
+                return remote_command, errors.getvalue(), exit_code.code
+        return remote_command, errors.getvalue(), None
+
+    def test_module_without_receipt_is_unrecognized(self):
+        self.assertIsNone(deploy.regeneration_registry_receipt(self.module(b"older module")))
+
+    def test_module_receipt_reports_the_installed_entry_count(self):
+        self.assertEqual(
+            deploy.regeneration_registry_receipt(self.module(self.MARKER + b"945 later bytes")),
+            945,
+        )
+
+    def test_malformed_receipt_is_unrecognized(self):
+        for payload in (self.MARKER, self.MARKER + b"entries", self.MARKER + b"-1"):
+            with self.subTest(payload=payload):
+                self.assertIsNone(deploy.regeneration_registry_receipt(self.module(payload)))
+
+    def test_covering_module_publishes_without_an_override(self):
+        remote_command, errors, exit_code = self.deploy_module(self.module(self.MARKER + b"945"))
+        self.assertIsNone(exit_code)
+        self.assertNotIn("regeneration", errors)
+        remote_command.assert_called()
+
+    def test_empty_registry_is_refused_before_any_remote_command(self):
+        remote_command, errors, exit_code = self.deploy_module(self.module(self.MARKER + b"0"))
+        self.assertEqual(exit_code, 2)
+        self.assertIn("installs an empty regeneration registry", errors)
+        self.assertIn("docs/development.md#regeneration-registry-hot-swap-hazard", errors)
+        remote_command.assert_not_called()
+
+    def test_empty_registry_publishes_when_explicitly_acknowledged(self):
+        remote_command, _, exit_code = self.deploy_module(
+            self.module(self.MARKER + b"0"), ("--allow-empty-regeneration",)
+        )
+        self.assertIsNone(exit_code)
+        remote_command.assert_called()
+
+    def test_reset_database_acknowledges_the_empty_registry(self):
+        remote_command, _, exit_code = self.deploy_module(
+            self.module(self.MARKER + b"0"), ("--reset-database",)
+        )
+        self.assertIsNone(exit_code)
+        remote_command.assert_called()
 
 
 class PackExclusionTests(unittest.TestCase):

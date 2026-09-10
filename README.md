@@ -7,15 +7,23 @@ original character and Yongan assets. The original Metin2 executable cannot
 connect to this game's new protocol.
 
 The current [public development build](https://kcanakdag.com:8443/) uses protocol
-26 with the original population package and four Warrior skills: Three-Way Cut,
-Sword Spin, Spirit Strike and Bash. Release `20260908T233819834672Z` adds the
-converted original Warrior skill effects to normal world playback. It preserves
-the existing world, characters, login accounts and keys. Refresh older tabs before
-signing in. Both matching Web/Linux exports passed package audits and all 76 public
-Chrome/Linux account/world checks passed with no browser engine errors. See [deployment evidence](docs/distribution.md).
-A focused local two-browser replay passes 34 checks for skill points, dragging,
-quickslot casting, matching damage and effect creation on both clients. Recorded
-Bash playback passes another 22 checks and shows its burst in both browser views.
+32 in database `mt2-public-quests-v32-20260910`, release
+`20260910T132257494611Z`. It runs the original Yongan population, the four
+selected Warrior skills and the opening quest slice compiled from the original
+quest scripts, including the server-side quest runtime and the client quest
+window. Refresh older tabs before signing in. See
+[deployment evidence](docs/distribution.md) for the published module hash and the
+qualification runs behind it.
+
+The preceding public release `20260908T233819834672Z` used protocol 26 with the
+original population package and four Warrior skills: Three-Way Cut, Sword Spin,
+Spirit Strike and Bash, including converted original Warrior skill effects in
+normal world playback. Both matching Web/Linux exports passed package audits and
+all 76 public Chrome/Linux account/world checks passed with no browser engine
+errors. A focused local two-browser replay passes 34 checks for skill points,
+dragging, quickslot casting, matching damage and effect creation on both clients.
+Recorded Bash playback passes another 22 checks and shows its burst in both
+browser views.
 
 The four-skill replay passes 52 two-client dummy checks; equipped animation QA
 passes 132 checks and the scrollable skill panel passes 18 native checks.
@@ -26,20 +34,20 @@ remain incomplete.
 Local mob threat behavior now has a reusable two-account passive
 retaliation and target-switching scenario (42 checks passed). See the
 [development replay instructions](docs/development.md#test-scope-and-passive-mob-replay).
-The worktree now uses protocol 31 with private timed buffs, owner-filtered status
-and matching bindings from an isolated training QA database. Berserk, Aura of the
-Sword and Strong Body pass local lifecycle, combat and movement qualification;
-the exported Web candidate passes 33 browser checks per buff through the real HUD
-and quickslot, including payment, cooldown, reconnect and expiry. See the
-implementation ledger for the scoped evidence and limits. This candidate remains
-local-issuer-only and is not the public deployment.
+The preceding local slice used protocol 31 with private timed buffs,
+owner-filtered status and matching bindings from an isolated training QA
+database. Berserk, Aura of the Sword and Strong Body pass local lifecycle, combat
+and movement qualification; the exported Web candidate passes 33 browser checks
+per buff through the real HUD and quickslot, including payment, cooldown,
+reconnect and expiry. See the implementation ledger for the scoped evidence and
+limits. That candidate remains local-issuer-only and is not the public
+deployment.
 The last accepted local protocol-29 build has private charge ownership, public charge
 status and exact-life monster stun state. The isolated five-skill candidate passes
 43 two-client charge-begin/strike checks and 27 live Brown Bear push/stun/expiry checks.
 Earlier activation/reconnect and account/movement checks remain documented in
 the implementation ledger. Two-handed weapons and full-map charge qualification
-remain pending; the public release above remains
-on protocol 26.
+remain pending; the earlier public release described above ran protocol 26.
 
 The local selected catalog now includes Dash and its original icon for both
 converted Warrior appearances. Its automatic approach adapter passes 33 live

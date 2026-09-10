@@ -25,26 +25,47 @@ class ItemDefinitionsTests(unittest.TestCase):
         cls.selection = profile["item_catalog"]
         cls.catalog = compile_catalog(cls.selection, cls.proto, cls.names, cls.source)
 
+    def item(self, vnum: int) -> dict:
+        return next(row for row in self.catalog["items"] if row["vnum"] == vnum)
+
     def test_selected_items_derive_distinct_values_and_source_restrictions(self) -> None:
-        sword, fan, small, medium = self.catalog["items"]
+        sword, fan = self.item(10), self.item(7000)
+        small, medium = self.item(27001), self.item(27002)
         self.assertEqual(
             (sword["height"], sword["stack_limit"], sword["allowed_classes"]), (2, 1, 7)
         )
         self.assertEqual(sword["weapon"]["power_max"], 15)
-        self.assertEqual(
-            [item["attack_speed_bonus"] for item in self.catalog["items"]], [22, 26, 0, 0]
-        )
+        self.assertEqual([sword["attack_speed_bonus"], fan["attack_speed_bonus"]], [22, 26])
         self.assertEqual((fan["height"], fan["allowed_classes"], fan["allowed_sexes"]), (1, 8, 3))
         self.assertEqual(
             fan["weapon"], {"class": "fan", "power_min": 11, "power_max": 15, "refine_attack": 0}
         )
+        self.assertEqual((small["kind"], medium["kind"]), ("recovery", "recovery"))
         self.assertEqual(
             small["recovery"], {"handler": "item.recovery.pool.v1", "hp": 300, "sp": 0}
         )
         self.assertEqual(medium["recovery"]["hp"], 800)
+        blue = self.item(27004)
+        self.assertEqual(blue["kind"], "recovery")
+        self.assertEqual(blue["recovery"], {"handler": "item.recovery.pool.v1", "hp": 0, "sp": 100})
         self.assertEqual(
             compile_catalog(self.selection, self.proto, self.names, self.source), self.catalog
         )
+
+    def test_armor_and_narrative_selections_keep_original_identity(self) -> None:
+        for vnum, category, position, name in (
+            (14000, "wrist", "wrist", "Wooden Bracelet+0"),
+            (16000, "neck", "neck", "Wooden Necklace+0"),
+            (17000, "ear", "ear", "Wooden Earrings+0"),
+        ):
+            with self.subTest(vnum=vnum):
+                item = self.item(vnum)
+                self.assertEqual(item["kind"], "armor")
+                self.assertEqual(item["armor"], {"category": category, "position": position})
+                self.assertEqual(item["name"], name)
+                self.assertEqual(item["stack_limit"], 1)
+        secret = self.item(69000)
+        self.assertEqual((secret["kind"], secret["name"]), ("narrative", "Bash Secret"))
 
     def test_additional_source_definition_requires_only_a_selection_record(self) -> None:
         selection = copy.deepcopy(self.selection)
@@ -57,11 +78,10 @@ class ItemDefinitionsTests(unittest.TestCase):
             }
         )
         result = compile_catalog(selection, self.proto, self.names, self.source)
-        self.assertEqual(len(result["items"]), 5)
-        self.assertEqual(result["items"][-1]["recovery"]["hp"], 1200)
-        self.assertEqual(
-            result["items"][-1]["recovery"]["handler"], result["items"][2]["recovery"]["handler"]
-        )
+        self.assertEqual(len(result["items"]), len(self.catalog["items"]) + 1)
+        large = next(row for row in result["items"] if row["vnum"] == 27003)
+        self.assertEqual(large["recovery"]["hp"], 1200)
+        self.assertEqual(large["recovery"]["handler"], self.item(27001)["recovery"]["handler"])
         # This compiler-only fixture does not add its original icon to the player package.
 
     def test_numeric_bounds_and_unsupported_handlers_fail_closed(self) -> None:
@@ -87,11 +107,13 @@ class ItemDefinitionsTests(unittest.TestCase):
                     validate_catalog(changed)
         for value in [True, -1, 65536, float("nan"), float("inf"), 1.1]:
             changed = copy.deepcopy(self.catalog)
-            changed["items"][2]["recovery"]["hp"] = value
+            next(row for row in changed["items"] if row["vnum"] == 27001)["recovery"]["hp"] = value
             with self.assertRaises(ValueError):
                 validate_catalog(changed)
         changed = copy.deepcopy(self.catalog)
-        changed["items"][2]["recovery"]["handler"] = "grant_experience"
+        next(row for row in changed["items"] if row["vnum"] == 27001)["recovery"]["handler"] = (
+            "grant_experience"
+        )
         with self.assertRaises(ValueError):
             validate_catalog(changed)
 
@@ -109,7 +131,9 @@ class ItemDefinitionsTests(unittest.TestCase):
         public = public_catalog(self.catalog)
         self.assertNotIn("recovery_policy", public)
         self.assertTrue(all("source" not in row for row in public["items"]))
-        self.assertEqual(public["items"][3]["recovery"]["hp"], 800)
+        medium = next(row for row in public["items"] if row["vnum"] == 27002)
+        self.assertEqual(medium["recovery"]["hp"], 800)
+        self.assertEqual(public["schema_version"], 3)
 
     def test_unsupported_source_limits_flags_and_types_are_rejected(self) -> None:
         for index, value in ((2, "ITEM_QUEST"), (5, "ANTI_DROP"), (14, "REAL_TIME"), (26, "10")):

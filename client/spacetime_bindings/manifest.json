@@ -1,12 +1,12 @@
 {
   "sdk_commit": "f6c59d7068e5dacbde0559906746d0a6c5933ffb",
-  "schema_sha256": "ebca85c16aa73f5c40231458d906667b85c73783b9e2cfa2081b85195c37c011",
+  "schema_sha256": "39b279cff7ce691d4a2c286d01697f4cc2106a8c903dedf59edd7d4f8eebf65a",
   "files": {
-    "module_game_client.gd": "c5cc5fb4f73fd56074631e8dfb11d93bf2ffe4c25ca62eb623fdc06ec320d9f6",
-    "module_game_db.gd": "1002ffbf619a9b6bd068bff899db5e0edc7027dde07a365b8378986b2399e9ea",
+    "module_game_client.gd": "741ebdc4ab7a3e0815be9eda29243276eb51bbaa2e4392149b0ba7913ab54946",
+    "module_game_db.gd": "2f9ba87132fa82a95ff5772ea4c830e0ed13f19d568e4faf48434f229e824dde",
     "module_game_procedures.gd": "2c2ac42c8f5d708902cc2112b5945c54fd54b4f2a37bf2f1a277c8a9fdbfcfea",
-    "module_game_reducers.gd": "f037b40b767869bf5b5cfae73a8fc446064524d0d9d8b580d8b53f7a6d0ac398",
-    "module_game_types.gd": "20d4059d5341b8169419a74393f41195802705cd81d69614742ce2b2c5fd24e8",
+    "module_game_reducers.gd": "5cc89dbc25669eaba2067c329ef622a075d36e441492f6e668c0f3ae8ec43298",
+    "module_game_types.gd": "94de346d523d435518e89ff4c5aabb26027958b78694fcef49387094faaa8179",
     "spacetime_autoload.gd": "3e5f5edc34f6dbc7ff44e3e6d4c296def7da5627e3db41e33a6f54d4ebb0edee",
     "tables/game_account_character_character_id_unique_index.gd": "2461b071a282081b049d783de71735e4d8815bb49c11b53d5a78930bccbac810",
     "tables/game_account_character_table.gd": "c26985f92ea6b317920b00e08c8a8e4280e47b6296ce89d7b46891272315278b",
@@ -49,6 +49,12 @@
     "tables/game_player_appearance_table.gd": "9f532790026e320771ae70f1d0db58c0ba7a3ab35bdaaa125d03addc48acfb47",
     "tables/game_player_identity_unique_index.gd": "4562030b695a19ea11ebfd6bad0d502fc2ff9036ed665f95d91ea1061f7e25d3",
     "tables/game_player_table.gd": "73600bc1b995fd51c1484b12c695c1d5e4e7f5caa3e7fe46600ac5391306fbc4",
+    "tables/game_quest_objective_id_unique_index.gd": "f052aac82851f17fbae88cce28f79dcc82087fff09ad1c8b3a97de9548d9987a",
+    "tables/game_quest_objective_table.gd": "9ef110c1486550260ea5e6318b6907584f7a4504784266ddcb727acfadde1a30",
+    "tables/game_quest_selection_character_id_unique_index.gd": "a3682da9d6e8ae0e9e73801d95b91edd320bd1b47e899d44dc6bee06fd1f4e63",
+    "tables/game_quest_selection_table.gd": "c0ce4cfed568065aa333b00d685b9092aeae908f5932147c70b09bab1eca0760",
+    "tables/game_quest_state_id_unique_index.gd": "da2bafac6dab25fa91fbbce3a715dff7cca38e69e55f99fca7a0ff186cf1d1e9",
+    "tables/game_quest_state_table.gd": "996ee6fb04a0f2f13c2bcd0c4421c4b4f555ef7cdb825246e7fb5c9607f7363f",
     "tables/game_simulation_clock_id_unique_index.gd": "5fbe09acb9a1ca04df6978f87869b91f2fc4e4eeaec6cc8cc56d62096b5fbd2f",
     "tables/game_simulation_clock_table.gd": "36ab9f4d6b4255b2f0eed91dce8e41c132f2de5209b580c2209d174d93820acc",
     "tables/game_world_info_id_unique_index.gd": "fa64aa4a100b951e816a0686324461cb5cfc46b40eed40465dbc079b10c89fe3",
@@ -91,7 +97,7 @@
     "types/game_monster_stun.gd": "011549eda31af373e9c9d895b41636bcea20bd92636f90f348269b38954295a2",
     "types/game_monster_threat.gd": "8f54b0c93795c9636c8f542e0ca019ab79fb15027e8f61787743fb46d1ad3bd0",
     "types/game_monster_victim.gd": "2c9e345ddef48dc7784774352a64b13404519d122a28efcf5420cd5777a47a06",
-    "types/game_npc_interaction.gd": "e5416f3e679f031436259c8315349831e3312b9846a387e8e94adfabe6dbf3e3",
+    "types/game_npc_interaction.gd": "b6c1f8277ef728bda99f46e8be3385f8eb0ac40dc4aabb5f23dd44ffe20109e2",
     "types/game_npc_spawn.gd": "536e08c942de961950fcad5d15c001fb550d2dc2e7de31d1c5b8ff8fd51e9ebf",
     "types/game_npc_spawn_retry.gd": "79c4fac64ce66a84e49bdd2b2a6e9b2fa0064a4d03bd2250d2d52d4fd1f3fd53",
     "types/game_obstacle.gd": "b8da9b9034aaae130806412bdc6bd2c62fcc0f9b6cbf563ffb7e1f792356f68e",
@@ -99,6 +105,9 @@
     "types/game_player.gd": "f0714323a6c6bbdd6bbf8ddd02bcad7c672106aefbcf01f02d02db4162e29e4b",
     "types/game_player_appearance.gd": "8194fb2f50c8470fc58919bbb901de1762ca7987e406be7891f8f91f031f02c2",
     "types/game_progression_operator.gd": "e44c19f63480edd074f36687b195868f639dce0cd9769ed7290cb4e3ca7cb002",
+    "types/game_quest_objective.gd": "6c99bf84d8b4c87f5e64a10b73650df1bf9445d901b6818f9427d8fca70cdb8b",
+    "types/game_quest_selection.gd": "406f2f5501b9ffe6a5ce48de91fd1e35dfc79b7adf63f98cb75ac6b7c14df5cc",
+    "types/game_quest_state.gd": "5081f131b3ad6154072178b8cdae42cadfe21739ac41c1cc676e9a270c205ca1",
     "types/game_saved_buff_modifier.gd": "377a5f66f63507b3bc99259bd0fc94250bc2b2ec8447933a86165de31cd541d6",
     "types/game_session.gd": "aa67b71a9f2b65f5d3ef56d19bf370501b17be4be9265826fb80547df05be7a4",
     "types/game_simulation_clock.gd": "186d54890e6a58db1b1fce09a15421d0800f083f947fdf7842f980948c56df72",
@@ -108,6 +117,6 @@
     "types/game_special_area.gd": "ad95ba1dd53394f53e6c726572b0b8ac6596c605bcf5ab75093ca149fd09341f",
     "types/game_special_area_victim.gd": "e1667e62199551a3f3faa5235a9daf19832dbf4139e9280d038f5ef51e98a083",
     "types/game_tick_schedule.gd": "0d19e056e6ab8c8968b2cf45f1ca5114d41b6fbdf30a021ca13da6ce771a9716",
-    "types/game_world_info.gd": "dd9c38c2cdb94d45710caad582a6d0624d74e6d14e49102ed1fe9cd6afc91890"
+    "types/game_world_info.gd": "e46d4cd6aac77e1e8b311353a7fa4c5a04d828412f2d8c9a2f7c95bedaf72e31"
   }
 }

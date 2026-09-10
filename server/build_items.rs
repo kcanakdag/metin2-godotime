@@ -84,7 +84,7 @@ pub fn validate_links(root: &Value) -> Result<(), String> {
 
 pub fn generate(value: &Value) -> Result<String, String> {
     let root = object(value, &["schema_version", "recovery_policy", "items"])?;
-    number(&root["schema_version"], 2, 2)?;
+    number(&root["schema_version"], 3, 3)?;
     if root["recovery_policy"]
         != json!({
             "id": "item.recovery.pool.v1", "interval_us": 1_000_000,
@@ -100,10 +100,18 @@ pub fn generate(value: &Value) -> Result<String, String> {
     }
     let mut output = String::from(
         "#[derive(Clone, Copy, Debug, PartialEq, Eq)]\n\
-         pub enum ItemKind { Weapon, Recovery { hp: u32, sp: u32 } }\n\
+         pub enum ItemKind {\n\
+         Weapon,\n\
+         Recovery { hp: u32, sp: u32 },\n\
+         /// Wearable armour. The category and wear position are preserved so\n\
+         /// later equipment work can use them; item bonuses are not modelled yet.\n\
+         Armor { category: &'static str, position: &'static str },\n\
+         /// Quest or miscellaneous item without an implemented mechanic.\n\
+         Narrative,\n\
+         }\n\
          #[derive(Clone, Copy, Debug)]\n\
          pub struct ItemDefinition {\n\
-         pub id: &'static str, pub vnum: u32,\n\
+         pub id: &'static str, pub vnum: u32, pub name: &'static str,\n\
          pub height: u8, pub stack_limit: u16, pub minimum_level: u8,\n\
          pub attack_speed_bonus: u16, pub allowed_classes: u8, pub allowed_sexes: u8, pub kind: ItemKind,\n\
          pub weapon: Option<WeaponPhysicalDefinition> }\n\
@@ -131,6 +139,7 @@ pub fn generate(value: &Value) -> Result<String, String> {
                 "kind",
                 "weapon",
                 "recovery",
+                "armor",
                 "source",
             ],
         )?;
@@ -229,9 +238,34 @@ pub fn generate(value: &Value) -> Result<String, String> {
                     String::from("None"),
                 )
             }
+            Some("armor") => {
+                let armor = object(&row["armor"], &["category", "position"])?;
+                if !row["recovery"].is_null() || !row["weapon"].is_null() {
+                    return Err("unsupported armor mechanic".into());
+                }
+                let category = armor["category"]
+                    .as_str()
+                    .filter(|value| !value.is_empty() && value.len() <= 32)
+                    .ok_or("armor category must be text")?;
+                let position = armor["position"]
+                    .as_str()
+                    .filter(|value| !value.is_empty() && value.len() <= 32)
+                    .ok_or("armor position must be text")?;
+                (
+                    format!("ItemKind::Armor {{ category: {category:?}, position: {position:?} }}"),
+                    String::from("None"),
+                )
+            }
+            Some("narrative") => {
+                if !row["recovery"].is_null() || !row["weapon"].is_null() || !row["armor"].is_null()
+                {
+                    return Err("narrative items must not declare a mechanic".into());
+                }
+                (String::from("ItemKind::Narrative"), String::from("None"))
+            }
             _ => return Err("unsupported item mechanic".into()),
         };
-        writeln!(output, "ItemDefinition {{ id: {id:?}, vnum: {vnum}, height: {height}, stack_limit: {stack_limit}, minimum_level: {minimum_level}, allowed_classes: {allowed_classes}, allowed_sexes: {allowed_sexes}, attack_speed_bonus: {attack_speed_bonus}, kind: {kind}, weapon: {weapon} }},").unwrap();
+        writeln!(output, "ItemDefinition {{ id: {id:?}, vnum: {vnum}, name: {name:?}, height: {height}, stack_limit: {stack_limit}, minimum_level: {minimum_level}, allowed_classes: {allowed_classes}, allowed_sexes: {allowed_sexes}, attack_speed_bonus: {attack_speed_bonus}, kind: {kind}, weapon: {weapon} }},").unwrap();
     }
     output.push_str("] ;\n");
     Ok(output)

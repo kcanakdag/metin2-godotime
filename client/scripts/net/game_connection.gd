@@ -34,9 +34,11 @@ signal monster_stuns_changed(rows: Array)
 signal combat_target_changed(info: Dictionary)
 signal npc_interaction_changed(info: Dictionary)
 signal npc_spawns_changed(rows: Array)
+signal quest_states_changed(rows: Array)
+signal quest_objectives_changed(rows: Array)
 
 const BINDINGS_PATH := "res://spacetime_bindings/schema/module_game_client.gd"
-const EXPECTED_PROTOCOL_VERSION := 31
+const EXPECTED_PROTOCOL_VERSION := 32
 const CONNECTION_TIMEOUT_MS := 12000
 const REDUCER_TIMEOUT_MS := 8000
 const TABLES := [
@@ -61,6 +63,9 @@ const TABLES := [
 	"combat_target_view",
 	"npc_interaction",
 	"npc_spawn",
+	"quest_state",
+	"quest_objective",
+	"quest_selection",
 ]
 const LOBBY_QUERIES := [
 	"SELECT * FROM account_character",
@@ -86,6 +91,9 @@ const QUERIES := [
 	"SELECT * FROM charge_status",
 	"SELECT * FROM buff_status",
 	"SELECT * FROM monster_stun",
+	"SELECT * FROM quest_state",
+	"SELECT * FROM quest_objective",
+	"SELECT * FROM quest_selection",
 ]
 
 var local_identity := ""
@@ -123,6 +131,8 @@ var command_feedback: Array = []
 var combat_target: Dictionary = {}
 var npc_interaction: Dictionary = {}
 var npc_spawns: Array = []
+## Quest rows arrive through a small view so the connection stays a transport.
+var quests := QuestRows.new()
 
 var _client: SpacetimeDBClient
 var _session := 0
@@ -214,10 +224,13 @@ func _connect(
 	_client.connect_db(endpoint, database, options)
 
 
-func disconnect_game() -> void:
+func disconnect_game(planned_refresh := false) -> void:
 	_retire_client()
 	_clear_snapshots()
-	_set_state("disconnected", "Disconnected.")
+	if planned_refresh:
+		_set_state("refreshing", "Refreshing your session…")
+	else:
+		_set_state("disconnected", "Disconnected.")
 
 
 func reconnect_game() -> void:
@@ -312,6 +325,19 @@ func interact_npc(spawn_id: String) -> void:
 
 func close_npc_interaction(session_id: int) -> void:
 	_call_reducer("close_npc_interaction", [session_id], [&"U64"])
+
+
+func npc_choose(session_id: int, option: int) -> void:
+	_call_reducer("npc_choose", [session_id, option], [&"U64", &"U32"])
+
+
+## Tracked letters for the signed-in character.
+func active_quests() -> Array:
+	return quests.objectives
+
+
+func quest_state_for(quest_id: String) -> Dictionary:
+	return quests.state_for(quest_id)
 
 
 func clear_combat_target() -> void:
@@ -684,6 +710,10 @@ func _flush_snapshots() -> void:
 						npc_interaction = row
 						break
 				npc_interaction_changed.emit(npc_interaction)
+			"quest_state", "quest_objective", "quest_selection":
+				quests.ingest(table_name, rows)
+				quest_states_changed.emit(quests.states)
+				quest_objectives_changed.emit(quests.objectives)
 			"combat_target_view":
 				combat_target = {}
 				for row: Dictionary in rows:
@@ -730,6 +760,10 @@ func _flush_snapshots() -> void:
 						or (
 							next_info.get("npc_catalog_hash", "")
 							!= world_info.get("npc_catalog_hash", "")
+						)
+						or (
+							next_info.get("quest_catalog_hash", "")
+							!= world_info.get("quest_catalog_hash", "")
 						)
 					)
 				):
@@ -874,6 +908,9 @@ func _clear_world_snapshots() -> void:
 	buffs_changed.emit(buffs)
 	npc_spawns = []
 	npc_spawns_changed.emit(npc_spawns)
+	quests.clear()
+	quest_states_changed.emit(quests.states)
+	quest_objectives_changed.emit(quests.objectives)
 	server_time_us = 0
 	inventory_changed.emit(inventory)
 	item_drops_changed.emit(item_drops)

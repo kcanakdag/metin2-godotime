@@ -42,7 +42,7 @@ func _run() -> void:
 	_check(icon.scale == Vector2(0.7, 0.7), "original affect scale")
 	_check(icon.texture != null, "original active-affect icon loads")
 	_check(
-		icon.texture.resource_path.ends_with("jeongwi_03.png"),
+		icon.texture != null and icon.texture.resource_path.ends_with("jeongwi_03.png"),
 		"active icon differs from rank-one learning icon"
 	)
 	_check(icon.focus_mode == Control.FOCUS_NONE, "buff icon cannot steal keyboard focus")

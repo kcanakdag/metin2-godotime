@@ -16,6 +16,7 @@ from PIL import __version__ as pillow_version
 
 UI_ROOT = "ymir work/ui/"
 OUTPUT = ROOT / "client/assets/imported/ui"
+DEFAULT_ITEM_PROFILE = ROOT / "content/profiles/p0-warrior-dog.json"
 STATUS_WINDOW_ASSETS = (
     "public/parameter_slot_01.sub",
     "game/windows/box_face.sub",
@@ -77,8 +78,28 @@ REFERENCES = (
 ) + INTRO_REFERENCES
 
 
-def selected_assets():
+def item_catalog_icons(profile_path):
+    """Item icons declared by a tracked content profile, never a hidden copy."""
+    profile = json.loads(Path(profile_path).read_text())
+    try:
+        rows = profile["item_catalog"]["items"]
+    except (KeyError, TypeError):
+        raise ValueError(f"Profile has no item_catalog: {profile_path}") from None
+    icons = set()
+    for row in rows:
+        icon = row.get("icon") if isinstance(row, dict) else None
+        if not isinstance(icon, str) or not re.fullmatch(r"icon/item/[0-9]{5,10}", icon):
+            raise ValueError(f"Invalid item icon reference: {icon!r}")
+        icons.add(icon + ".tga")
+    if not icons:
+        raise ValueError(f"Profile declares no item icons: {profile_path}")
+    return sorted(icons)
+
+
+def selected_assets(item_icons=None):
     """Explicit HUD/window fixture; no recursive archive or reference-code imports."""
+    if item_icons is None:
+        item_icons = item_catalog_icons(DEFAULT_ITEM_PROFILE)
     names = {
         "equipment_bg_without_ring.tga",
         "pattern/taskbar_base.tga",
@@ -161,12 +182,7 @@ def selected_assets():
         | {UI_ROOT + name for name in STATUS_WINDOW_ASSETS}
         | {UI_ROOT + name for name in TARGET_WINDOW_ASSETS}
         | {STATUS_ENGLISH_WINDOW_ROOT + name for name in STATUS_ENGLISH_WINDOW_ASSETS}
-        | {
-            "icon/item/00010.tga",
-            "icon/item/07000.tga",
-            "icon/item/27001.tga",
-            "icon/item/27002.tga",
-        }
+        | set(item_icons)
         | {
             f"icon/face/{source_class}_{sex}.tga"
             for source_class in ("warrior", "assassin", "sura", "shaman")
@@ -278,16 +294,33 @@ def stitch_yongan(archive, output_root=None):
     }
 
 
-def convert(archive, *, skill_icons=(), output_root=None):
+def convert(archive, *, skill_icons=(), item_icons=None, output_root=None):
     output_root = OUTPUT if output_root is None else output_root
-    names = set(selected_assets())
+    if item_icons is None:
+        item_icons = item_catalog_icons(DEFAULT_ITEM_PROFILE)
+    item_icons = list(item_icons)
+    names = set(selected_assets(item_icons))
     for icon in skill_icons:
         if not isinstance(icon, str) or not re.fullmatch(
             r"skill/(warrior|assassin|sura|shaman)/[a-z0-9_]+", icon
         ):
             raise ValueError("Invalid selected class skill icon")
         names.add(UI_ROOT + icon + ".sub")
-    paths = {name: archive.resolve(name) for name in sorted(names)}
+    # The pinned client archive genuinely lacks a file for a few declared item
+    # icons (for example quest item 69000). Record those names instead of
+    # fabricating art; every other declared asset still has to resolve.
+    declared_item_icons = set(item_icons)
+    paths = {}
+    source_absent = []
+    for name in sorted(names):
+        try:
+            paths[name] = archive.resolve(name)
+        except FileNotFoundError:
+            if name not in declared_item_icons:
+                raise
+            source_absent.append(name)
+    if source_absent:
+        print("Pinned archive ships no file for declared item icon(s): " + ", ".join(source_absent))
     archive.fetch_many([*paths.values(), *REFERENCES])
     prepared = {}
     for name, source in paths.items():
@@ -304,6 +337,7 @@ def convert(archive, *, skill_icons=(), output_root=None):
         "converter": "tools/import_metin_ui.py",
         "pillow_version": pillow_version,
         "references": list(REFERENCES),
+        "source_absent_item_icons": source_absent,
         "assets": {},
     }
     destinations = set()
@@ -349,6 +383,12 @@ def main():
     parser.add_argument(
         "--skill-catalog", type=Path, default=ROOT / "client/assets/imported/skills/catalog.v1.json"
     )
+    parser.add_argument(
+        "--item-profile",
+        type=Path,
+        default=DEFAULT_ITEM_PROFILE,
+        help="Tracked content profile whose item_catalog selects the imported item icons",
+    )
     args = parser.parse_args()
     archive = Archive(offline=args.offline)
     archive.inventory()
@@ -372,7 +412,12 @@ def main():
         ):
             raise ValueError("Expected pinned class skill inventory")
         icons.extend(skill["icon"] for skill in inventory["skills"])
-    convert(archive, skill_icons=icons, output_root=args.output)
+    convert(
+        archive,
+        skill_icons=icons,
+        item_icons=item_catalog_icons(args.item_profile),
+        output_root=args.output,
+    )
 
 
 if __name__ == "__main__":

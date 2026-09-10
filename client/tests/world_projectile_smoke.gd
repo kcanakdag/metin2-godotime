@@ -17,7 +17,7 @@ class ConnectionSpy:
 		state = "connected"
 		connection_state_changed.emit(state, "Offline projectile QA")
 
-	func disconnect_game() -> void:
+	func disconnect_game(_planned_refresh := false) -> void:
 		disconnects += 1
 		state = "disconnected"
 		connection_state_changed.emit(state, "Offline projectile QA")

@@ -214,8 +214,11 @@ func _run() -> void:
 	await process_frame
 	tooltip.show_item({"vnum": 27002})
 	_check(
-		_tooltip_text(tooltip).contains("Cannot be used yet."),
-		"medium potion tooltip marks use as deferred"
+		(
+			_tooltip_text(tooltip).contains("Restores 800 HP gradually")
+			and _tooltip_text(tooltip).contains("Right-click to use")
+		),
+		"medium potion tooltip matches the implemented consume path"
 	)
 	var visual_row := _progression(37, 300, 0, 4, 6)
 	visual_row.current_sp = 260

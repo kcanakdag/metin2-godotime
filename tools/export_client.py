@@ -21,6 +21,7 @@ from actor_texture_import import configure_actor_texture_imports
 from build_character_catalog import validate_package as validate_character_package
 from build_npc_catalog import CATALOG as NPC_CATALOG
 from build_npc_catalog import validate_package as validate_npc_package
+from godot_editor_log import strip_editor_socket_port_error
 from item_definitions import FIELDS as ITEM_FIELDS
 from item_definitions import public_catalog as public_item_catalog
 from target_effect_export import (
@@ -202,7 +203,8 @@ def run(command, log, env, timeout=180):
         except subprocess.TimeoutExpired as error:
             raise RuntimeError(f"Command timed out after {timeout}s; see {log}") from error
     stdout = log.read_text(errors="replace")
-    if result.returncode or "SCRIPT ERROR:" in stdout or "ERROR:" in stdout:
+    checked = strip_editor_socket_port_error(stdout)
+    if result.returncode or "SCRIPT ERROR:" in checked or "ERROR:" in checked:
         raise RuntimeError(f"Command failed; see {log}\n{stdout[-5000:]}")
     return stdout
 

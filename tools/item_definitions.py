@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 RECOVERY_POLICY = {
     "id": "item.recovery.pool.v1",
     "interval_us": 1_000_000,
@@ -32,7 +32,29 @@ FIELDS = {
     "kind",
     "weapon",
     "recovery",
+    "armor",
     "source",
+}
+
+ARMOR_CATEGORIES = {
+    "ARMOR_BODY": "body",
+    "ARMOR_WRIST": "wrist",
+    "ARMOR_NECK": "neck",
+    "ARMOR_EAR": "ear",
+    "ARMOR_HEAD": "head",
+    "ARMOR_FOOT": "foot",
+    "ARMOR_HAND": "hand",
+    "ARMOR_SHIELD": "shield",
+}
+ARMOR_POSITIONS = {
+    "WEAR_BODY": "body",
+    "WEAR_WRIST": "wrist",
+    "WEAR_NECK": "neck",
+    "WEAR_EAR": "ear",
+    "WEAR_HEAD": "head",
+    "WEAR_FOOT": "foot",
+    "WEAR_HAND": "hand",
+    "WEAR_SHIELD": "shield",
 }
 
 
@@ -117,14 +139,32 @@ def validate_catalog(catalog: object) -> None:
                 or weapon["power_max"] + weapon["refine_attack"] > 65535
             ):
                 raise ValueError("Invalid weapon power range")
+            if item["armor"] is not None:
+                raise ValueError("Weapons must not declare armor fields")
         elif item["kind"] == "recovery":
             effect = _object(item["recovery"], {"handler", "hp", "sp"}, "item recovery")
-            if item["weapon"] is not None or effect["handler"] != RECOVERY_POLICY["id"]:
+            if (
+                item["weapon"] is not None
+                or item["armor"] is not None
+                or effect["handler"] != RECOVERY_POLICY["id"]
+            ):
                 raise ValueError("Unsupported item recovery handler")
             for key in ("hp", "sp"):
                 integer(effect[key], "recovery " + key, 0, 65535)
             if effect["hp"] + effect["sp"] == 0:
                 raise ValueError("Recovery effect must restore HP or SP")
+        elif item["kind"] == "armor":
+            armor = _object(item["armor"], {"category", "position"}, "item armor")
+            if (
+                armor["category"] not in set(ARMOR_CATEGORIES.values())
+                or armor["position"] not in set(ARMOR_POSITIONS.values())
+                or item["weapon"] is not None
+                or item["recovery"] is not None
+            ):
+                raise ValueError("Unsupported armor mechanic")
+        elif item["kind"] == "narrative":
+            if any(item[key] is not None for key in ("weapon", "recovery", "armor")):
+                raise ValueError("Narrative items must not declare a mechanic")
         else:
             raise ValueError("Unsupported item kind")
 
@@ -176,6 +216,7 @@ def compile_catalog(selection: dict, proto_text: str, names_text: str, source: d
             "attack_speed_bonus": 0,
             "weapon": None,
             "recovery": None,
+            "armor": None,
             "source": {**source, "row_number": number},
         }
         if (
@@ -204,6 +245,33 @@ def compile_catalog(selection: dict, proto_text: str, names_text: str, source: d
                 "hp": int(row[24]),
                 "sp": int(row[25]),
             }
+        elif row[2] == "ITEM_ARMOR" and row[3] in ARMOR_CATEGORIES and row[7] in ARMOR_POSITIONS:
+            applied = [
+                (apply_type, int(apply_value))
+                for apply_type, apply_value in zip(row[18:24:2], row[19:24:2], strict=True)
+                if apply_type != "APPLY_NONE" or int(apply_value) != 0
+            ]
+            # The selected opening rewards carry small static bonuses. They are
+            # preserved as provenance only until equipment stats are modelled.
+            supported = {
+                "APPLY_ATT_SPEED",
+                "APPLY_MAX_STAMINA",
+                "APPLY_CAST_SPEED",
+                "APPLY_RESIST_FIRE",
+                "APPLY_DEX",
+            }
+            if any(apply_type not in supported for apply_type, _ in applied):
+                raise ValueError(f"Item {vnum} has an unsupported armor apply")
+            item["kind"] = "armor"
+            item["armor"] = {
+                "category": ARMOR_CATEGORIES[row[3]],
+                "position": ARMOR_POSITIONS[row[7]],
+            }
+        elif row[2] == "ITEM_NONE":
+            # `ITEM_NONE` rows carry prose-only or unimplemented mechanics
+            # (shield skills, refine data). Keeping the row preserves the name
+            # and icon without claiming an executable effect.
+            item["kind"] = "narrative"
         else:
             raise ValueError(f"Item {vnum} uses an unsupported type/subtype")
         compiled.append(item)

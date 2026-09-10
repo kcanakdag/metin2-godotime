@@ -12,6 +12,7 @@ import signal
 import subprocess
 from pathlib import Path
 
+from godot_editor_log import strip_editor_socket_port_error
 from test_actors import PROJECT, ROOT, run, sha256
 
 DEFAULT_PROFILE = ROOT / "content/worlds/yongan.population.json"
@@ -33,9 +34,12 @@ def run_preview(command: list[str], environment: dict, log_path: Path, *, smoke:
                 os.killpg(process.pid, signal.SIGKILL)
                 process.wait()
             raise RuntimeError(f"World preview interrupted or timed out; see {log_path}") from None
-    text = log_path.read_text()
+    raw = log_path.read_text()
+    # An isolated preview still prints the harmless editor-IPC bind failure while
+    # the user's editor owns that socket; only that signature is tolerated.
+    text = strip_editor_socket_port_error(raw)
     if status or "SCRIPT ERROR:" in text or "\nERROR:" in text:
-        raise RuntimeError(f"World preview failed; see {log_path}\n{text[-2500:]}")
+        raise RuntimeError(f"World preview failed; see {log_path}\n{raw[-2500:]}")
 
 
 def inspector(map_id: str) -> Path:

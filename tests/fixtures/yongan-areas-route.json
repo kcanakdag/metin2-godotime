@@ -69,6 +69,45 @@
     608,
     668
   ],
+  "dialogue_targets": [
+    {
+      "key": "doctor",
+      "spawn_id": "spawn.yongan.doctor-20018-0",
+      "name": "Baek-Go",
+      "title": "Baek-Go:",
+      "body_contains": "what can I do for you?",
+      "bounds_cm": [
+        69400,
+        65600,
+        69600,
+        65800
+      ],
+      "regroup": [
+        606,
+        671
+      ],
+      "waypoints": [
+        [
+          658,
+          670.5
+        ]
+      ],
+      "approach": [
+        692.618,
+        657.294
+      ],
+      "return_waypoints": [
+        [
+          658,
+          670.5
+        ],
+        [
+          604,
+          668
+        ]
+      ]
+    }
+  ],
   "entry_population": [
     {
       "spawn_id": "spawn.yongan.arms-9001-0",
@@ -301,7 +340,7 @@
       "yaw": 3.141592653589793
     }
   ],
-  "entry_areas": [
+  "areas_outside_entry_view": [
     {
       "spawn_id": "spawn.yongan.auntie-20002-0",
       "name": "Aranyo",

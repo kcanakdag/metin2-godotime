@@ -693,6 +693,24 @@
         "icon": "icon/item/07000"
       },
       {
+        "id": "item.armor.wooden-bracelet",
+        "revision": 1,
+        "vnum": 14000,
+        "icon": "icon/item/14000"
+      },
+      {
+        "id": "item.armor.wooden-necklace",
+        "revision": 1,
+        "vnum": 16000,
+        "icon": "icon/item/16000"
+      },
+      {
+        "id": "item.armor.wooden-earrings",
+        "revision": 1,
+        "vnum": 17000,
+        "icon": "icon/item/17000"
+      },
+      {
         "id": "item.consumable.red-potion-small",
         "revision": 1,
         "vnum": 27001,
@@ -703,6 +721,18 @@
         "revision": 1,
         "vnum": 27002,
         "icon": "icon/item/27002"
+      },
+      {
+        "id": "item.consumable.blue-potion-small",
+        "revision": 1,
+        "vnum": 27004,
+        "icon": "icon/item/27004"
+      },
+      {
+        "id": "item.quest.bash-secret",
+        "revision": 1,
+        "vnum": 69000,
+        "icon": "icon/item/69000"
       }
     ]
   }

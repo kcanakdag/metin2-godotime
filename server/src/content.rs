@@ -341,3 +341,80 @@ mod npc_position_tests {
         }
     }
 }
+
+#[cfg(all(test, feature = "yongan"))]
+mod guard_route_tests {
+    use super::*;
+    use crate::movement::{self, BASE_SPEED_POINTS, Travel};
+
+    /// The Yongan square route the exported QA click walks: the city guard stands at
+    /// (605, 663) and the click lands on (608, 668).
+    ///
+    /// `NpcApproach` only fires its interaction inside a 4.5 m radius, so the walked
+    /// line has to stay clear *and* actually close the gap. The reservation also
+    /// re-issues click-to-move onto the guard's own position, which therefore has to
+    /// pass the `move_to` destination validation too.
+    const GUARD: (f32, f32) = (605.0, 663.0);
+    const APPROACH: (f32, f32) = (608.0, 668.0);
+    const INTERACTION_DISTANCE: f32 = 4.5;
+
+    fn distance(x: f32, z: f32) -> f32 {
+        (x - GUARD.0).hypot(z - GUARD.1)
+    }
+
+    #[test]
+    fn square_to_guard_route_closes_inside_the_interaction_radius() {
+        assert!(valid_target(GUARD.0, GUARD.1).is_ok());
+        assert!(distance(APPROACH.0, APPROACH.1) > INTERACTION_DISTANCE);
+        assert!(
+            clear_path(APPROACH.0, APPROACH.1, GUARD.0, GUARD.1, &[]),
+            "baked world geometry blocks the guard route"
+        );
+
+        // Replay the authoritative walk. A reconnect now re-issues this same intent
+        // instead of dropping it, so the route must reach interaction range rather
+        // than stalling outside it (the exported r15 click stopped at 5.04 m).
+        let (mut x, mut z) = APPROACH;
+        let mut clock = 0i64;
+        let mut ticks = 0;
+        while distance(x, z) > INTERACTION_DISTANCE {
+            let previous = clock;
+            clock += i64::from(crate::TICK_MS) * 1000;
+            let travel = Travel::with_effects(previous, clock, 0, BASE_SPEED_POINTS, &[]).unwrap();
+            let (step_x, step_z) = movement::target_step(x, z, GUARD.0, GUARD.1, travel);
+            let (next_x, next_z) = slide(x, z, step_x, step_z, &[]);
+            assert!(
+                (next_x - x).hypot(next_z - z) > 0.0,
+                "the walk stalled at ({next_x}, {next_z})"
+            );
+            x = next_x;
+            z = next_z;
+            ticks += 1;
+            assert!(ticks < 200, "the walk never reached the interaction radius");
+        }
+    }
+
+    #[test]
+    fn reconnect_reissue_from_every_surrounding_tile_stays_walkable() {
+        // A re-issue that already sits inside the radius interacts without walking.
+        assert!(distance(GUARD.0 + 3.0, GUARD.1) <= INTERACTION_DISTANCE);
+        for (offset_x, offset_z) in [
+            (0.0, 5.0),
+            (5.0, 0.0),
+            (0.0, -5.0),
+            (-5.0, 0.0),
+            (4.0, 4.0),
+            (4.0, -4.0),
+            (-4.0, 4.0),
+            (-4.0, -4.0),
+        ] {
+            let (start_x, start_z) = (GUARD.0 + offset_x, GUARD.1 + offset_z);
+            assert!(valid_target(start_x, start_z).is_ok());
+            assert!(distance(start_x, start_z) > INTERACTION_DISTANCE);
+            assert!(
+                clear_path(start_x, start_z, GUARD.0, GUARD.1, &[]),
+                "the reconnect re-issue from ({start_x}, {start_z}) is blocked"
+            );
+        }
+    }
+}

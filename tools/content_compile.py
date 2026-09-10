@@ -2272,7 +2272,57 @@ def build_command(args: argparse.Namespace) -> None:
     validate_server_payload(server, profile["profile_id"])
     write_compile_outputs(profile_path, normalized, server)
     paths = output_paths(profile["profile_id"])
-    staging_parent = ROOT / ".local/content" / profile["profile_id"]
+    if args.reuse_blender_report:
+        blender_report = reuse_blender_report(normalized, paths)
+    else:
+        blender_report = run_blender_conversion(args, paths)
+    client = make_client_payload(normalized, server, blender_report)
+    write_json(paths["client"], client)
+    report = json.loads(paths["report"].read_text())
+    report.update(
+        {
+            "status": "built",
+            "presentation_output_hash": client["presentation_output_hash"],
+            "blender_version": blender_report["blender_version"],
+            "artifacts": client["artifacts"],
+        }
+    )
+    write_json(paths["report"], report)
+    validate_command(argparse.Namespace(profile=str(profile_path)))
+
+
+def reuse_blender_report(normalized: dict, paths: dict[str, Path]) -> dict:
+    """Reuse a recorded conversion instead of re-running Blender.
+
+    This exists for profile edits that cannot change converted geometry, such as
+    adding item-catalog rows for armor or consumables. The recorded report is
+    accepted only when it belongs to the same profile, is a completed
+    conversion, and every recorded artifact still exists on disk with its
+    recorded digest, so a stale or hand-edited mesh fails the build instead of
+    silently shipping. Gear that needs new models must run the Blender step.
+    """
+    if not paths["blender_report"].is_file():
+        raise ValueError(f"No recorded conversion to reuse: {paths['blender_report']}")
+    blender_report = json.loads(paths["blender_report"].read_text())
+    if blender_report.get("status") != "converted":
+        raise ValueError("Recorded conversion is not a completed conversion")
+    if blender_report.get("profile_id") != normalized["profile_id"]:
+        raise ValueError("Recorded conversion belongs to another profile")
+    final_output = paths["client"].parent
+    for artifact in blender_report["artifacts"]:
+        target = final_output / safe_path(artifact["relative_path"])
+        if (
+            not target.is_file()
+            or hashlib.sha256(target.read_bytes()).hexdigest() != artifact["sha256"]
+        ):
+            raise ValueError(f"Converted artifact is missing or changed: {target}")
+    extract_actor_texture_pngs(final_output, blender_report)
+    return blender_report
+
+
+def run_blender_conversion(args: argparse.Namespace, paths: dict[str, Path]) -> dict:
+    profile_id = json.loads(paths["normalized"].read_text())["profile_id"]
+    staging_parent = ROOT / ".local/content" / profile_id
     staging_parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="build-", dir=staging_parent) as temporary:
         staging = Path(temporary)
@@ -2318,19 +2368,7 @@ def build_command(args: argparse.Namespace) -> None:
             temporary_target.replace(target)
         extract_actor_texture_pngs(final_output, blender_report)
         write_json(paths["blender_report"], blender_report)
-    client = make_client_payload(normalized, server, blender_report)
-    write_json(paths["client"], client)
-    report = json.loads(paths["report"].read_text())
-    report.update(
-        {
-            "status": "built",
-            "presentation_output_hash": client["presentation_output_hash"],
-            "blender_version": blender_report["blender_version"],
-            "artifacts": client["artifacts"],
-        }
-    )
-    write_json(paths["report"], report)
-    validate_command(argparse.Namespace(profile=str(profile_path)))
+    return blender_report
 
 
 def validate_command(args: argparse.Namespace) -> None:
@@ -2349,9 +2387,15 @@ def validate_command(args: argparse.Namespace) -> None:
         ):
             raise ValueError("Client item capabilities differ from trusted definitions")
         models = {item["id"]: item for item in client["items"]}
+        ui_manifest = ROOT / "client/assets/imported/ui/manifest.json"
+        source_absent_icons = set()
+        if ui_manifest.is_file():
+            source_absent_icons = set(
+                json.loads(ui_manifest.read_text()).get("source_absent_item_icons", [])
+            )
         for item in runtime["item_catalog"]["items"]:
             icon = ROOT / "client/assets/imported/ui" / (item["icon"] + ".png")
-            if not icon.is_file():
+            if not icon.is_file() and item["icon"] + ".tga" not in source_absent_icons:
                 raise ValueError(f"Required item icon is missing: {icon}")
             if item["kind"] == "weapon" and models.get(item["id"], {}).get("vnum") != item["vnum"]:
                 raise ValueError(f"Required equipped-item presentation is missing: {item['id']}")
@@ -2427,6 +2471,14 @@ def main() -> None:
     build_parser.add_argument("--profile", default=str(DEFAULT_PROFILE))
     build_parser.add_argument("--offline", action="store_true")
     build_parser.add_argument("--blender", required=True)
+    build_parser.add_argument(
+        "--reuse-blender-report",
+        action="store_true",
+        help=(
+            "Reuse the recorded conversion for this profile instead of running Blender; "
+            "only valid when the profile edit cannot change converted geometry"
+        ),
+    )
     build_parser.set_defaults(function=build_command)
     validate_parser = subparsers.add_parser("validate", help="validate generated profile artifacts")
     validate_parser.add_argument("--profile", default=str(DEFAULT_PROFILE))

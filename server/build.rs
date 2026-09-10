@@ -11,6 +11,7 @@ mod build_mobs;
 mod build_npcs;
 mod build_original_population;
 mod build_population;
+mod build_quests;
 mod build_regeneration;
 mod build_skills;
 mod build_training;
@@ -517,7 +518,8 @@ fn main() {
         let path = Path::new(&path);
         println!("cargo:rerun-if-changed={}", path.display());
         let bytes = fs::read(path).unwrap_or_else(|e| fail(format!("Cannot read original population: {e}")));
-        build_original_population::compile(&bytes, Some(&mobs.vnums)).unwrap_or_else(|e| fail(e))
+        build_original_population::compile_with_count(&bytes, Some(&mobs.vnums))
+            .unwrap_or_else(|e| fail(e))
     });
     println!("cargo:rerun-if-changed={DEFINITIONS}");
     println!("cargo:rerun-if-changed={COMBO_VALIDATOR}");
@@ -1547,9 +1549,10 @@ pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
     writeln!(output, "];").unwrap();
 
     output.push_str("#[derive(Clone, Copy, Debug)]\npub struct RegenerationGroupArea { pub bounds_cm: [i32; 4], pub groups: &'static [&'static [u32]] }\n#[derive(Clone, Copy, Debug)]\npub struct RegenerationDefinition { pub force_aggressive: bool, pub area: Option<RegenerationGroupArea>, pub id: u32, pub interval_us: i64, pub capacity: usize, pub startup_jitter_max_seconds: u8, pub templates: &'static [MonsterSpawnDefinition] }\n");
-    if let Some(registry) = original_population {
+    let regeneration_entries = if let Some((registry, entries)) = original_population {
         output.push_str(&registry);
         output.push_str("pub const REGENERATION_DEFINITIONS: &[RegenerationDefinition] = ORIGINAL_REGENERATION_DEFINITIONS;\n");
+        entries
     } else if std::env::var(TARGET_FIXTURE_ENV).unwrap_or_default() == "regenerating-wild-dog-v1" {
         let payload: Value = serde_json::from_slice(
             &fs::read(REGENERATING_TARGET_FIXTURE).expect("regeneration fixture must exist"),
@@ -1581,9 +1584,23 @@ pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
             "None".into()
         };
         writeln!(output, "pub const REGENERATION_DEFINITIONS: &[RegenerationDefinition] = &[RegenerationDefinition {{ force_aggressive: {force_aggressive}, area: {area}, id: {id}, interval_us: {interval}, capacity: {capacity}, startup_jitter_max_seconds: {jitter}, templates: MONSTER_SPAWNS }}];").unwrap();
+        1
     } else {
         output.push_str("pub const REGENERATION_DEFINITIONS: &[RegenerationDefinition] = &[];\n");
-    }
+        0
+    };
+    // `monster_regeneration` rows outlive the module that inserted them, so the
+    // installed registry is deployment-relevant state. The receipt travels in the
+    // module bytes; `tools/deploy.py` reads it before publishing. See
+    // `docs/development.md#regeneration-registry-hot-swap-hazard`.
+    writeln!(
+        output,
+        "pub const REGENERATION_REGISTRY_RECEIPT: &str = {};",
+        rust_string(&format!(
+            "mt2spacetime.regeneration-registry.v1 count={regeneration_entries}"
+        ))
+    )
+    .unwrap();
 
     let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("Cargo sets OUT_DIR"));
     let item_fixture = build_items::recovery_fixture_enabled(
@@ -1606,6 +1623,7 @@ pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
     );
     build_items::validate_links(&payload).unwrap_or_else(|error| fail(error));
     output.push_str(&build_npcs::build());
+    output.push_str(&build_quests::build());
     output.push_str(&build_classes::build());
     output.push_str(&build_skills::build());
     output.push_str(&build_training::build());
