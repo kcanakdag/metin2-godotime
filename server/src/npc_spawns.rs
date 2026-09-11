@@ -1,6 +1,6 @@
 //! Persistent area NPC placement. No client reducer can move or reroll these rows.
 use crate::{content, definitions, now_us, npc_placement};
-use spacetimedb::{rand::Rng, ReducerContext, Table};
+use spacetimedb::{ReducerContext, Table, rand::Rng};
 
 #[spacetimedb::table(accessor = npc_spawn, public)]
 pub struct NpcSpawn {

@@ -1,7 +1,7 @@
 #[allow(dead_code)]
 #[path = "../build_npcs.rs"]
 mod build_npcs;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 fn fixtures() -> (Value, Value) {
     (
         json!({"schema":"mt2spacetime.static-npcs","version":1,"actors":[{"id":"actor.npc.guard","name":"Guard","vnum":9001}],"maps":[{"id":"metin2_map_a1","content_hash":"map-hash","placements":[{"id":"spawn.guard","actor_id":"actor.npc.guard","position":[1,2,3]}]}]}),

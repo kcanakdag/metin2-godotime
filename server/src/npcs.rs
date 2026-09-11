@@ -4,7 +4,7 @@
 //! change and reward. Selecting an answer goes through `npc_choose`, which
 //! re-validates the open session before the quest runtime looks at the stored
 //! branches, so a client cannot answer a question that was never offered.
-use crate::npc_spawns::{npc_spawn, NpcSpawn};
+use crate::npc_spawns::{NpcSpawn, npc_spawn};
 use crate::quest::quest_selection;
 use crate::{accounts, active_controller, content, controller, definitions, now_us, player, quest};
 use spacetimedb::{Filter, Identity, ReducerContext, Table};

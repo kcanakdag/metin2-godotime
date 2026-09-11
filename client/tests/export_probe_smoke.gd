@@ -69,10 +69,10 @@ class ProbeWorld:
 	var events: Array[InputEvent] = []
 	var commands: Array[Dictionary] = []
 	var hud := ProbeHud.new()
-	var _pve := {}
-	var _hovered_npc: NpcActor
 	var destinations: Array[Vector3] = []
 	var stops := 0
+	var _pve := {}
+	var _hovered_npc: NpcActor
 
 	func _init() -> void:
 		add_child(connection)
@@ -221,10 +221,7 @@ func _run() -> void:
 	probe._dispatch({"action": "target", "x": 606.0, "z": 671.0})
 	probe._dispatch({"action": "stop"})
 	_check(
-		(
-			world.destinations == [Vector3(606.0, 0.0, 671.0)]
-			and world.stops == 1
-		),
+		world.destinations == [Vector3(606.0, 0.0, 671.0)] and world.stops == 1,
 		"probe walk commands route through the shared click reservation"
 	)
 	var command_path := ProjectSettings.globalize_path("user://probe-command.json")

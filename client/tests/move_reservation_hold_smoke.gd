@@ -125,15 +125,13 @@ func _run() -> void:
 	main.set("_held_movement", true)
 	main.call("_physics_process", 0.2)
 	_check(
-		connection.stops == 1,
-		"an uncleared WASD hold cancels the walk on the next physics tick"
+		connection.stops == 1, "an uncleared WASD hold cancels the walk on the next physics tick"
 	)
 
 	main.set("_held_movement", true)
 	main.call("request_move_destination", DESTINATION)
 	_check(
-		not bool(main.get("_held_movement")),
-		"request_move_destination clears the stale WASD hold"
+		not bool(main.get("_held_movement")), "request_move_destination clears the stale WASD hold"
 	)
 	_check(
 		connection.moves == [Vector2(DESTINATION.x, DESTINATION.z)],
@@ -159,11 +157,7 @@ func _run() -> void:
 
 	main.call("request_stop_moving")
 	_check(
-		(
-			connection.stops == 2
-			and not bool(main.get("_held_movement"))
-			and not driver.is_active()
-		),
+		connection.stops == 2 and not bool(main.get("_held_movement")) and not driver.is_active(),
 		"request_stop_moving clears every reservation and the hold flag"
 	)
 	_check(
