@@ -5,6 +5,30 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Public 945-group world population deployed — 2026-09-11
+
+The reviewed module `.local/world-population-r1/mt2_server.maintain-r1.wasm`
+(sha256 `ba665d3f7507f1f343183093ab35269fd359b9f765e0fb3b1ebe9cc32075051a`,
+3,720,905 bytes) is live on the public playtest endpoint as release
+`20260911T123640567701Z`, database `mt2-public-quests-v32-20260910`,
+`delete_data=never`. The matching web export is
+`.local/world-population-r1/export/web-r8`; its `index.pck` sha256
+`4db41122b687608511a634e0011a9a76ffcf257b8231497019a9d090b3840ab5` is byte
+identical to the served pack under `/opt/metin2-godotime/web/current`. The
+previous public baseline was release `20260910T132257494611Z`, module
+`3f96b25aea5563059b1c6cc80966ae234ace7a1dd99effa49c2f088c47f26f9d`.
+
+Post-deploy verification, performed against the live host rather than the
+deploy tool's local preflight: `/health` answers, the status file reports
+`phase: ready` with the database and release above, and the served
+`mt2_server.wasm` hash equals the frozen candidate. The migration added the
+private `monster_regeneration_registry` table with 945 entries while retaining
+the protocol-32 quest catalog and account rows
+(`maintain-r1-receipt.json` still says `published: false` because it was
+written before the publish step; the release supersedes that field). This
+build is the authorized instrumented QA probe export, not a friend/release
+package.
+
 ## Actor acceptance follows installed content — 2026-09-11
 
 The exported two-client actor acceptance had drifted behind the content it was
