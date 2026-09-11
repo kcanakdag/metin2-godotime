@@ -5,6 +5,19 @@ import struct
 
 from mob_gameplay import integer, number
 
+# ``EMobRank`` in the pinned ``common/length.h``. Only the first four ranks
+# receive common-drop rows, but the protocol carries the original value so a
+# future boss content slice does not need a schema change.
+MOB_RANKS = ("PAWN", "S_PAWN", "KNIGHT", "S_KNIGHT", "BOSS", "KING")
+
+
+def mob_rank(source):
+    """Original ``EMobRank`` value of a mob prototype row."""
+    rank = source.get("rank")
+    if rank not in MOB_RANKS:
+        raise ValueError(f"Missing or unsupported mob rank: {rank!r}")
+    return MOB_RANKS.index(rank)
+
 
 def immunity_flags(source):
     """Pinned ProtoReader flag order; preserve all bits for future affect handlers."""
@@ -166,6 +179,7 @@ def species_record(mob):
         "name": rust_text(mob["name"]),
         "model_key": rust_text(mob["model_key"]),
         "motion_set": rust_text(mob["id"] + ".general"),
+        "rank": str(mob_rank(source)),
         "level": str(integer(mob["level"], 1, 99, "species level")),
         "health": str(integer(mob["health"], 1, 65535, "species health")),
         "attack_range_m": repr(float(number(mob["attack_range_m"], 0.01, 100, "range"))),

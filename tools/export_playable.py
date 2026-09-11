@@ -250,6 +250,19 @@ def main():
             shutil.rmtree(stage / "assets/imported/maps")
             run([*common, "--editor", "--import", "--quit"], local / "core-import.log", env)
         executable = build / ("index.html" if args.target == "web" else "MT2Spacetime.x86_64")
+        required_maps = []
+        if args.include_map and args.target == "linux":
+            # The native client validates the installed bake before entering the world, so
+            # the pack must carry the same map metadata the web build streams per chunk.
+            staged_maps = stage / "assets/imported/maps"
+            required_maps = sorted(
+                path.relative_to(stage).as_posix() for path in staged_maps.glob("*/collision.json")
+            )
+            if not required_maps:
+                raise RuntimeError(
+                    "Native playable export needs baked map metadata under "
+                    "client/assets/imported/maps: run make import-map and make bake-map"
+                )
         run([*common, "--export-release", "Playable", executable], local / "export.log", env)
         audit = audit_pack(
             args.godot,
@@ -260,6 +273,7 @@ def main():
             content_root=stage,
             p1_requirements=p1_requirements,
             motion_effect_hash=motion_effects_hash,
+            required_maps=required_maps,
         )
         audit["target_effects"] = audit_target_effect_pack(
             args.godot,

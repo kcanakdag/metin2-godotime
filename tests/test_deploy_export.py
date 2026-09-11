@@ -351,6 +351,17 @@ class PackExclusionTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "no packaged test probe"):
             export_client.validate_pack_paths([], allow_test_probe=True)
 
+    def test_native_export_requires_installed_map_data(self):
+        maps = ("assets/imported/maps/yongan/collision.json",)
+        with self.assertRaisesRegex(RuntimeError, "missing installed map data"):
+            export_client.validate_pack_paths(
+                ["res://.godot/imported/warrior.scn"], required_maps=maps
+            )
+        result = export_client.validate_pack_paths(
+            ["res://assets/imported/maps/yongan/collision.json"], required_maps=maps
+        )
+        self.assertEqual(result["files_checked"], 1)
+
 
 class TargetEffectExportTests(unittest.TestCase):
     def make_project(self, root):
@@ -614,6 +625,53 @@ class P1ProfileAuditTests(unittest.TestCase):
         ]
         return manifest
 
+    @classmethod
+    def manifest_with_registered_weapon(cls, resource, artifact_id="sword-11"):
+        """Register a second weapon whose compiler model name keeps its dot.
+
+        The fixture reuses the starter sword's public physical dictionary so the
+        only behaviour under test is the generated model resource path.
+        """
+        manifest = cls.manifest()
+        manifest["artifacts"].append(
+            {
+                "id": artifact_id,
+                "type": "model",
+                "path": resource,
+                "sha256": "e" * 64,
+                "bytes": 123,
+                "mesh_count": 1,
+                "textured_mesh_count": 1,
+                "vertices": 3,
+                "triangles": 1,
+            }
+        )
+        manifest["items"].append(
+            {
+                "id": "item.weapon.sword-11",
+                "vnum": 11,
+                "physical": export_client.P1_SWORD_PHYSICAL.copy(),
+                "model": {"artifact_id": artifact_id, "path": resource},
+            }
+        )
+        manifest["item_catalog"] = {
+            "schema_version": 1,
+            "items": [
+                {
+                    "id": "item.weapon.sword-11",
+                    "vnum": 11,
+                    "kind": "weapon",
+                    "weapon": {
+                        "class": "sword",
+                        "power_min": export_client.P1_SWORD_PHYSICAL["power_min"],
+                        "power_max": export_client.P1_SWORD_PHYSICAL["power_max"],
+                        "refine_attack": export_client.P1_SWORD_PHYSICAL["refine_attack"],
+                    },
+                }
+            ],
+        }
+        return manifest
+
     def test_generated_manifest_requires_exact_profile_artifacts(self):
         manifest = self.manifest()
         self.assertEqual(
@@ -622,6 +680,28 @@ class P1ProfileAuditTests(unittest.TestCase):
         manifest["artifacts"].pop()
         with self.assertRaisesRegex(RuntimeError, "missing"):
             export_client.validate_p1_manifest(manifest)
+
+    def test_generated_manifest_accepts_dotted_registered_weapon_model_path(self):
+        resource = "res://assets/imported/content/p0-warrior-dog/items/weapon.sword-11.glb"
+        manifest = self.manifest_with_registered_weapon(resource)
+        validated = export_client.validate_p1_manifest(manifest)
+        self.assertIn(resource, set(validated))
+
+    def test_generated_manifest_rejects_escaped_or_malformed_weapon_model_paths(self):
+        prefix = "res://assets/imported/content/p0-warrior-dog/items/"
+        for resource in (
+            prefix + "weapon..glb",
+            prefix + "weapon.sword-11.glb.png",
+            prefix + "nested/weapon.sword-11.glb",
+            prefix + "weapon.Sword-11.glb",
+            prefix + ".glb",
+            "res://assets/imported/content/p0-warrior-dog/items/../items/weapon.glb",
+            "user://assets/imported/content/p0-warrior-dog/items/weapon.sword-11.glb",
+        ):
+            with self.subTest(resource=resource):
+                manifest = self.manifest_with_registered_weapon(resource)
+                with self.assertRaisesRegex(RuntimeError, "invalid model path"):
+                    export_client.validate_p1_manifest(manifest)
 
     def test_generated_manifest_rejects_profile_hash_and_structural_mismatch(self):
         manifest = self.manifest()

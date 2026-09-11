@@ -491,22 +491,6 @@ pub fn equipped_weapon_item(ctx: &ReducerContext, owner: Identity) -> Option<(u6
         })
 }
 
-pub fn drop_potion(ctx: &ReducerContext, owner: Identity, x: f32, y: f32, z: f32) {
-    let now = now_us(ctx);
-    let drop = ctx.db.item_drop().insert(ItemDrop {
-        id: 0,
-        x,
-        y,
-        z,
-        vnum: RED_POTION,
-        count: 1,
-        owner,
-        reserved_until_us: now.saturating_add(10_000_000),
-        expires_at_us: now.saturating_add(60_000_000),
-    });
-    item_security::ground(ctx, &drop, true, Cause::Monster);
-}
-
 #[spacetimedb::reducer]
 pub fn pickup_item_drop(ctx: &ReducerContext, id: u64) -> Result<(), String> {
     active_controller(ctx)?;

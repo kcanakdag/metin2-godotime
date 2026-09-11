@@ -2115,7 +2115,7 @@ Do not use that population assertion for a deliberately smaller custom map.
 Build `cargo build --manifest-path server/Cargo.toml --locked --offline --features
 yongan --example world_route`, then send JSON on stdin to
 `server/target/debug/examples/world_route`, for example
-`{"start":[660,575],"goal":[788.39,553.6]}`. The offline planner uses the actual
+`{"start":[660,575],"goal":[787.5,567]}`. The offline planner uses the actual
 server terrain, player footprint and clear-path function. Its bounded grid search
 emits map-hash-bound waypoints with collision-clear segments up to 12 metres.
 This is a developer route generator, not gameplay pathfinding or an admin teleport.

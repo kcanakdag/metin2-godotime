@@ -876,7 +876,26 @@ pub(crate) fn kill_monster(ctx: &ReducerContext, monster: &mut Monster, characte
     // experience also records the objective, so a reconnect cannot lose it and
     // a rejected reward cannot leave a half-advanced quest.
     crate::quest::on_kill(ctx, character, definition.vnum);
-    inventory::drop_potion(ctx, character, monster.x, monster.y, monster.z);
+    // Loot follows the killer's level against the victim's own level and rank,
+    // exactly as ``CreateDropItem`` does. A character without a progression row
+    // cannot have dealt the killing blow, so an absent row drops no items
+    // rather than rolling against a level nobody has.
+    if let Some(killer_level) = ctx
+        .db
+        .character_progression()
+        .character_id()
+        .find(character)
+        .map(|progression| progression.level)
+    {
+        let rolled = crate::drops::roll(
+            ctx,
+            killer_level,
+            monster.level,
+            definition.species.rank,
+            definition.vnum,
+        );
+        crate::drops::drop_items(ctx, character, (monster.x, monster.y, monster.z), &rolled);
+    }
     ctx.db.loot().insert(Loot {
         id: 0,
         x: monster.x,

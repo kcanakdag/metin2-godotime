@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 mod build_classes;
 mod build_combo;
+mod build_drops;
 mod build_items;
 mod build_mobs;
 mod build_npcs;
@@ -1475,6 +1476,7 @@ pub struct MobSpeciesDefinition {
     pub name: &'static str,
     pub model_key: &'static str,
     pub motion_set: &'static str,
+    pub rank: u8,
     pub level: u8,
     pub health: u16,
     pub attack_range_m: f32,
@@ -1507,6 +1509,7 @@ pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
         immunity_flags: 0,
         vnum: MOB_VNUM, actor_id: MOB_ACTOR_ID, name: MOB_NAME,
         model_key: MOB_MODEL_KEY, motion_set: MOB_MOTION_SET,
+        rank: 0,
         level: MOB_LEVEL, health: MOB_MAX_HEALTH,
         attack_range_m: MOB_ATTACK.range_m, move_speed_mps: MOB_MOVE_SPEED_MPS,
         experience: MOB_EXPERIENCE, gold_min: MOB_REWARD_GOLD_MIN, gold_max: MOB_REWARD_GOLD_MAX,
@@ -1624,6 +1627,7 @@ pub const MOB_DEFINITIONS: &[MobDefinition] = &[MobDefinition {
     build_items::validate_links(&payload).unwrap_or_else(|error| fail(error));
     output.push_str(&build_npcs::build());
     output.push_str(&build_quests::build());
+    output.push_str(&build_drops::build());
     output.push_str(&build_classes::build());
     output.push_str(&build_skills::build());
     output.push_str(&build_training::build());

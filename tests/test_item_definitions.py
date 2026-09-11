@@ -2,10 +2,18 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import unittest
 from pathlib import Path
 
-from tools.item_definitions import compile_catalog, public_catalog, validate_catalog
+from tools.item_definitions import (
+    ARMOR_CATEGORIES,
+    ARMOR_POSITIONS,
+    compile_catalog,
+    expand_selection,
+    public_catalog,
+    validate_catalog,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -13,7 +21,8 @@ ROOT = Path(__file__).resolve().parents[1]
 class ItemDefinitionsTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        profile = json.loads((ROOT / "content/profiles/p0-warrior-dog.json").read_text())
+        profile_path = ROOT / "content/profiles/p0-warrior-dog.json"
+        profile = json.loads(profile_path.read_text())
         reference = profile["source"]["server_reference"]
         cache = ROOT / "assets/source/content/server" / reference["revision"]
         cls.proto = (cache / "gamefiles/conf/item_proto.txt").read_text(encoding="latin-1")
@@ -22,8 +31,32 @@ class ItemDefinitionsTests(unittest.TestCase):
             row for row in reference["files"] if row["path"] == "gamefiles/conf/item_proto.txt"
         )
         cls.source = {**source, "revision": reference["revision"]}
-        cls.selection = profile["item_catalog"]
+        cls.profile_selection = profile["item_catalog"]
+        cls.selection, cls.selection_paths = expand_selection(
+            cls.profile_selection, profile_path.parent
+        )
         cls.catalog = compile_catalog(cls.selection, cls.proto, cls.names, cls.source)
+
+    def test_the_profile_selection_resolves_its_generated_include(self) -> None:
+        included = ROOT / "content/profiles/drops/live-drops.json"
+        self.assertEqual(self.selection_paths, [included])
+        self.assertEqual(self.selection["schema_version"], 1)
+        self.assertEqual(
+            len(self.selection["items"]),
+            len(self.profile_selection["items"]) + len(json.loads(included.read_text())["items"]),
+        )
+        vnums = [row["vnum"] for row in self.selection["items"]]
+        self.assertEqual(vnums, sorted(vnums))
+        self.assertEqual(
+            sorted(row["id"] for row in self.selection["items"]),
+            sorted(
+                row["id"]
+                for row in [
+                    *self.profile_selection["items"],
+                    *json.loads(included.read_text())["items"],
+                ]
+            ),
+        )
 
     def item(self, vnum: int) -> dict:
         return next(row for row in self.catalog["items"] if row["vnum"] == vnum)
@@ -71,17 +104,18 @@ class ItemDefinitionsTests(unittest.TestCase):
         selection = copy.deepcopy(self.selection)
         selection["items"].append(
             {
-                "id": "item.consumable.red-potion-large",
+                "id": "item.consumable.grilled-zander-27863",
                 "revision": 1,
-                "vnum": 27003,
-                "icon": "icon/item/27003",
+                "vnum": 27863,
+                "icon": "icon/item/27863",
             }
         )
         result = compile_catalog(selection, self.proto, self.names, self.source)
         self.assertEqual(len(result["items"]), len(self.catalog["items"]) + 1)
-        large = next(row for row in result["items"] if row["vnum"] == 27003)
-        self.assertEqual(large["recovery"]["hp"], 1200)
-        self.assertEqual(large["recovery"]["handler"], self.item(27001)["recovery"]["handler"])
+        zander = next(row for row in result["items"] if row["vnum"] == 27863)
+        self.assertEqual((zander["kind"], zander["name"]), ("recovery", "Grilled Zander"))
+        self.assertEqual(zander["recovery"]["hp"], 180)
+        self.assertEqual(zander["recovery"]["handler"], self.item(27001)["recovery"]["handler"])
         # This compiler-only fixture does not add its original icon to the player package.
 
     def test_numeric_bounds_and_unsupported_handlers_fail_closed(self) -> None:
@@ -134,6 +168,14 @@ class ItemDefinitionsTests(unittest.TestCase):
         medium = next(row for row in public["items"] if row["vnum"] == 27002)
         self.assertEqual(medium["recovery"]["hp"], 800)
         self.assertEqual(public["schema_version"], 3)
+
+    def test_client_wear_vocabulary_matches_the_compiled_tokens(self) -> None:
+        """One unknown token rejects the whole installed catalog, so guard drift."""
+        source = (ROOT / "client/scripts/content/item_catalog.gd").read_text()
+        match = re.search(r"const WEAR_SLOTS := \[(.*?)\]", source, re.DOTALL)
+        self.assertIsNotNone(match, "client WEAR_SLOTS list is missing")
+        client = set(re.findall(r'"([a-z_]+)"', match.group(1)))
+        self.assertEqual(client, set(ARMOR_CATEGORIES.values()) | set(ARMOR_POSITIONS.values()))
 
     def test_unsupported_source_limits_flags_and_types_are_rejected(self) -> None:
         for index, value in ((2, "ITEM_QUEST"), (5, "ANTI_DROP"), (14, "REAL_TIME"), (26, "10")):

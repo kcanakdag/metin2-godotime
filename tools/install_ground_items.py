@@ -6,9 +6,15 @@ import json
 from pathlib import Path
 
 from content_compile import canonical_bytes
+from import_ground_items import YANG_VNUM
 from install_mob_content import checked_file, digest, install, read_json, relative
 
 PREFIX = "res://assets/imported/ground_items/"
+# The runtime catalog is keyed by vnum but only loads one scene per distinct
+# model, so many registry rows may share one converted GLB. Bound both the
+# installed rows and the distinct converted models.
+MAX_DEFINITIONS = 4096
+MAX_MODELS = 256
 
 
 def collect(content):
@@ -17,7 +23,7 @@ def collect(content):
     if digest(canonical_bytes(document)) != content_hash or document.get("schema_version") != 1:
         raise ValueError("Ground-item source manifest mismatch")
     definitions = document["ground_items"]
-    if not isinstance(definitions, list) or not 1 <= len(definitions) <= 256:
+    if not isinstance(definitions, list) or not 1 <= len(definitions) <= MAX_DEFINITIONS:
         raise ValueError("Invalid ground-item selection")
     report = read_json(content / "blender-report.json")
     if report.get("status") != "converted" or report.get("profile_id") != document["profile_id"]:
@@ -49,6 +55,8 @@ def collect(content):
             raise ValueError("Duplicate ground-model destination")
         files[name] = data
         models[identity] = {"path": PREFIX + name, "sha256": digest(data)}
+    if len(models) > MAX_MODELS:
+        raise ValueError(f"Ground-item selection exceeds {MAX_MODELS} converted models")
     vnums = set()
     for row in definitions:
         vnum = row["vnum"]
@@ -60,6 +68,8 @@ def collect(content):
         ):
             raise ValueError("Invalid ground-item model reference")
         vnums.add(vnum)
+    if YANG_VNUM not in vnums:
+        raise ValueError("Ground-item selection does not cover the Yang ground model")
     catalog = {
         "schema_version": 1,
         "content_hash": content_hash,

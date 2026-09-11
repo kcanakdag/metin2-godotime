@@ -11,7 +11,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from progression_definitions import (  # noqa: E402
+    BOSS_DELTA_COUNT,
+    NORMAL_DELTA_COUNT,
     ProgressionDefinitionError,
+    parse_mob_level_delta_tables,
     parse_progression_definitions,
     quarter_thresholds,
 )
@@ -83,10 +86,108 @@ def definitions_fixture(**changes):
     return parse_progression_definitions(*source_fixture(**changes))
 
 
+# ``aiPercentByDeltaLevForBoss`` from ``src/game/src/constants.cpp``: equal to
+# the normal table up to index 14, then the boss curve ``GetDropPct`` selects
+# for a ranked mob.
+BOSS_DELTA_VALUES = [
+    1,
+    3,
+    5,
+    7,
+    15,
+    30,
+    60,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    97,
+    99,
+    100,
+    105,
+    110,
+    115,
+    120,
+    125,
+    130,
+    135,
+    140,
+    145,
+    150,
+    155,
+    160,
+    165,
+    170,
+    180,
+]
+
+
+def mob_level_delta_fixture() -> str:
+    """The two level-delta declarations as the pinned ``constants.cpp`` has them."""
+    normal = ", ".join(map(str, DELTA_VALUES))
+    boss = ", ".join(map(str, BOSS_DELTA_VALUES))
+    return (
+        "const int aiPercentByDeltaLev[MAX_EXP_DELTA_OF_LEV] = "
+        f"{{ {normal} }};\n"
+        "const int aiPercentByDeltaLevForBoss[MAX_EXP_DELTA_OF_LEV] = "
+        f"{{ {boss} }};\n"
+    )
+
+
 class ProgressionDefinitionsTests(unittest.TestCase):
     def assert_definition_error(self, message: str, operation) -> None:
         with self.assertRaisesRegex(ProgressionDefinitionError, re.escape(message)):
             operation()
+
+    def test_mob_level_delta_tables_are_parsed_from_the_constants_shape(self) -> None:
+        normal, boss = parse_mob_level_delta_tables(mob_level_delta_fixture())
+        self.assertEqual(len(normal), NORMAL_DELTA_COUNT)
+        self.assertEqual(len(boss), BOSS_DELTA_COUNT)
+        self.assertEqual(normal, tuple(DELTA_VALUES))
+        self.assertEqual(boss, tuple(BOSS_DELTA_VALUES))
+        self.assertEqual(normal[0], 1)
+        self.assertEqual(normal[-1], 180)
+        self.assertEqual((boss[0], boss[-1]), (1, 180))
+
+    def test_the_boss_table_is_required_and_checked(self) -> None:
+        constants, _, _ = source_fixture()
+        boss_body = ", ".join(map(str, DELTA_VALUES))
+        with_boss = (
+            constants + f"\nconst int aiPercentByDeltaLevForBoss[MAX_EXP_DELTA_OF_LEV] = "
+            f"{{ {boss_body} }};\n"
+        )
+        _, boss = parse_mob_level_delta_tables(with_boss)
+        self.assertEqual(boss, tuple(DELTA_VALUES))
+
+        self.assert_definition_error(
+            "aiPercentByDeltaLevForBoss must contain 31 values",
+            lambda: parse_mob_level_delta_tables(
+                constants + "\nconst int aiPercentByDeltaLevForBoss[MAX_EXP_DELTA_OF_LEV] = "
+                f"{{ {', '.join(map(str, DELTA_VALUES[:-1]))} }};\n"
+            ),
+        )
+        self.assert_definition_error(
+            "aiPercentByDeltaLevForBoss values must be within 0..1000",
+            lambda: parse_mob_level_delta_tables(
+                constants + "\nconst int aiPercentByDeltaLevForBoss[MAX_EXP_DELTA_OF_LEV] = "
+                f"{{ {', '.join(map(str, [*DELTA_VALUES[:-1], 1001]))} }};\n"
+            ),
+        )
+        self.assert_definition_error(
+            "aiPercentByDeltaLevForBoss must have exactly one braced initializer",
+            lambda: parse_mob_level_delta_tables(constants),
+        )
+        self.assert_definition_error(
+            "aiPercentByDeltaLev must contain 31 values",
+            lambda: parse_mob_level_delta_tables(
+                "const int aiPercentByDeltaLev[MAX_EXP_DELTA_OF_LEV] = "
+                f"{{ {', '.join(map(str, DELTA_VALUES[:-1]))} }};\n"
+                "const int aiPercentByDeltaLevForBoss[MAX_EXP_DELTA_OF_LEV] = "
+                f"{{ {boss_body} }};\n"
+            ),
+        )
 
     def test_known_warrior_and_dog_progression_inputs(self) -> None:
         definitions = definitions_fixture()

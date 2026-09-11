@@ -124,6 +124,7 @@ def stage_project(stage: Path) -> None:
         shutil.copytree(ROOT / "client" / directory, stage / directory)
     for filename in (
         "scripts/net/game_connection.gd",
+        "scripts/net/quest_rows.gd",
         "tests/account_smoke.gd",
         "tests/movement_attack_smoke.gd",
         "tests/multiplayer_smoke.gd",

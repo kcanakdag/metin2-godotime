@@ -224,6 +224,7 @@ def stage_project(stage: Path, *, client_input: bool = False) -> None:
         shutil.copytree(ROOT / "client" / directory, stage / directory)
     for source, destination in (
         (ROOT / "client/scripts/net/game_connection.gd", stage / "scripts/net/game_connection.gd"),
+        (ROOT / "client/scripts/net/quest_rows.gd", stage / "scripts/net/quest_rows.gd"),
         (ROOT / "tools/progression_admin_smoke.gd", stage / "tests/progression_admin_smoke.gd"),
         (ROOT / "tools/skill_reaction_smoke.gd", stage / "tests/skill_reaction_smoke.gd"),
         (ROOT / "tools/skill_batch_smoke.gd", stage / "tests/skill_batch_smoke.gd"),

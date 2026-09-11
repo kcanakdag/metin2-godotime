@@ -497,7 +497,13 @@ def validate_p1_manifest(manifest):
             continue
         resource = item.get("model", {}).get("path", "")
         if not re.fullmatch(
-            r"res://assets/imported/content/p0-warrior-dog/items/[a-z0-9-]+\.glb", resource
+            # The compiler names each model after its item id without the
+            # ``item.`` prefix, so multi-word weapons keep their dot:
+            # ``weapon.sword-11.glb``. Every dot-separated segment stays
+            # non-empty so ``..`` and empty segments cannot appear.
+            r"res://assets/imported/content/p0-warrior-dog/items/"
+            r"[a-z0-9-]+(?:\.[a-z0-9-]+)*\.glb",
+            resource,
         ):
             raise RuntimeError("Registered weapon has an invalid model path")
         if resource in expected_resources:
@@ -650,10 +656,11 @@ def p1_profile_requirements(*, allow_legacy=False):
     }
 
 
-def validate_pack_paths(paths, *, allow_test_probe=False):
+def validate_pack_paths(paths, *, allow_test_probe=False, required_maps=()):
     """Reject development bridges and private/source files in the actual exported pack."""
     forbidden = []
     probes = []
+    packaged = {path.removeprefix("res://") for path in paths}
     for path in paths:
         relative = path.removeprefix("res://")
         parts = Path(relative.lower()).parts
@@ -702,6 +709,13 @@ def validate_pack_paths(paths, *, allow_test_probe=False):
         raise RuntimeError("Test probe included in a player export: " + ", ".join(probes))
     if allow_test_probe and not probes:
         raise RuntimeError("The requested test export has no packaged test probe")
+    missing_maps = sorted(entry for entry in required_maps if entry not in packaged)
+    if missing_maps:
+        raise RuntimeError(
+            "Native export is missing installed map data: "
+            + ", ".join(missing_maps)
+            + " (pass --include-map so the staged project keeps assets/imported/maps)"
+        )
     return {"files_checked": len(paths), "test_probe_present": bool(probes)}
 
 
@@ -715,6 +729,7 @@ def audit_pack(
     p1_requirements=None,
     content_root=None,
     motion_effect_hash="",
+    required_maps=(),
 ):
     # Load the actual exported PCK, checking remapped meshes and animations too.
     pck = Path(pck).resolve()
@@ -1427,6 +1442,7 @@ func has_required_entities(manifest: Dictionary, artifacts: Dictionary) -> bool:
         validate_pack_paths(
             json.loads((output / "pack-inventory.json").read_text()),
             allow_test_probe=allow_test_probe,
+            required_maps=required_maps,
         )
     )
     return audit

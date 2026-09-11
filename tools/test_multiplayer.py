@@ -37,9 +37,8 @@ def main() -> None:
         for directory in ("addons/SpacetimeDB", "spacetime_bindings", "tests"):
             shutil.copytree(ROOT / "client" / directory, stage / directory)
         (stage / "scripts/net").mkdir(parents=True)
-        shutil.copy2(
-            ROOT / "client/scripts/net/game_connection.gd", stage / "scripts/net/game_connection.gd"
-        )
+        for filename in ("game_connection.gd", "quest_rows.gd"):
+            shutil.copy2(ROOT / "client/scripts/net" / filename, stage / "scripts/net" / filename)
         (stage / "project.godot").write_text(
             'config_version=5\n[application]\nconfig/name="MT2 Multiplayer Tests"\n'
             '[rendering]\nrenderer/rendering_method="gl_compatibility"\n'

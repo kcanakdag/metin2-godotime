@@ -23,7 +23,7 @@ from actor_texture_import import write_actor_texture_import
 from content_diff import add_parser as add_diff_parser
 from content_formats import parse_item_script, parse_motion_list, parse_msa, parse_race_script
 from fetch_test_assets import METIN_COMMIT, ROOT
-from item_definitions import compile_catalog, public_catalog, validate_catalog
+from item_definitions import compile_catalog, expand_selection, public_catalog, validate_catalog
 from metin_archive import Archive, safe_path, virtual_path, write_json
 from metin_root_motion import (
     COORDINATE_CONVERSION,
@@ -199,6 +199,24 @@ def digest(value: object) -> str:
     return hashlib.sha256(canonical_bytes(value)).hexdigest()
 
 
+def _checked_attachment_transform(transform: object, label: str) -> dict:
+    if not isinstance(transform, dict) or set(transform) != {
+        "translation_m",
+        "rotation_degrees",
+        "scale",
+    }:
+        raise ValueError(f"Attachment transform must declare translation/rotation/scale: {label}")
+    for field in ("translation_m", "rotation_degrees", "scale"):
+        values = transform[field]
+        if len(values) != 3 or not all(
+            type(value) in {int, float} and math.isfinite(value) for value in values
+        ):
+            raise ValueError(f"Invalid {field} for {label}")
+        if field == "scale" and any(value <= 0 for value in values):
+            raise ValueError(f"Invalid scale for {label}")
+    return transform
+
+
 def load_profile(path: Path) -> dict:
     profile = json.loads(path.read_text())
     if profile.get("schema_version") != SCHEMA_VERSION:
@@ -208,6 +226,42 @@ def load_profile(path: Path) -> dict:
         raise ValueError(f"Invalid profile_id {profile_id!r}")
     if profile["source"]["client"]["revision"] != METIN_COMMIT:
         raise ValueError("Profile does not use the pinned client revision")
+    derived = profile.get("equipped_item_models")
+    if derived is not None:
+        if not isinstance(derived, dict) or set(derived) != {
+            "source",
+            "kinds",
+            "equipment_modes",
+            "actor_attachment",
+            "attachment_transform",
+        }:
+            raise ValueError(
+                "equipped_item_models must declare exactly source, kinds, "
+                "equipment_modes, actor_attachment and attachment_transform"
+            )
+        if not safe_path(derived["source"]).startswith("bin/pack/"):
+            raise ValueError("equipped_item_models.source must be an archive pack path")
+        names = derived["kinds"]
+        if (
+            not isinstance(names, list)
+            or not names
+            or any(type(name) is not str or not name for name in names)
+            or len(names) != len(set(names))
+        ):
+            raise ValueError("equipped_item_models.kinds must be unique nonempty strings")
+        modes = derived["equipment_modes"]
+        if (
+            not isinstance(modes, dict)
+            or not modes
+            or any(
+                type(key) is not str or not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", str(value))
+                for key, value in modes.items()
+            )
+        ):
+            raise ValueError("equipped_item_models.equipment_modes must map classes to modes")
+        if not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", str(derived["actor_attachment"])):
+            raise ValueError("Invalid equipped_item_models actor attachment")
+        _checked_attachment_transform(derived["attachment_transform"], "equipped_item_models")
     ids = [entry["id"] for entry in [*profile["actors"], *profile["items"]]]
     if len(ids) != len(set(ids)):
         raise ValueError("Profile content IDs must be unique")
@@ -263,15 +317,7 @@ def load_profile(path: Path) -> dict:
         output = safe_path(item["output"])
         if not output.endswith(".glb"):
             raise ValueError(f"Item output must be a GLB: {output}")
-        transform = item["attachment_transform"]
-        for field in ("translation_m", "rotation_degrees", "scale"):
-            values = transform[field]
-            if len(values) != 3 or not all(
-                type(value) in {int, float} and math.isfinite(value) for value in values
-            ):
-                raise ValueError(f"Invalid {field} for {item['id']}")
-            if field == "scale" and any(value <= 0 for value in values):
-                raise ValueError(f"Invalid scale for {item['id']}")
+        _checked_attachment_transform(item["attachment_transform"], item["id"])
     if len(action_ids) != len(set(action_ids)):
         raise ValueError("Profile action IDs must be globally unique")
     if len(godot_names) != len(set(godot_names)):
@@ -843,6 +889,105 @@ def _normalise_items(profile: dict, archive: Archive) -> list[dict]:
     return result
 
 
+def _item_list_equipped_models(archive: Archive, source: str, vnums: set[int]) -> dict[int, str]:
+    """Resolve equipped models for the selected vnums from the client item list.
+
+    The client's ``item_list.txt`` is the authoritative equipped-model source:
+    only 3- or 4-column rows are accepted, and the fourth column names the
+    model. Rows outside the selection are not interpreted, matching
+    ``tools/import_ground_items.py``.
+    """
+    result = {}
+    for row_number, line in enumerate(
+        archive.get(source).read_text(encoding="utf-8-sig").splitlines(), 1
+    ):
+        fields = line.split("\t")
+        if not fields[0].strip().isdigit() or int(fields[0]) not in vnums:
+            continue
+        vnum = int(fields[0])
+        if vnum in result or len(fields) not in (3, 4):
+            raise ValueError(f"Malformed selected item_list row {row_number}")
+        result[vnum] = virtual_path(fields[3]) if len(fields) == 4 else ""
+    missing = sorted(vnums - set(result))
+    if missing:
+        raise ValueError(f"Selected equipped items are missing from the item list: {missing}")
+    return result
+
+
+def _derived_equipped_items(
+    profile: dict, archive: Archive, catalog_items: list[dict], explicit_items: list[dict]
+) -> list[dict]:
+    """Derive equipped presentation for catalog rows without an authored record.
+
+    The profile's ``equipped_item_models`` block selects which catalog kinds
+    must be equippable. Models come from the pinned client item list and
+    textures from each model's Carbon material bindings, so a new weapon added
+    to ``item_proto`` and the drop catalog gains usable presentation without a
+    hand-written profile entry. Authored ``items`` entries keep precedence, so
+    a vnum can still pin its own script-verified model and textures.
+    """
+    derived = profile.get("equipped_item_models")
+    if derived is None:
+        return []
+    from metin_root_motion import _carbon_reader
+    from npc_definitions import material_bindings
+
+    explicit_ids = {item["id"] for item in explicit_items}
+    selected = {
+        row["vnum"]: row
+        for row in catalog_items
+        if row["kind"] in derived["kinds"] and row["id"] not in explicit_ids
+    }
+    if not selected:
+        return []
+    models = _item_list_equipped_models(archive, derived["source"], set(selected))
+    outputs = {item["output"] for item in explicit_items}
+    cached: dict[str, dict] = {}
+    result = []
+    for vnum in sorted(selected):
+        row = selected[vnum]
+        virtual = models[vnum]
+        if not virtual.endswith(".gr2"):
+            raise ValueError(f"Item vnum {vnum} has no equipped model in the item list")
+        weapon = row.get("weapon")
+        weapon_class = weapon.get("class") if isinstance(weapon, dict) else None
+        mode = derived["equipment_modes"].get(weapon_class)
+        if mode is None:
+            raise ValueError(f"Item vnum {vnum} has no declared equipment mode")
+        model = archive.resolve(virtual)
+        if model not in cached:
+            raw = _carbon_reader().read_raw(archive.get(model).read_bytes()).file_info
+            bindings = {
+                name: archive.resolve(value)
+                for name, value in material_bindings(raw, "/".join(model.split("/")[3:-1])).items()
+            }
+            archive.fetch_many(sorted(set(bindings.values())))
+            cached[model] = {
+                "source_model": model,
+                "source_textures": sorted(set(bindings.values())),
+                "material_texture_bindings": bindings,
+            }
+        slug = row["id"].split(".", 1)[1] if row["id"].startswith("item.") else row["id"]
+        output = safe_path(f"items/{slug}.glb")
+        if output in outputs:
+            raise ValueError(f"Derived item output collides with an authored output: {output}")
+        outputs.add(output)
+        result.append(
+            {
+                "id": row["id"],
+                "vnum": row["vnum"],
+                "name": row["name"],
+                "kind": row["kind"],
+                "equipment_mode": mode,
+                **cached[model],
+                "output": output,
+                "actor_attachment": derived["actor_attachment"],
+                "attachment_transform": derived["attachment_transform"],
+            }
+        )
+    return result
+
+
 def _source_records(archive: Archive, server_sources: list[dict]) -> list[dict]:
     records = [
         {"path": path, **metadata, "revision": METIN_COMMIT}
@@ -850,6 +995,33 @@ def _source_records(archive: Archive, server_sources: list[dict]) -> list[dict]:
     ]
     records.extend(server_sources)
     return sorted(records, key=lambda entry: (entry["revision"], entry["path"]))
+
+
+def _selection_records(paths: list[Path]) -> list[dict]:
+    """Bind a profile's ``include`` chain into the compiled content identity.
+
+    The profile itself is already part of the identity, but it only names the
+    included documents. Hashing the resolved files means an edit to a generated
+    registry changes ``content_hash`` instead of silently reusing content
+    compiled from the previous revision.
+    """
+    records = []
+    for path in paths:
+        payload = path.read_bytes()
+        try:
+            relative = str(path.relative_to(ROOT))
+        except ValueError:
+            relative = str(path)
+        records.append(
+            {
+                "path": relative,
+                "sha256": hashlib.sha256(payload).hexdigest(),
+                "bytes": len(payload),
+                "revision": "profile-include",
+                "role": "item-selection",
+            }
+        )
+    return records
 
 
 def compile_normalized(profile_path: Path, *, offline: bool) -> dict:
@@ -881,15 +1053,24 @@ def compile_normalized(profile_path: Path, *, offline: bool) -> dict:
     archive.fetch_many(initial_paths)
     catalog = _validate_catalogs(profile, archive)
     progression = _selected_progression(profile)
+    item_selection, item_selection_paths = expand_selection(
+        profile["item_catalog"], profile_path.parent
+    )
     item_catalog = compile_catalog(
-        profile["item_catalog"],
+        item_selection,
         _server_reference_text(profile, "gamefiles/conf/item_proto.txt"),
         _server_reference_text(profile, "gamefiles/conf/item_names_en.txt"),
         _source_identity(profile, "gamefiles/conf/item_proto.txt"),
     )
     actors, unsupported = _normalise_motions(profile, archive)
     items = _normalise_items(profile, archive)
-    sources = _source_records(archive, server_sources + client_sources)
+    items = [
+        *items,
+        *_derived_equipped_items(profile, archive, item_catalog["items"], items),
+    ]
+    sources = _source_records(
+        archive, server_sources + client_sources + _selection_records(item_selection_paths)
+    )
     identity_input = {
         "schema_version": SCHEMA_VERSION,
         "compiler_version": COMPILER_VERSION,
@@ -1579,6 +1760,11 @@ def write_compile_outputs(profile_path: Path, normalized: dict, server: dict) ->
             "content_hash": normalized["content_hash"],
             "gameplay_definition_hash": server["gameplay_definition_hash"],
             "source_count": len(normalized["sources"]),
+            "item_selection": [
+                {"path": row["path"], "sha256": row["sha256"]}
+                for row in normalized["sources"]
+                if row.get("role") == "item-selection"
+            ],
             "motion_count": sum(
                 len(mode["motions"]) for actor in normalized["actors"] for mode in actor["modes"]
             ),

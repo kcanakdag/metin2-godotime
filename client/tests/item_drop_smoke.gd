@@ -103,6 +103,17 @@ func _run() -> void:
 		bad = document.duplicate(true)
 		bad.models.values()[0].path = "res://scripts/main.gd"
 		_check("ground model cannot escape namespace", not policy.load_document(bad))
+		var model_id: String = document.models.keys()[0]
+		var shared := {"schema_version": 1, "models": document.models, "items": []}
+		for vnum in range(1, 400):
+			shared.items.append({"vnum": vnum, "model_id": model_id})
+		_check(
+			"hundreds of vnums may share one ground model",
+			policy.load_document(shared) and policy.scene(399) != null and policy.scene(400) == null
+		)
+		shared.items = shared.items.slice(0, 399)
+		shared.items.append({"vnum": 399, "model_id": model_id})
+		_check("repeated vnum still rejects", not policy.load_document(shared))
 	var report := {"checks": _checks, "failures": _failures}
 	FileAccess.open("user://item-drops.json", FileAccess.WRITE).store_string(JSON.stringify(report))
 	print(JSON.stringify(report))

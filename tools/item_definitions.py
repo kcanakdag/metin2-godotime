@@ -6,9 +6,17 @@ validation is independent of the selected vnums so new rows reuse the handlers.
 
 from __future__ import annotations
 
+import json
 import re
+from pathlib import Path, PurePosixPath
 
 SCHEMA_VERSION = 3
+SELECTION_FIELDS = {"schema_version", "items"}
+SELECTION_OPTIONAL = {"include", "source"}
+# An include chain is a review aid, not a build system: one generated registry
+# plus the hand-written rows next to it. The depth bound only stops a runaway
+# edit from turning a typo into an unbounded read.
+MAX_INCLUDE_DEPTH = 4
 RECOVERY_POLICY = {
     "id": "item.recovery.pool.v1",
     "interval_us": 1_000_000,
@@ -36,26 +44,98 @@ FIELDS = {
     "source",
 }
 
+# Armour subtype and wear tokens exactly as the pinned data reader spells them
+# (`full-game-research/server/source/src/db/src/ProtoReader.cpp`, the
+# `arSub2`/`arWearrFlag` tables). The corpus writes feet as `ARMOR_FOOTS` /
+# `WEAR_FOOTS`, and every `ARMOR_SHIELD` row in the pinned item_proto wears in
+# `WEAR_UNIQUE`; the server-side token list has no separate shield wear flag,
+# while the client's own `EWearPositions` keeps `WEAR_SHIELD` distinct. The
+# compiled value is the source token lowercased so a future equipment system
+# can decide slot semantics without the compiler inventing one.
 ARMOR_CATEGORIES = {
     "ARMOR_BODY": "body",
+    "ARMOR_HEAD": "head",
+    "ARMOR_SHIELD": "shield",
     "ARMOR_WRIST": "wrist",
+    "ARMOR_FOOTS": "foots",
     "ARMOR_NECK": "neck",
     "ARMOR_EAR": "ear",
-    "ARMOR_HEAD": "head",
-    "ARMOR_FOOT": "foot",
-    "ARMOR_HAND": "hand",
-    "ARMOR_SHIELD": "shield",
 }
 ARMOR_POSITIONS = {
     "WEAR_BODY": "body",
+    "WEAR_HEAD": "head",
+    "WEAR_FOOTS": "foots",
     "WEAR_WRIST": "wrist",
+    "WEAR_WEAPON": "weapon",
     "WEAR_NECK": "neck",
     "WEAR_EAR": "ear",
-    "WEAR_HEAD": "head",
-    "WEAR_FOOT": "foot",
-    "WEAR_HAND": "hand",
     "WEAR_SHIELD": "shield",
+    "WEAR_UNIQUE": "unique",
+    "WEAR_ARROW": "arrow",
+    "WEAR_HAIR": "hair",
+    "WEAR_ABILITY": "ability",
 }
+# Every ``APPLY_*`` token the pinned corpus uses in its six armour bonus
+# columns. The tokens are a vocabulary check, not a claim that the bonus is
+# modelled: equipment bonuses have no runtime effect yet, so a selected row
+# keeps its name, icon, level and class/sex masks and discards the numbers.
+# Rejecting a token outside this set still catches a truncated or shifted row.
+ARMOR_APPLY_VOCABULARY = frozenset(
+    {
+        "APPLY_ATTBONUS_ASSASSIN",
+        "APPLY_ATTBONUS_DEVIL",
+        "APPLY_ATTBONUS_HUMAN",
+        "APPLY_ATTBONUS_MONSTER",
+        "APPLY_ATTBONUS_SHAMAN",
+        "APPLY_ATTBONUS_SURA",
+        "APPLY_ATTBONUS_WARRIOR",
+        "APPLY_ATT_GRADE_BONUS",
+        "APPLY_ATT_SPEED",
+        "APPLY_BLOCK",
+        "APPLY_CAST_SPEED",
+        "APPLY_CON",
+        "APPLY_CRITICAL_PCT",
+        "APPLY_DEF_GRADE_BONUS",
+        "APPLY_DEX",
+        "APPLY_DODGE",
+        "APPLY_EXP_DOUBLE_BONUS",
+        "APPLY_GOLD_DOUBLE_BONUS",
+        "APPLY_HP_REGEN",
+        "APPLY_INT",
+        "APPLY_KILL_HP_RECOVER",
+        "APPLY_KILL_SP_RECOVER",
+        "APPLY_MANA_BURN_PCT",
+        "APPLY_MAX_HP",
+        "APPLY_MAX_HP_PCT",
+        "APPLY_MAX_SP",
+        "APPLY_MAX_SP_PCT",
+        "APPLY_MAX_STAMINA",
+        "APPLY_MELEE_MAGIC_ATTBONUS_PER",
+        "APPLY_MOV_SPEED",
+        "APPLY_NONE",
+        "APPLY_NORMAL_HIT_DAMAGE_BONUS",
+        "APPLY_NORMAL_HIT_DEFEND_BONUS",
+        "APPLY_PENETRATE_PCT",
+        "APPLY_POISON_REDUCE",
+        "APPLY_RESIST_ASSASSIN",
+        "APPLY_RESIST_BOW",
+        "APPLY_RESIST_ELEC",
+        "APPLY_RESIST_FIRE",
+        "APPLY_RESIST_MAGIC",
+        "APPLY_RESIST_SHAMAN",
+        "APPLY_RESIST_SURA",
+        "APPLY_RESIST_SWORD",
+        "APPLY_RESIST_WARRIOR",
+        "APPLY_RESIST_WIND",
+        "APPLY_SKILL",
+        "APPLY_SKILL_DAMAGE_BONUS",
+        "APPLY_SKILL_DEFEND_BONUS",
+        "APPLY_SP_REGEN",
+        "APPLY_STEAL_SP",
+        "APPLY_STR",
+        "APPLY_STUN_PCT",
+    }
+)
 
 
 def integer(value: object, label: str, minimum: int, maximum: int) -> int:
@@ -68,6 +148,89 @@ def _object(value: object, fields: set[str], label: str) -> dict:
     if not isinstance(value, dict) or set(value) != fields:
         raise ValueError(f"{label} has missing or unsupported fields")
     return value
+
+
+def expand_selection(selection: object, base_dir: Path) -> tuple[dict, list[Path]]:
+    """Resolve a selection's ``include`` chain into one explicit row list.
+
+    A selection may point at one other selection document (``include``) whose
+    rows are merged with its own. The path resolves relative to the document
+    that names it, so a profile can pull in a generated registry that sits next
+    to it and that registry can build on further selections in turn.
+
+    The second return value lists every resolved document in resolution order.
+    Callers hash them so compiled content is bound to the exact bytes that
+    produced it instead of only to the pointer that named them. Row metadata
+    (``source``) is validated here and then dropped, so the merged document is
+    exactly the ``{schema_version, items}`` shape the compiler expects.
+    """
+    resolved: list[Path] = []
+    merged = _expand_selection(selection, Path(base_dir), frozenset(), resolved, 0)
+    return _sort_selection(merged), resolved
+
+
+def _sort_selection(selection: dict) -> dict:
+    """Order the merged rows by vnum the way the compiler validates them.
+
+    A single document is written in vnum order, but an include chain cannot be:
+    the hand-written rows sit next to a generated registry whose vnums cover
+    them, so concatenating the two would only be sorted by coincidence. Sorting
+    here keeps that review convention inside one file while letting a profile
+    name its generated registry without owning a copy of it.
+    """
+    keys = []
+    for row in selection["items"]:
+        if not isinstance(row, dict):
+            raise ValueError("selected item must be an object")
+        keys.append(integer(row.get("vnum"), "selected vnum", 1, 2**32 - 1))
+    rows = [
+        row
+        for _, row in sorted(zip(keys, selection["items"], strict=True), key=lambda pair: pair[0])
+    ]
+    return {"schema_version": 1, "items": rows}
+
+
+def _expand_selection(
+    selection: object,
+    base_dir: Path,
+    chain: frozenset[Path],
+    resolved: list[Path],
+    depth: int,
+) -> dict:
+    if depth > MAX_INCLUDE_DEPTH:
+        raise ValueError("Item selection include chain is too deep")
+    if not isinstance(selection, dict):
+        raise ValueError("item selection has missing or unsupported fields")
+    declared = set(selection)
+    if not SELECTION_FIELDS <= declared or declared - SELECTION_FIELDS - SELECTION_OPTIONAL:
+        raise ValueError("item selection has missing or unsupported fields")
+    if "source" in selection and not isinstance(selection["source"], dict):
+        raise ValueError("item selection source must be an object")
+    integer(selection["schema_version"], "item selection schema", 1, 1)
+    rows = selection["items"]
+    if not isinstance(rows, list):
+        raise ValueError("item selection items must be a list")
+    merged = list(rows)
+    include = selection.get("include")
+    if include is None:
+        return {"schema_version": 1, "items": merged}
+    if not isinstance(include, str) or not include or "\\" in include:
+        raise ValueError("item selection include must be a relative path")
+    relative = PurePosixPath(include)
+    if relative.is_absolute() or ".." in relative.parts or relative.name in {"", "."}:
+        raise ValueError("item selection include must stay inside its directory")
+    target = (base_dir / relative).resolve()
+    if target in chain:
+        raise ValueError(f"Item selection include cycle at {include}")
+    if target in resolved:
+        raise ValueError(f"Item selection includes the same document twice: {include}")
+    if not target.is_file():
+        raise ValueError(f"Item selection include is missing: {include}")
+    resolved.append(target)
+    document = json.loads(target.read_text())
+    included = _expand_selection(document, target.parent, chain | {target}, resolved, depth + 1)
+    merged.extend(included["items"])
+    return {"schema_version": 1, "items": merged}
 
 
 def validate_catalog(catalog: object) -> None:
@@ -251,16 +414,9 @@ def compile_catalog(selection: dict, proto_text: str, names_text: str, source: d
                 for apply_type, apply_value in zip(row[18:24:2], row[19:24:2], strict=True)
                 if apply_type != "APPLY_NONE" or int(apply_value) != 0
             ]
-            # The selected opening rewards carry small static bonuses. They are
-            # preserved as provenance only until equipment stats are modelled.
-            supported = {
-                "APPLY_ATT_SPEED",
-                "APPLY_MAX_STAMINA",
-                "APPLY_CAST_SPEED",
-                "APPLY_RESIST_FIRE",
-                "APPLY_DEX",
-            }
-            if any(apply_type not in supported for apply_type, _ in applied):
+            # Static bonuses are read to reject a shifted or unsupported row and
+            # then discarded; equipment stats are not modelled yet.
+            if any(apply_type not in ARMOR_APPLY_VOCABULARY for apply_type, _ in applied):
                 raise ValueError(f"Item {vnum} has an unsupported armor apply")
             item["kind"] = "armor"
             item["armor"] = {

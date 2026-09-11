@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 
 from fetch_test_assets import METIN_COMMIT, ROOT
 from import_metin_intro import INTRO_REFERENCES, selected_intro_assets
+from item_definitions import expand_selection
 from metin_archive import Archive, virtual_path, write_json
 from PIL import Image
 from PIL import __version__ as pillow_version
@@ -80,11 +81,17 @@ REFERENCES = (
 
 def item_catalog_icons(profile_path):
     """Item icons declared by a tracked content profile, never a hidden copy."""
-    profile = json.loads(Path(profile_path).read_text())
+    path = Path(profile_path)
+    profile = json.loads(path.read_text())
     try:
-        rows = profile["item_catalog"]["items"]
+        selection = profile["item_catalog"]
     except (KeyError, TypeError):
         raise ValueError(f"Profile has no item_catalog: {profile_path}") from None
+    # The registry a profile installs is the profile's own rows plus whatever
+    # its ``include`` chain names; both are tracked files, so following the
+    # include keeps the "icons come from a tracked profile" rule intact.
+    merged, _ = expand_selection(selection, path.parent)
+    rows = merged["items"]
     icons = set()
     for row in rows:
         icon = row.get("icon") if isinstance(row, dict) else None

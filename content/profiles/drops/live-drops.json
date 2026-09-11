@@ -1,0 +1,2242 @@
+{
+  "schema_version": 1,
+  "source": {
+    "corpus": {
+      "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+      "sha256": "7d0521d8189d0c858a0ea8714a72ca53580a3105a94588dc5c7feb8efd46601d"
+    },
+    "item_proto": {
+      "path": "gamefiles/conf/item_proto.txt",
+      "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+      "git_sha": "f199abcc1077916c3496d84c58240cbc095ac033",
+      "sha256": "b16190baa1b37425eb372339f81eb188e37ecd0bdb06530f0a9a63f0fb045292"
+    },
+    "item_names": {
+      "path": "gamefiles/conf/item_names_en.txt",
+      "revision": "7ee9c84bd348b94326aeaa7d6bbb2c8c6ca34318",
+      "git_sha": "81404285be617d9b55c6ba23fcbcc87f7b3b8733",
+      "sha256": "5d0e18e89e8aad096a5a7475971a303baa92c065e1d77a999e8421897c5d7acf"
+    },
+    "mob_content": {
+      "path": ".local/mobs/server-package-r2/gameplay.v1.json",
+      "sha256": "bceefda002ac4a38b313416b28c5d6a16ac7791e7b28aea0295b73328480fa73"
+    },
+    "id_rule": "item.<weapon|armor|consumable>.<name-slug>-<vnum>",
+    "icon_rule": "ItemManager.cpp LoadItemProto chain: exact icon/item/<vnum>.tga, then the earlier same-name row's icon, then <vnum> - <vnum> % 10, then the hard-coded EmptyBowl 27995",
+    "icon_resolution": {
+      "base-10": 225,
+      "exact": 103
+    },
+    "selected_by_kind": {
+      "armor": 235,
+      "recovery": 6,
+      "weapon": 87
+    },
+    "candidates": 533,
+    "excluded": {
+      "ITEM_MATERIAL/MATERIAL_LEATHER": [
+        50721,
+        50722,
+        50723,
+        50724
+      ],
+      "ITEM_POLYMORPH/0": [
+        70104
+      ],
+      "ITEM_QUEST/0": [
+        50318,
+        50319,
+        50320,
+        50321
+      ],
+      "ITEM_SPECIAL/SPECIAL_MAP": [
+        50054,
+        50055,
+        50056,
+        50083
+      ],
+      "ITEM_TREASURE_BOX/0": [
+        50006,
+        50007
+      ],
+      "ITEM_USE/USE_ABILITY_UP": [
+        27104,
+        27105
+      ],
+      "ITEM_USE/USE_DETACHMENT": [
+        25100
+      ],
+      "ITEM_USE/USE_SPECIAL": [
+        50061,
+        50301,
+        50302,
+        50303,
+        50304,
+        50305,
+        50306,
+        50311,
+        50312,
+        50313,
+        50314,
+        50315,
+        50316,
+        50600,
+        70102
+      ],
+      "ITEM_USE/USE_TUNING": [
+        25040
+      ],
+      "ITEM_WEAPON/WEAPON_ARROW": [
+        8001
+      ],
+      "ITEM_WEAPON/WEAPON_BELL": [
+        5000,
+        5001,
+        5002,
+        5010,
+        5011,
+        5012,
+        5020,
+        5021,
+        5022,
+        5030,
+        5031,
+        5032,
+        5040,
+        5041,
+        5042,
+        5050,
+        5051,
+        5052,
+        5060,
+        5061,
+        5062,
+        5070,
+        5071,
+        5072,
+        5080,
+        5081,
+        5082,
+        5083,
+        5084,
+        5094,
+        5095,
+        5096,
+        5104,
+        5105,
+        5106
+      ],
+      "ITEM_WEAPON/WEAPON_BOW": [
+        2000,
+        2001,
+        2002,
+        2010,
+        2011,
+        2012,
+        2020,
+        2021,
+        2022,
+        2030,
+        2031,
+        2032,
+        2040,
+        2041,
+        2042,
+        2050,
+        2051,
+        2052,
+        2060,
+        2061,
+        2062,
+        2070,
+        2071,
+        2072,
+        2080,
+        2081,
+        2082,
+        2090,
+        2091,
+        2092,
+        2100,
+        2101,
+        2102,
+        2110,
+        2111,
+        2112,
+        2120,
+        2121,
+        2122,
+        2134,
+        2135,
+        2136
+      ],
+      "ITEM_WEAPON/WEAPON_DAGGER": [
+        1001,
+        1002,
+        1010,
+        1011,
+        1012,
+        1020,
+        1021,
+        1022,
+        1030,
+        1031,
+        1032,
+        1040,
+        1041,
+        1042,
+        1050,
+        1051,
+        1052,
+        1060,
+        1061,
+        1062,
+        1070,
+        1071,
+        1072,
+        1080,
+        1081,
+        1082,
+        1090,
+        1091,
+        1092,
+        1093,
+        1094,
+        1104,
+        1105,
+        1106,
+        1114,
+        1115,
+        1116,
+        4000,
+        4001,
+        4002,
+        4010,
+        4011,
+        4012,
+        4020,
+        4021,
+        4022
+      ],
+      "ITEM_WEAPON/WEAPON_TWO_HANDED": [
+        3000,
+        3001,
+        3002,
+        3010,
+        3011,
+        3012,
+        3020,
+        3021,
+        3022,
+        3030,
+        3031,
+        3032,
+        3040,
+        3041,
+        3042,
+        3050,
+        3051,
+        3052,
+        3060,
+        3061,
+        3062,
+        3070,
+        3071,
+        3072,
+        3080,
+        3081,
+        3082,
+        3090,
+        3091,
+        3092,
+        3100,
+        3101,
+        3102,
+        3110,
+        3111,
+        3112,
+        3120,
+        3121,
+        3122,
+        3123,
+        3124,
+        3134,
+        3135,
+        3136,
+        3144,
+        3145,
+        3146
+      ]
+    }
+  },
+  "items": [
+    {
+      "id": "item.weapon.sword-11",
+      "revision": 1,
+      "vnum": 11,
+      "icon": "icon/item/00010"
+    },
+    {
+      "id": "item.weapon.sword-12",
+      "revision": 1,
+      "vnum": 12,
+      "icon": "icon/item/00010"
+    },
+    {
+      "id": "item.weapon.long-sword-20",
+      "revision": 1,
+      "vnum": 20,
+      "icon": "icon/item/00020"
+    },
+    {
+      "id": "item.weapon.long-sword-21",
+      "revision": 1,
+      "vnum": 21,
+      "icon": "icon/item/00020"
+    },
+    {
+      "id": "item.weapon.long-sword-22",
+      "revision": 1,
+      "vnum": 22,
+      "icon": "icon/item/00020"
+    },
+    {
+      "id": "item.weapon.crescent-sword-30",
+      "revision": 1,
+      "vnum": 30,
+      "icon": "icon/item/00030"
+    },
+    {
+      "id": "item.weapon.crescent-sword-31",
+      "revision": 1,
+      "vnum": 31,
+      "icon": "icon/item/00030"
+    },
+    {
+      "id": "item.weapon.crescent-sword-32",
+      "revision": 1,
+      "vnum": 32,
+      "icon": "icon/item/00030"
+    },
+    {
+      "id": "item.weapon.bamboo-sword-40",
+      "revision": 1,
+      "vnum": 40,
+      "icon": "icon/item/00040"
+    },
+    {
+      "id": "item.weapon.bamboo-sword-41",
+      "revision": 1,
+      "vnum": 41,
+      "icon": "icon/item/00040"
+    },
+    {
+      "id": "item.weapon.bamboo-sword-42",
+      "revision": 1,
+      "vnum": 42,
+      "icon": "icon/item/00040"
+    },
+    {
+      "id": "item.weapon.broad-sword-50",
+      "revision": 1,
+      "vnum": 50,
+      "icon": "icon/item/00050"
+    },
+    {
+      "id": "item.weapon.broad-sword-51",
+      "revision": 1,
+      "vnum": 51,
+      "icon": "icon/item/00050"
+    },
+    {
+      "id": "item.weapon.broad-sword-52",
+      "revision": 1,
+      "vnum": 52,
+      "icon": "icon/item/00050"
+    },
+    {
+      "id": "item.weapon.silver-sword-60",
+      "revision": 1,
+      "vnum": 60,
+      "icon": "icon/item/00060"
+    },
+    {
+      "id": "item.weapon.silver-sword-61",
+      "revision": 1,
+      "vnum": 61,
+      "icon": "icon/item/00060"
+    },
+    {
+      "id": "item.weapon.silver-sword-62",
+      "revision": 1,
+      "vnum": 62,
+      "icon": "icon/item/00060"
+    },
+    {
+      "id": "item.weapon.orchid-sword-70",
+      "revision": 1,
+      "vnum": 70,
+      "icon": "icon/item/00070"
+    },
+    {
+      "id": "item.weapon.orchid-sword-71",
+      "revision": 1,
+      "vnum": 71,
+      "icon": "icon/item/00070"
+    },
+    {
+      "id": "item.weapon.orchid-sword-72",
+      "revision": 1,
+      "vnum": 72,
+      "icon": "icon/item/00070"
+    },
+    {
+      "id": "item.weapon.bastard-sword-80",
+      "revision": 1,
+      "vnum": 80,
+      "icon": "icon/item/00080"
+    },
+    {
+      "id": "item.weapon.bastard-sword-81",
+      "revision": 1,
+      "vnum": 81,
+      "icon": "icon/item/00080"
+    },
+    {
+      "id": "item.weapon.bastard-sword-82",
+      "revision": 1,
+      "vnum": 82,
+      "icon": "icon/item/00080"
+    },
+    {
+      "id": "item.weapon.barbarian-sword-90",
+      "revision": 1,
+      "vnum": 90,
+      "icon": "icon/item/00090"
+    },
+    {
+      "id": "item.weapon.barbarian-sword-91",
+      "revision": 1,
+      "vnum": 91,
+      "icon": "icon/item/00090"
+    },
+    {
+      "id": "item.weapon.barbarian-sword-92",
+      "revision": 1,
+      "vnum": 92,
+      "icon": "icon/item/00090"
+    },
+    {
+      "id": "item.weapon.bloody-sword-100",
+      "revision": 1,
+      "vnum": 100,
+      "icon": "icon/item/00100"
+    },
+    {
+      "id": "item.weapon.bloody-sword-101",
+      "revision": 1,
+      "vnum": 101,
+      "icon": "icon/item/00100"
+    },
+    {
+      "id": "item.weapon.bloody-sword-102",
+      "revision": 1,
+      "vnum": 102,
+      "icon": "icon/item/00100"
+    },
+    {
+      "id": "item.weapon.great-sword-110",
+      "revision": 1,
+      "vnum": 110,
+      "icon": "icon/item/00110"
+    },
+    {
+      "id": "item.weapon.great-sword-112",
+      "revision": 1,
+      "vnum": 112,
+      "icon": "icon/item/00110"
+    },
+    {
+      "id": "item.weapon.great-sword-113",
+      "revision": 1,
+      "vnum": 113,
+      "icon": "icon/item/00110"
+    },
+    {
+      "id": "item.weapon.flying-wizard-sword-120",
+      "revision": 1,
+      "vnum": 120,
+      "icon": "icon/item/00120"
+    },
+    {
+      "id": "item.weapon.flying-wizard-sword-121",
+      "revision": 1,
+      "vnum": 121,
+      "icon": "icon/item/00120"
+    },
+    {
+      "id": "item.weapon.flying-wizard-sword-122",
+      "revision": 1,
+      "vnum": 122,
+      "icon": "icon/item/00120"
+    },
+    {
+      "id": "item.weapon.half-moon-sword-130",
+      "revision": 1,
+      "vnum": 130,
+      "icon": "icon/item/00130"
+    },
+    {
+      "id": "item.weapon.half-moon-sword-131",
+      "revision": 1,
+      "vnum": 131,
+      "icon": "icon/item/00130"
+    },
+    {
+      "id": "item.weapon.half-moon-sword-132",
+      "revision": 1,
+      "vnum": 132,
+      "icon": "icon/item/00130"
+    },
+    {
+      "id": "item.weapon.half-moon-sword-133",
+      "revision": 1,
+      "vnum": 133,
+      "icon": "icon/item/00130"
+    },
+    {
+      "id": "item.weapon.half-moon-sword-134",
+      "revision": 1,
+      "vnum": 134,
+      "icon": "icon/item/00130"
+    },
+    {
+      "id": "item.weapon.battle-sword-144",
+      "revision": 1,
+      "vnum": 144,
+      "icon": "icon/item/00140"
+    },
+    {
+      "id": "item.weapon.battle-sword-145",
+      "revision": 1,
+      "vnum": 145,
+      "icon": "icon/item/00140"
+    },
+    {
+      "id": "item.weapon.battle-sword-146",
+      "revision": 1,
+      "vnum": 146,
+      "icon": "icon/item/00140"
+    },
+    {
+      "id": "item.weapon.ghost-fang-blade-154",
+      "revision": 1,
+      "vnum": 154,
+      "icon": "icon/item/00150"
+    },
+    {
+      "id": "item.weapon.ghost-fang-blade-155",
+      "revision": 1,
+      "vnum": 155,
+      "icon": "icon/item/00150"
+    },
+    {
+      "id": "item.weapon.ghost-fang-blade-156",
+      "revision": 1,
+      "vnum": 156,
+      "icon": "icon/item/00150"
+    },
+    {
+      "id": "item.weapon.nymph-sword-164",
+      "revision": 1,
+      "vnum": 164,
+      "icon": "icon/item/00160"
+    },
+    {
+      "id": "item.weapon.nymph-sword-165",
+      "revision": 1,
+      "vnum": 165,
+      "icon": "icon/item/00160"
+    },
+    {
+      "id": "item.weapon.nymph-sword-166",
+      "revision": 1,
+      "vnum": 166,
+      "icon": "icon/item/00160"
+    },
+    {
+      "id": "item.weapon.exorcism-sword-244",
+      "revision": 1,
+      "vnum": 244,
+      "icon": "icon/item/00240"
+    },
+    {
+      "id": "item.weapon.exorcism-sword-245",
+      "revision": 1,
+      "vnum": 245,
+      "icon": "icon/item/00240"
+    },
+    {
+      "id": "item.weapon.exorcism-sword-246",
+      "revision": 1,
+      "vnum": 246,
+      "icon": "icon/item/00240"
+    },
+    {
+      "id": "item.weapon.fan-7001",
+      "revision": 1,
+      "vnum": 7001,
+      "icon": "icon/item/07000"
+    },
+    {
+      "id": "item.weapon.fan-7002",
+      "revision": 1,
+      "vnum": 7002,
+      "icon": "icon/item/07000"
+    },
+    {
+      "id": "item.weapon.iron-fan-7010",
+      "revision": 1,
+      "vnum": 7010,
+      "icon": "icon/item/07010"
+    },
+    {
+      "id": "item.weapon.iron-fan-7011",
+      "revision": 1,
+      "vnum": 7011,
+      "icon": "icon/item/07010"
+    },
+    {
+      "id": "item.weapon.iron-fan-7012",
+      "revision": 1,
+      "vnum": 7012,
+      "icon": "icon/item/07010"
+    },
+    {
+      "id": "item.weapon.black-tiger-fan-7020",
+      "revision": 1,
+      "vnum": 7020,
+      "icon": "icon/item/07020"
+    },
+    {
+      "id": "item.weapon.black-tiger-fan-7021",
+      "revision": 1,
+      "vnum": 7021,
+      "icon": "icon/item/07020"
+    },
+    {
+      "id": "item.weapon.black-tiger-fan-7022",
+      "revision": 1,
+      "vnum": 7022,
+      "icon": "icon/item/07020"
+    },
+    {
+      "id": "item.weapon.crane-wing-fan-7030",
+      "revision": 1,
+      "vnum": 7030,
+      "icon": "icon/item/07030"
+    },
+    {
+      "id": "item.weapon.crane-wing-fan-7031",
+      "revision": 1,
+      "vnum": 7031,
+      "icon": "icon/item/07030"
+    },
+    {
+      "id": "item.weapon.crane-wing-fan-7032",
+      "revision": 1,
+      "vnum": 7032,
+      "icon": "icon/item/07030"
+    },
+    {
+      "id": "item.weapon.peacock-fan-7040",
+      "revision": 1,
+      "vnum": 7040,
+      "icon": "icon/item/07040"
+    },
+    {
+      "id": "item.weapon.peacock-fan-7041",
+      "revision": 1,
+      "vnum": 7041,
+      "icon": "icon/item/07040"
+    },
+    {
+      "id": "item.weapon.peacock-fan-7042",
+      "revision": 1,
+      "vnum": 7042,
+      "icon": "icon/item/07040"
+    },
+    {
+      "id": "item.weapon.aquatic-fan-7050",
+      "revision": 1,
+      "vnum": 7050,
+      "icon": "icon/item/07050"
+    },
+    {
+      "id": "item.weapon.aquatic-fan-7051",
+      "revision": 1,
+      "vnum": 7051,
+      "icon": "icon/item/07050"
+    },
+    {
+      "id": "item.weapon.aquatic-fan-7052",
+      "revision": 1,
+      "vnum": 7052,
+      "icon": "icon/item/07050"
+    },
+    {
+      "id": "item.weapon.stone-fan-7060",
+      "revision": 1,
+      "vnum": 7060,
+      "icon": "icon/item/07060"
+    },
+    {
+      "id": "item.weapon.stone-fan-7061",
+      "revision": 1,
+      "vnum": 7061,
+      "icon": "icon/item/07060"
+    },
+    {
+      "id": "item.weapon.stone-fan-7062",
+      "revision": 1,
+      "vnum": 7062,
+      "icon": "icon/item/07060"
+    },
+    {
+      "id": "item.weapon.ocean-fan-7070",
+      "revision": 1,
+      "vnum": 7070,
+      "icon": "icon/item/07070"
+    },
+    {
+      "id": "item.weapon.ocean-fan-7071",
+      "revision": 1,
+      "vnum": 7071,
+      "icon": "icon/item/07070"
+    },
+    {
+      "id": "item.weapon.ocean-fan-7072",
+      "revision": 1,
+      "vnum": 7072,
+      "icon": "icon/item/07070"
+    },
+    {
+      "id": "item.weapon.sting-fan-7080",
+      "revision": 1,
+      "vnum": 7080,
+      "icon": "icon/item/07080"
+    },
+    {
+      "id": "item.weapon.sting-fan-7081",
+      "revision": 1,
+      "vnum": 7081,
+      "icon": "icon/item/07080"
+    },
+    {
+      "id": "item.weapon.sting-fan-7082",
+      "revision": 1,
+      "vnum": 7082,
+      "icon": "icon/item/07080"
+    },
+    {
+      "id": "item.weapon.sun-fan-7122",
+      "revision": 1,
+      "vnum": 7122,
+      "icon": "icon/item/07120"
+    },
+    {
+      "id": "item.weapon.sun-fan-7123",
+      "revision": 1,
+      "vnum": 7123,
+      "icon": "icon/item/07120"
+    },
+    {
+      "id": "item.weapon.sun-fan-7124",
+      "revision": 1,
+      "vnum": 7124,
+      "icon": "icon/item/07120"
+    },
+    {
+      "id": "item.weapon.heavenly-bird-fan-7134",
+      "revision": 1,
+      "vnum": 7134,
+      "icon": "icon/item/07130"
+    },
+    {
+      "id": "item.weapon.heavenly-bird-fan-7135",
+      "revision": 1,
+      "vnum": 7135,
+      "icon": "icon/item/07130"
+    },
+    {
+      "id": "item.weapon.heavenly-bird-fan-7136",
+      "revision": 1,
+      "vnum": 7136,
+      "icon": "icon/item/07130"
+    },
+    {
+      "id": "item.weapon.salvation-fan-7144",
+      "revision": 1,
+      "vnum": 7144,
+      "icon": "icon/item/07140"
+    },
+    {
+      "id": "item.weapon.salvation-fan-7145",
+      "revision": 1,
+      "vnum": 7145,
+      "icon": "icon/item/07140"
+    },
+    {
+      "id": "item.weapon.salvation-fan-7146",
+      "revision": 1,
+      "vnum": 7146,
+      "icon": "icon/item/07140"
+    },
+    {
+      "id": "item.armor.monk-plate-armour-11200",
+      "revision": 1,
+      "vnum": 11200,
+      "icon": "icon/item/11200"
+    },
+    {
+      "id": "item.armor.monk-plate-armour-11201",
+      "revision": 1,
+      "vnum": 11201,
+      "icon": "icon/item/11200"
+    },
+    {
+      "id": "item.armor.monk-plate-armour-11202",
+      "revision": 1,
+      "vnum": 11202,
+      "icon": "icon/item/11200"
+    },
+    {
+      "id": "item.armor.iron-plate-armour-11210",
+      "revision": 1,
+      "vnum": 11210,
+      "icon": "icon/item/11210"
+    },
+    {
+      "id": "item.armor.iron-plate-armour-11211",
+      "revision": 1,
+      "vnum": 11211,
+      "icon": "icon/item/11210"
+    },
+    {
+      "id": "item.armor.iron-plate-armour-11212",
+      "revision": 1,
+      "vnum": 11212,
+      "icon": "icon/item/11210"
+    },
+    {
+      "id": "item.armor.tiger-plate-armour-11220",
+      "revision": 1,
+      "vnum": 11220,
+      "icon": "icon/item/11220"
+    },
+    {
+      "id": "item.armor.tiger-plate-armour-11221",
+      "revision": 1,
+      "vnum": 11221,
+      "icon": "icon/item/11220"
+    },
+    {
+      "id": "item.armor.tiger-plate-armour-11222",
+      "revision": 1,
+      "vnum": 11222,
+      "icon": "icon/item/11220"
+    },
+    {
+      "id": "item.armor.lion-plate-armour-11230",
+      "revision": 1,
+      "vnum": 11230,
+      "icon": "icon/item/11230"
+    },
+    {
+      "id": "item.armor.lion-plate-armour-11231",
+      "revision": 1,
+      "vnum": 11231,
+      "icon": "icon/item/11230"
+    },
+    {
+      "id": "item.armor.lion-plate-armour-11232",
+      "revision": 1,
+      "vnum": 11232,
+      "icon": "icon/item/11230"
+    },
+    {
+      "id": "item.armor.lion-plate-armour-11233",
+      "revision": 1,
+      "vnum": 11233,
+      "icon": "icon/item/11230"
+    },
+    {
+      "id": "item.armor.lethal-plate-armour-11240",
+      "revision": 1,
+      "vnum": 11240,
+      "icon": "icon/item/11240"
+    },
+    {
+      "id": "item.armor.lethal-plate-armour-11241",
+      "revision": 1,
+      "vnum": 11241,
+      "icon": "icon/item/11240"
+    },
+    {
+      "id": "item.armor.lethal-plate-armour-11242",
+      "revision": 1,
+      "vnum": 11242,
+      "icon": "icon/item/11240"
+    },
+    {
+      "id": "item.armor.dragon-plate-armour-11250",
+      "revision": 1,
+      "vnum": 11250,
+      "icon": "icon/item/11250"
+    },
+    {
+      "id": "item.armor.dragon-plate-armour-11251",
+      "revision": 1,
+      "vnum": 11251,
+      "icon": "icon/item/11250"
+    },
+    {
+      "id": "item.armor.dragon-plate-armour-11252",
+      "revision": 1,
+      "vnum": 11252,
+      "icon": "icon/item/11250"
+    },
+    {
+      "id": "item.armor.azure-suit-11400",
+      "revision": 1,
+      "vnum": 11400,
+      "icon": "icon/item/11400"
+    },
+    {
+      "id": "item.armor.azure-suit-11401",
+      "revision": 1,
+      "vnum": 11401,
+      "icon": "icon/item/11400"
+    },
+    {
+      "id": "item.armor.azure-suit-11402",
+      "revision": 1,
+      "vnum": 11402,
+      "icon": "icon/item/11400"
+    },
+    {
+      "id": "item.armor.ivory-suit-11410",
+      "revision": 1,
+      "vnum": 11410,
+      "icon": "icon/item/11410"
+    },
+    {
+      "id": "item.armor.ivory-suit-11411",
+      "revision": 1,
+      "vnum": 11411,
+      "icon": "icon/item/11410"
+    },
+    {
+      "id": "item.armor.ivory-suit-11412",
+      "revision": 1,
+      "vnum": 11412,
+      "icon": "icon/item/11410"
+    },
+    {
+      "id": "item.armor.crimson-suit-11420",
+      "revision": 1,
+      "vnum": 11420,
+      "icon": "icon/item/11420"
+    },
+    {
+      "id": "item.armor.crimson-suit-11421",
+      "revision": 1,
+      "vnum": 11421,
+      "icon": "icon/item/11420"
+    },
+    {
+      "id": "item.armor.crimson-suit-11422",
+      "revision": 1,
+      "vnum": 11422,
+      "icon": "icon/item/11420"
+    },
+    {
+      "id": "item.armor.red-ant-suit-11430",
+      "revision": 1,
+      "vnum": 11430,
+      "icon": "icon/item/11430"
+    },
+    {
+      "id": "item.armor.red-ant-suit-11431",
+      "revision": 1,
+      "vnum": 11431,
+      "icon": "icon/item/11430"
+    },
+    {
+      "id": "item.armor.red-ant-suit-11432",
+      "revision": 1,
+      "vnum": 11432,
+      "icon": "icon/item/11430"
+    },
+    {
+      "id": "item.armor.red-ant-suit-11433",
+      "revision": 1,
+      "vnum": 11433,
+      "icon": "icon/item/11430"
+    },
+    {
+      "id": "item.armor.ant-lion-suit-11440",
+      "revision": 1,
+      "vnum": 11440,
+      "icon": "icon/item/11440"
+    },
+    {
+      "id": "item.armor.ant-lion-suit-11441",
+      "revision": 1,
+      "vnum": 11441,
+      "icon": "icon/item/11440"
+    },
+    {
+      "id": "item.armor.ant-lion-suit-11442",
+      "revision": 1,
+      "vnum": 11442,
+      "icon": "icon/item/11440"
+    },
+    {
+      "id": "item.armor.ninja-suit-11450",
+      "revision": 1,
+      "vnum": 11450,
+      "icon": "icon/item/11450"
+    },
+    {
+      "id": "item.armor.ninja-suit-11451",
+      "revision": 1,
+      "vnum": 11451,
+      "icon": "icon/item/11450"
+    },
+    {
+      "id": "item.armor.ninja-suit-11452",
+      "revision": 1,
+      "vnum": 11452,
+      "icon": "icon/item/11450"
+    },
+    {
+      "id": "item.armor.fuchsia-suit-11485",
+      "revision": 1,
+      "vnum": 11485,
+      "icon": "icon/item/11480"
+    },
+    {
+      "id": "item.armor.fuchsia-suit-11486",
+      "revision": 1,
+      "vnum": 11486,
+      "icon": "icon/item/11480"
+    },
+    {
+      "id": "item.armor.requiem-plate-armour-11600",
+      "revision": 1,
+      "vnum": 11600,
+      "icon": "icon/item/11600"
+    },
+    {
+      "id": "item.armor.requiem-plate-armour-11601",
+      "revision": 1,
+      "vnum": 11601,
+      "icon": "icon/item/11600"
+    },
+    {
+      "id": "item.armor.requiem-plate-armour-11602",
+      "revision": 1,
+      "vnum": 11602,
+      "icon": "icon/item/11600"
+    },
+    {
+      "id": "item.armor.storm-plate-armour-11610",
+      "revision": 1,
+      "vnum": 11610,
+      "icon": "icon/item/11610"
+    },
+    {
+      "id": "item.armor.storm-plate-armour-11611",
+      "revision": 1,
+      "vnum": 11611,
+      "icon": "icon/item/11610"
+    },
+    {
+      "id": "item.armor.storm-plate-armour-11612",
+      "revision": 1,
+      "vnum": 11612,
+      "icon": "icon/item/11610"
+    },
+    {
+      "id": "item.armor.misfortune-armour-11620",
+      "revision": 1,
+      "vnum": 11620,
+      "icon": "icon/item/11620"
+    },
+    {
+      "id": "item.armor.misfortune-armour-11621",
+      "revision": 1,
+      "vnum": 11621,
+      "icon": "icon/item/11620"
+    },
+    {
+      "id": "item.armor.misfortune-armour-11622",
+      "revision": 1,
+      "vnum": 11622,
+      "icon": "icon/item/11620"
+    },
+    {
+      "id": "item.armor.ghost-plate-armour-11630",
+      "revision": 1,
+      "vnum": 11630,
+      "icon": "icon/item/11630"
+    },
+    {
+      "id": "item.armor.ghost-plate-armour-11631",
+      "revision": 1,
+      "vnum": 11631,
+      "icon": "icon/item/11630"
+    },
+    {
+      "id": "item.armor.ghost-plate-armour-11632",
+      "revision": 1,
+      "vnum": 11632,
+      "icon": "icon/item/11630"
+    },
+    {
+      "id": "item.armor.ghost-plate-armour-11633",
+      "revision": 1,
+      "vnum": 11633,
+      "icon": "icon/item/11630"
+    },
+    {
+      "id": "item.armor.yin-and-yang-armour-11640",
+      "revision": 1,
+      "vnum": 11640,
+      "icon": "icon/item/11640"
+    },
+    {
+      "id": "item.armor.yin-and-yang-armour-11641",
+      "revision": 1,
+      "vnum": 11641,
+      "icon": "icon/item/11640"
+    },
+    {
+      "id": "item.armor.yin-and-yang-armour-11642",
+      "revision": 1,
+      "vnum": 11642,
+      "icon": "icon/item/11640"
+    },
+    {
+      "id": "item.armor.mystic-plate-armour-11650",
+      "revision": 1,
+      "vnum": 11650,
+      "icon": "icon/item/11650"
+    },
+    {
+      "id": "item.armor.mystic-plate-armour-11651",
+      "revision": 1,
+      "vnum": 11651,
+      "icon": "icon/item/11650"
+    },
+    {
+      "id": "item.armor.mystic-plate-armour-11652",
+      "revision": 1,
+      "vnum": 11652,
+      "icon": "icon/item/11650"
+    },
+    {
+      "id": "item.armor.spirit-plate-armour-11685",
+      "revision": 1,
+      "vnum": 11685,
+      "icon": "icon/item/11680"
+    },
+    {
+      "id": "item.armor.spirit-plate-armour-11686",
+      "revision": 1,
+      "vnum": 11686,
+      "icon": "icon/item/11680"
+    },
+    {
+      "id": "item.armor.crimson-clothing-11800",
+      "revision": 1,
+      "vnum": 11800,
+      "icon": "icon/item/11800"
+    },
+    {
+      "id": "item.armor.crimson-clothing-11801",
+      "revision": 1,
+      "vnum": 11801,
+      "icon": "icon/item/11800"
+    },
+    {
+      "id": "item.armor.crimson-clothing-11802",
+      "revision": 1,
+      "vnum": 11802,
+      "icon": "icon/item/11800"
+    },
+    {
+      "id": "item.armor.turquoise-clothing-11810",
+      "revision": 1,
+      "vnum": 11810,
+      "icon": "icon/item/11810"
+    },
+    {
+      "id": "item.armor.turquoise-clothing-11811",
+      "revision": 1,
+      "vnum": 11811,
+      "icon": "icon/item/11810"
+    },
+    {
+      "id": "item.armor.turquoise-clothing-11812",
+      "revision": 1,
+      "vnum": 11812,
+      "icon": "icon/item/11810"
+    },
+    {
+      "id": "item.armor.pink-clothing-11820",
+      "revision": 1,
+      "vnum": 11820,
+      "icon": "icon/item/11820"
+    },
+    {
+      "id": "item.armor.pink-clothing-11821",
+      "revision": 1,
+      "vnum": 11821,
+      "icon": "icon/item/11820"
+    },
+    {
+      "id": "item.armor.pink-clothing-11822",
+      "revision": 1,
+      "vnum": 11822,
+      "icon": "icon/item/11820"
+    },
+    {
+      "id": "item.armor.amorous-clothing-11830",
+      "revision": 1,
+      "vnum": 11830,
+      "icon": "icon/item/11830"
+    },
+    {
+      "id": "item.armor.amorous-clothing-11831",
+      "revision": 1,
+      "vnum": 11831,
+      "icon": "icon/item/11830"
+    },
+    {
+      "id": "item.armor.amorous-clothing-11832",
+      "revision": 1,
+      "vnum": 11832,
+      "icon": "icon/item/11830"
+    },
+    {
+      "id": "item.armor.amorous-clothing-11833",
+      "revision": 1,
+      "vnum": 11833,
+      "icon": "icon/item/11830"
+    },
+    {
+      "id": "item.armor.heavenly-clothing-11840",
+      "revision": 1,
+      "vnum": 11840,
+      "icon": "icon/item/11840"
+    },
+    {
+      "id": "item.armor.heavenly-clothing-11841",
+      "revision": 1,
+      "vnum": 11841,
+      "icon": "icon/item/11840"
+    },
+    {
+      "id": "item.armor.heavenly-clothing-11842",
+      "revision": 1,
+      "vnum": 11842,
+      "icon": "icon/item/11840"
+    },
+    {
+      "id": "item.armor.sun-clothing-11850",
+      "revision": 1,
+      "vnum": 11850,
+      "icon": "icon/item/11850"
+    },
+    {
+      "id": "item.armor.sun-clothing-11851",
+      "revision": 1,
+      "vnum": 11851,
+      "icon": "icon/item/11850"
+    },
+    {
+      "id": "item.armor.sun-clothing-11852",
+      "revision": 1,
+      "vnum": 11852,
+      "icon": "icon/item/11850"
+    },
+    {
+      "id": "item.armor.baroness-dress-11885",
+      "revision": 1,
+      "vnum": 11885,
+      "icon": "icon/item/11880"
+    },
+    {
+      "id": "item.armor.baroness-dress-11886",
+      "revision": 1,
+      "vnum": 11886,
+      "icon": "icon/item/11880"
+    },
+    {
+      "id": "item.armor.traditional-helmet-12200",
+      "revision": 1,
+      "vnum": 12200,
+      "icon": "icon/item/12200"
+    },
+    {
+      "id": "item.armor.iron-helmet-12220",
+      "revision": 1,
+      "vnum": 12220,
+      "icon": "icon/item/12220"
+    },
+    {
+      "id": "item.armor.ghost-mask-sallet-12240",
+      "revision": 1,
+      "vnum": 12240,
+      "icon": "icon/item/12240"
+    },
+    {
+      "id": "item.armor.leather-hood-12340",
+      "revision": 1,
+      "vnum": 12340,
+      "icon": "icon/item/12340"
+    },
+    {
+      "id": "item.armor.leather-hood-12342",
+      "revision": 1,
+      "vnum": 12342,
+      "icon": "icon/item/12340"
+    },
+    {
+      "id": "item.armor.chain-hood-12360",
+      "revision": 1,
+      "vnum": 12360,
+      "icon": "icon/item/12360"
+    },
+    {
+      "id": "item.armor.steel-hood-12380",
+      "revision": 1,
+      "vnum": 12380,
+      "icon": "icon/item/12380"
+    },
+    {
+      "id": "item.armor.bloody-helmet-12480",
+      "revision": 1,
+      "vnum": 12480,
+      "icon": "icon/item/12480"
+    },
+    {
+      "id": "item.armor.bloody-helmet-12482",
+      "revision": 1,
+      "vnum": 12482,
+      "icon": "icon/item/12480"
+    },
+    {
+      "id": "item.armor.mocking-helmet-12500",
+      "revision": 1,
+      "vnum": 12500,
+      "icon": "icon/item/12500"
+    },
+    {
+      "id": "item.armor.castle-helmet-12520",
+      "revision": 1,
+      "vnum": 12520,
+      "icon": "icon/item/12520"
+    },
+    {
+      "id": "item.armor.monk-hat-12620",
+      "revision": 1,
+      "vnum": 12620,
+      "icon": "icon/item/12620"
+    },
+    {
+      "id": "item.armor.monk-hat-12622",
+      "revision": 1,
+      "vnum": 12622,
+      "icon": "icon/item/12620"
+    },
+    {
+      "id": "item.armor.phoenix-hat-12640",
+      "revision": 1,
+      "vnum": 12640,
+      "icon": "icon/item/12640"
+    },
+    {
+      "id": "item.armor.phoenix-hat-12641",
+      "revision": 1,
+      "vnum": 12641,
+      "icon": "icon/item/12640"
+    },
+    {
+      "id": "item.armor.sunlight-hat-12660",
+      "revision": 1,
+      "vnum": 12660,
+      "icon": "icon/item/12660"
+    },
+    {
+      "id": "item.armor.wooden-bracelet-14000",
+      "revision": 1,
+      "vnum": 14000,
+      "icon": "icon/item/14000"
+    },
+    {
+      "id": "item.armor.wooden-bracelet-14001",
+      "revision": 1,
+      "vnum": 14001,
+      "icon": "icon/item/14000"
+    },
+    {
+      "id": "item.armor.wooden-bracelet-14002",
+      "revision": 1,
+      "vnum": 14002,
+      "icon": "icon/item/14000"
+    },
+    {
+      "id": "item.armor.copper-bracelet-14020",
+      "revision": 1,
+      "vnum": 14020,
+      "icon": "icon/item/14020"
+    },
+    {
+      "id": "item.armor.copper-bracelet-14021",
+      "revision": 1,
+      "vnum": 14021,
+      "icon": "icon/item/14020"
+    },
+    {
+      "id": "item.armor.copper-bracelet-14022",
+      "revision": 1,
+      "vnum": 14022,
+      "icon": "icon/item/14020"
+    },
+    {
+      "id": "item.armor.silver-bracelet-14040",
+      "revision": 1,
+      "vnum": 14040,
+      "icon": "icon/item/14040"
+    },
+    {
+      "id": "item.armor.silver-bracelet-14041",
+      "revision": 1,
+      "vnum": 14041,
+      "icon": "icon/item/14040"
+    },
+    {
+      "id": "item.armor.silver-bracelet-14042",
+      "revision": 1,
+      "vnum": 14042,
+      "icon": "icon/item/14040"
+    },
+    {
+      "id": "item.armor.silver-bracelet-14044",
+      "revision": 1,
+      "vnum": 14044,
+      "icon": "icon/item/14040"
+    },
+    {
+      "id": "item.armor.silver-bracelet-14045",
+      "revision": 1,
+      "vnum": 14045,
+      "icon": "icon/item/14040"
+    },
+    {
+      "id": "item.armor.gold-bracelet-14060",
+      "revision": 1,
+      "vnum": 14060,
+      "icon": "icon/item/14060"
+    },
+    {
+      "id": "item.armor.gold-bracelet-14061",
+      "revision": 1,
+      "vnum": 14061,
+      "icon": "icon/item/14060"
+    },
+    {
+      "id": "item.armor.gold-bracelet-14062",
+      "revision": 1,
+      "vnum": 14062,
+      "icon": "icon/item/14060"
+    },
+    {
+      "id": "item.armor.jade-bracelet-14080",
+      "revision": 1,
+      "vnum": 14080,
+      "icon": "icon/item/14080"
+    },
+    {
+      "id": "item.armor.jade-bracelet-14081",
+      "revision": 1,
+      "vnum": 14081,
+      "icon": "icon/item/14080"
+    },
+    {
+      "id": "item.armor.jade-bracelet-14082",
+      "revision": 1,
+      "vnum": 14082,
+      "icon": "icon/item/14080"
+    },
+    {
+      "id": "item.armor.jade-bracelet-14084",
+      "revision": 1,
+      "vnum": 14084,
+      "icon": "icon/item/14080"
+    },
+    {
+      "id": "item.armor.jade-bracelet-14085",
+      "revision": 1,
+      "vnum": 14085,
+      "icon": "icon/item/14080"
+    },
+    {
+      "id": "item.armor.ebony-bracelet-14100",
+      "revision": 1,
+      "vnum": 14100,
+      "icon": "icon/item/14100"
+    },
+    {
+      "id": "item.armor.ebony-bracelet-14101",
+      "revision": 1,
+      "vnum": 14101,
+      "icon": "icon/item/14100"
+    },
+    {
+      "id": "item.armor.ebony-bracelet-14102",
+      "revision": 1,
+      "vnum": 14102,
+      "icon": "icon/item/14100"
+    },
+    {
+      "id": "item.armor.ebony-bracelet-14104",
+      "revision": 1,
+      "vnum": 14104,
+      "icon": "icon/item/14100"
+    },
+    {
+      "id": "item.armor.ebony-bracelet-14105",
+      "revision": 1,
+      "vnum": 14105,
+      "icon": "icon/item/14100"
+    },
+    {
+      "id": "item.armor.pearl-bracelet-14120",
+      "revision": 1,
+      "vnum": 14120,
+      "icon": "icon/item/14120"
+    },
+    {
+      "id": "item.armor.pearl-bracelet-14121",
+      "revision": 1,
+      "vnum": 14121,
+      "icon": "icon/item/14120"
+    },
+    {
+      "id": "item.armor.pearl-bracelet-14122",
+      "revision": 1,
+      "vnum": 14122,
+      "icon": "icon/item/14120"
+    },
+    {
+      "id": "item.armor.pearl-bracelet-14124",
+      "revision": 1,
+      "vnum": 14124,
+      "icon": "icon/item/14120"
+    },
+    {
+      "id": "item.armor.pearl-bracelet-14125",
+      "revision": 1,
+      "vnum": 14125,
+      "icon": "icon/item/14120"
+    },
+    {
+      "id": "item.armor.white-gold-bracelet-14140",
+      "revision": 1,
+      "vnum": 14140,
+      "icon": "icon/item/14140"
+    },
+    {
+      "id": "item.armor.white-gold-bracelet-14141",
+      "revision": 1,
+      "vnum": 14141,
+      "icon": "icon/item/14140"
+    },
+    {
+      "id": "item.armor.white-gold-bracelet-14142",
+      "revision": 1,
+      "vnum": 14142,
+      "icon": "icon/item/14140"
+    },
+    {
+      "id": "item.armor.crystal-bracelet-14160",
+      "revision": 1,
+      "vnum": 14160,
+      "icon": "icon/item/14160"
+    },
+    {
+      "id": "item.armor.crystal-bracelet-14161",
+      "revision": 1,
+      "vnum": 14161,
+      "icon": "icon/item/14160"
+    },
+    {
+      "id": "item.armor.crystal-bracelet-14162",
+      "revision": 1,
+      "vnum": 14162,
+      "icon": "icon/item/14160"
+    },
+    {
+      "id": "item.armor.amethyst-bracelet-14180",
+      "revision": 1,
+      "vnum": 14180,
+      "icon": "icon/item/14180"
+    },
+    {
+      "id": "item.armor.amethyst-bracelet-14181",
+      "revision": 1,
+      "vnum": 14181,
+      "icon": "icon/item/14180"
+    },
+    {
+      "id": "item.armor.amethyst-bracelet-14182",
+      "revision": 1,
+      "vnum": 14182,
+      "icon": "icon/item/14180"
+    },
+    {
+      "id": "item.armor.leather-shoes-15000",
+      "revision": 1,
+      "vnum": 15000,
+      "icon": "icon/item/15000"
+    },
+    {
+      "id": "item.armor.leather-shoes-15001",
+      "revision": 1,
+      "vnum": 15001,
+      "icon": "icon/item/15000"
+    },
+    {
+      "id": "item.armor.leather-shoes-15002",
+      "revision": 1,
+      "vnum": 15002,
+      "icon": "icon/item/15000"
+    },
+    {
+      "id": "item.armor.bamboo-skin-shoes-15020",
+      "revision": 1,
+      "vnum": 15020,
+      "icon": "icon/item/15020"
+    },
+    {
+      "id": "item.armor.bamboo-skin-shoes-15021",
+      "revision": 1,
+      "vnum": 15021,
+      "icon": "icon/item/15020"
+    },
+    {
+      "id": "item.armor.bamboo-skin-shoes-15022",
+      "revision": 1,
+      "vnum": 15022,
+      "icon": "icon/item/15020"
+    },
+    {
+      "id": "item.armor.wooden-shoes-15040",
+      "revision": 1,
+      "vnum": 15040,
+      "icon": "icon/item/15040"
+    },
+    {
+      "id": "item.armor.wooden-shoes-15041",
+      "revision": 1,
+      "vnum": 15041,
+      "icon": "icon/item/15040"
+    },
+    {
+      "id": "item.armor.wooden-shoes-15042",
+      "revision": 1,
+      "vnum": 15042,
+      "icon": "icon/item/15040"
+    },
+    {
+      "id": "item.armor.gold-threaded-shoes-15060",
+      "revision": 1,
+      "vnum": 15060,
+      "icon": "icon/item/15060"
+    },
+    {
+      "id": "item.armor.gold-threaded-shoes-15061",
+      "revision": 1,
+      "vnum": 15061,
+      "icon": "icon/item/15060"
+    },
+    {
+      "id": "item.armor.gold-threaded-shoes-15062",
+      "revision": 1,
+      "vnum": 15062,
+      "icon": "icon/item/15060"
+    },
+    {
+      "id": "item.armor.leather-boots-15080",
+      "revision": 1,
+      "vnum": 15080,
+      "icon": "icon/item/15080"
+    },
+    {
+      "id": "item.armor.leather-boots-15081",
+      "revision": 1,
+      "vnum": 15081,
+      "icon": "icon/item/15080"
+    },
+    {
+      "id": "item.armor.leather-boots-15082",
+      "revision": 1,
+      "vnum": 15082,
+      "icon": "icon/item/15080"
+    },
+    {
+      "id": "item.armor.leather-boots-15085",
+      "revision": 1,
+      "vnum": 15085,
+      "icon": "icon/item/15080"
+    },
+    {
+      "id": "item.armor.leather-boots-15086",
+      "revision": 1,
+      "vnum": 15086,
+      "icon": "icon/item/15080"
+    },
+    {
+      "id": "item.armor.golden-shoes-15100",
+      "revision": 1,
+      "vnum": 15100,
+      "icon": "icon/item/15100"
+    },
+    {
+      "id": "item.armor.golden-shoes-15101",
+      "revision": 1,
+      "vnum": 15101,
+      "icon": "icon/item/15100"
+    },
+    {
+      "id": "item.armor.golden-shoes-15102",
+      "revision": 1,
+      "vnum": 15102,
+      "icon": "icon/item/15100"
+    },
+    {
+      "id": "item.armor.bronze-boots-15120",
+      "revision": 1,
+      "vnum": 15120,
+      "icon": "icon/item/15120"
+    },
+    {
+      "id": "item.armor.bronze-boots-15121",
+      "revision": 1,
+      "vnum": 15121,
+      "icon": "icon/item/15120"
+    },
+    {
+      "id": "item.armor.bronze-boots-15122",
+      "revision": 1,
+      "vnum": 15122,
+      "icon": "icon/item/15120"
+    },
+    {
+      "id": "item.armor.jade-shoes-15140",
+      "revision": 1,
+      "vnum": 15140,
+      "icon": "icon/item/15140"
+    },
+    {
+      "id": "item.armor.jade-shoes-15141",
+      "revision": 1,
+      "vnum": 15141,
+      "icon": "icon/item/15140"
+    },
+    {
+      "id": "item.armor.jade-shoes-15142",
+      "revision": 1,
+      "vnum": 15142,
+      "icon": "icon/item/15140"
+    },
+    {
+      "id": "item.armor.ecstasy-shoes-15160",
+      "revision": 1,
+      "vnum": 15160,
+      "icon": "icon/item/15160"
+    },
+    {
+      "id": "item.armor.ecstasy-shoes-15161",
+      "revision": 1,
+      "vnum": 15161,
+      "icon": "icon/item/15160"
+    },
+    {
+      "id": "item.armor.ecstasy-shoes-15162",
+      "revision": 1,
+      "vnum": 15162,
+      "icon": "icon/item/15160"
+    },
+    {
+      "id": "item.armor.nimbus-boots-15180",
+      "revision": 1,
+      "vnum": 15180,
+      "icon": "icon/item/15180"
+    },
+    {
+      "id": "item.armor.nimbus-boots-15181",
+      "revision": 1,
+      "vnum": 15181,
+      "icon": "icon/item/15180"
+    },
+    {
+      "id": "item.armor.nimbus-boots-15182",
+      "revision": 1,
+      "vnum": 15182,
+      "icon": "icon/item/15180"
+    },
+    {
+      "id": "item.armor.fire-bird-shoes-15223",
+      "revision": 1,
+      "vnum": 15223,
+      "icon": "icon/item/15220"
+    },
+    {
+      "id": "item.armor.fire-bird-shoes-15224",
+      "revision": 1,
+      "vnum": 15224,
+      "icon": "icon/item/15220"
+    },
+    {
+      "id": "item.armor.wooden-necklace-16000",
+      "revision": 1,
+      "vnum": 16000,
+      "icon": "icon/item/16000"
+    },
+    {
+      "id": "item.armor.wooden-necklace-16001",
+      "revision": 1,
+      "vnum": 16001,
+      "icon": "icon/item/16000"
+    },
+    {
+      "id": "item.armor.wooden-necklace-16002",
+      "revision": 1,
+      "vnum": 16002,
+      "icon": "icon/item/16000"
+    },
+    {
+      "id": "item.armor.copper-necklace-16020",
+      "revision": 1,
+      "vnum": 16020,
+      "icon": "icon/item/16020"
+    },
+    {
+      "id": "item.armor.copper-necklace-16021",
+      "revision": 1,
+      "vnum": 16021,
+      "icon": "icon/item/16020"
+    },
+    {
+      "id": "item.armor.copper-necklace-16022",
+      "revision": 1,
+      "vnum": 16022,
+      "icon": "icon/item/16020"
+    },
+    {
+      "id": "item.armor.silver-necklace-16040",
+      "revision": 1,
+      "vnum": 16040,
+      "icon": "icon/item/16040"
+    },
+    {
+      "id": "item.armor.silver-necklace-16041",
+      "revision": 1,
+      "vnum": 16041,
+      "icon": "icon/item/16040"
+    },
+    {
+      "id": "item.armor.silver-necklace-16042",
+      "revision": 1,
+      "vnum": 16042,
+      "icon": "icon/item/16040"
+    },
+    {
+      "id": "item.armor.golden-necklace-16060",
+      "revision": 1,
+      "vnum": 16060,
+      "icon": "icon/item/16060"
+    },
+    {
+      "id": "item.armor.golden-necklace-16061",
+      "revision": 1,
+      "vnum": 16061,
+      "icon": "icon/item/16060"
+    },
+    {
+      "id": "item.armor.golden-necklace-16062",
+      "revision": 1,
+      "vnum": 16062,
+      "icon": "icon/item/16060"
+    },
+    {
+      "id": "item.armor.golden-necklace-16065",
+      "revision": 1,
+      "vnum": 16065,
+      "icon": "icon/item/16060"
+    },
+    {
+      "id": "item.armor.golden-necklace-16066",
+      "revision": 1,
+      "vnum": 16066,
+      "icon": "icon/item/16060"
+    },
+    {
+      "id": "item.armor.jade-necklace-16080",
+      "revision": 1,
+      "vnum": 16080,
+      "icon": "icon/item/16080"
+    },
+    {
+      "id": "item.armor.jade-necklace-16081",
+      "revision": 1,
+      "vnum": 16081,
+      "icon": "icon/item/16080"
+    },
+    {
+      "id": "item.armor.jade-necklace-16082",
+      "revision": 1,
+      "vnum": 16082,
+      "icon": "icon/item/16080"
+    },
+    {
+      "id": "item.armor.ebony-necklace-16100",
+      "revision": 1,
+      "vnum": 16100,
+      "icon": "icon/item/16100"
+    },
+    {
+      "id": "item.armor.ebony-necklace-16101",
+      "revision": 1,
+      "vnum": 16101,
+      "icon": "icon/item/16100"
+    },
+    {
+      "id": "item.armor.ebony-necklace-16102",
+      "revision": 1,
+      "vnum": 16102,
+      "icon": "icon/item/16100"
+    },
+    {
+      "id": "item.armor.pearl-necklace-16120",
+      "revision": 1,
+      "vnum": 16120,
+      "icon": "icon/item/16120"
+    },
+    {
+      "id": "item.armor.pearl-necklace-16121",
+      "revision": 1,
+      "vnum": 16121,
+      "icon": "icon/item/16120"
+    },
+    {
+      "id": "item.armor.pearl-necklace-16122",
+      "revision": 1,
+      "vnum": 16122,
+      "icon": "icon/item/16120"
+    },
+    {
+      "id": "item.armor.white-gold-necklace-16140",
+      "revision": 1,
+      "vnum": 16140,
+      "icon": "icon/item/16140"
+    },
+    {
+      "id": "item.armor.white-gold-necklace-16141",
+      "revision": 1,
+      "vnum": 16141,
+      "icon": "icon/item/16140"
+    },
+    {
+      "id": "item.armor.white-gold-necklace-16142",
+      "revision": 1,
+      "vnum": 16142,
+      "icon": "icon/item/16140"
+    },
+    {
+      "id": "item.armor.crystal-necklace-16160",
+      "revision": 1,
+      "vnum": 16160,
+      "icon": "icon/item/16160"
+    },
+    {
+      "id": "item.armor.crystal-necklace-16161",
+      "revision": 1,
+      "vnum": 16161,
+      "icon": "icon/item/16160"
+    },
+    {
+      "id": "item.armor.crystal-necklace-16162",
+      "revision": 1,
+      "vnum": 16162,
+      "icon": "icon/item/16160"
+    },
+    {
+      "id": "item.armor.amethyst-necklace-16180",
+      "revision": 1,
+      "vnum": 16180,
+      "icon": "icon/item/16180"
+    },
+    {
+      "id": "item.armor.amethyst-necklace-16181",
+      "revision": 1,
+      "vnum": 16181,
+      "icon": "icon/item/16180"
+    },
+    {
+      "id": "item.armor.amethyst-necklace-16182",
+      "revision": 1,
+      "vnum": 16182,
+      "icon": "icon/item/16180"
+    },
+    {
+      "id": "item.armor.wooden-earrings-17000",
+      "revision": 1,
+      "vnum": 17000,
+      "icon": "icon/item/17000"
+    },
+    {
+      "id": "item.armor.wooden-earrings-17001",
+      "revision": 1,
+      "vnum": 17001,
+      "icon": "icon/item/17000"
+    },
+    {
+      "id": "item.armor.wooden-earrings-17002",
+      "revision": 1,
+      "vnum": 17002,
+      "icon": "icon/item/17000"
+    },
+    {
+      "id": "item.armor.copper-earrings-17020",
+      "revision": 1,
+      "vnum": 17020,
+      "icon": "icon/item/17020"
+    },
+    {
+      "id": "item.armor.copper-earrings-17021",
+      "revision": 1,
+      "vnum": 17021,
+      "icon": "icon/item/17020"
+    },
+    {
+      "id": "item.armor.copper-earrings-17022",
+      "revision": 1,
+      "vnum": 17022,
+      "icon": "icon/item/17020"
+    },
+    {
+      "id": "item.armor.silver-earrings-17040",
+      "revision": 1,
+      "vnum": 17040,
+      "icon": "icon/item/17040"
+    },
+    {
+      "id": "item.armor.silver-earrings-17041",
+      "revision": 1,
+      "vnum": 17041,
+      "icon": "icon/item/17040"
+    },
+    {
+      "id": "item.armor.silver-earrings-17042",
+      "revision": 1,
+      "vnum": 17042,
+      "icon": "icon/item/17040"
+    },
+    {
+      "id": "item.armor.golden-earrings-17060",
+      "revision": 1,
+      "vnum": 17060,
+      "icon": "icon/item/17060"
+    },
+    {
+      "id": "item.armor.golden-earrings-17061",
+      "revision": 1,
+      "vnum": 17061,
+      "icon": "icon/item/17060"
+    },
+    {
+      "id": "item.armor.golden-earrings-17062",
+      "revision": 1,
+      "vnum": 17062,
+      "icon": "icon/item/17060"
+    },
+    {
+      "id": "item.armor.jade-earrings-17080",
+      "revision": 1,
+      "vnum": 17080,
+      "icon": "icon/item/17080"
+    },
+    {
+      "id": "item.armor.jade-earrings-17081",
+      "revision": 1,
+      "vnum": 17081,
+      "icon": "icon/item/17080"
+    },
+    {
+      "id": "item.armor.jade-earrings-17082",
+      "revision": 1,
+      "vnum": 17082,
+      "icon": "icon/item/17080"
+    },
+    {
+      "id": "item.armor.ebony-earrings-17100",
+      "revision": 1,
+      "vnum": 17100,
+      "icon": "icon/item/17100"
+    },
+    {
+      "id": "item.armor.ebony-earrings-17101",
+      "revision": 1,
+      "vnum": 17101,
+      "icon": "icon/item/17100"
+    },
+    {
+      "id": "item.armor.ebony-earrings-17102",
+      "revision": 1,
+      "vnum": 17102,
+      "icon": "icon/item/17100"
+    },
+    {
+      "id": "item.armor.pearl-earrings-17120",
+      "revision": 1,
+      "vnum": 17120,
+      "icon": "icon/item/17120"
+    },
+    {
+      "id": "item.armor.pearl-earrings-17121",
+      "revision": 1,
+      "vnum": 17121,
+      "icon": "icon/item/17120"
+    },
+    {
+      "id": "item.armor.pearl-earrings-17122",
+      "revision": 1,
+      "vnum": 17122,
+      "icon": "icon/item/17120"
+    },
+    {
+      "id": "item.armor.white-gold-earrings-17140",
+      "revision": 1,
+      "vnum": 17140,
+      "icon": "icon/item/17140"
+    },
+    {
+      "id": "item.armor.white-gold-earrings-17141",
+      "revision": 1,
+      "vnum": 17141,
+      "icon": "icon/item/17140"
+    },
+    {
+      "id": "item.armor.white-gold-earrings-17142",
+      "revision": 1,
+      "vnum": 17142,
+      "icon": "icon/item/17140"
+    },
+    {
+      "id": "item.armor.crystal-earrings-17160",
+      "revision": 1,
+      "vnum": 17160,
+      "icon": "icon/item/17160"
+    },
+    {
+      "id": "item.armor.crystal-earrings-17161",
+      "revision": 1,
+      "vnum": 17161,
+      "icon": "icon/item/17160"
+    },
+    {
+      "id": "item.armor.crystal-earrings-17162",
+      "revision": 1,
+      "vnum": 17162,
+      "icon": "icon/item/17160"
+    },
+    {
+      "id": "item.armor.amethyst-earrings-17180",
+      "revision": 1,
+      "vnum": 17180,
+      "icon": "icon/item/17180"
+    },
+    {
+      "id": "item.armor.amethyst-earrings-17181",
+      "revision": 1,
+      "vnum": 17181,
+      "icon": "icon/item/17180"
+    },
+    {
+      "id": "item.armor.amethyst-earrings-17182",
+      "revision": 1,
+      "vnum": 17182,
+      "icon": "icon/item/17180"
+    },
+    {
+      "id": "item.armor.heaven-s-tear-earrings-17200",
+      "revision": 1,
+      "vnum": 17200,
+      "icon": "icon/item/17200"
+    },
+    {
+      "id": "item.armor.heaven-s-tear-earrings-17201",
+      "revision": 1,
+      "vnum": 17201,
+      "icon": "icon/item/17200"
+    },
+    {
+      "id": "item.armor.heaven-s-tear-earrings-17202",
+      "revision": 1,
+      "vnum": 17202,
+      "icon": "icon/item/17200"
+    },
+    {
+      "id": "item.consumable.red-potion-s-27001",
+      "revision": 1,
+      "vnum": 27001,
+      "icon": "icon/item/27001"
+    },
+    {
+      "id": "item.consumable.red-potion-m-27002",
+      "revision": 1,
+      "vnum": 27002,
+      "icon": "icon/item/27002"
+    },
+    {
+      "id": "item.consumable.red-potion-l-27003",
+      "revision": 1,
+      "vnum": 27003,
+      "icon": "icon/item/27003"
+    },
+    {
+      "id": "item.consumable.blue-potion-s-27004",
+      "revision": 1,
+      "vnum": 27004,
+      "icon": "icon/item/27004"
+    },
+    {
+      "id": "item.consumable.blue-potion-m-27005",
+      "revision": 1,
+      "vnum": 27005,
+      "icon": "icon/item/27005"
+    },
+    {
+      "id": "item.consumable.blue-potion-l-27006",
+      "revision": 1,
+      "vnum": 27006,
+      "icon": "icon/item/27006"
+    }
+  ]
+}

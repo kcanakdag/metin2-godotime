@@ -16,6 +16,7 @@ U32_MAX = (1 << 32) - 1
 I32_MAX = (1 << 31) - 1
 EXP_TABLE_MAX_NAME = "PLAYER_EXP_TABLE_MAX"
 NORMAL_DELTA_COUNT = 31
+BOSS_DELTA_COUNT = 31
 EXPECTED_COMPILED_MAX_LEVEL = 120
 EXPECTED_DEFAULT_LEVEL_CAP = 99
 
@@ -160,14 +161,9 @@ def parse_progression_definitions(
         if next_experience == 0:
             raise ProgressionDefinitionError(f"exp_table[{level}] must be positive")
 
-    normal_level_delta_percent = _parse_integer_array(constants_cpp, "aiPercentByDeltaLev")
-    if len(normal_level_delta_percent) != NORMAL_DELTA_COUNT:
-        raise ProgressionDefinitionError(
-            "aiPercentByDeltaLev must contain "
-            f"{NORMAL_DELTA_COUNT} values, got {len(normal_level_delta_percent)}"
-        )
-    if any(value < 0 or value > 1000 for value in normal_level_delta_percent):
-        raise ProgressionDefinitionError("aiPercentByDeltaLev values must be within 0..1000")
+    normal_level_delta_percent = _level_delta_percent(
+        constants_cpp, "aiPercentByDeltaLev", NORMAL_DELTA_COUNT
+    )
 
     default_level_cap = _parse_named_assignment(config_cpp, "gPlayerMaxLevel")
     if not 1 <= default_level_cap <= compiled_max_level:
@@ -234,6 +230,32 @@ def _parse_warrior_initial(source: str) -> WarriorInitial:
 
 def _parse_integer_array(source: str, name: str) -> list[int]:
     return _parse_integer_list(_extract_braced_initializer(source, name), name)
+
+
+def _level_delta_percent(source: str, name: str, count: int) -> list[int]:
+    values = _parse_integer_array(source, name)
+    if len(values) != count:
+        raise ProgressionDefinitionError(f"{name} must contain {count} values, got {len(values)}")
+    if any(value < 0 or value > 1000 for value in values):
+        raise ProgressionDefinitionError(f"{name} values must be within 0..1000")
+    return values
+
+
+def parse_mob_level_delta_tables(
+    constants_cpp: str,
+) -> tuple[tuple[int, ...], tuple[int, ...]]:
+    """Both ``aiPercentByDeltaLev`` tables the original scales loot with.
+
+    ``ITEM_MANAGER::GetDropPct`` selects ``aiPercentByDeltaLevForBoss`` for a
+    non-stone mob of ``MOB_RANK_BOSS`` or above and ``aiPercentByDeltaLev``
+    otherwise. ``tools/build_drop_catalog.py`` embeds the pair in the compiled
+    drop catalog so the runtime rolls the pinned percentages instead of a copy
+    that could drift from the source.
+    """
+
+    normal = _level_delta_percent(constants_cpp, "aiPercentByDeltaLev", NORMAL_DELTA_COUNT)
+    boss = _level_delta_percent(constants_cpp, "aiPercentByDeltaLevForBoss", BOSS_DELTA_COUNT)
+    return tuple(normal), tuple(boss)
 
 
 def _parse_named_assignment(source: str, name: str) -> int:

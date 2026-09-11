@@ -3,6 +3,12 @@ extends RefCounted
 
 const PATH := "res://assets/imported/ground_items/catalog.v1.json"
 const PREFIX := "res://assets/imported/ground_items/models/"
+# Yang is currency rather than a drop row; the actor renders every coin with
+# this vnum's original ground mesh. The importer and installer always cover it.
+const YANG_VNUM := 1
+# Rows share models: one GLB may back hundreds of vnums, so the row bound is
+# generous while ``models`` stays the real conversion limit.
+const MAX_ITEMS := 4096
 static var _shared: RefCounted
 var error_message := ""
 var _items: Dictionary = {}
@@ -38,7 +44,7 @@ func load_document(document: Dictionary) -> bool:
 		not models is Dictionary
 		or not items is Array
 		or not 1 <= items.size()
-		or items.size() > 256
+		or items.size() > MAX_ITEMS
 	):
 		return _fail("Invalid ground-item catalog tables")
 	var validated: Dictionary = {}

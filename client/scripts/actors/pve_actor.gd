@@ -409,7 +409,7 @@ func _build_loot() -> void:
 		_loot_icon.pixel_size = 0.018
 		_loot_icon.position.y = 0.35
 		_visual.add_child(_loot_icon)
-	elif not _set_ground_model(1):
+	elif not _set_ground_model(GroundItems.YANG_VNUM):
 		_part(Vector3(0, 0.35, 0), Vector3(0.35, 0.35, 0.35), Color("ffd26e"))
 
 

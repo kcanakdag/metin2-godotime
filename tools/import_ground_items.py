@@ -17,16 +17,26 @@ from npc_definitions import material_bindings
 
 ITEM_LIST = "bin/pack/locale_en/locale/en/item_list.txt"
 DEFAULT_MODEL = "ymir work/item/etc/item_bag.gr2"
+# Yang is currency, not a drop row, but the client renders every dropped coin
+# with the original ``money.gr2`` ground mesh. Every package covers it even
+# when the selection only names droppable items.
+YANG_VNUM = 1
+# A selection names item vnums; conversion and the runtime both work per
+# distinct model. 235 of the 328 droppable registry rows resolve to the shared
+# ``item_bag.gr2`` fallback, so 32 models cover every reachable drop.  Bound the
+# vnum selection generously and keep the model bound where it belongs.
+MAX_VNUMS = 4096
+MAX_MODELS = 256
 
 
 def selected_models(text, vnums):
     selected = set(vnums)
     if (
         not selected
-        or len(selected) > 256
+        or len(selected) > MAX_VNUMS
         or any(type(v) is not int or not 0 < v <= 0xFFFFFFFF for v in selected)
     ):
-        raise ValueError("Select 1–256 positive item vnums")
+        raise ValueError(f"Select 1–{MAX_VNUMS} positive item vnums")
     result = {}
     for line in text.splitlines():
         fields = line.split("\t")
@@ -41,12 +51,40 @@ def selected_models(text, vnums):
         result[vnum] = model
     if set(result) != selected:
         raise ValueError(f"Selected item definitions missing: {sorted(selected - set(result))}")
+    models = set(result.values())
+    if len(models) > MAX_MODELS:
+        raise ValueError(
+            f"Selection resolves to {len(models)} ground models; {MAX_MODELS} is the maximum"
+        )
     return dict(sorted(result.items()))
+
+
+def selection_vnums(path):
+    """Every vnum of a compiled item selection (``tools/build_item_selection.py``)."""
+    document = json.loads(Path(path).read_text())
+    if document.get("schema_version") != 1 or not isinstance(document.get("items"), list):
+        raise ValueError(f"Unsupported item selection: {path}")
+    vnums = set()
+    for row in document["items"]:
+        vnum = row.get("vnum")
+        if type(vnum) is not int or not 0 < vnum <= 0xFFFFFFFF or vnum in vnums:
+            raise ValueError(f"Invalid item selection row: {row!r}")
+        vnums.add(vnum)
+    if not vnums:
+        raise ValueError(f"Empty item selection: {path}")
+    return sorted(vnums)
+
+
+def coverage_vnums(vnums):
+    """Union a selection with the vnums the client renders outside drop rolls."""
+    return sorted(set(vnums) | {YANG_VNUM})
 
 
 def normalize(vnums, *, offline=False):
     archive = source_archive(offline)
-    selected = selected_models(archive.get(ITEM_LIST).read_text(encoding="utf-8-sig"), vnums)
+    selected = selected_models(
+        archive.get(ITEM_LIST).read_text(encoding="utf-8-sig"), coverage_vnums(vnums)
+    )
     assets, entries = {}, []
     for vnum, virtual in selected.items():
         model = archive.resolve(virtual)
@@ -121,6 +159,11 @@ def preview(output, godot):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--vnum", type=int, action="append")
+    parser.add_argument(
+        "--selection",
+        type=Path,
+        help="Compiled item selection whose every row is selected (mutually exclusive with --vnum)",
+    )
     parser.add_argument("--offline", action="store_true")
     parser.add_argument("--blender")
     parser.add_argument("--godot", help="Import and render an isolated Linux/Xvfb preview")
@@ -128,10 +171,13 @@ def main():
     args = parser.parse_args()
     if args.godot and not args.blender:
         parser.error("--godot requires --blender")
+    if args.selection and args.vnum:
+        parser.error("--selection and --vnum are mutually exclusive")
     output = args.output.resolve()
     if output.exists():
         raise ValueError("Use a fresh output directory")
-    document, sources = normalize(args.vnum or [1, 27001, 27002], offline=args.offline)
+    vnums = selection_vnums(args.selection) if args.selection else (args.vnum or [1, 27001, 27002])
+    document, sources = normalize(vnums, offline=args.offline)
     output.mkdir(parents=True)
     manifest = output / "normalized.v1.json"
     manifest.write_text(json.dumps(document, indent=2) + "\n")

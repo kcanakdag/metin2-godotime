@@ -7,12 +7,22 @@ Missing, duplicate, malformed and unsafe selected records reject. This is an
 independently authored parser based on `GameLib/ItemManager.cpp::LoadItemList` and
 `ItemData.cpp::SetDefaultItemData`, not copied original implementation.
 
-The default fixture selects only Yang (vnum 1), Small Red Potion (27001) and Medium
-Red Potion (27002). Yang resolves `money.gr2`; both potions share `medicine_R.GR2`.
-The tool deduplicates models, resolves their diffuse texture dependencies through
-the pinned archive/Carbon reader, and reuses the existing Blender item converter.
-Only these selected dependencies are fetched. Original models/textures and outputs
-remain ignored. Runtime models use GLB, not GR2; conversion is centimetres to metres.
+The default selection is the drop registry itself: every droppable vnum in
+`content/profiles/drops/live-drops.json` plus Yang. `--selection PATH` takes a
+different JSON selection (`{"items": [{"vnum": …}, …]}` or a bare `[vnum, …]`
+list) and `--vnum` repeats still select an explicit ad-hoc set; the two options are
+mutually exclusive. Both paths stay inside `MAX_VNUMS = 4096`, and the resolved
+model set must fit `MAX_MODELS = 256`, so a bad selection fails before any network
+work.
+
+Yang (vnum 1) is always included even when a selection omits it, because the client
+renders every Yang amount with vnum 1 and the runtime catalog would otherwise have
+no model for it; `install_ground_items.py` rejects a package whose rows do not cover
+vnum 1. Yang resolves `money.gr2`. The tool deduplicates models, resolves their
+diffuse texture dependencies through the pinned archive/Carbon reader, and reuses
+the existing Blender item converter. Only these selected dependencies are fetched.
+Original models/textures and outputs remain ignored. Runtime models use GLB, not
+GR2; conversion is centimetres to metres.
 
 ```sh
 .local/venv-dev/bin/python tools/import_ground_items.py \
@@ -25,8 +35,8 @@ creates an isolated project and XDG directories beneath the output, preserving
 open editors. Logs, native report and screenshot are retained. Omit `--godot` for
 conversion only, or omit both engines for dependency normalization only. Use
 `--offline` after the selected files are cached. Repeat `--vnum` to select an
-explicit alternative set of at most 256 item IDs; choose a fresh output directory.
-Do not expand the fixture to every game item implicitly.
+explicit ad-hoc set of item IDs; choose a fresh output directory. Do not expand the
+fixture to every game item implicitly.
 
 `normalized.v1.json` maps each vnum to a shared model ID and records source hashes
 and revision. `blender-report.json` records artifact hashes, geometry, metre bounds,
@@ -34,12 +44,16 @@ textured meshes and converter/importer versions. The converter prepares assets; 
 Original drop motion/effects remain pending. Ground-name layout is handled by the
 shared client component described below.
 
-The default selection converts to two GLBs totalling 92,728 bytes. Parser tests
-cover shared selection, original fallback and invalid records. An offline normalized
-package exactly matched the online one. The complete offline Blender/Godot command
-passed at `.local/items/ground-pipeline-r2`; all three preview instances have textured
-meshes and valid bounds. The initial native capture was reviewed and showed the
-coin pile and two red bottles. See `acceptance.json` for source/artifact hashes.
+The current package is `.local/items/ground-pipeline-r4`: 329 vnums resolve to 33
+GLBs totalling 9,459,280 bytes, every artifact has at least one textured mesh, and
+the Blender report is bound to importer commit `8cba2311`. Its installed runtime
+catalog (`content_hash 6e4e1e25…`) holds the same 329 rows and 33 models. Parser and
+installer tests cover shared selection, original fallback, invalid records, the
+4096/256 bounds, the `--selection`/`--vnum` exclusivity and the mandatory currency
+row; an offline normalized package exactly matched the online one.
+The earlier three-item fixture passed at `.local/items/ground-pipeline-r2`
+(two GLBs, 92,728 bytes) and its archived copies live under
+`.local/items/superseded/`.
 
 
 ## Install and render the selected package
@@ -58,11 +72,13 @@ for a different package until an explicit upgrade workflow exists. Receipts esta
 consistency of trusted local compiler output, not a signature or license grant.
 
 The optional shared catalog validates selected vnums/model references and package
-paths, then caches PackedScenes for reuse. `PveActor` uses vnum 1 for Yang and the
-subscribed item vnum for item drops. Selected models stay settled; original falling,
-landing and glow effects are still pending. Items outside the installed model set
-retain their catalog icon fallback. Without a package, older fixture clients retain
-the previous fallback presentation. Restart a running client after installation.
+paths, then caches PackedScenes for reuse. `PveActor` uses the shared
+`GroundItems.YANG_VNUM` constant (1) for Yang and the subscribed item vnum for item
+drops, so the currency row cannot drift from the installed catalog. Selected models
+stay settled; original falling, landing and glow effects are still pending. Items
+outside the installed model set retain their catalog icon fallback. Without a
+package, older fixture clients retain the previous fallback presentation. Restart a
+running client after installation.
 
 `--ground-items` with `--field-combat --mob-route <route>` in
 `tools/test_browser_accounts.py` verifies matching original ground-model paths and

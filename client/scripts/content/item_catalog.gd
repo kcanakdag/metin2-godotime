@@ -5,7 +5,24 @@ extends RefCounted
 const MANIFEST_PATH := "res://assets/imported/content/p0-warrior-dog/manifest.v1.json"
 const HANDLER := "item.recovery.pool.v1"
 const SCHEMA_VERSION := 3
-const WEAR_SLOTS := ["body", "wrist", "neck", "ear", "head", "foot", "hand", "shield"]
+# The compiled token is the pinned reader's own wear flag lowercased
+# (``WEAR_FOOTS``, ``WEAR_UNIQUE``), so this mirrors the vocabulary instead of
+# inventing slot names. Accepting only a subset fails the whole catalog closed
+# because one unrecognised row rejects every item definition.
+const WEAR_SLOTS := [
+	"body",
+	"head",
+	"foots",
+	"wrist",
+	"weapon",
+	"neck",
+	"ear",
+	"shield",
+	"unique",
+	"arrow",
+	"hair",
+	"ability",
+]
 
 static var _shared: ItemCatalog
 

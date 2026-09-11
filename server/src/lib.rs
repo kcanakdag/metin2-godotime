@@ -16,6 +16,7 @@ mod combat_geometry;
 mod combo;
 mod content;
 pub mod crush;
+mod drops;
 mod inventory;
 mod item_catalog;
 mod item_effects;
@@ -290,6 +291,7 @@ pub fn init(ctx: &ReducerContext) {
     combat::initialize(ctx);
     npcs::validate_content();
     quest::validate_content();
+    drops::validate_content();
     npc_spawns::validate_content();
     npc_spawns::maintain(ctx).expect("Initialize area NPC placement");
     admin::initialize();

@@ -1097,7 +1097,7 @@ Implementation prerequisites: [SYS-LOOT](#sys-loot).
 
 Behavioral coupling: [SRV-009](#srv-009), [SRV-011](#srv-011), [SRV-013](#srv-013), economy policy.
 
-Current project: One gold/potion reward, reservation/pickup/expiry; no original drop table or party allocation.
+Current project: Compiled pinned drop catalog (revision 7ee9c84: 1220 common rows, 10 groups, 10 selected mobs) rolled server-side on kill with the original level-delta tables and rare-bonus draw order; excluded rows recorded per reason. 329-vnum/33-model ground catalog including mandatory Yang, and a 52-check two-export field run (equip, kill, death on both clients, original ground models) with 132 focused Python and 9 Rust tests. Alignment drops, party allocation, the item-drop death penalty and gift/treasure boxes remain open.
 
 Named subfeatures and required behavior:
 

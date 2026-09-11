@@ -5,6 +5,84 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Classic drop tables roll server-side in both exports — 2026-09-11
+
+`kill_monster` no longer hands out a fixed red potion. The pinned original catalog
+is compiled, embedded in the module and rolled on the server for the killing
+character: `tools/metin_drops.py` reads the pinned `common_drop_item.txt` and
+`mob_drop_item.txt`, `tools/build_drop_catalog.py` compiles the selection in
+`content/profiles/drops/live-drops.json`, `server/build_drops.rs` embeds it through
+`MT2_DROP_CATALOG`, and `server/src/drops.rs` reproduces `ITEM_MANAGER::CreateDropItem`
+including the `GetDropPct` level-delta scaling and the rare-bonus draw order. The
+old `inventory::drop_potion` helper is deleted; drops become ground rows through
+the existing reservation/pickup/expiry path.
+
+The compiled `server/content/drops/catalog.v1.json` (file sha256 `499de240…`,
+embedded `content_hash 71fafdec…`, source revision `7ee9c84`, corpus hash
+`7d0521d8…`) carries 1220 common rows — PAWN 277, S_PAWN 317, KNIGHT 319,
+S_KNIGHT 307 — plus 10 group declarations / 41 rows (8 `drop`, 2 `kill`, 0 `limit`,
+0 `thiefgloves`) and the 10 selected mobs (4 PAWN, 3 S_PAWN, 3 S_KNIGHT;
+`item_prototypes` count 5743, 150 range rows). Exclusions are recorded per reason
+instead of silently dropped: 53 unreachable-band rows (KNIGHT 29, S_PAWN 24) and 744
+rows whose vnum has no installed prototype (PAWN 157, KNIGHT 191, S_KNIGHT 203,
+S_PAWN 193), plus 19 dropped group rows. `tools/progression_definitions.py` now also
+parses `aiPercentByDeltaLevForBoss` so the catalog embeds both level-delta tables
+the original selects between by mob rank.
+
+Acceptance is the exported two-client run `.local/drops/field-live-r1/report.json`
+(sha256 `1c6931ab…`) against database `mt2-p2-world-population-r1-20260911`:
+**52 checks, 0 failures, 0 browser engine errors**. It registers one account per
+export, creates a character on each, walks `tests/fixtures/yongan-hunting-route.json`
+out of town in 16 legs, equips the starter weapon, damages and kills an original
+field mob with the death observed on both exports, and confirms the original ground
+models render in both with a native capture. Focused tests:
+`tests.test_drop_catalog test_drop_tables test_item_definitions test_ground_items
+test_install_ground_items test_deploy_export` pass 132 checks,
+`tests.test_progression_definitions` 9, and `server/src/drops.rs` holds 9 Rust tests
+covering the bonus short-circuit, rank table selection and clamp, level-band
+consumption, kill-group gating, `limit` gating and widened percent rounding. The
+Godot fixture `.local/items/ground-runtime-r2/` passes 32 item-drop checks
+(`runtime.log` sha256 `4cb4bd7f…`, `item-drops.json` `cef027ab…`). Earlier ground
+presentation evidence stays bound to its own database: `.local/items/ground-live-r1`
+(48 checks, sha256 `6cac8683…`) and `.local/items/labels-live-r1` (49 checks,
+sha256 `5c79c8b6…`) ran on `mt2-p2-original-linked-r1-20260908`.
+
+Remaining limits: the selected slice has no populated `limit` or `thiefgloves`
+groups, and the kill-group `rare_pct` column is parsed and consumed in draw order
+but the item model has no rare attribute to set. Party/alignment drops, the
+item-drop death penalty and gift/treasure boxes stay open `SRV-012` subfeatures, and
+the 744 unregistered-item rows are a deliberate registry boundary rather than a
+loader failure. The installed module (sha256 `5d2a0b38…`,
+regeneration-registry receipt `count=945`) uses the local issuer and must not be
+published; read `docs/development.md#regeneration-registry-hot-swap-hazard` before
+hot-swapping it over an existing database.
+
+## Ground items cover the whole drop registry with Yang — 2026-09-11
+
+The ground-item fixture used to convert three hand-picked items, so most compiled
+drop rows would have failed to render. `tools/import_ground_items.py` now defaults
+to the drop registry itself — every droppable vnum in
+`content/profiles/drops/live-drops.json` plus Yang — and `--selection PATH` takes a
+different JSON selection while `--vnum` still selects an explicit ad-hoc set; the
+two options are mutually exclusive and both stay inside `MAX_VNUMS = 4096` /
+`MAX_MODELS = 256`. Yang (vnum 1) is always included and
+`tools/install_ground_items.py` rejects a package whose rows do not cover it,
+because the client draws every coin amount with that vnum.
+
+`.local/items/ground-pipeline-r4` converts 329 vnums into 33 GLBs totalling
+9,459,280 bytes, every artifact carries at least one textured mesh, and the Blender
+report is bound to importer commit `8cba2311`. The installed runtime catalog
+`client/assets/imported/ground_items/catalog.v1.json` (file sha256 `71dad56f…`,
+`content_hash 6e4e1e25…`) holds the same 329 rows and 33 models. `GroundItems.YANG_VNUM`
+is now the single client constant for that model and `pve_actor.gd` renders Yang
+through it. `client/scripts/content/item_catalog.gd` also accepts the pinned
+reader's own wear vocabulary (`foots`, `unique`, `weapon`, `arrow`, `hair`,
+`ability`, …): the previous slot list rejected the whole catalog as soon as one
+compiled row used a flag it did not know. `docs/ground-items.md` documents the new
+selection, the mandatory currency row and the bounds; the importer/installer tests
+cover shared selection, invalid records, both bounds, the option exclusivity and
+the Yang-coverage rejection.
+
 ## Area-NPC dialogue accepted on both exported clients — 2026-09-11
 
 `interact_npc` now carries the original town conversation instead of a placeholder
@@ -3003,7 +3081,7 @@ Public endpoint still uses protocol 19. Artifact hashes and scoped acceptance:
 `server/examples/world_route.rs` adds a bounded offline route planner using the
 runtime terrain/footprint/clear-path functions. It emits map-hash-bound waypoints
 with segments up to 12 m, without changing game state. The selected path from
-(660,575) to (788.39,553.6) is in `tests/fixtures/yongan-hunting-route.json`.
+(660,575) to (787.5,567) is in `tests/fixtures/yongan-hunting-route.json`.
 Repeated generation was identical; blocked destination (770,552) and out-of-bounds
 start were rejected. Focused Rust example Clippy and Python lint passed.
 
