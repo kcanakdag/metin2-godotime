@@ -20,6 +20,9 @@ Start each new task or handoff by inspecting `git status`, recent commits and th
 relevant source. Read these maintained documents rather than relying on an old
 chat summary:
 
+- `AGENT_HANDOFF.md`: the newest takeover document. It records workstation and
+  deployment state, the slice currently in flight and its investigation, plus
+  the immediate next actions. Revalidate its observed facts before acting.
 - `README.md`: setup, controls, supported behavior and deployment overview.
 - `docs/rebuild/implementation-status.md`: accepted milestones, active work and
   evidence. Local work and the public deployment may be different versions.
@@ -264,18 +267,56 @@ accepted and deployed; never claim full-game or original-client parity from one
 bounded fixture. Continue authorized work without repeatedly asking permission
 for routine implementation choices.
 
-## Current continuation snapshot — protocol 32 quests (2026-09-10)
+## Current continuation snapshot — world population deployed, combat polish active (2026-09-11)
 
-The active slice is the protocol-32 server-authoritative quest runtime. It is
-deployed publicly as release `20260910T132257494611Z`, database
-`mt2-public-quests-v32-20260910`, module SHA-256
-`3f96b25aea5563059b1c6cc80966ae234ace7a1dd99effa49c2f088c47f26f9d`. The served
-web pack is `web-r4` and the native pack is `linux-r6`; both live under
-`.local/public-quests-v32-r1/`, and `.local/.../web-r5` differs and is **not**
-deployed. Confirm the live release from
+The repository root `AGENT_HANDOFF.md` is the detailed takeover document for this
+checkpoint. It records a moment, not configuration: revalidate its processes,
+endpoints and hashes before restarting, publishing or claiming status.
+
+The active slice is **combat polish**: held-space combo continuation with and
+without a live target, a data-driven weapon-mode chain so the two-handed warrior
+and other classes reuse one path, then skill learning and upgrading. The
+investigation (file and line anchors, original-server comparison and a suggested
+change order) is recorded in `AGENT_HANDOFF.md` section 5; no code has changed yet
+and the worktree is clean.
+
+The public playtest endpoint serves release `20260911T123640567701Z` on database
+`mt2-public-quests-v32-20260910` (`delete_data: never`): module
+`/opt/metin2-godotime/mt2_server.wasm` sha256
+`ba665d3f7507f1f343183093ab35269fd359b9f765e0fb3b1ebe9cc32075051a` (3,720,905
+bytes), built from `.local/world-population-r1/mt2_server.maintain-r1.wasm`, and
+the served web pack `index.pck` sha256
+`4db41122b687608511a634e0011a9a76ffcf257b8231497019a9d090b3840ab5`, byte
+identical to `.local/world-population-r1/export/web-r8`. The previous baseline
+was release `20260910T132257494611Z`, module
+`3f96b25aea5563059b1c6cc80966ae234ace7a1dd99effa49c2f088c47f26f9d`; its local
+candidates under `.local/public-quests-v32-r1/` (web-r4, web-r5, linux-r6) are
+superseded history and must not be re-deployed. Confirm the live release from
 `/opt/metin2-godotime/deployment-status.json` plus `sha256sum
-/opt/metin2-godotime/mt2_server.wasm`; the SpacetimeDB CLI "program hash" is over a
-normalized module and does not equal the file hash.
+/opt/metin2-godotime/mt2_server.wasm`; the SpacetimeDB CLI "program hash" is over
+a normalized module and does not equal the file hash.
+
+That deployment added the private `monster_regeneration_registry` table with 945
+entries (a top-up over `monster_regeneration`) while retaining the protocol-32
+quest catalog and account rows, so the deployed module itself embeds the
+regeneration-registry receipt (945 entries). `server/build.rs` plus
+`tools/deploy.py` now refuse to hot-swap a module whose registry is empty unless
+`--allow-empty-regeneration` or `--reset-database` is passed. Read
+`docs/development.md#regeneration-registry-hot-swap-hazard` before publishing
+over an existing database, and keep a registry-covering population file
+(currently `.local/mobs/yongan-runtime-policy-r2/population.v1.json`, 945
+entries) available for top-ups like the deployed
+`.local/world-population-r1/mt2_server.maintain-r1.wasm`.
+`content/worlds/yongan.population.json` still has no `regeneration` key.
+
+## Superseded continuation snapshot — protocol 32 quests (2026-09-10)
+
+Superseded by the 2026-09-11 deployment above; the quest runtime and its sources
+of truth remain current.
+
+The protocol-32 server-authoritative quest runtime was deployed publicly as
+release `20260910T132257494611Z` (module SHA-256
+`3f96b25aea5563059b1c6cc80966ae234ace7a1dd99effa49c2f088c47f26f9d`).
 
 Quest sources of truth: `server/src/quest.rs` (runtime), `tools/build_quest_catalog.py`
 (compiler), `tools/metin_quests.py` (pinned corpus reader), profile
@@ -291,16 +332,11 @@ published module demonstrably contains the catalog — verify a deployment with
 `quest_state`, `quest_objective` and `quest_selection` are account-filtered with
 `:sender` visibility filters; branch bodies never leave the server.
 
-The same worktree carries an unpublished deployment-safety change: the
-regeneration-registry receipt. `server/build.rs` embeds
-`mt2spacetime.regeneration-registry.v1 count=<n>` and `tools/deploy.py` refuses to
-hot-swap a module whose registry is empty unless `--allow-empty-regeneration` or
-`--reset-database` is passed. The public module predates the receipt and prints
-`None`, which is never blocked. Read
-`docs/development.md#regeneration-registry-hot-swap-hazard` before publishing a
-new module over an existing database; the current covering candidate is
-`.local/mobs/yongan-runtime-policy-r2/population.v1.json` with 945 entries, while
-`content/worlds/yongan.population.json` still has no `regeneration` key.
+The regeneration-registry receipt described in this snapshot is no longer
+unpublished: `server/build.rs` embeds
+`mt2spacetime.regeneration-registry.v1 count=<n>`, `tools/deploy.py` refuses a
+hot-swap whose receipt is empty, and the currently deployed module carries 945
+entries. See the newest snapshot above.
 
 ## Superseded continuation snapshot — protocol-31 self-buffs (2026-09-09)
 
