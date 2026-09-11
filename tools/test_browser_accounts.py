@@ -1062,6 +1062,7 @@ def main() -> None:
                     web_id,
                     native_id,
                     output,
+                    field_mobs=samples.get("field_mobs"),
                 )
             if args.progression_combat and args.inventory:
                 # The inventory quickslot rejection needs the full-health starter
