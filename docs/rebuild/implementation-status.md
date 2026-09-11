@@ -5,6 +5,35 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
+## Actor acceptance follows installed content — 2026-09-11
+
+The exported two-client actor acceptance had drifted behind the content it was
+meant to validate. It asserted the retired `p0-warrior-dog` fixture paths and a
+fixture-only mob id, so a relocated character model or a newly installed species
+failed the harness before it exercised anything. `tools/test_browser_actors.py`
+now derives its expectations from `client/assets/imported/characters/catalog.v1.json`
+and `mobs/presentation.v1.json`, and `tools/test_browser_accounts.py` passes the
+field-route mob capture into the check.
+
+The onehand-combo check no longer requires the live clip to still be playing. The
+software-rendered Web client runs at a few frames per second and can step
+straight over a one-second clip, so the check reads the subscribed
+`public_action_history` for the server-accepted action instead. Peer combo
+presentation is recorded inside the same polling predicate: the native history
+is a short rolling window, and a second poll after the first check returned
+missed it (r26 `peer_client_rendered_the_accepted_onehand_combo` timed out even
+though the r25 native snapshot contained the presentation). Two named checks
+remain: `accepted_onehand_action_projects_to_both_clients` and
+`peer_client_rendered_the_accepted_onehand_combo`.
+
+Acceptance is `.local/world-population-r1/acceptance/browser-r27/report.json`
+(sha256 `e66b0e27…`) against database `mt2-p2-world-population-r1-20260911`,
+exports `web-r7` and `linux-r3`: **124 checks, 0 failures, 0 browser engine
+errors**, including the full entry flow, field route, both actor checks,
+equipment projection, movement rejection, character switching and
+logout/login. The r25/r26 reports remain recorded as harness failures, not
+gameplay regressions.
+
 ## Durable web sign-out and a live login button — 2026-09-11
 
 Two web-only account defects are fixed. First, sign-out durability: Emscripten's
