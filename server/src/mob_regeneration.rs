@@ -14,6 +14,19 @@ pub struct MonsterRegeneration {
     pub last_owner: u64,
 }
 
+/// Which registry the persisted `monster_regeneration` rows were last reconciled
+/// with. This belongs to the database, so the top-up decision survives hot-swaps
+/// and rolls back with the transaction that failed to complete it.
+#[spacetimedb::table(accessor = monster_regeneration_registry)]
+pub struct MonsterRegenerationRegistry {
+    #[primary_key]
+    pub id: u8,
+    pub receipt: String,
+    pub entries: u32,
+}
+
+const REGISTRY_MARKER_ID: u8 = 0;
+
 fn registry_definition(id: u32) -> Option<&'static crate::definitions::RegenerationDefinition> {
     crate::definitions::REGENERATION_DEFINITIONS
         .iter()
@@ -65,12 +78,69 @@ fn row(id: u32, state: &EntryState) -> MonsterRegeneration {
     }
 }
 
+fn pending_registry_ids(existing: impl Fn(u32) -> bool) -> Vec<u32> {
+    crate::definitions::REGENERATION_DEFINITIONS
+        .iter()
+        .map(|definition| definition.id)
+        .filter(|id| !existing(*id))
+        .collect()
+}
+
+/// Persisted rows outlive the module that inserted them, so a module whose
+/// registry covers more entries than the database has rows must top up the
+/// missing ones from `simulate`; `initialize` only runs when the database is
+/// created. Inserting a row for an entry that did not exist when the database was
+/// created is safe: it starts pending and the next tick allocates its group.
+/// Existing rows are never touched — their owners, capacity and saved deadlines
+/// belong to live allocations.
+///
+/// The marker row keeps the scan out of every tick and makes the decision
+/// transactional: a rolled-back tick leaves the previous marker, so the top-up is
+/// retried instead of being skipped by a process-local flag.
+pub fn maintain(ctx: &ReducerContext) -> Result<(), String> {
+    let installed = crate::definitions::REGENERATION_REGISTRY_RECEIPT;
+    let entries = crate::definitions::REGENERATION_DEFINITIONS.len() as u32;
+    if ctx
+        .db
+        .monster_regeneration_registry()
+        .id()
+        .find(REGISTRY_MARKER_ID)
+        .is_some_and(|marker| marker.receipt == installed && marker.entries == entries)
+    {
+        return Ok(());
+    }
+    for id in pending_registry_ids(|id| ctx.db.monster_regeneration().id().find(id).is_some()) {
+        let d = definition(id)?;
+        ctx.db
+            .monster_regeneration()
+            .insert(row(id, &EntryState::new(d.interval_us, d.capacity, 0)?));
+    }
+    let marker = MonsterRegenerationRegistry {
+        id: REGISTRY_MARKER_ID,
+        receipt: installed.to_owned(),
+        entries,
+    };
+    if ctx
+        .db
+        .monster_regeneration_registry()
+        .id()
+        .find(REGISTRY_MARKER_ID)
+        .is_some()
+    {
+        ctx.db.monster_regeneration_registry().id().update(marker);
+    } else {
+        ctx.db.monster_regeneration_registry().insert(marker);
+    }
+    Ok(())
+}
+
 pub fn initialize(ctx: &ReducerContext) -> Result<(), String> {
     for d in crate::definitions::REGENERATION_DEFINITIONS {
         ctx.db
             .monster_regeneration()
             .insert(row(d.id, &EntryState::new(d.interval_us, d.capacity, 0)?));
     }
+    maintain(ctx)?;
     tick(ctx)?;
     Ok(())
 }
@@ -222,4 +292,27 @@ pub fn forces_aggression(ctx: &ReducerContext, monster_id: u32) -> Result<bool, 
     // An allocated group can outlive the registry entry that created it, so this
     // reports "no forced aggression" instead of failing the combat tick.
     Ok(registry_definition(group.regeneration_entry).is_some_and(|d| d.force_aggressive))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pending_registry_ids;
+    use std::collections::HashSet;
+
+    #[test]
+    fn pending_registry_ids_selects_only_absent_entries_in_registry_order() {
+        let installed = crate::definitions::REGENERATION_DEFINITIONS;
+        let ids: Vec<u32> = installed.iter().map(|definition| definition.id).collect();
+        assert_eq!(pending_registry_ids(|_| false), ids);
+        assert!(pending_registry_ids(|_| true).is_empty());
+
+        let existing: HashSet<u32> = ids.iter().copied().step_by(2).collect();
+        assert_eq!(
+            pending_registry_ids(|id| existing.contains(&id)),
+            ids.iter()
+                .copied()
+                .filter(|id| !existing.contains(id))
+                .collect::<Vec<_>>()
+        );
+    }
 }

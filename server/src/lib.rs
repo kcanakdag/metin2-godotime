@@ -600,6 +600,7 @@ pub fn simulate(ctx: &ReducerContext, _schedule: TickSchedule) -> Result<(), Str
     // 2.8.3 has no update lifecycle hook. Refresh static metadata after publication
     // from this existing authorized schedule, without resetting any gameplay tables.
     refresh_world_info(ctx)?;
+    mob_regeneration::maintain(ctx)?;
     accounts::maintain(ctx);
     let mut clock = ctx
         .db
