@@ -103,7 +103,11 @@ func logout() -> void:
 	_refresh_at = 0
 	_restoring = false
 	_connection.disconnect_game()
-	_auth.logout()
+	# The browser build only reports a finished sign-out once the local session
+	# is durably cleared; showing the login screen earlier lets an immediate
+	# reload restore the token the player just discarded.
+	_intro.set_status("authenticating", "Signing out…")
+	await _auth.logout()
 	_intro.show()
 	_intro.clear_session()
 	_intro.set_status("ready", "Log in to continue.")

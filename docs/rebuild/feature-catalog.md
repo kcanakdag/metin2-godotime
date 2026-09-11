@@ -632,7 +632,7 @@ Implementation prerequisites: [SYS-UI](#sys-ui).
 
 Behavioral coupling: content build, [SRV-011](#srv-011), [SRV-013](#srv-013), [SRV-022](#srv-022).
 
-Current project: Selected original images and connected intro/HUD/inventory/chat/map/system subset; no full fonts/screens/state parity.
+Current project: Selected original images and connected intro/HUD/inventory/chat/map/system subset, including a system-menu sign-out whose cleared web session is durable before the login screen returns (browser repro on the served export); no full fonts/screens/state parity.
 
 Named subfeatures and required behavior:
 

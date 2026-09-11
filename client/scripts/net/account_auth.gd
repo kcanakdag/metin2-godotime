@@ -6,6 +6,30 @@ signal token_ready(token: String)
 signal failed(message: String)
 signal status_changed(message: String)
 
+## The web export mounts `user://` with Emscripten's IDBFS, and the engine drops a
+## write-back requested while another one is running: `GodotFS.sync()` resolves
+## immediately and reports "Already syncing!". Signing out therefore waits for the
+## in-flight sync, then starts and awaits its own, so the deletion is durable before
+## the caller leaves its busy state. `eval` without the global-context flag is a
+## direct eval inside the engine's module closure, which is the only scope that can
+## reach `GodotFS`; the completion marker travels through `globalThis`.
+const WEB_FLUSH_SCRIPT := """
+globalThis.__mt2UserFsFlushed = 0;
+void (async () => {
+	try {
+		while (GodotFS._syncing) {
+			await new Promise(resolve => setTimeout(resolve, 20));
+		}
+		await GodotFS.sync();
+		globalThis.__mt2UserFsFlushed = 1;
+	} catch (error) {
+		globalThis.__mt2UserFsFlushed = -1;
+	}
+})();
+"""
+const WEB_FLUSH_READY := "globalThis.__mt2UserFsFlushed || 0"
+const WEB_FLUSH_TIMEOUT_MS := 5000
+
 var _base_url := ""
 var _session_token := ""
 var _session_path := ""
@@ -63,6 +87,8 @@ func logout() -> void:
 	var token := _session_token
 	_forget_session()
 	_busy = false
+	if OS.has_feature("web"):
+		await _await_web_filesystem_flush()
 	if not token.is_empty():
 		await _request("/sign-out", HTTPClient.METHOD_POST, {}, token)
 
@@ -186,3 +212,29 @@ func _flush_web_filesystem() -> void:
 	if not OS.has_feature("web"):
 		return
 	JavaScriptBridge.force_fs_sync()
+
+
+## Signing out has to survive an immediate page reload, so the browser build
+## waits for the IndexedDB write-back instead of assuming the engine's queued
+## sync already ran. The caller keeps its "signing out" state until this returns.
+func _await_web_filesystem_flush() -> void:
+	JavaScriptBridge.eval(WEB_FLUSH_SCRIPT)
+	var deadline := Time.get_ticks_msec() + WEB_FLUSH_TIMEOUT_MS
+	while true:
+		var state := _web_flush_state()
+		if state > 0:
+			return
+		if state < 0:
+			push_warning("The web export could not persist the cleared session.")
+			return
+		if Time.get_ticks_msec() >= deadline:
+			push_warning("The web export did not persist the cleared session in time.")
+			return
+		await get_tree().process_frame
+
+
+func _web_flush_state() -> int:
+	var raw: Variant = JavaScriptBridge.eval(WEB_FLUSH_READY)
+	if typeof(raw) == TYPE_INT or typeof(raw) == TYPE_FLOAT:
+		return int(raw)
+	return 0
