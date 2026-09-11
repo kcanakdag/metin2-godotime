@@ -632,7 +632,7 @@ Implementation prerequisites: [SYS-UI](#sys-ui).
 
 Behavioral coupling: content build, [SRV-011](#srv-011), [SRV-013](#srv-013), [SRV-022](#srv-022).
 
-Current project: Selected original images and connected intro/HUD/inventory/chat/map/system subset, including a system-menu sign-out whose cleared web session is durable before the login screen returns (browser repro on the served export); no full fonts/screens/state parity.
+Current project: Selected original images and connected intro/HUD/inventory/chat/map/system subset, including a system-menu sign-out whose cleared web session survives an immediate reload (localStorage marker plus repeated IndexedDB clean reads, browser repro r9) and a login button that only the auth-service probe disables (login rejection repro r2, 139-check exported replay r21); no full fonts/screens/state parity.
 
 Named subfeatures and required behavior:
 

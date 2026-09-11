@@ -4,6 +4,10 @@ extends Node
 
 const Intro = preload("res://scripts/ui/classic_intro.gd")
 const AuthTransport = preload("res://scripts/net/account_auth.gd")
+## A single probe can miss while the page is busy (the exported Web build runs at
+## a few frames per second under software rendering), and dropping availability
+## for that blip hides the server row and disables the account-list button.
+const PROBE_FAILURE_TOLERANCE := 3
 
 var _auth: AuthTransport
 var _connection: GameConnection
@@ -17,6 +21,8 @@ var _return_to_world := false
 var _refresh_at := 0
 var _health_at := 0
 var _health_pending := false
+var _game_probe_failures := 0
+var _auth_probe_failures := 0
 var _restoring := false
 ## True while a scheduled token refresh deliberately drops the world connection.
 ## The lobby overlay and the HUD windows stay as the player left them until the
@@ -270,9 +276,17 @@ func _select_character(character_id: String) -> void:
 
 func _check_server() -> void:
 	_health_pending = true
-	var auth_ready := await _health_request("/auth/health")
-	var game_ready := await _health_request("/v1/database/" + _database.uri_encode() + "/identity")
-	_intro.set_server("Metin2 Godotime", auth_ready and game_ready)
+	# Both probes are awaited in order; a probe that misses once no longer flips
+	# the lobby offline, so the short in-flight window is invisible to the player.
+	var auth_ready: bool = await _health_request("/auth/health")
+	var game_ready: bool = await _health_request(
+		"/v1/database/" + _database.uri_encode() + "/identity"
+	)
+	_auth_probe_failures = 0 if auth_ready else _auth_probe_failures + 1
+	_game_probe_failures = 0 if game_ready else _game_probe_failures + 1
+	var auth_available := _auth_probe_failures < PROBE_FAILURE_TOLERANCE
+	var game_available := _game_probe_failures < PROBE_FAILURE_TOLERANCE
+	_intro.set_server("Metin2 Godotime", auth_available and game_available, auth_available)
 	_health_at = Time.get_ticks_msec() + 15000
 	_health_pending = false
 

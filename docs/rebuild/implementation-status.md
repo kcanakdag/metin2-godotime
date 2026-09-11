@@ -5,38 +5,64 @@ planning deliverable. It complements the [full rebuild plan](../full-rebuild-pla
 and its canonical [feature catalog](plan.json); it does not replace, collapse,
 or reclassify that scope.
 
-## Web sign-out survives an immediate page reload — 2026-09-11
+## Durable web sign-out and a live login button — 2026-09-11
 
-The browser export mounts `user://` from IndexedDB through Emscripten's IDBFS, and
-the engine discards a write-back requested while another one is running
-(`GodotFS.sync()` resolves immediately and reports `Already syncing!`). The
-session deletion a sign-out performs could therefore still be pending when the
-player reloaded, restoring the token they had just discarded.
-`client/scripts/net/account_auth.gd` now waits for the in-flight
-`GodotFS._syncing` flag, then starts and awaits its own `GodotFS.sync()` before
-`logout()` reports completion, with a five-second timeout that warns instead of
-hanging. `client/scripts/net/account_flow.gd` holds the "Signing out…" status
-until that returns, so the login screen is not shown early. The helper is web-only;
-native and Linux sign-out behaviour is unchanged.
+Two web-only account defects are fixed. First, sign-out durability: Emscripten's
+IDBFS queues write-backs, and a queued write carries the snapshot of the file it
+captured, so a write-back of the session captured before the sign-out could land
+*after* the deletion sync and restore the token the player had just discarded.
+Waiting for a single `GodotFS.sync()` (the superseded `logout-repro-r6` change)
+only closed the "already syncing" race. `client/scripts/net/account_auth.gd` now
+keeps forcing a write-back of the cleared state and reads the persisted store
+directly until the `.session` key stays absent across three consecutive reads,
+with a six-second timeout that warns instead of hanging. Because that write-back
+can still lose the race outright, the browser build also records the signed-out
+state in `localStorage` (synchronous, so it survives the next page load even when
+IndexedDB has not caught up) under a per-endpoint, per-profile key, and
+`configure()` re-drops a token file that a signed-out marker still covers. The
+marker is cleared whenever a session is saved, so signing into one server never
+hides a session kept for another; an unreadable marker (private mode, blocked
+storage) falls back to the stored file instead of locking the player out.
+`client/scripts/net/account_flow.gd` holds "Signing out…" until the removal is
+confirmed. Native and Linux sign-out never used this path.
 
-Acceptance is the focused browser reproduction `tools/repro_logout_refresh.py`
-run against the served `web-r4` export (`index.pck` sha256 `5aa61d68…`,
-`index.wasm` `fc74679e…`) on database `mt2-p2-world-population-r1-20260911`:
-`.local/world-population-r1/acceptance/logout-repro-r6/report.json`
-(sha256 `be548dc8…`) records **19 checks, 0 failures, 0 browser engine errors**.
-It registers an account, creates a character, enters the world, signs out through
-the original system menu and reloads the page; the raw IndexedDB view shows the
-stored session gone at the first sample (`persisted_after_ms: 0`) and the
-reloaded client settles on the server-selection screen instead of stalling.
-`before-reload.png` and `after-reload.png` are retained for human review. The
-same script reproduced the original stall on the pre-fix export
-(`logout-repro-r2`, status `stalled_after_logout_reload`) and passed on `web-r3`
-`logout-repro-r5` after the change.
+Second, the login button: the lobby health probe gates the server row *and*
+`login_submit` on the game-database check, so a single missed probe — routine in
+the exported Web build, which runs at a few frames per second under software
+rendering — disabled the button for the whole in-flight window and then silently
+swallowed the click. `account_flow.gd` now tolerates three consecutive probe
+failures per service, and `classic_intro.gd` tracks `_auth_available` separately
+from the server-list `_available`: `login_submit` is disabled only by `_busy or
+not _auth_available`, and an unavailable auth service reports "The login service
+is unreachable. Retrying…" instead of doing nothing.
 
-Remaining limits: this evidence is probe/IndexedDB state plus retained
-screenshots rather than an agent-reviewed render, and the timeout path still
-clears the in-memory session before the durable write, so a blocked IndexedDB
-could lose it on reload. Native/Linux exports never used this path.
+Acceptance is the served probe export `web-r7` (`index.pck` sha256 `ef323d7a…`,
+`index.wasm` `fc74679e…`) on database `mt2-p2-world-population-r1-20260911`. The
+focused reproduction `tools/repro_logout_refresh.py`
+(`.local/world-population-r1/acceptance/logout-repro-r9/report.json`, sha256
+`2ade293c…`) signs out through the original system menu and reloads the page:
+**19 checks, 0 failures, 0 browser engine errors**, with the stored session gone
+at the first IndexedDB sample and the reloaded client settling on server
+selection. The new `tools/repro_login_rejection.py` reproduced the silent no-op
+on the pre-fix pack (`login-rejection-r1/report.json`, status `failed`) and passes
+three consecutive attempts on `web-r7` (`login-rejection-r2/report.json`, sha256
+`b84a1ccf…`, status `passed`): each click reports `Signing in…` and then
+`Username or password is incorrect.` while `auth_available` stays true. The full
+two-client replay
+`.local/world-population-r1/acceptance/browser-r21/report.json` (sha256
+`8c780605…`) records **139 checks, 0 failures, 0 browser engine errors**, including
+`wrong_password_remains_on_original_login`,
+`logout_refresh_has_no_saved_session`,
+`browser_reload_restores_account_to_selection` and the field-combat route. The
+focused native fixture
+`.local/world-population-r1/acceptance/intro-suite-r1/report.json` (sha256
+`e8e2c082…`) passes 61 Godot UI checks for the same entry screens.
+
+Remaining limits: the browser evidence is probe state plus retained captures
+rather than an agent-reviewed render. The marker is per origin, so a player who
+signs out and later clears only `localStorage` returns to trusting the stored
+file. Three tolerated probe failures mean a genuinely dead auth service takes up
+to three probe cycles (about 45 s) before the button disables.
 
 ## Classic drop tables roll server-side in both exports — 2026-09-11
 

@@ -32,6 +32,9 @@ const BUSY_STATES := [
 var _stage := "server"
 var _busy := false
 var _available := false
+## Auth-service reachability, tracked apart from the game database the server
+## list needs. Logging in stays possible while only the world database is down.
+var _auth_available := false
 var _server_label := "Yongan"
 var _authenticated := false
 var _rows: Array = []
@@ -127,9 +130,13 @@ func set_status(state: String, message: String) -> void:
 		_focus_default.call_deferred()
 
 
-func set_server(label: String, available: bool) -> void:
+func set_server(label: String, available: bool, auth_available: bool = true) -> void:
+	## Availability is sticky by design: the caller only reports the database as
+	## offline after sustained probe failures, so a transient blip keeps the
+	## already-verified server selectable and never disables login.
 	_server_label = label
 	_available = available
+	_auth_available = auth_available
 	_controls.server_row.text = label
 	_controls.channel_row.text = "CH 1   " + ("Online" if available else "Offline")
 	_controls.connection_name.text = label + " / CH 1"
@@ -208,6 +215,7 @@ func snapshot() -> Dictionary:
 		"stage": _stage,
 		"busy": _busy,
 		"available": _available,
+		"auth_available": _auth_available,
 		"slot": _slot,
 		"character_class": _class_id,
 		"sex": _sex,
@@ -546,7 +554,10 @@ func _update_enabled() -> void:
 		_controls.server_confirm.disabled = _busy or not _available
 		_controls.server_row.disabled = _busy or not _available
 		_controls.channel_row.disabled = _busy or not _available
-		_controls.login_submit.disabled = _busy or not _available
+		# Login only needs the auth service. Gating the submit on the game database
+		# probe disabled the button for the whole in-flight window and silently
+		# swallowed the click, so only the auth service can disable it here.
+		_controls.login_submit.disabled = _busy or not _auth_available
 	var row := _row_for_slot(_slot)
 	_controls.enter.disabled = _busy or row.is_empty() or str(row.get("id", "")) != _selected_id
 	_left.disabled = _busy
@@ -614,7 +625,11 @@ func _begin_create() -> void:
 
 
 func _submit_login() -> void:
-	if _busy or not _available:
+	if _busy:
+		return
+	if not _auth_available:
+		# A disabled button swallows clicks without telling the player why.
+		set_status("error", "The login service is unreachable. Retrying…")
 		return
 	if _username.text.strip_edges().is_empty() or _password.text.is_empty():
 		set_status("error", "Enter your username and password.")
